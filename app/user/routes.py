@@ -250,21 +250,21 @@ def _get_user_posts_and_replies(user, page):
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
         if private:
             post_select += f" AND community_id NOT IN ({private})"
-            reply_select += f"AND community_id NOT IN ({private})"
+            reply_select += f" AND community_id NOT IN ({private})"
     elif current_user.is_authenticated and current_user.id == user_id:
         # Users see their own posts/replies including soft-deleted ones they deleted
         post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
         if private:
             post_select += f" AND community_id NOT IN ({private})"
-            reply_select += f"AND community_id NOT IN ({private})"
+            reply_select += f" AND community_id NOT IN ({private})"
     else:
         # Everyone else sees only non-deleted posts/replies
         post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
         if private:
             post_select += f" AND community_id NOT IN ({private})"
-            reply_select += f"AND community_id NOT IN ({private})"
+            reply_select += f" AND community_id NOT IN ({private})"
 
     full_query = (
         post_select
@@ -358,10 +358,10 @@ def show_profile(user):
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)
 
-    if user.banned:
-        flash(_("This user has been banned."), "warning")
     if user.deleted:
         flash(_("This user has been deleted."), "warning")
+    elif user.banned:
+        flash(_("This user has been banned."), "warning")
 
     post_page = request.args.get("post_page", 1, type=int)
     replies_page = request.args.get("replies_page", 1, type=int)
@@ -843,12 +843,14 @@ def user_settings():
         ("ca", _l("Catalan")),
         ("zh", _l("Chinese")),
         ("en", _l("English")),
+        ("fi", _l("Finnish")),
         ("fr", _l("French")),
         ("de", _l("German")),
         ("hi", _l("Hindi")),
         ("ja", _l("Japanese")),
         ("es", _l("Spanish")),
         ("pl", _l("Polish")),
+        ("uk", _l("Ukrainian")),
     ]
     form.read_languages.choices = read_language_choices()
     if form.validate_on_submit():
@@ -1001,6 +1003,8 @@ def connect_oauth():
 @bp.route("/user/settings/import_export", methods=["GET", "POST"])
 @login_required
 def user_settings_import_export():
+    from app import redis_client
+
     user = User.query.filter_by(
         id=current_user.id, deleted=False, banned=False, ap_id=None
     ).first()
@@ -1031,16 +1035,14 @@ def user_settings_import_export():
             file_ext = os.path.splitext(import_file.filename)[1]
             if file_ext.lower() != ".json":
                 abort(400)
-            new_filename = gibberish(15) + ".json"
 
-            directory = "app/static/media/"
+            redis_key = f"import:{user.id}:{gibberish(15)}"
+            imported_data = import_file.stream.read()
 
-            # save the file
-            final_place = os.path.join(directory, new_filename)
-            import_file.save(final_place)
+            redis_client.set(redis_key, imported_data, ex=3600)
 
             # import settings in background task
-            import_settings(final_place)
+            import_settings(redis_key)
 
             flash(
                 _(
@@ -1693,23 +1695,25 @@ def notifications_all_read():
     return redirect(url_for("user.notifications", type=original_notif_type))
 
 
-def import_settings(filename):
+def import_settings(redis_key):
     if current_app.debug:
-        import_settings_task(current_user.id, filename)
+        import_settings_task(current_user.id, redis_key)
     else:
-        import_settings_task.delay(current_user.id, filename)
+        import_settings_task.delay(current_user.id, redis_key)
 
 
 @celery.task
-def import_settings_task(user_id, filename):
+def import_settings_task(user_id, redis_key):
     from app.api.alpha.utils.misc import get_resolve_object
 
     with current_app.app_context():
         session = get_task_session()
         try:
             with patch_db_session(session):
+                from app import redis_client
+
                 user = session.query(User).get(user_id)
-                contents = file_get_contents(filename)
+                contents = redis_client.get(redis_key)
                 contents_json = json.loads(contents)
 
                 # Follow communities
@@ -1920,7 +1924,7 @@ def import_settings_task(user_id, filename):
                 cache.delete_memoized(blocked_users, user.id)
                 cache.delete_memoized(blocked_domains, user.id)
 
-                os.unlink(filename)
+                redis_client.delete(redis_key)
 
         except Exception:
             session.rollback()
@@ -2003,6 +2007,7 @@ def user_settings_filters():
 
     return render_template(
         "user/filters.html",
+        title=_("Filters"),
         form=form,
         filters=filters,
         user=current_user,
@@ -2034,6 +2039,7 @@ def user_settings_filters_add():
         cache.delete_memoized(user_filters_home, current_user.id)
         cache.delete_memoized(user_filters_posts, current_user.id)
         cache.delete_memoized(user_filters_replies, current_user.id)
+        cache.delete_memoized(filtered_out_communities, current_user)
 
         flash(_("Your changes have been saved."), "success")
         return redirect(url_for("user.user_settings_filters"))
@@ -2063,6 +2069,7 @@ def user_settings_filters_edit(filter_id):
         cache.delete_memoized(user_filters_home, current_user.id)
         cache.delete_memoized(user_filters_posts, current_user.id)
         cache.delete_memoized(user_filters_replies, current_user.id)
+        cache.delete_memoized(filtered_out_communities, current_user)
 
         flash(_("Your changes have been saved."), "success")
 
@@ -2096,6 +2103,7 @@ def user_settings_filters_delete(filter_id):
     cache.delete_memoized(user_filters_home, current_user.id)
     cache.delete_memoized(user_filters_posts, current_user.id)
     cache.delete_memoized(user_filters_replies, current_user.id)
+    cache.delete_memoized(filtered_out_communities, current_user)
     flash(_("Filter deleted."))
     return redirect(url_for("user.user_settings_filters"))
 

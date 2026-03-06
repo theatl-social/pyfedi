@@ -14,6 +14,7 @@ from app.api.alpha import (
     post_bp,
     private_message_bp,
     upload_bp,
+    admin_bp,
 )
 from app.api.alpha.utils.community import (
     get_community,
@@ -35,8 +36,13 @@ from app.api.alpha.utils.community import (
     post_community_leave_all,
 )
 from app.api.alpha.utils.domain import post_domain_block
-from app.api.alpha.utils.feed import get_feed_list, get_feed
-from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion
+from app.api.alpha.utils.feed import get_feed_list, get_feed, post_feed_follow
+from app.api.alpha.utils.misc import (
+    get_search,
+    get_resolve_object,
+    get_suggestion,
+    get_modlog,
+)
 from app.api.alpha.utils.post import (
     get_post_list,
     get_post,
@@ -120,6 +126,7 @@ from app.api.alpha.utils.user import (
     post_user_ban,
     post_user_unban,
 )
+from app.api.alpha.utils.admin import get_registration_list, put_registration_approve
 from app.constants import *
 from app.utils import orjson_response, get_setting
 from app.api.alpha.schema import *
@@ -515,6 +522,19 @@ def get_alpha_feed_list(data):
     resp = get_feed_list(auth, data)
     validated = FeedListResponse().load(resp)
     return orjson_response(validated)
+
+
+@feed_bp.route("/feed/follow", methods=["POST"])
+@feed_bp.doc(summary="Follow / subscribe to a feed.")
+@feed_bp.arguments(FollowFeedRequest)
+@feed_bp.response(200, FeedView)
+@feed_bp.alt_response(400, schema=DefaultError)
+def post_alpha_feed_follow(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_feed_follow(auth, data)
+    return FeedView().load(resp)
 
 
 # Post
@@ -1433,6 +1453,34 @@ def post_alpha_user_image_delete(data):
     return ImageDeleteResponse().load(resp)
 
 
+# Admin routes, only some are selectively implemented. Everything else intended to be done through web ui
+
+
+@admin_bp.route("/admin/registration_application/list", methods=["GET"])
+@admin_bp.doc(summary="Get the list of applications ready for admin review")
+@admin_bp.arguments(GetRegistrationList, location="query")
+@admin_bp.response(200, GetRegistrationListResponse)
+@admin_bp.alt_response(400, schema=DefaultError)
+def get_alpha_admin_registration_list(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = get_registration_list(auth, data)
+    return GetRegistrationListResponse().load(resp)
+
+
+@admin_bp.route("/admin/registration_application/approve", methods=["PUT"])
+@admin_bp.doc(summary="Approve or deny a registration")
+@admin_bp.arguments(RegistrationApproveRequest)
+@admin_bp.response(200)
+@admin_bp.alt_response(400, schema=DefaultError)
+def put_alpha_admin_registration_approve(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    put_registration_approve(auth, data)
+
+
 # Not yet implemented. Copied from lemmy's V3 api, so some aren't needed, and some need changing
 
 
@@ -1443,10 +1491,19 @@ def alpha_site():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
-# Miscellaneous - not yet implemented
-@bp.route("/api/alpha/modlog", methods=["GET"])  # Get Modlog. Not usually public
-def alpha_miscellaneous():
-    return jsonify({"error": "not_yet_implemented"}), 400
+# Miscellaneous
+@misc_bp.route("/modlog", methods=["GET"])  # Get Modlog
+@misc_bp.doc(summary="Get modlog.")
+@misc_bp.arguments(GetModLogRequest, location="query")
+@misc_bp.response(200, GetModLogResponse)
+@misc_bp.alt_response(400, schema=DefaultError)
+@misc_bp.alt_response(429, schema=DefaultError)
+def alpha_miscellaneous_modlog(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = get_modlog(auth, data)
+    return GetModLogResponse().load(resp)
 
 
 # Community - not yet implemented
@@ -1521,11 +1578,11 @@ def alpha_user_mention():
 
 # Admin - not yet implemented
 @bp.route("/api/alpha/admin/add", methods=["POST"])
-@bp.route("/api/alpha/admin/registration_application/count", methods=["GET"])  # (no
-@bp.route("/api/alpha/admin/registration_application/list", methods=["GET"])  # plans
-@bp.route("/api/alpha/admin/registration_application/approve", methods=["PUT"])  # to
+@bp.route(
+    "/api/alpha/admin/registration_application/count", methods=["GET"]
+)  # (no plans to
 @bp.route("/api/alpha/admin/purge/person", methods=["POST"])  # implement
-@bp.route("/api/alpha/admin/purge/community", methods=["POST"])  # any
+@bp.route("/api/alpha/admin/purge/community", methods=["POST"])  # any more
 @bp.route("/api/alpha/admin/purge/post", methods=["POST"])  # endpoints
 @bp.route("/api/alpha/admin/purge/comment", methods=["POST"])  # for admin user)
 def alpha_admin():

@@ -5,7 +5,7 @@ from random import randint
 
 import flask
 from pyld import jsonld
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from ua_parser import parse as uaparse
 
 from app import db, cache
@@ -46,7 +46,7 @@ from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import desc, text
 
-from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.main.forms import ShareLinkForm
 from app.post.routes import show_post
 from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
@@ -117,6 +117,7 @@ from app.models import (
     Feed,
     FeedItem,
     CmsPage,
+    BannedInstances,
 )
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
 
@@ -131,13 +132,6 @@ def index(sort=None, view_filter=None):
         "Accept", ""
     ) or "application/activity+json" in request.headers.get("Accept", ""):
         return activitypub_application()
-
-    return home_page(sort, view_filter)
-
-
-def home_page(sort, view_filter):
-    verification_warning()
-    block_honey_pot()
 
     if sort is None:
         sort = current_user.default_sort if current_user.is_authenticated else "hot"
@@ -159,14 +153,28 @@ def home_page(sort, view_filter):
     if current_user.is_anonymous and request_etag_matches(current_etag):
         return return_304(current_etag)
 
-    page = request.args.get("page", 0, type=int)
-    result_id = (
-        request.args.get("result_id", gibberish(15))
+    verification_warning()
+    block_honey_pot()
+
+    return home_page(
+        sort,
+        view_filter,
+        page=request.args.get("page", 0, type=int),
+        result_id=request.args.get("result_id", gibberish(15))
         if current_user.is_authenticated
-        else None
+        else None,
+        low_bandwidth=request.cookies.get("low_bandwidth", "0") == "1",
+        tag=request.args.get("tag", ""),
     )
-    low_bandwidth = request.cookies.get("low_bandwidth", "0") == "1"
-    tag = request.args.get("tag", "")
+
+
+def home_page_cache_key(sort, view_filter, page, result_id, low_bandwidth, tag):
+    # this is almost the same as cache.memoized except prepends current_user.get_id() which is 0 for all anonymous users
+    return f"{current_user.get_id()}_{sort}_{view_filter}_{page}_{result_id}_{low_bandwidth}_{tag}"
+
+
+@cache.cached(timeout=3, make_cache_key=home_page_cache_key)
+def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
     page_length = 20 if low_bandwidth else current_app.config["PAGE_LENGTH"]
 
     # view filter - subscribed/local/all
@@ -236,7 +244,6 @@ def home_page(sort, view_filter):
         instance_stickies = []
 
     if current_user.is_anonymous:
-        flash(_("Create an account to tailor this feed to your interests."))
         content_filters = {"-1": {"trump", "elon", "musk"}}
     else:
         content_filters = user_filters_home(current_user.id)
@@ -321,6 +328,26 @@ def home_page(sort, view_filter):
         .all()
     )
 
+    # New Instances
+    instances = (
+        db.session.query(Instance)
+        .outerjoin(BannedInstances, BannedInstances.domain == Instance.domain)
+        .filter(
+            Instance.gone_forever == False,
+            Instance.dormant == False,
+            BannedInstances.id == None,
+            or_(
+                Instance.software == "piefed",
+                Instance.software == "lemmy",
+                Instance.software == "mbin",
+                Instance.software == "nodebb",
+            ),
+        )
+        .order_by(desc(Instance.created_at))
+        .limit(5)
+        .all()
+    )
+
     # Upcoming events
     upcoming_events = db.session.execute(
         text("""SELECT e.start, p.title, p.id FROM "event" e
@@ -352,6 +379,7 @@ def home_page(sort, view_filter):
             low_bandwidth=low_bandwidth,
             recently_upvoted=recently_upvoted,
             recently_downvoted=recently_downvoted,
+            new_instances=instances,
             communities_banned_from_list=communities_banned_from_list,
             SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING,
             SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
@@ -377,10 +405,12 @@ def home_page(sort, view_filter):
             user_pronouns=user_pronouns(),
         )
     )
-    resp.headers.set("Vary", "Accept, Cookie, Accept-Language")
+    resp.headers.set("ETag", f"{sort}_{view_filter}_{hash(str(g.site.last_active))}")
     if current_user.is_anonymous:
+        resp.headers.set("Vary", "Accept, Accept-Language")
         resp.headers.set("Cache-Control", "public, max-age=60")
     else:
+        resp.headers.set("Vary", "Accept, Cookie, Accept-Language")
         resp.headers.set("Cache-Control", "private, max-age=15, must-revalidate")
 
     return resp
@@ -692,17 +722,21 @@ def modlog():
     if suspect_user_name:
         if f"@{current_app.config['SERVER_NAME']}" in suspect_user_name:
             suspect_user_name = suspect_user_name.split("@")[0]
-        user = User.query.filter_by(user_name=suspect_user_name, ap_id=None).first()
+        user = User.query.filter(
+            func.lower(User.user_name) == suspect_user_name.lower(), User.ap_id == None
+        ).first()
         if user is None:
-            user = User.query.filter_by(ap_id=suspect_user_name).first()
+            user = User.query.filter_by(ap_id=suspect_user_name.lower()).first()
         if user:
             modlog_entries = modlog_entries.filter(ModLog.target_user_id == user.id)
     if user_name:
         if f"@{current_app.config['SERVER_NAME']}" in user_name:
             user_name = user_name.split("@")[0]
-        user = User.query.filter_by(user_name=user_name, ap_id=None).first()
+        user = User.query.filter(
+            func.lower(User.user_name) == suspect_user_name.lower(), User.ap_id == None
+        ).first()
         if user is None:
-            user = User.query.filter_by(ap_id=user_name).first()
+            user = User.query.filter_by(ap_id=user_name.lower()).first()
         if user:
             modlog_entries = modlog_entries.filter(ModLog.user_id == user.id)
     if community_id:
@@ -793,7 +827,7 @@ def about_page():
     admins = Site.admins()
     staff = Site.staff()
     domains_amount = db.session.execute(
-        text('SELECT COUNT(id) as c FROM "domain" WHERE "banned" IS false')
+        text('SELECT COUNT(*) as c FROM "domain" WHERE "banned" IS false')
     ).scalar()
     community_amount = local_communities()
     instance = Instance.query.filter_by(id=1).first()
@@ -938,11 +972,11 @@ def honey_pot(whatever=None):
     count = redis_client.zcount(key, now - 86400, now)
 
     if count >= 3:
-        redis_client.set(f"ban:{ip}", 1, ex=86400 * 7)
+        redis_client.set(f"ban:{ip}", 1, ex=86400 * 7 * 4)  # ban scraper for 4 weeks
 
     if whatever:
         try:
-            return show_post(int(whatever))
+            return show_post(int(whatever), "hot", False, False)
         except Exception:
             pass
     return ""
@@ -951,7 +985,7 @@ def honey_pot(whatever=None):
 @bp.route("/test")
 @debug_mode_only
 def test():
-    refresh_instance_chooser()
+    # refresh_instance_chooser()
     # p = Post.query.get(42)
     # p.delete_dependencies()
     # db.session.delete(p)
@@ -1599,25 +1633,25 @@ def explore():
     )
 
 
-@bp.route("/content_warning", methods=["GET", "POST"])
+@bp.route("/content_warning")
 def content_warning():
-    form = ContentWarningForm()
-    if form.validate_on_submit():
-        if form.next.data.startswith("/"):
-            resp = make_response(redirect(form.next.data))
-            resp.set_cookie(
-                "warned", "yes", expires=datetime(year=2099, month=12, day=30)
-            )
-            return resp
-    form.next.data = referrer()
+    next_url = referrer()
     message = """
     This website contains age-restricted materials including nudity and explicit depictions of sexual activity.
 
     By entering, you affirm that you are at least 18 years of age or the age of majority in the jurisdiction you are accessing the website from and you consent to viewing sexually explicit content.
     """
-    return render_template(
-        "generic_form.html", title=_("Content warning"), message=message, form=form
+    resp = make_response(
+        render_template(
+            "content_warning.html",
+            title=_("Content warning"),
+            message=message,
+            next_url=next_url,
+        )
     )
+    resp.headers.set("Vary", "Accept, Cookie, Accept-Language")
+    resp.headers.set("Cache-Control", "private, max-age=1, must-revalidate")
+    return resp
 
 
 @bp.route("/my-year-in-review/<year>")

@@ -3,7 +3,7 @@ from flask_babel import _, g
 from flask_login import current_user
 from sqlalchemy import or_, desc, text
 
-from app import limiter, db
+from app import limiter, db, current_app
 from app.activitypub.util import resolve_remote_post_from_search
 from app.community.forms import RetrieveRemotePost
 from app.community.util import search_for_community
@@ -59,6 +59,8 @@ def run_search():
     if community_id == 0 and community:
         if not community.startswith("!"):
             community = f"!{community}"
+        if not "@" in community:
+            community = community + "@" + current_app.config["SERVER_NAME"]
         community_obj = search_for_community(community, allow_fetch=False)
         if community_obj:
             community_id = community_obj.id
@@ -263,6 +265,8 @@ def run_search():
             recently_upvoted = []
             recently_downvoted = []
 
+        languages = Language.query.order_by(Language.name).all()
+        instance_software = Instance.unique_software_names()
         return render_template(
             "search/results.html",
             title=_("Search results for %(q)s", q=q),
@@ -270,9 +274,17 @@ def run_search():
             replies=replies,
             community_results=communities,
             q=q,
+            community=community,
             community_id=community_id,
             language_id=language_id,
             search_for=search_for,
+            sort_by=sort_by,
+            type=type,
+            software=software,
+            nsfw=nsfw,
+            minimum_upvote=minimum_upvote,
+            languages=languages,
+            instance_software=instance_software,
             next_url=next_url,
             prev_url=prev_url,
             show_post_community=True,

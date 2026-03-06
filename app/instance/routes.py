@@ -150,16 +150,15 @@ def list_instances():
     )
 
     allowed = (
-        db.session.execute(text('SELECT COUNT(id) FROM "allowed_instances"')).scalar()
+        db.session.execute(text('SELECT COUNT(*) FROM "allowed_instances"')).scalar()
         > 0
     )
     blocked = (
-        db.session.execute(text('SELECT COUNT(id) FROM "banned_instances"')).scalar()
-        > 0
+        db.session.execute(text('SELECT COUNT(*) FROM "banned_instances"')).scalar() > 0
     )
     trusted = (
         db.session.execute(
-            text('SELECT COUNT(id) FROM "instance" WHERE trusted IS TRUE')
+            text('SELECT COUNT(*) FROM "instance" WHERE trusted IS TRUE')
         ).scalar()
         > 0
     )

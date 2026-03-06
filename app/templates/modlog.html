@@ -53,7 +53,7 @@
                    autocomplete="off">
             <datalist id="mod_suggestions"></datalist>
         {% endif -%}
-        <input type="submit" name="submit" value="Search" class="btn btn-primary"/>
+        <input type="submit" name="submit" value="{{ _('Search') }}" class="btn btn-primary"/>
     </form>
     <div class="table-responsive-md mt-4">
         {% if modlog_entries.items %}
@@ -68,7 +68,7 @@
             <tbody>
                 {% for modlog_entry in modlog_entries.items %}
                     <tr>
-                        <td>{{ arrow.get(modlog_entry.created_at).humanize(locale=locale) }}</td>
+                        <td>{{ localize_datetime(modlog_entry.created_at, locale) }}</td>
                         <td>
                             {% if can_see_names %}
                                 {{ render_username(modlog_entry.author) if modlog_entry.author else '' }}

@@ -10,11 +10,11 @@
 <script src="/static/js/coolfieldset.js?v=3" nonce={{ nonce }}></script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative add_reply main_pane">
-        <fieldset id="post_reply_op" class="coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_op_state', 'collapsed') == 'collapsed' }} mt-3"><legend class="w-auto">Original post</legend>
+        <fieldset id="post_reply_op" class="coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_op_state', 'collapsed') == 'collapsed' }} mt-3"><legend class="w-auto">{{ _('Original post') }}</legend>
             <h3>{{ post.title }}</h3>
             {{ post.body_html | safe if post.body_html else '' }}
         </fieldset>
-        <fieldset id="post_reply_comment" class="coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_comment_state', 'collapsed') == 'collapsed' }} mt-4 mb-4"><legend class="w-auto">Comment you are replying to</legend>
+        <fieldset id="post_reply_comment" class="coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_comment_state', 'collapsed') == 'collapsed' }} mt-4 mb-4"><legend class="w-auto">{{ _('Comment you are replying to') }}</legend>
         {{ comment.body_html | safe}}
         </fieldset>
         <div class="position-relative">

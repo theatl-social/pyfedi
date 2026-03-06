@@ -9,13 +9,14 @@
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle, render_emoji_button %}
 
 {% block app_content %}
+<script src="/static/js/coolfieldset.js?v=4" nonce={{ nonce }}></script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
-        <h1>{{ _('Search results for') }} <form method="get" class="redo_search"><input type="search" name="q" value="{{ q }}" class="form-control">
-        <input type="hidden" name="community" value="{{ community_id }}">
-        <input type="hidden" name="language" value="{{ language_id }}">
-        <input type="hidden" name="search_for" value="{{ search_for }}">
-        </form></h1>
+        <h1>{{ _('Search results for') }} {{ q }}</h1>
+        <fieldset class="mt-4 coolfieldset collapsed">
+            <legend class="w-auto">{{ _('Alter search terms') }}</legend>
+            {% include "search/_search_form.html" %}
+        </fieldset>
         {% if posts -%}
             <div class="post_list">
                 {% for post in posts.items %}
@@ -99,7 +100,7 @@
                 {% endif -%}
                 {% if rss_feed %}
                 <p class="mt-4">
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> {{ _('RSS feed') }}</a>
                 </p>
                 {% endif %}
             </div>

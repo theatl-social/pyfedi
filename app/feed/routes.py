@@ -1,8 +1,10 @@
 # ----- imports -----
 from collections import namedtuple
+from datetime import timezone
 from random import randint
 from typing import List
 
+from feedgen.feed import FeedGenerator
 from flask import (
     g,
     current_app,
@@ -96,6 +98,7 @@ from app.utils import (
     blocked_communities,
     block_honey_pot,
     user_pronouns,
+    mimetype_from_url,
 )
 
 
@@ -248,7 +251,9 @@ def feed_add_remote():
             new_feed = search_for_feed("~" + feed + "@" + server)
         else:
             message = Markup(
-                "Accepted address formats: ~feedname@server.name or https://server.name/f/feedname."
+                _(
+                    "Accepted address formats: ~feedname@server.name or https://server.name/f/feedname."
+                )
             )
             flash(message, "error")
         if new_feed is None:
@@ -1506,3 +1511,73 @@ def lookup(feedname, domain):
                 return redirect(referrer)
             else:
                 return redirect("/")
+
+
+@bp.route("/f/<path:feed_path>.rss", methods=["GET"])
+def show_feed_rss(feed_path):
+    feed_url_parts = feed_path.split("/")
+    last_feed_machine_name = feed_url_parts[-1]
+    feed = Feed.query.filter(
+        Feed.machine_name == last_feed_machine_name.strip().lower()
+    ).first()
+
+    if feed:
+        # Get the feed_ids
+        if feed.show_posts_in_children:  # include posts from child feeds
+            feed_ids = get_all_child_feed_ids(feed)
+        else:
+            feed_ids = [feed.id]
+
+        # For each feed get the community ids (FeedItem) in the feed
+        feed_community_ids = []
+        for fid in feed_ids:
+            feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == fid).all()
+            for item in feed_items:
+                feed_community_ids.append(item.community_id)
+
+        post_ids = get_deduped_post_ids("", feed_community_ids, "new")
+        post_ids = paginate_post_ids(post_ids, 0, page_length=100)
+        posts = post_ids_to_models(post_ids, "new")
+
+        fg = FeedGenerator()
+        fg.id(f"{current_app.config['SERVER_URL']}/f/{last_feed_machine_name}")
+        fg.title(f"{feed.title} on {g.site.name}")
+        fg.link(
+            href=f"{current_app.config['SERVER_URL']}/f/{last_feed_machine_name}",
+            rel="alternate",
+        )
+        fg.logo(
+            f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png"
+        )
+        fg.subtitle(" ")
+        fg.link(
+            href=f"{current_app.config['SERVER_URL']}/f/{last_feed_machine_name}.rss",
+            rel="self",
+        )
+        fg.language("en")
+
+        for post in posts:
+            fe = fg.add_entry()
+            fe.title(post.title)
+            if post.slug:
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
+            else:
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
+            if post.url:
+                type = mimetype_from_url(post.url)
+                if type and not type.startswith("text/"):
+                    fe.enclosure(post.url, type=type)
+            fe.description(post.body_html)
+            fe.guid(post.profile_id(), permalink=True)
+            fe.author(name=post.author.user_name)
+            fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
+
+        response = make_response(fg.rss_str())
+        response.headers.set("Content-Type", "application/rss+xml")
+        response.headers.add_header("ETag", f"{feed.id}_{hash(g.site.last_active)}")
+        response.headers.add_header(
+            "Cache-Control", "no-cache, max-age=600, must-revalidate"
+        )
+        return response
+    else:
+        abort(404)

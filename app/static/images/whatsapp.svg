@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 24 24"
+   width="24"
+   height="24"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="1.7"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   aria-hidden="true"
+   version="1.1"
+   id="svg6"
+   sodipodi:docname="whatsapp.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs10" />
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="34.625"
+     inkscape:cx="12.028881"
+     inkscape:cy="12.028881"
+     inkscape:window-width="1920"
+     inkscape:window-height="1016"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg6" />
+  <!-- chat bubble -->
+  <path
+     d="M 20.135169,11.344824 C 19.763934,2.87949 8.7620233,0.61145618 4.8005958,7.971256 0.76283392,15.472875 10.3437,23.029082 17,17.7 l 3,2.3 -1,-3.1 c 0.976935,-1.619255 1.230682,-3.283532 1.135169,-5.555176 z"
+     id="path2"
+     sodipodi:nodetypes="cscccc" />
+  <!-- phone handset -->
+  <path
+     d="M 8.8741345,8.2483249 C 9.1005756,7.7199624 9.7798988,7.5690017 10.232781,7.9464035 l 0.905764,0.7548036 c 0.377402,0.3019214 0.452882,0.8302839 0.150961,1.2076858 l -0.377402,0.5283621 c 0.679323,1.207686 1.660568,2.11345 2.868254,2.868254 l 0.528362,-0.377402 c 0.377402,-0.301921 0.905765,-0.226441 1.207686,0.150961 l 0.754804,0.905764 c 0.377402,0.452883 0.226441,1.132206 -0.301922,1.358647 C 15.365446,15.56992 14.761603,15.6454 14.15776,15.49444 10.987585,14.664156 9.388752,12.653957 8.558468,9.4837815 8.4075073,8.8799386 8.3498437,9.4215427 8.5762848,8.8176998 Z"
+     id="path4"
+     style="stroke-width:1.28317"
+     sodipodi:nodetypes="csccccccsccccc" />
+</svg>

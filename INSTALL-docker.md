@@ -143,3 +143,7 @@ Use:
 ```bash
 sudo docker compose -f compose.dev.yaml up
 ```
+
+### BUT WAIT THERE'S MORE
+
+Refer to the bare metal install instructions for details about setting up email, S3, cdn and much more.

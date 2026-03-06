@@ -373,14 +373,14 @@ def update_community_stats():
 
             community.post_count = session.execute(
                 text(
-                    "SELECT COUNT(id) as c FROM post WHERE deleted is false and community_id = :community_id"
+                    "SELECT COUNT(*) as c FROM post WHERE deleted is false and community_id = :community_id"
                 ),
                 {"community_id": community.id},
             ).scalar()
 
             community.post_reply_count = session.execute(
                 text(
-                    "SELECT COUNT(id) as c FROM post_reply WHERE deleted is false and community_id = :community_id"
+                    "SELECT COUNT(*) as c FROM post_reply WHERE deleted is false and community_id = :community_id"
                 ),
                 {"community_id": community.id},
             ).scalar()

@@ -216,9 +216,13 @@ from app.utils import (
 )
 
 
+def post_cache_key(post_id, sort, low_bandwidth, autoplay):
+    return f"{current_user.get_id()}_{post_id}_{sort}_{low_bandwidth}_{autoplay}_{request.method}"
+
+
+@cache.cached(timeout=5, make_cache_key=post_cache_key)
 @login_required_if_private_instance
-def show_post(post_id: int):
-    block_honey_pot()
+def show_post(post_id: int, sort, low_bandwidth, autoplay):
     with limiter.limit("30/minute"):
         post = Post.query.get_or_404(post_id)
         community: Community = post.community
@@ -254,13 +258,6 @@ def show_post(post_id: int):
             if (post.nsfw or post.nsfl) and user_in_restricted_country(current_user):
                 abort(403)
 
-        sort = request.args.get(
-            "sort",
-            "hot"
-            if current_user.is_anonymous
-            else current_user.default_comment_sort or "hot",
-        )
-
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
         if current_user.is_anonymous and request_etag_matches(current_etag):
@@ -286,7 +283,9 @@ def show_post(post_id: int):
             mod_list = []
         else:
             mod_user_ids = [mod.user_id for mod in mods]
-            mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+            mod_list = User.query.filter(
+                User.id.in_(mod_user_ids), User.deleted.is_(False)
+            ).all()
 
         banned_from_community = False
         if current_user.is_authenticated and community.id in communities_banned_from(
@@ -585,7 +584,7 @@ def show_post(post_id: int):
             sort=sort,
             show_deleted=current_user.is_authenticated
             and current_user.is_admin_or_staff(),
-            autoplay=request.args.get("autoplay", False),
+            autoplay=autoplay,
             archive_link=archive_link,
             noindex=not post.author.indexable,
             preconnect=post.url if post.url else None,
@@ -603,7 +602,7 @@ def show_post(post_id: int):
             disable_voting=post.archived is not None,
             user_notes=user_notes(current_user.get_id()),
             banned_from_community=banned_from_community,
-            low_bandwidth=request.cookies.get("low_bandwidth", "0") == "1",
+            low_bandwidth=low_bandwidth,
             inoculation=inoculation[randint(0, len(inoculation) - 1)]
             if g.site.show_inoculation_block
             else None,
@@ -613,7 +612,6 @@ def show_post(post_id: int):
             author_banned=author_banned,
             user_pronouns=user_pronouns(),
         )
-        response.headers.set("Vary", "Accept, Cookie, Accept-Language")
         response.headers.set(
             "Link",
             f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"',
@@ -622,9 +620,12 @@ def show_post(post_id: int):
         response.headers.set(
             "Link", f'<{oembed_url}>; rel="alternate"; type="application/json+oembed"'
         )
+        response.headers.set("ETag", f"{post.id}{sort}_{hash(post.last_active)}")
         if current_user.is_anonymous:
+            response.headers.set("Vary", "Accept, Accept-Language")
             response.headers.set("Cache-Control", "public, max-age=30")
         else:
+            response.headers.set("Vary", "Accept, Cookie, Accept-Language")
             response.headers.set(
                 "Cache-Control", "private, max-age=15, must-revalidate"
             )
@@ -1024,20 +1025,28 @@ def continue_discussion(post_id, comment_id):
         ):
             abort(404)
         else:
-            if post.deleted_by == post.user_id:
+            if comment.deleted:
                 flash(
                     _(
-                        "This post has been deleted by the author and is only visible to staff and admins."
+                        "This comment has been deleted and is only visible to staff and admins."
                     ),
                     "warning",
                 )
             else:
-                flash(
-                    _(
-                        "This post has been deleted and is only visible to staff and admins."
-                    ),
-                    "warning",
-                )
+                if post.deleted_by == post.user_id:
+                    flash(
+                        _(
+                            "This post has been deleted by the author and is only visible to staff and admins."
+                        ),
+                        "warning",
+                    )
+                else:
+                    flash(
+                        _(
+                            "This post has been deleted and is only visible to staff and admins."
+                        ),
+                        "warning",
+                    )
 
     mods = post.community.moderators()
     is_moderator = current_user.is_authenticated and any(
@@ -1047,7 +1056,9 @@ def continue_discussion(post_id, comment_id):
         mod_list = []
     else:
         mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+        mod_list = User.query.filter(
+            User.id.in_(mod_user_ids), User.deleted.is_(False)
+        ).all()
     replies = get_comment_branch(
         post, comment.id, "top", current_user if current_user.is_authenticated else None
     )
@@ -1148,7 +1159,9 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
         mod_list = []
     else:
         mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+        mod_list = User.query.filter(
+            User.id.in_(mod_user_ids), User.deleted.is_(False)
+        ).all()
     replies = get_comment_branch(
         post, comment.id, "top", current_user if current_user.is_authenticated else None
     )
@@ -1236,7 +1249,9 @@ def add_reply(post_id: int, comment_id: int):
         mod_list = []
     else:
         mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+        mod_list = User.query.filter(
+            User.id.in_(mod_user_ids), User.deleted.is_(False)
+        ).all()
 
     if in_reply_to.author.has_blocked_user(current_user.id):
         flash(_("You cannot reply to %(name)s", name=in_reply_to.author.display_name()))
@@ -1573,7 +1588,9 @@ def post_edit(post_id: int):
         mod_list = []
     else:
         mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+        mod_list = User.query.filter(
+            User.id.in_(mod_user_ids), User.deleted.is_(False)
+        ).all()
 
     if (
         post.user_id == current_user.id
@@ -2450,7 +2467,8 @@ def post_move(post_id: int):
 
 @bp.route("/post/search_community_suggestions", methods=["POST"])
 def post_search_community_suggestions():
-    q = request.form.get("which_community", "").lower()
+    q = request.form.get("which_community") or request.form.get("community") or ""
+    q = q.lower()
 
     joined = joined_communities(current_user.get_id())
     moderating = moderating_communities(current_user.get_id())
@@ -3072,14 +3090,16 @@ def post_view_voting_activity(post_id: int):
     if current_user.is_admin_or_staff() or post.community.is_moderator():
         post_title = post.title
         upvoters = (
-            User.query.join(PostVote, PostVote.user_id == User.id)
-            .filter_by(post_id=post_id, effect=1.0)
-            .order_by(User.ap_domain, User.user_name)
+            db.session.query(User, PostVote)
+            .join(PostVote, PostVote.user_id == User.id)
+            .filter(PostVote.post_id == post_id, PostVote.effect == 1.0)
+            .order_by(PostVote.created_at)
         )
         downvoters = (
-            User.query.join(PostVote, PostVote.user_id == User.id)
-            .filter_by(post_id=post_id, effect=-1.0)
-            .order_by(User.ap_domain, User.user_name)
+            db.session.query(User, PostVote)
+            .join(PostVote, PostVote.user_id == User.id)
+            .filter(PostVote.post_id == post_id, PostVote.effect == -1.0)
+            .order_by(PostVote.created_at)
         )
 
         # local users will be at the bottom of each list as ap_domain is empty for those.
@@ -3103,14 +3123,20 @@ def post_reply_view_voting_activity(comment_id: int):
     if current_user.is_admin_or_staff() or post_reply.community.is_moderator():
         reply_text = post_reply.body
         upvoters = (
-            User.query.join(PostReplyVote, PostReplyVote.user_id == User.id)
-            .filter_by(post_reply_id=comment_id, effect=1.0)
-            .order_by(User.ap_domain, User.user_name)
+            db.session.query(User, PostReplyVote)
+            .join(PostReplyVote, PostReplyVote.user_id == User.id)
+            .filter(
+                PostReplyVote.post_reply_id == comment_id, PostReplyVote.effect == 1.0
+            )
+            .order_by(PostReplyVote.created_at)
         )
         downvoters = (
-            User.query.join(PostReplyVote, PostReplyVote.user_id == User.id)
-            .filter_by(post_reply_id=comment_id, effect=-1.0)
-            .order_by(User.ap_domain, User.user_name)
+            db.session.query(User, PostReplyVote)
+            .join(PostReplyVote, PostReplyVote.user_id == User.id)
+            .filter(
+                PostReplyVote.post_reply_id == comment_id, PostReplyVote.effect == -1.0
+            )
+            .order_by(PostReplyVote.created_at)
         )
 
         # local users will be at the bottom of each list as ap_domain is empty for those.
@@ -3301,24 +3327,37 @@ def show_post_ical(post_id: int):
 def post_check_ai(post_id):
     post = Post.query.get(post_id)
     if current_app.config["DETECT_AI_ENDPOINT"]:
-        if len(post.body) > 100:
-            is_ai = get_request(
-                f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}"
-            )
-            if is_ai and is_ai.status_code == 200:
-                is_ai_result = is_ai.json()
-                if is_ai_result["detection_result"] == "ai":
+        is_ai = get_request(
+            f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}"
+        )
+        if is_ai and is_ai.status_code == 200:
+            is_ai_result = is_ai.json()
+            if is_ai_result["detection_result"] == "ai":
+                result_type = "alert-warning"
+            else:
+                result_type = "alert-success"
+            if is_ai_result["detection_result"] == "none":
+                return f'<div class="w-100 alert {result_type}">Detection blocked</div>'
+            output = f'<div class="w-100 alert {result_type}">'
+            output += "Post: " + is_ai_result["detection_result"].upper()
+            output += "<br>"
+            output += f"{int(is_ai_result['confidence'] * 100)}% confident"
+            output += "</div>"
+            if "attachment" in is_ai_result:
+                if is_ai_result["attachment"]["detection_result"] == "ai":
                     result_type = "alert-warning"
                 else:
                     result_type = "alert-success"
-                output = f'<div class="w-100 alert {result_type}">'
-                output += is_ai_result["detection_result"].upper()
+                output += f'<div class="w-100 alert {result_type}">'
+                output += (
+                    "Link: " + is_ai_result["attachment"]["detection_result"].upper()
+                )
                 output += "<br>"
-                output += f"{int(is_ai_result['confidence'] * 100)}% confident"
+                output += (
+                    f"{int(is_ai_result['attachment']['confidence'] * 100)}% confident"
+                )
                 output += "</div>"
-                return output
-        else:
-            return _("Body text is too short to be sure.")
+            return output
     else:
         return _("Not configured.")
 

@@ -39,9 +39,9 @@
                 <link href="{{ url_for('static', filename='js/markdown/downarea.css', changed=getmtime('js/markdown/downarea.css')) }}" type="text/css" rel="stylesheet" />
                 <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
                 {% if current_user.code_style -%}
-                    <link href="{{ url_for('static', filename='pygments/' + current_user.code_style + '.css') }}" type="text/css" rel="stylesheet" />
+                    <link href="{{ url_for('static', filename='pygments/' + current_user.code_style + '.css', v='1') }}" type="text/css" rel="stylesheet" />
                 {% else -%}
-                    <link href="{{ url_for('static', filename='pygments/fruity.css') }}" type="text/css" rel="stylesheet" />
+                    <link href="{{ url_for('static', filename='pygments/fruity.css', v='1') }}" type="text/css" rel="stylesheet" />
                 {% endif -%}
             {% endif -%}
             {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
@@ -86,6 +86,9 @@
       {% if preconnect and not low_bandwidth -%}
         <link rel="preconnect" href='{{ preconnect }}'>
       {% endif -%}
+      {% if config["S3_PUBLIC_URL"] and not low_bandwidth -%}
+        <link rel="preconnect" href="{{ config['S3_PUBLIC_URL'] }}">
+      {% endif -%}
       {% if g.site.additional_css -%}
       <style>
           {{ g.site.additional_css | safe }}
@@ -105,6 +108,7 @@
     {% endblock %}
   </head>
   <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ compaction_level() }}" hx-headers='{"x-csrftoken": "{{ cs }}"}'>
+    {%- include "translation.html" -%}
     {%- include "svg_sprites.html" -%}
     {% if 'fontSize' in request.cookies -%}
         <style>
@@ -166,7 +170,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation">
+            <div class="collapse navbar-collapse{% if current_user.is_authenticated %} authenticated{% endif %}" id="navbarSupportedContent" role="navigation">
                     <ul class="nav navbar-nav text-end text-lg-start">
                         {% if current_user.is_anonymous -%}
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
@@ -251,7 +255,7 @@
                             {% endif %}
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                             <li class="nav-item right d-none d-md-inline-block">
-                                <a class="nav-link" href="/notifications" title="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}" aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
+                                <a class="nav-link" href="/notifications" title="{{ ngettext('%(num)d unread notification', '%(num)d unread notifications', current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}" aria-label="{{ ngettext('%(num)d unread notification', '%(num)d unread notifications', current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
                                     {% if current_user.unread_notifications %}
                                         <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
                                     {% else %}
@@ -261,7 +265,7 @@
                             </li>
                         {% endif %}
                         <li class="nav-item {% if current_user.is_anonymous %}right{% endif %} content-center" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
-                        <li class="nav-item content-center"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
+                        <li class="nav-item content-center"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" data-dark="{{ _('Dark mode') }}" data-light="{{ _('Light mode') }}" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
                         {% if current_user.is_anonymous %}<li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/auth/instance_chooser">{{ _('Register') }}</a></li>{% endif %}
                         {% if current_user.is_authenticated %}<li class="nav-item content-center"  aria-label="{{ _('Settings') }}"><a class="nav-link" href="/user/settings" tabindex="" title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a></li>{% endif %}
@@ -298,7 +302,7 @@
                     <a href="/privacy">{{ _('Privacy policy') }}</a> | <a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a>
                 </p>
             </div>
-            <p class="text-center"><a href="https://github.com/theatl-social/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />Please <a href="https://github.com/theatl-social/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
+            <p class="text-center"><a href="https://github.com/theatl-social/pyfedi">PeachPie v{{ VERSION }}</a>, a fork of <a href="https://codeberg.org/rimu/pyfedi">PieFed</a>. Free and open source.<br />Please <a href="https://github.com/theatl-social/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
             <p role="timer" id="timeSpent" class="text-center mt-4" title="{{ _('This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values.') }}"></p>
         </footer>
         <nav class="d-lg-none mobilenav nav nav-pills nav-fill border-top">
@@ -339,17 +343,14 @@
             </div>
         </dialog>
         <dialog id="reaction_dialog">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">{{ _('React with an emoji') }}</h5>
-                <button type="button" class="btn-close" aria-label="{{ _('Close') }}" id="reaction_dialog_close"></button>
-            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="mb-0">{{ _('React with an emoji') }}</h5><button type="button" class="btn-close" aria-label="{{ _('Close') }}" id="reaction_dialog_close"></button></div>
             <div id="reaction_dialog_contents"></div>
         </dialog>
     {% endblock -%}
 
     {% block scripts -%}
     {% endblock -%}
-    {{ bootstrap.load_js(nonce=nonce) }}
+    {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}" nonce="{{ nonce }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/user-mentions.js', changed=getmtime('js/user-mentions.js')) }}" nonce="{{ nonce }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}" nonce="{{ nonce }}"></script>

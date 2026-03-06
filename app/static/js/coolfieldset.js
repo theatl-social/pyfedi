@@ -37,6 +37,10 @@
     content.forEach((element) => {
       element.setAttribute('aria-expanded', 'true');
     });
+    // Re-hide content of any nested collapsed coolfieldsets that were revealed above
+    fieldset.querySelectorAll('.coolfieldset.collapsed').forEach((nested) => {
+      hideFieldsetContent(nested, { animation: false });
+    });
     if (!options.animation) {
       fieldset.dispatchEvent(new Event('update'));
     }

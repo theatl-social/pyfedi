@@ -1,7 +1,10 @@
 import pytest
+import json
+import base64
 
 from app import create_app, cache
 from app.activitypub.util import find_actor_or_create, find_actor_or_create_cached
+from app.activitypub.signature import HttpSignature, RsaKeys
 from config import Config
 
 
@@ -149,3 +152,145 @@ def test_find_actor_or_create_cached(app):
         from app import db
 
         assert user_before in db.session or user_before.id is not None
+
+
+def test_signed_request_async(app):
+    """Test the signed_request function with send_via_async=True to verify signature generation"""
+    with app.app_context():
+        # Generate a test keypair
+        private_key, public_key = RsaKeys.generate_keypair()
+
+        # Create a test payload
+        test_body = {
+            "type": "Create",
+            "id": "https://example.com/activities/1",
+            "actor": "https://example.com/users/testuser",
+            "object": {"type": "Note", "content": "Test content"},
+        }
+
+        test_uri = "https://remote.example.com/inbox"
+        test_key_id = "https://example.com/users/testuser#main-key"
+
+        # Call signed_request multiple times to test caching
+        print("\n=== First call (cache miss expected) ===")
+        result = HttpSignature.signed_request(
+            uri=test_uri,
+            body=test_body,
+            private_key=private_key,
+            key_id=test_key_id,
+            content_type="application/activity+json",
+            method="post",
+            timeout=10,
+            send_via_async=True,
+        )
+
+        print("\n=== Second call (cache hit expected) ===")
+        result = HttpSignature.signed_request(
+            uri=test_uri,
+            body=test_body,
+            private_key=private_key,
+            key_id=test_key_id,
+            content_type="application/activity+json",
+            method="post",
+            timeout=10,
+            send_via_async=True,
+        )
+
+        print("\n=== Third call (cache hit expected) ===")
+        result = HttpSignature.signed_request(
+            uri=test_uri,
+            body=test_body,
+            private_key=private_key,
+            key_id=test_key_id,
+            content_type="application/activity+json",
+            method="post",
+            timeout=10,
+            send_via_async=True,
+        )
+
+        # Verify the result is a tuple of (uri, headers, body_bytes)
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+
+        returned_uri, headers, body_bytes = result
+
+        # Verify the URI is returned correctly
+        assert returned_uri == test_uri
+
+        # Verify body_bytes is properly JSON-encoded
+        assert isinstance(body_bytes, bytes)
+        decoded_body = json.loads(body_bytes.decode("utf8"))
+        assert decoded_body["type"] == "Create"
+        assert decoded_body["id"] == test_body["id"]
+        assert "@context" in decoded_body  # Should be added automatically
+
+        # Verify required headers exist
+        assert "Host" in headers
+        assert "Date" in headers
+        assert "Digest" in headers
+        assert "Content-Type" in headers
+        assert "Signature" in headers
+        assert "User-Agent" in headers
+
+        # Verify header values
+        assert headers["Host"] == "remote.example.com"
+        assert headers["Content-Type"] == "application/activity+json"
+        assert headers["Digest"].startswith("SHA-256=")
+
+        # Verify the Signature header format
+        signature_header = headers["Signature"]
+        assert "keyId=" in signature_header
+        assert "headers=" in signature_header
+        assert "signature=" in signature_header
+        assert "algorithm=" in signature_header
+        assert test_key_id in signature_header
+        assert "rsa-sha256" in signature_header
+
+        # Parse and verify the signature details
+        signature_details = HttpSignature.parse_signature(signature_header)
+        assert signature_details["keyid"] == test_key_id
+        assert signature_details["algorithm"] == "rsa-sha256"
+        assert isinstance(signature_details["signature"], bytes)
+        assert len(signature_details["signature"]) > 0
+
+        # Verify the required headers are included in the signature
+        required_headers = ["host", "date", "digest", "content-type"]
+        for header in required_headers:
+            assert header in [h.lower() for h in signature_details["headers"]]
+
+        # Verify the digest is correct
+        expected_digest = HttpSignature.calculate_digest(body_bytes)
+        assert headers["Digest"] == expected_digest
+
+        # Verify the signature can be verified with the public key
+        # Reconstruct the signed string - must include all headers in the exact order
+        from urllib.parse import urlparse
+
+        uri_parts = urlparse(test_uri)
+
+        signed_string_parts = []
+        for header_name in signature_details["headers"]:
+            if header_name == "(request-target)":
+                signed_string_parts.append(f"(request-target): post {uri_parts.path}")
+            elif header_name == "host":
+                signed_string_parts.append(f"host: {headers['Host']}")
+            elif header_name == "date":
+                signed_string_parts.append(f"date: {headers['Date']}")
+            elif header_name == "digest":
+                signed_string_parts.append(f"digest: {headers['Digest']}")
+            elif header_name == "content-type":
+                signed_string_parts.append(f"content-type: {headers['Content-Type']}")
+
+        signed_string = "\n".join(signed_string_parts)
+
+        # Verify the signature
+        try:
+            HttpSignature.verify_signature(
+                signature_details["signature"], signed_string, public_key
+            )
+            signature_valid = True
+        except Exception as e:
+            signature_valid = False
+            print(f"Signature verification failed: {e}")
+
+        assert signature_valid, "Generated signature should be valid"

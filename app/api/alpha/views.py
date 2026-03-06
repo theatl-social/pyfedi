@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from flask import current_app, g
 from sqlalchemy import text, func, or_
 from sqlalchemy.orm.exc import NoResultFound
@@ -1600,6 +1602,14 @@ def site_view(user) -> dict:
     elif g.site.sidebar:
         site["sidebar"] = g.site.sidebar
 
+    announcement = get_setting("announcement")
+    if announcement:
+        site["announcement_md"] = announcement
+
+    announcement_html = get_setting("announcement_html")
+    if announcement_html:
+        site["announcement"] = announcement_html
+
     if g.site.description:
         site["description"] = g.site.description
     for language in Language.query.all():
@@ -1625,6 +1635,7 @@ def site_instance_chooser_view():
                 BannedInstances.domain == "hexbear.net",
                 BannedInstances.domain == "lemmygrad.ml",
                 BannedInstances.domain == "hilariouschaos.com",
+                BannedInstances.domain == "gregtech.eu",
                 BannedInstances.domain == "lemmy.ml",
             )
         )
@@ -1762,7 +1773,7 @@ def cached_modlist_for_user(user):
 def users_total():
     return db.session.execute(
         text(
-            'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false'
+            'SELECT COUNT(*) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false'
         )
     ).scalar()
 
@@ -1830,3 +1841,42 @@ def blocked_instances_view(user) -> list[dict]:
             }
         )
     return blocked
+
+
+def registration_view(registration) -> dict:
+    if current_app.config["FLAG_THROWAWAY_EMAILS"] and os.path.isfile(
+        "app/static/tmp/disposable_domains.txt"
+    ):
+        with open("app/static/tmp/disposable_domains.txt", "r", encoding="utf-8") as f:
+            disposable_domains = [line.rstrip("\n") for line in f]
+    else:
+        disposable_domains = []
+
+    v1 = dict()
+    v1["answer"] = registration.answer
+    v1["applied_at"] = registration.created_at.isoformat(timespec="microseconds") + "Z"
+    v1["email"] = registration.user.email
+    v1["user_id"] = registration.user.id
+    v1["user_name"] = registration.user.display_name()
+
+    if registration.user.ip_address:
+        v1["ip_address"] = registration.user.ip_address
+
+    if registration.user.ip_address_country:
+        v1["country_code"] = registration.user.ip_address_country
+
+    if registration.user.email_domain() in disposable_domains:
+        v1["throwaway_email"] = True
+
+    if registration.status == 1:
+        v1["status"] = "approved"
+        if registration.approved_by:
+            v1["approved_by"] = user_view(registration.approved_by, variant=1)
+        if registration.approved_at:
+            v1["approved_at"] = (
+                registration.approved_at.isoformat(timespec="microseconds") + "Z"
+            )
+    else:
+        v1["status"] = "awaiting review"
+
+    return v1

@@ -47,13 +47,6 @@ topic_bp = ApiBlueprint(
 
 user_bp = ApiBlueprint("User", __name__, url_prefix="/api/alpha", description="")
 
-admin_bp = ApiBlueprint(
-    "Admin",
-    __name__,
-    url_prefix="/api/alpha/admin",
-    description="Administrative endpoints for user management and private registration",
-)
-
 reply_bp = ApiBlueprint("Comment", __name__, url_prefix="/api/alpha", description="")
 
 post_bp = ApiBlueprint("Post", __name__, url_prefix="/api/alpha", description="")
@@ -63,6 +56,8 @@ private_message_bp = ApiBlueprint(
 )
 
 upload_bp = ApiBlueprint("Upload", __name__, url_prefix="/api/alpha", description="")
+
+admin_bp = ApiBlueprint("Admin", __name__, url_prefix="/api/alpha", description="")
 
 
 def shared_error_handler(e):
@@ -123,10 +118,9 @@ blueprints = [
     post_bp,
     private_message_bp,
     upload_bp,
+    admin_bp,
 ]
 for blueprint in blueprints:
     blueprint.errorhandler(Exception)(shared_error_handler)
 
 from app.api.alpha import routes
-from app.api.admin import routes as admin_routes
-from app.api.admin import monitoring_routes

@@ -24,7 +24,7 @@ class Config(object):
         "SERVER_NAME"
     )
     ERRORS_TO = os.environ.get("ERRORS_TO") or ""
-    LANGUAGES = ["ca", "de", "en", "es", "fr", "ja", "zh"]
+    LANGUAGES = ["ca", "de", "en", "es", "fr", "ja", "uk", "zh"]
     FULL_AP_CONTEXT = bool(int(os.environ.get("FULL_AP_CONTEXT", 0)))
     CACHE_TYPE = os.environ.get("CACHE_TYPE") or "FileSystemCache"
     CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL") or "redis://localhost:6379/1"
@@ -98,6 +98,7 @@ class Config(object):
     S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY") or ""
     S3_ACCESS_SECRET = os.environ.get("S3_ACCESS_SECRET") or ""
     S3_PUBLIC_URL = os.environ.get("S3_PUBLIC_URL") or ""
+    S3_STORAGE_CLASS = os.environ.get("S3_STORAGE_CLASS") or ""
 
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID") or ""
     GOOGLE_OAUTH_SECRET = os.environ.get("GOOGLE_OAUTH_SECRET") or ""

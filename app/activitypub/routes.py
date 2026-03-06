@@ -15,7 +15,7 @@ from flask_babel import _
 from flask_login import current_user
 from furl import furl
 from psycopg2 import IntegrityError
-from sqlalchemy import desc, or_, text
+from sqlalchemy import desc, or_, text, func
 
 from app import db, cache, celery, limiter
 from app.activitypub import bp
@@ -131,6 +131,7 @@ from app.utils import (
     moderating_communities_ids_all_users,
     publish_sse_event,
     blocked_users,
+    block_honey_pot,
 )
 
 
@@ -146,10 +147,11 @@ def testredis_get():
 
 
 @bp.route("/.well-known/webfinger")
+@cache.cached(timeout=60, query_string=True)
 def webfinger():
     if request.args.get("resource"):
         feed = False
-        query = request.args.get("resource")  # acct:alice@tada.club
+        query = request.args.get("resource", "")  # acct:alice@tada.club
         if "acct:" in query:
             actor = query.split(":")[1].split("@")[0]  # alice
             if actor.startswith("~"):
@@ -191,8 +193,8 @@ def webfinger():
             object = (
                 User.query.filter(
                     or_(
-                        User.user_name == actor.strip(),
-                        User.alt_user_name == actor.strip(),
+                        func.lower(User.user_name) == actor.strip().lower(),
+                        func.lower(User.alt_user_name) == actor.strip().lower(),
                     )
                 )
                 .filter_by(deleted=False, banned=False, ap_id=None)
@@ -219,7 +221,7 @@ def webfinger():
             return ""
 
         webfinger_data = {
-            "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
+            "subject": f"acct:{actor.strip().lower()}@{current_app.config['SERVER_NAME']}",
             "aliases": [object.public_url()],
             "links": [
                 {
@@ -241,6 +243,13 @@ def webfinger():
                     "rel": "https://w3id.org/fep/3b86/Create",
                     "template": f"{current_app.config['SERVER_URL']}/share?url="
                     + "{object}",
+                }
+            )
+        elif isinstance(object, Community):
+            webfinger_data["links"].append(
+                {
+                    "rel": "https://w3id.org/fep/3b86/Follow",
+                    "template": "{object}/subscribe",
                 }
             )
         resp = jsonify(webfinger_data)
@@ -477,7 +486,7 @@ def user_profile(actor):
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
             user: User = (
-                User.query.filter(or_(User.user_name == actor))
+                User.query.filter(or_(func.lower(User.user_name) == actor.lower()))
                 .filter_by(ap_id=None)
                 .first()
             )
@@ -491,7 +500,7 @@ def user_profile(actor):
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
             user: User = (
-                User.query.filter(or_(User.user_name == actor))
+                User.query.filter(or_(func.lower(User.user_name) == actor.lower()))
                 .filter_by(ap_id=None)
                 .first()
             )
@@ -617,7 +626,7 @@ def community_profile(actor):
             ap_id=actor.lower(), banned=False
         ).first()
     else:
-        profile_id = f"{current_app.config['SERVER_URL']}/c/{actor.lower()}"
+        profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.lower()}"
         community: Community = Community.query.filter_by(
             ap_profile_id=profile_id, ap_id=None
         ).first()
@@ -691,6 +700,11 @@ def community_profile(actor):
                         "type": "Image",
                         "url": f"{current_app.config['SERVER_URL']}{community.header_image()}",
                     }
+            actor_data["language"] = []
+            for language in community.languages:
+                actor_data["language"].append(
+                    {"identifier": language.code, "name": language.name}
+                )
             resp = jsonify(actor_data)
             resp.content_type = "application/activity+json"
             resp.headers.set("Cache-Control", "public, max-age=30")
@@ -716,6 +730,12 @@ def community_profile(actor):
             return redirect(url_for("community.add_local"))
         else:
             abort(404)
+
+
+@bp.route("/c/<actor>/subscribe", methods=["GET"])
+def community_profile_subscribe(actor):
+    # For use by FEP 3b86, activity intents. See webfinger()
+    return redirect(url_for("community.subscribe", actor=actor))
 
 
 @bp.route("/inbox", methods=["POST"])
@@ -1148,17 +1168,6 @@ def process_inbox_request(request_json, store_ap_json):
                     actor = find_actor_or_create_cached(actor_id)
                     if actor and isinstance(actor, User):
                         user = actor
-                        # Update user's last_seen in a separate transaction to avoid deadlocks
-                        with redis_client.lock(
-                            f"lock:user:{user.id}", timeout=10, blocking_timeout=6
-                        ):
-                            session.execute(
-                                text(
-                                    'UPDATE "user" SET last_seen=:last_seen WHERE id = :user_id'
-                                ),
-                                {"last_seen": utcnow(), "user_id": user.id},
-                            )
-                            session.commit()
                     elif actor and isinstance(
                         actor, Community
                     ):  # Process a few activities from NodeBB and a.gup.pe
@@ -1275,16 +1284,6 @@ def process_inbox_request(request_json, store_ap_json):
                                     f"{user.ap_id} is banned",
                                 )
                                 return
-
-                            with redis_client.lock(
-                                f"lock:user:{user.id}", timeout=10, blocking_timeout=6
-                            ):
-                                user.last_seen = utcnow()
-                                user.instance.last_seen = utcnow()
-                                user.instance.dormant = False
-                                user.instance.gone_forever = False
-                                user.instance.failures = 0
-                                session.commit()
                         else:
                             log_incoming_ap(
                                 id,
@@ -1384,6 +1383,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 session.add(member)
                                 community.subscriptions_count += 1
                                 community.last_active = utcnow()
+                                user.last_seen = utcnow()
                                 session.commit()
                                 cache.delete_memoized(
                                     community_membership, user, community
@@ -2715,6 +2715,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 session.delete(member)
                                 community.subscriptions_count -= 1
                                 community.last_active = utcnow()
+                                user.last_seen = utcnow()
                             if join_request:
                                 session.delete(join_request)
                             session.commit()
@@ -3453,7 +3454,18 @@ def post_ap(post_id):
         else:
             return redirect(post.ap_id, code=301)
     else:
-        return show_post(post_id)
+        block_honey_pot()
+        return show_post(
+            post_id,
+            low_bandwidth=request.cookies.get("low_bandwidth", "0") == "1",
+            sort=request.args.get(
+                "sort",
+                "hot"
+                if current_user.is_anonymous
+                else current_user.default_comment_sort or "hot",
+            ),
+            autoplay=request.args.get("autoplay", False),
+        )
 
 
 @bp.route("/c/<community_name>/p/<int:post_id>/<slug>", methods=["GET", "HEAD", "POST"])
@@ -3524,7 +3536,7 @@ def post_ap_context(post_id):
 
 
 @bp.route("/activities/<type>/<id>")
-@cache.cached(timeout=600)
+@cache.cached(timeout=2400)
 def activities_json(type, id):
     activity = ActivityPubLog.query.filter_by(
         activity_id=f"{current_app.config['SERVER_URL']}/activities/{type}/{id}"
@@ -3536,10 +3548,10 @@ def activities_json(type, id):
             activity_json = {}
         resp = jsonify(activity_json)
         resp.content_type = "application/activity+json"
-        resp.headers["Cache-Control"] = "public, max-age=1200"
-        return resp
     else:
-        abort(404)
+        resp = make_response("", 404)
+    resp.headers["Cache-Control"] = "public, max-age=2400"
+    return resp
 
 
 # Other instances can query the result of their POST to the inbox by using this endpoint. The ID of the activity they

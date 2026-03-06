@@ -5,6 +5,7 @@ td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5
 span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
 .codehilite .hll { background-color: #333333 }
 .codehilite > pre { background: #111111 !important; color: #FFF }
+.codehilite > pre .btn { color: white; }
 .codehilite .c { color: #080; font-style: italic; background-color: #0F140F } /* Comment */
 .codehilite .err { color: #FFF } /* Error */
 .codehilite .esc { color: #FFF } /* Escape */

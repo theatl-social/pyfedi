@@ -45,3 +45,9 @@ body {
   border-radius: 50%;
   vertical-align: bottom;
 }
+
+.visually-hidden {
+  display: none;
+  color: white;
+  font-size: 1px;
+}

@@ -311,6 +311,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     community.post_count += 1
     community.last_active = g.site.last_active = utcnow()
     user.post_count += 1
+    user.last_seen = utcnow()
 
     post.generate_ap_id(community)
 
@@ -518,6 +519,8 @@ def edit_post(
             post.type = POST_TYPE_IMAGE
         elif post.url.startswith("https://loops.video/"):
             post.type = POST_TYPE_VIDEO
+        elif is_video_url(post.url):
+            post.type = POST_TYPE_VIDEO
 
     if scheduled_for:
         date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
@@ -673,6 +676,9 @@ def edit_post(
         # Move uploaded file to S3
         if store_files_in_s3():
             session = boto3.session.Session()
+            extra_args = {"ContentType": guess_mime_type(final_place)}
+            if current_app.config.get("S3_STORAGE_CLASS"):
+                extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
             s3 = session.client(
                 service_name="s3",
                 region_name=current_app.config["S3_REGION"],
@@ -690,7 +696,7 @@ def edit_post(
                 + "/"
                 + new_filename
                 + final_ext,
-                ExtraArgs={"ContentType": guess_mime_type(final_place)},
+                ExtraArgs=extra_args,
             )
             url = (
                 f"https://{current_app.config['S3_PUBLIC_URL']}/posts/"
@@ -825,7 +831,8 @@ def edit_post(
             post.url = embed_url
 
             if (
-                url.endswith(".mp4")
+                is_video_url(url)
+                or url.endswith(".mp4")
                 or url.endswith(".webm")
                 or is_video_hosting_site(embed_url)
             ):

@@ -107,13 +107,10 @@ def chat_home(conversation_id=None):
 @trustworthy_account_required
 def new_message(to):
     recipient = User.query.get_or_404(to)
-    if (
-        current_user.created_very_recently()
-        or current_user.reputation <= -10
-        or current_user.banned
-        or not current_user.verified
-    ) and not current_user.is_admin_or_staff():
+
+    if not current_user.can_send_pm(recipient):
         return redirect(url_for("chat.denied"))
+
     if recipient.has_blocked_user(current_user.id) or current_user.has_blocked_user(
         recipient.id
     ):

@@ -41,6 +41,13 @@ class TestMarkdownToHtml(unittest.TestCase):
             '<p>This is a test link <a href="https://pizza.com" rel="nofollow ugc" target="_blank">https://pizza.com</a>. Will it work?</p>\n',
         )
 
+    def test_links_w_tilde(self):
+        """Test links that have a tilde in them."""
+        markdown = "This link has a tilde: https://site.tld/~user"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        correct_html = '<p>This link has a tilde: <a href="https://site.tld/~user" rel="nofollow ugc" target="_blank">https://site.tld/~user</a></p>\n'
+        self.assertEqual(result, correct_html)
+
     def test_code_blocks(self):
         """Test code blocks formatting"""
         markdown = "```\ncode block\n```"
@@ -79,6 +86,11 @@ class TestMarkdownToHtml(unittest.TestCase):
         markdown = "> <Book Title and Volume> Review Goes Here [5/10]"
         result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
+
+        markdown = "This is an emoticon with an angled bracket :<\n\nThis is a paragraph\n\n> This is a block quote."
+        correct_html = "<p>This is an emoticon with an angled bracket :&lt;</p>\n<p>This is a paragraph</p>\n<blockquote>\n<p>This is a block quote.</p>\n</blockquote>\n"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        self.assertEqual(correct_html, result)
 
     def test_gt_lt_in_code(self):
         """Test usage of angle brackets in code block"""
@@ -329,10 +341,9 @@ And if you want to add your score to the database to help your fellow Bookworms 
         self.assertEqual(target_html, result)
 
         # Testing multiline footnote with formatting
-        # Note: With on_newline: True in markdown config, single newlines become <br/>
         markdown = "Here is a footnote ref[^1].\n\n[^1]:\n    indented *line*\n    **formatted** line with `code` and || spoilers ||"
         result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
-        target_html = '<p>Here is a footnote ref<sup class="footnote-ref" id="fnref-1-fn-test"><a href="#fn-1-fn-test">1</a></sup>.</p>\n<div class="footnotes">\n<hr/>\n<ol>\n<li id="fn-1-fn-test">\n<p>indented <em>line</em><br/>\n<strong>formatted</strong> line with <code>code</code> and <tg-spoiler>spoilers</tg-spoiler>\xa0<a class="footnoteBackLink" href="#fnref-1-fn-test">↩</a></p>\n</li>\n</ol>\n</div>\n'
+        target_html = '<p>Here is a footnote ref<sup class="footnote-ref" id="fnref-1-fn-test"><a href="#fn-1-fn-test">1</a></sup>.</p>\n<div class="footnotes">\n<hr/>\n<ol>\n<li id="fn-1-fn-test">\n<p>indented <em>line</em>\n<strong>formatted</strong> line with <code>code</code> and <tg-spoiler>spoilers</tg-spoiler>\xa0<a class="footnoteBackLink" href="#fnref-1-fn-test">↩</a></p>\n</li>\n</ol>\n</div>\n'
         self.assertEqual(target_html, result)
 
     def test_double_underscore_bold(self):
@@ -356,6 +367,114 @@ And if you want to add your score to the database to help your fellow Bookworms 
         markdown = "***This*** is ___bold and italics___."
         result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
         target_html = "<p><em><strong>This</strong></em> is <em><strong>bold and italics</strong></em>.</p>\n"
+        self.assertEqual(target_html, result)
+
+    def test_spoiler_blocks(self):
+        """Test various functionality with spoiler blocks."""
+
+        # Basic functionality
+        markdown = "::: spoiler Summary\nThis is a spoiler.\n:::"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<details><summary>Summary</summary><div class="spoiler_block symmetric">\n<p>This is a spoiler.</p>\n</div></details>\n'
+        self.assertEqual(target_html, result)
+
+        # Naked spoiler
+        markdown = "::: spoiler\nThis is a spoiler.\n:::"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<details><summary>Spoiler</summary><div class="spoiler_block symmetric">\n<p>This is a spoiler.</p>\n</div></details>\n'
+        self.assertEqual(target_html, result)
+
+        # Bulleted list immediately after spoiler opening
+        markdown = "::: spoiler Summary\n- one\n- two\n:::"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<details><summary>Summary</summary><div class="spoiler_block symmetric">\n<ul>\n<li>one</li>\n<li>two</li>\n</ul>\n</div></details>\n'
+        self.assertEqual(target_html, result)
+
+        # Nested spoilers
+        markdown = "::: spoiler First Summary\n::: spoiler Second Summary\nSpoiler content\n:::\n:::"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<details><summary>First Summary</summary><div class="spoiler_block symmetric">\n<details><summary>Second Summary</summary><div class="spoiler_block symmetric">\n<p>Spoiler content</p>\n</div></details>\n</div></details>\n'
+        self.assertEqual(target_html, result)
+
+        # Asymmetric spoiler formatting, fallback to old spoiler block behavior
+        markdown = "::: spoiler Summary 1\n::: spoiler Summary 2\nThis is a spoiler with no closing\n:::\n"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<p><details><summary>Summary 1</summary><div class="spoiler_block"><p>\n</p></div></details> spoiler Summary 2</p>\n<p>This is a spoiler with no closing</p>\n<p>:::</p>\n'
+        self.assertEqual(target_html, result)
+
+    def test_video_embeds(self):
+        """Tests embedded video markdown."""
+
+        # mp4 video
+        markdown = "![alt text here](https://site.tld/video.mp4)"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<p><video class="responsive-video" controls="" loop="" muted="" playsinline="" preload="metadata"><source src="https://site.tld/video.mp4" type="video/mp4"/> Your browser does not support playing HTML5 video. <a href="https://site.tld/video.mp4" rel="nofollow ugc" target="_blank">You can download a copy of the file instead.</a> Here is a description of the content: alt text here</video></p>\n'
+        self.assertEqual(target_html, result)
+
+        # webm video
+        markdown = "![alt text here](https://site.tld/video.webm)"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<p><video class="responsive-video" controls="" loop="" muted="" playsinline="" preload="metadata"><source src="https://site.tld/video.webm" type="video/webm"/> Your browser does not support playing HTML5 video. <a href="https://site.tld/video.webm" rel="nofollow ugc" target="_blank">You can download a copy of the file instead.</a> Here is a description of the content: alt text here</video></p>\n'
+        self.assertEqual(target_html, result)
+
+        # other, unsupported video, just treat it like any other image markdown
+        markdown = "![alt text here](https://site.tld/video.mov)"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<p><img alt="alt text here" loading="lazy" src="https://site.tld/video.mov"/></p>\n'
+        self.assertEqual(target_html, result)
+
+        # make sure images still work right
+        markdown = "![alt text here](https://site.tld/image.png)"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = '<p><img alt="alt text here" loading="lazy" src="https://site.tld/image.png"/></p>\n'
+        self.assertEqual(target_html, result)
+
+    def test_inline_spoilers(self):
+        """Tests inline spoiler functionality."""
+
+        # Basic functionality
+        # telegram/discord format: || like this ||
+        markdown = "|| spoiler here ||"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><tg-spoiler>spoiler here</tg-spoiler></p>\n"
+        self.assertEqual(target_html, result)
+
+        # reddit format: >! like this !<
+        markdown = ">! spoiler here !<"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><tg-spoiler>spoiler here</tg-spoiler></p>\n"
+        self.assertEqual(target_html, result)
+
+        # with no space after spoiler delineator
+        # telegram/discord:
+        markdown = "||spoiler here||"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><tg-spoiler>spoiler here</tg-spoiler></p>\n"
+        self.assertEqual(target_html, result)
+
+        # reddit:
+        markdown = ">!spoiler here!<"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><tg-spoiler>spoiler here</tg-spoiler></p>\n"
+        self.assertEqual(target_html, result)
+
+        # Multiple occurrences
+        # telegram/discord:
+        markdown = "|| spoiler here || and || another ||"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><tg-spoiler>spoiler here</tg-spoiler> and <tg-spoiler>another</tg-spoiler></p>\n"
+        self.assertEqual(target_html, result)
+
+        # reddit:
+        markdown = ">! spoiler here !< and >! another !<"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><tg-spoiler>spoiler here</tg-spoiler> and <tg-spoiler>another</tg-spoiler></p>\n"
+        self.assertEqual(target_html, result)
+
+        # Mixed formats
+        markdown = "|| spoiler here || and >! another !<"
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><tg-spoiler>spoiler here</tg-spoiler> and <tg-spoiler>another</tg-spoiler></p>\n"
         self.assertEqual(target_html, result)
 
 

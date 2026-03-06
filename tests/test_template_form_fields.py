@@ -47,7 +47,13 @@ def extract_form_field_references(template_content: str) -> set[str]:
     matches = set(re.findall(pattern, template_content))
 
     # Filter out method calls and template imports that aren't field references
-    non_field_attrs = {"hidden_tag", "csrf_token", "validate_on_submit", "errors", "html"}
+    non_field_attrs = {
+        "hidden_tag",
+        "csrf_token",
+        "validate_on_submit",
+        "errors",
+        "html",
+    }
 
     return matches - non_field_attrs
 
@@ -60,11 +66,11 @@ def get_form_field_names(form_class) -> set[str]:
     # Inspect class attributes to find field definitions
     field_names = set()
     for name in dir(form_class):
-        if name.startswith('_'):
+        if name.startswith("_"):
             continue
         attr = getattr(form_class, name, None)
         # Check if it's a WTForms field (UnboundField at class level)
-        if hasattr(attr, 'creation_counter'):  # WTForms UnboundField marker
+        if hasattr(attr, "creation_counter"):  # WTForms UnboundField marker
             field_names.add(name)
 
     # Also add csrf_token which is always present in FlaskForm
@@ -112,6 +118,6 @@ class TestTemplateFormFields:
         missing_fields = rendered_fields - form_fields
 
         assert not missing_fields, (
-            f"admin/site.html render_field() calls reference missing SiteProfileForm fields:\n"
+            "admin/site.html render_field() calls reference missing SiteProfileForm fields:\n"
             + "\n".join(f"  - form.{field}" for field in sorted(missing_fields))
         )

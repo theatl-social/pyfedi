@@ -13,9 +13,12 @@
 
         <h1 class="mt-2">{{ title }}</h1>
 
-        <p class="mt-4 mb-4"><a href="/auth/register" class="btn btn-primary">{{ _('Join %(domain)s', domain=instance_domain) }}</a>
-        <a href="#begin_searching" class="btn btn-outline-secondary">{{ _("I don't know, help me") }}</a>
+        <p class="mt-4 mb-4">{% if not closed %}<a href="/auth/register" class="btn btn-primary">{{ _('Join %(domain)s', domain=instance_domain) }}</a>{% endif %}
+        <a href="#" class="btn btn-outline-secondary" id="helpMe">{{ _("I don't know, help me") }}</a>
         </p>
+        {% if not closed %}
+            <p>{{ _('Either join this server using the button above or choose one below.') }}</p>
+        {% endif -%}
         <form id="begin_searching">
         <div class="row">
             <div class="col col-3">
@@ -52,13 +55,13 @@
         <!-- Loading indicator -->
         <div id="loading-indicator" class="text-center d-none mt-3">
             <div class="spinner-border" role="status">
-                <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">{{ _('Loading...') }}</span>
             </div>
         </div>
 
         <!-- Results will be populated here by JavaScript -->
         <hr>
-        <div id="search-results" class="row mt-3 instance_chooser_results">
+        <div id="search-results" class="row mt-3 instance_chooser_results" data-error="{{ _('Failed to search instances. Please try again.') }}">
         </div>
         <div class="row">
             <div class="col"><p>{{ _('These servers are ordered by speed so it may vary depending on time of day, etc') }}</p></div>
@@ -72,7 +75,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="instanceModalLabel">{{ _('Server details') }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
       </div>
       <div class="modal-body">
         <div class="row">
@@ -122,6 +125,34 @@
                 </ul>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Instance Details Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalLabel">{{ _('Help') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col">
+            <p>{{ _("There's not much risk involved in this decision - you can always export your subscriptions and settings and import then into another server if your original choice doesn't work out.") }}</p>
+            <p>{{ _("The servers are listed in order of how fast they are - look for ones with a rocket or lightning icon.") }}</p>
+            <p>{{ _("Stability is a rough measure of how organized the admin team is and how much support they have, not uptime.") }}</p>
+            <p>{{ _("Newbie friendly servers have set up some starter-packs to help you find interesting communities more easily.") }}</p>
+            <p>{{ _("Age is how long the server has been online for. Generally older ones are more likely to be around for the long term.") }}</p>
+            <p>{{ _("The language of the server only matters when need to communicate with the admins.") }}</p>
+            <p>{{ _("Click 'more' on a server to read a longer description of it.") }}</p>
           </div>
         </div>
       </div>
@@ -264,7 +295,7 @@
             renderResults(data.result || []);
         } catch (error) {
             console.error('Error searching instances:', error);
-            renderError('Failed to search instances. Please try again.');
+            renderError(resultsContainer.dataset['error']);
         } finally {
             // Hide loading indicator
             loadingIndicator.classList.add('d-none');
@@ -303,7 +334,7 @@
                         <tr>
                         <td><a href="https://${instance.domain}" title="${instance.domain}" target="_blank" rel="noopener">
                             <img src="${instance.logo_url}" width="50" height="50" class="me-2" onerror="this.style.display='none'"></a></td>
-                        <td>
+                        <td class="instance_name">
                         <a href="https://${instance.domain}" title="${instance.domain}" target="_blank" rel="noopener">
                         ${instance.name} <span class="fe fe-external"></span><br>
                             <small>${instance.domain}</small></a>
@@ -556,7 +587,7 @@
         else if(countDefederated === 1)
             defederationQuality = 'Minimal';
         else if(countDefederated < 1)
-            defederationQuality = 'Negligent';
+            defederationQuality = 'None';
 
         const defederationElement = document.getElementById('modal-defederation')
         defederationElement.innerHTML = defederationQuality;
@@ -571,6 +602,14 @@
         const form = document.querySelector('form');
         const searchInput = form.querySelector('input[name="q"]');
         const selectElements = form.querySelectorAll('select');
+        const helpModal = document.getElementById('helpMe')
+
+        if(helpModal) {
+            helpModal.addEventListener('click', () => {
+                const modal = new bootstrap.Modal(document.getElementById('helpModal'));
+                modal.show();
+            })
+        }
 
         // Search input with debounce
         searchInput.addEventListener('input', debounceSearch);

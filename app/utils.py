@@ -21,12 +21,14 @@ from typing import List, Tuple, Optional
 from urllib.parse import urlparse, parse_qs, urlencode
 from zoneinfo import available_timezones
 
+import arrow
 import flask
 import httpx
 import jwt
 import markdown2
 import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
+from babel.numbers import format_compact_decimal
 import orjson
 
 from app.markdown_extras import apply_enhanced_image_attributes
@@ -46,11 +48,12 @@ from flask import (
     g,
     flash,
     abort,
+    session,
 )
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
-from sqlalchemy import text, or_, desc, asc, event, select, func
+from sqlalchemy import text, or_, desc, asc, event, select, func, update
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
@@ -124,9 +127,7 @@ def render_template(
     if current_user.is_anonymous:
         if "etag" in context:
             resp.headers.add_header("ETag", context["etag"])
-        resp.headers.add_header(
-            "Cache-Control", "no-cache, max-age=600, must-revalidate"
-        )
+        resp.headers.add_header("Cache-Control", "no-cache, must-revalidate")
 
     # Early Hints-compatible Link headers (for Cloudflare or supporting proxies)
     resp.headers["Link"] = (
@@ -150,8 +151,11 @@ def request_etag_matches(etag):
 def return_304(etag, content_type=None):
     resp = make_response("", 304)
     resp.headers.add_header("ETag", request.headers["If-None-Match"])
-    resp.headers.add_header("Cache-Control", "no-cache, max-age=600, must-revalidate")
-    resp.headers.add_header("Vary", "Accept, Cookie, Accept-Language")
+    resp.headers.add_header("Cache-Control", "no-cache, must-revalidate")
+    if current_user.is_anonymous:
+        resp.headers.add_header("Vary", "Accept, Accept-Language")
+    else:
+        resp.headers.add_header("Vary", "Accept, Cookie, Accept-Language")
     if content_type:
         resp.headers.set("Content-Type", content_type)
     return resp
@@ -348,14 +352,9 @@ def is_local_image_url(url):
 
 def is_video_url(url: str) -> bool:
     common_video_extensions = [".mp4", ".webm"]
-    mime_type = mime_type_using_head(url) if url.startswith("http") else None
-    if mime_type:
-        mime_type_parts = mime_type.split("/")
-        return f".{mime_type_parts[1]}" in common_video_extensions
-    else:
-        parsed_url = urlparse(url)
-        path = parsed_url.path.lower()
-        return any(path.endswith(extension) for extension in common_video_extensions)
+    parsed_url = urlparse(url)
+    path = parsed_url.path.lower()
+    return any(path.endswith(extension) for extension in common_video_extensions)
 
 
 def is_video_hosting_site(url: str) -> bool:
@@ -416,6 +415,8 @@ allowed_tags = [
     "h6",
     "pre",
     "div",
+    "video",
+    "source",
     "code",
     "img",
     "details",
@@ -471,6 +472,7 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
         fn_string = gibberish(6)
 
     code_placeholder = gibberish(10)
+    link_placeholder = gibberish(10)
 
     # substitute out the <code> snippets so that they don't inadvertently get formatted
     code_snippets, clean_html = stash_code_html(html, code_placeholder)
@@ -491,16 +493,19 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
         r":{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}", re.S
     )
     clean_html = re_spoiler.sub(
-        r"<details><summary>\1</summary><p>\2</p></details>", clean_html
+        r'<details><summary>\1</summary><div class="spoiler_block"><p>\2</p></div></details>',
+        clean_html,
     )
 
     # replace strikethough markdown left in HTML
     re_strikethough = re.compile(r"~~(.*)~~")
     clean_html = re_strikethough.sub(r"<s>\1</s>", clean_html)
 
-    # replace subscript markdown left in HTML
+    # replace subscript markdown left in HTML, don't break links that have a ~ in them
     re_subscript = re.compile(r"~([^~\r\n\t\f\v ]+)~")
+    link_snippets, clean_html = stash_link_html(clean_html, link_placeholder)
     clean_html = re_subscript.sub(r"<sub>\1</sub>", clean_html)
+    clean_html = pop_link(link_snippets, clean_html, link_placeholder)
 
     # replace superscript markdown left in HTML
     re_superscript = re.compile(r"\^([^\^\r\n\t\f\v ]+)\^")
@@ -728,6 +733,22 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
                     ["width", "height", "align", "title", "data-enhanced-img"]
                 )
 
+            if tag.name == "video":
+                allowed_attrs.extend(
+                    [
+                        "controls",
+                        "loop",
+                        "preload",
+                        "autoplay",
+                        "muted",
+                        "playsinline",
+                        "disablepictureinpicture",
+                    ]
+                )
+
+            if tag.name == "source":
+                allowed_attrs.extend(["type"])
+
             for attr in list(tag.attrs):
                 if attr not in allowed_attrs:
                     del tag[attr]
@@ -793,7 +814,8 @@ def escape_non_html_angle_brackets(text: str) -> str:
         else:
             return f"&lt;{match.group(1)}&gt;"
 
-    text = re.sub(r"<([^<>]+?)>", escape_tag, text)
+    bracket_regex = re.compile(r"<([^<>\n]+?)>", re.M)
+    text = re.sub(bracket_regex, escape_tag, text)
 
     # Step 3: Restore code blocks
     text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
@@ -875,6 +897,174 @@ def handle_lemmy_autocomplete(text: str) -> str:
     return text
 
 
+def handle_lemmy_spoilers(text: str) -> str:
+    """
+    Handles the block spoiler syntax inherited from lemmy
+    """
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_html(text, placeholder)
+
+    # Step 2: Regex stuff
+    spoiler_opening = re.compile(r"^<p>:{3}\sspoiler\s+?(\S.+?)?</p>$", re.M)
+    spoiler_closing = re.compile(r"^<p>:{3}\s*?</p>$", re.M)
+
+    # Step 3: Count the number of openings and closings so that we know we are closing each html tag we open
+    num_openings = re.findall(spoiler_opening, text)
+    num_closings = re.findall(spoiler_closing, text)
+
+    # Step 4: If the number of openings and closings match, make the html substitutions
+    # If they don't match, then process the block spoilers in allowlist_html instead (can't nest spoilers, more quirks)
+    if len(num_openings) == len(num_closings):
+        text = spoiler_opening.sub(
+            r'<details><summary>\1</summary><div class="spoiler_block symmetric">', text
+        )
+        text = spoiler_closing.sub(r"</div></details>", text)
+
+    # Step 5: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
+def handle_naked_spoilers(text: str) -> str:
+    """
+    Makes lemmy spoiler blocks without a summary block actually work
+    """
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_md(text, placeholder)
+
+    # Step 2: Regex stuff
+    empty_spoilers = re.compile(r"^:{3}\sspoiler[ ]*?$", re.M)
+    text = empty_spoilers.sub("::: spoiler Spoiler", text)
+
+    # Step 3: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
+def handle_spoiler_spacing(text: str) -> str:
+    """
+    Inserts a blank line in the markdown after a spoiler block opening (see #1612)
+    """
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_md(text, placeholder)
+
+    # Step 2: Regex stuff
+    spoiler_opening = re.compile(r"^:{3}\sspoiler\s+?(\S.+?)?$", re.M)
+    spoiler_closing = re.compile(r"^:{3}\s*?$", re.M)
+    text = spoiler_opening.sub(r"::: spoiler \1\n", text)
+    text = spoiler_closing.sub(r"\n:::\n", text)
+
+    # Step 3: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
+def handle_video_embeds(text: str) -> str:
+    """
+    Takes markdown video embedding format and turns it into html.
+    """
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_md(text, placeholder)
+
+    # Step 2: Function to handle matched regex groups
+    def sub_video_markdown(match):
+        alt_text = match.group(1)
+        link = match.group(2)
+
+        if is_video_url(link):
+            output = (
+                '<video class="responsive-video" muted controls loop '
+                + 'playsinline disablepictureinpicture" preload="metadata">'
+            )
+            download_text = _("You can download a copy of the file instead.")
+            if link.endswith(".webm"):
+                output += f'<source type="video/webm" src="{link}"> '
+            elif link.endswith(".mp4"):
+                output += f'<source type="video/mp4" src="{link}"> '
+
+            output += _("Your browser does not support playing HTML5 video.")
+            output += " " + f'<a href="{link}" download>' + download_text + "</a>"
+            output += " " + _("Here is a description of the content: %s" % alt_text)
+            output += "</video>"
+
+            return output
+        else:
+            # return things unchanged (probably an image link)
+            return match.group(0)
+
+    # Step 3: Do the regex matching and substitutions
+    img_md = re.compile(r"!\[(.*?)\]\((\S*?)\)", re.M)
+    text = re.sub(img_md, sub_video_markdown, text)
+
+    # Step 4: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
+def make_quotes_straight(text: str) -> str:
+    """
+    Don't do the stylized opening and ending quotation marks as part of the smartypants extra inside angle brackets.
+    It breaks too many things.
+    """
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_html(text, placeholder)
+
+    # Step 2: function to do replacements
+    def replace_quotes_in_brackets(match):
+        left_dquot = match.group(0).replace("&#8220;", '"')
+        right_dquot = left_dquot.replace("&#8221;", '"')
+        left_squot = right_dquot.replace("&#8216;", "'")
+        right_squot = left_squot.replace("&#8217;", "'")
+
+        return right_squot
+
+    # Step 3: regex stuff
+    potential_html = re.compile(r"<([^<>\n]+?)>", re.M)
+    text = re.sub(potential_html, replace_quotes_in_brackets, text)
+
+    # Step 4: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
+def handle_reddit_spoilers(text: str) -> str:
+    """Handle reddit-style in-line spoilers >! like this !<"""
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_html(text, placeholder)
+
+    # Step 2: Do the regex matching and substitutions
+    img_md = re.compile(r">!\s?(.+?)\s?!<", re.M)
+    text = img_md.sub(r"<tg-spoiler>\1</tg-spoiler>", text)
+
+    # Step 3: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(
@@ -885,6 +1075,8 @@ def markdown_to_html(
     test_env=False,
 ) -> str:
     if markdown_text:
+        markdown_text = handle_reddit_spoilers(markdown_text)
+
         # Escape <...> if it’s not a real HTML tag
         markdown_text = escape_non_html_angle_brackets(
             markdown_text
@@ -894,6 +1086,9 @@ def markdown_to_html(
             markdown_text
         )  # Some preprocessing to better handle bold and italics
         markdown_text = handle_lemmy_autocomplete(markdown_text)
+        markdown_text = handle_naked_spoilers(markdown_text)
+        markdown_text = handle_spoiler_spacing(markdown_text)
+        markdown_text = handle_video_embeds(markdown_text)
 
         try:
             md = markdown2.Markdown(
@@ -904,7 +1099,7 @@ def markdown_to_html(
                     "strike": True,
                     "tg-spoiler": True,
                     "link-patterns": [(LINK_PATTERN, r"\1")],
-                    "breaks": {"on_backslash": True, "on_newline": True},
+                    "breaks": {"on_backslash": True},
                     "tag-friendly": True,
                     "smarty-pants": True,
                     "enhanced-images": True,
@@ -925,7 +1120,7 @@ def markdown_to_html(
                         "strike": True,
                         "tg-spoiler": True,
                         "link-patterns": [(LINK_PATTERN, r"\1")],
-                        "breaks": {"on_backslash": True, "on_newline": True},
+                        "breaks": {"on_backslash": True},
                         "tag-friendly": True,
                         "smarty-pants": True,
                         "enhanced-images": True,
@@ -940,6 +1135,9 @@ def markdown_to_html(
 
         if not allow_img:
             raw_html = escape_img(raw_html)
+
+        raw_html = handle_lemmy_spoilers(raw_html)
+        raw_html = make_quotes_straight(raw_html)
 
         return allowlist_html(
             raw_html, a_target=a_target if anchors_new_tab else "", test_env=test_env
@@ -1721,7 +1919,7 @@ def instance_allowed(host: str) -> bool:
 
 @cache.memoize(timeout=150)
 def instance_banned(domain: str) -> bool:
-    session = get_task_session()
+    session = get_task_session()  # noqa: F811
     try:
         if domain is None or domain == "":
             return False
@@ -1754,7 +1952,7 @@ def instance_online(domain: str) -> bool:
     domain = domain.lower().strip()
     if "https://" in domain or "http://" in domain:
         domain = urlparse(domain).hostname
-    session = get_task_session()
+    session = get_task_session()  # noqa: F811
     try:
         instance = session.query(Instance).filter_by(domain=domain).first()
         if instance is not None:
@@ -1775,7 +1973,7 @@ def instance_gone_forever(domain: str) -> bool:
     domain = domain.lower().strip()
     if "https://" in domain or "http://" in domain:
         domain = urlparse(domain).hostname
-    session = get_task_session()
+    session = get_task_session()  # noqa: F811
     try:
         instance = session.query(Instance).filter_by(domain=domain).first()
         if instance is not None:
@@ -1796,7 +1994,7 @@ def user_cookie_banned() -> bool:
 
 @cache.memoize(timeout=30)
 def banned_ip_addresses() -> List[str]:
-    session = get_task_session()
+    session = get_task_session()  # noqa: F811
     try:
         ips = session.query(IpBan).all()
         return [ip.ip_address for ip in ips]
@@ -1960,7 +2158,7 @@ def can_upload_video():
         return False
     elif upload_access == "admins" and not current_user.is_admin_or_staff():
         return False
-    elif upload_access == "users" and not current_user.is_authenticated():
+    elif upload_access == "users" and not current_user.is_authenticated:
         return False
     return True
 
@@ -1969,14 +2167,14 @@ def reply_already_exists(user_id, post_id, parent_id, body) -> bool:
     if parent_id is None:
         num_matching_replies = db.session.execute(
             text(
-                'SELECT COUNT(id) as c FROM "post_reply" WHERE deleted is false and user_id = :user_id AND post_id = :post_id AND parent_id is null AND body = :body'
+                'SELECT COUNT(*) as c FROM "post_reply" WHERE deleted is false and user_id = :user_id AND post_id = :post_id AND parent_id is null AND body = :body'
             ),
             {"user_id": user_id, "post_id": post_id, "body": body},
         ).scalar()
     else:
         num_matching_replies = db.session.execute(
             text(
-                'SELECT COUNT(id) as c FROM "post_reply" WHERE deleted is false and user_id = :user_id AND post_id = :post_id AND parent_id = :parent_id AND body = :body'
+                'SELECT COUNT(*) as c FROM "post_reply" WHERE deleted is false and user_id = :user_id AND post_id = :post_id AND parent_id = :parent_id AND body = :body'
             ),
             {
                 "user_id": user_id,
@@ -2319,11 +2517,20 @@ def finalize_user_setup(user):
         )
 
     # find all notifications from this registration and mark them as read
-    reg_notifs = Notification.query.filter_by(
-        notif_type=NOTIF_REGISTRATION, author_id=user.id
+    unread_notification_users = db.session.scalars(
+        update(Notification)
+        .where(
+            Notification.notif_type == NOTIF_REGISTRATION,
+            Notification.author_id == user.id,
+        )
+        .values({Notification.read: True})
+        .returning(Notification.user_id)
+    ).all()
+    db.session.execute(
+        update(User)
+        .where(User.id.in_(unread_notification_users))
+        .values({User.unread_notifications: User.unread_notifications - 1})
     )
-    for rn in reg_notifs:
-        rn.read = True
 
     db.session.commit()
 
@@ -2405,6 +2612,8 @@ def feed_tree_public(search_param=None) -> List[dict]:
 
 @cache.memoize(timeout=600)
 def opengraph_parse(url):
+    if url == "":
+        return None
     if "?" in url:
         url = url.split("?")
         url = url[0]
@@ -2520,6 +2729,9 @@ def url_to_thumbnail_file(filename) -> File:
 
             if store_files_in_s3():
                 content_type = guess_mime_type(temp_file_path)
+                extra_args = {"ContentType": content_type}
+                if current_app.config.get("S3_STORAGE_CLASS"):
+                    extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
                 boto3_session = boto3.session.Session()
                 s3 = boto3_session.client(
                     service_name="s3",
@@ -2539,7 +2751,7 @@ def url_to_thumbnail_file(filename) -> File:
                     + "/"
                     + new_filename
                     + final_ext,
-                    ExtraArgs={"ContentType": content_type},
+                    ExtraArgs=extra_args,
                 )
                 os.unlink(temp_file_path)
                 thumbnail_170_url = (
@@ -2562,7 +2774,7 @@ def url_to_thumbnail_file(filename) -> File:
                         + new_filename
                         + "_512"
                         + final_ext,
-                        ExtraArgs={"ContentType": content_type},
+                        ExtraArgs=extra_args,
                     )
                     os.unlink(temp_file_path_512)
                     thumbnail_512_url = (
@@ -2621,10 +2833,15 @@ def parse_page(page_url):
         "og:description",
     ]
 
+    # todo: do a head request head_request() and check content-type and size before proceeding
+
     # read the html from the page
     response = get_request(page_url)
 
     if response.status_code != 200:
+        return False
+
+    if "text/html" not in response.headers.get("Content-Type", ""):
         return False
 
     # set up beautiful soup
@@ -2645,7 +2862,7 @@ def parse_page(page_url):
             found_tags["og_description"] = desc["content"]
 
     if "og:description" in found_tags and "description" not in found_tags:
-        found_tags["description"] = found_tags["og_description"]
+        found_tags["description"] = found_tags["og:description"]
 
     if len(found_tags) == 0 or "og:title" not in found_tags:
         title = soup.find("title")
@@ -2764,6 +2981,13 @@ def fixup_url(url):
         video_id = timestamp = None
         path = parsed_url.path
         query_params = parse_qs(parsed_url.query)
+
+        # Handle YouTube playlists - let them through unmolested
+        if path == "/playlist" and "list" in query_params:
+            thumbnail_url = ""
+            embed_url = url
+            return thumbnail_url, embed_url
+
         if path:
             if path.startswith("/shorts/") and len(path) > 8:
                 video_id = path[8:]
@@ -3129,7 +3353,7 @@ def patch_db_session(task_session):
 
     # Create a wrapper that makes the task session work with Flask-SQLAlchemy's Model.query
     class SessionWrapper:
-        def __init__(self, session):
+        def __init__(self, session):  # noqa: F811
             self._session = session
 
         def __call__(self):
@@ -3213,15 +3437,19 @@ def download_defeds(defederation_subscription_id: int, domain: str):
 
 @celery.task
 def download_defeds_worker(defederation_subscription_id: int, domain: str):
-    session = get_task_session()
+    session = get_task_session()  # noqa: F811
+    allowed_instances = [
+        instance.domain for instance in session.query(AllowedInstances).all()
+    ]
     for defederation_url in retrieve_defederation_list(domain):
-        session.add(
-            BannedInstances(
-                domain=defederation_url,
-                reason="auto",
-                subscription_id=defederation_subscription_id,
+        if defederation_url not in allowed_instances:
+            session.add(
+                BannedInstances(
+                    domain=defederation_url,
+                    reason="auto",
+                    subscription_id=defederation_subscription_id,
+                )
             )
-        )
     session.commit()
     session.close()
 
@@ -3782,12 +4010,17 @@ def move_file_to_s3(file_id, s3):
             ):
                 if os.path.isfile(file.thumbnail_path):
                     content_type = guess_mime_type(file.thumbnail_path)
+                    extra_args = {"ContentType": content_type}
+                    if current_app.config.get("S3_STORAGE_CLASS"):
+                        extra_args["StorageClass"] = current_app.config[
+                            "S3_STORAGE_CLASS"
+                        ]
                     new_path = file.thumbnail_path.replace("app/static/media/", "")
                     s3.upload_file(
                         file.thumbnail_path,
                         current_app.config["S3_BUCKET"],
                         new_path,
-                        ExtraArgs={"ContentType": content_type},
+                        ExtraArgs=extra_args,
                     )
                     os.unlink(file.thumbnail_path)
                     file.thumbnail_path = (
@@ -3802,12 +4035,17 @@ def move_file_to_s3(file_id, s3):
             ):
                 if os.path.isfile(file.file_path):
                     content_type = guess_mime_type(file.file_path)
+                    extra_args = {"ContentType": content_type}
+                    if current_app.config.get("S3_STORAGE_CLASS"):
+                        extra_args["StorageClass"] = current_app.config[
+                            "S3_STORAGE_CLASS"
+                        ]
                     new_path = file.file_path.replace("app/static/media/", "")
                     s3.upload_file(
                         file.file_path,
                         current_app.config["S3_BUCKET"],
                         new_path,
-                        ExtraArgs={"ContentType": content_type},
+                        ExtraArgs=extra_args,
                     )
                     os.unlink(file.file_path)
                     file.file_path = (
@@ -3822,12 +4060,17 @@ def move_file_to_s3(file_id, s3):
             ):
                 if os.path.isfile(file.source_url):
                     content_type = guess_mime_type(file.source_url)
+                    extra_args = {"ContentType": content_type}
+                    if current_app.config.get("S3_STORAGE_CLASS"):
+                        extra_args["StorageClass"] = current_app.config[
+                            "S3_STORAGE_CLASS"
+                        ]
                     new_path = file.source_url.replace("app/static/media/", "")
                     s3.upload_file(
                         file.source_url,
                         current_app.config["S3_BUCKET"],
                         new_path,
-                        ExtraArgs={"ContentType": content_type},
+                        ExtraArgs=extra_args,
                     )
                     os.unlink(file.source_url)
                     file.source_url = (
@@ -4277,7 +4520,7 @@ def render_from_tpl(tpl: str) -> str:
     return pattern.sub(_sub, tpl)
 
 
-@lru_cache(maxsize=8)  # Small cache - only one unique result expected
+@lru_cache(maxsize=None)
 def get_timezones():
     """
     returns an OrderedDict of timezones:
@@ -4354,7 +4597,7 @@ def archive_post(post_id: int):
     from app import redis_client
     import os
 
-    session = get_task_session()
+    session = get_task_session()  # noqa: F811
     try:
         with patch_db_session(session):
             if current_app.debug:
@@ -4842,6 +5085,15 @@ def compaction_level():
     return compact_level
 
 
+def humanize_number(value):
+    """Return an abbreviated, human-readable number (e.g. 1.2k instead of 1215)"""
+
+    if not value:
+        return "0"
+
+    return format_compact_decimal(value, locale=g.locale)
+
+
 def debug_checkpoint(name: str):
     """
     record a named debug checkpoint.
@@ -4859,29 +5111,20 @@ def debug_checkpoint(name: str):
     return now, delta
 
 
-# Private Registration Utility Functions (fork-specific)
-def is_private_registration_enabled():
-    """Check if private registration feature is enabled"""
-    # Check environment variable first, then fall back to database setting
-    env_value = os.environ.get("PRIVATE_REGISTRATION_ENABLED")
-    if env_value is not None:
-        return env_value.lower() == "true"
-    return get_setting("PRIVATE_REGISTRATION_ENABLED", "false").lower() == "true"
+@cache.memoize(timeout=60)
+def get_site_as_dict() -> dict:
+    # return the Site as a dict so that it can be serialized by flask-caching
+    site = db.session.query(Site).get(1)
+    exclude = ["private_key"]
+    return {
+        c.name: getattr(site, c.name)
+        for c in site.__table__.columns
+        if c.name not in exclude
+    }
 
 
-def get_private_registration_secret():
-    """Get the private registration secret from environment"""
-    return os.environ.get("PRIVATE_REGISTRATION_SECRET", "")
-
-
-def get_private_registration_allowed_ips():
-    """Get list of allowed IP ranges for private registration"""
-    ips = get_setting("PRIVATE_REGISTRATION_IPS", "")
-    if not ips:
-        return []
-    return [ip.strip() for ip in ips.split(",") if ip.strip()]
-
-
-def should_log_private_registration_attempts():
-    """Check if registration attempts should be logged"""
-    return get_setting("PRIVATE_REGISTRATION_LOG_ATTEMPTS", "true").lower() == "true"
+def localize_datetime(inp, locale="en"):
+    try:
+        return arrow.get(inp).humanize(locale=locale)
+    except ValueError:
+        return arrow.get(inp).humanize(locale="en")

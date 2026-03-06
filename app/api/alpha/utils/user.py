@@ -168,14 +168,14 @@ def get_user_unread_count(auth):
     if unread_notifications > 0:
         unread_comment_replies = db.session.execute(
             text(
-                "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                "SELECT COUNT(*) as c FROM notification WHERE user_id = :user_id AND read = false \
                 AND notif_type = :notif_type AND subtype = 'new_reply_on_followed_comment'"
             ),
             {"user_id": user.id, "notif_type": NOTIF_REPLY},
         ).scalar()
         unread_post_replies = db.session.execute(
             text(
-                "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                "SELECT COUNT(*) as c FROM notification WHERE user_id = :user_id AND read = false \
                 AND notif_type = :notif_type AND subtype = 'top_level_comment_on_followed_post'"
             ),
             {"user_id": user.id, "notif_type": NOTIF_POST},
@@ -183,14 +183,14 @@ def get_user_unread_count(auth):
         unread_replies = unread_comment_replies + unread_post_replies
         unread_comment_mentions = db.session.execute(
             text(
-                "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                "SELECT COUNT(*) as c FROM notification WHERE user_id = :user_id AND read = false \
                 AND notif_type = :notif_type AND subtype = 'comment_mention'"
             ),
             {"user_id": user.id, "notif_type": NOTIF_MENTION},
         ).scalar()
         unread_post_mentions = db.session.execute(
             text(
-                "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                "SELECT COUNT(*) as c FROM notification WHERE user_id = :user_id AND read = false \
                 AND notif_type = :notif_type AND subtype = 'post_mention'"
             ),
             {"user_id": user.id, "notif_type": NOTIF_MENTION},
@@ -198,7 +198,7 @@ def get_user_unread_count(auth):
         unread_mentions = unread_comment_mentions + unread_post_mentions
         unread_messages = db.session.execute(
             text(
-                "SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"
+                "SELECT COUNT(*) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"
             ),
             {"user_id": user.id},
         ).scalar()

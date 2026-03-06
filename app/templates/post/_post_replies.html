@@ -1,5 +1,6 @@
 {% if replies or more_replies -%}
-<h2 class="visually-hidden">{{ post.reply_count_cross_posted if post.reply_count_cross_posted else post.reply_count }} {{ _('Comments') }}</h2>
+{% set reply_count = post.reply_count_cross_posted if post.reply_count_cross_posted else post.reply_count %}
+<h2 class="visually-hidden">{{ ngettext('%(num)d Comment', '%(num)d Comments', reply_count) }}</h2>
 <div class="row">
     <div class="col">
         {% if current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}
@@ -52,7 +53,7 @@
                                     href="{{ url_for('post.post_reply_options', post_id=1, comment_id=1) if low_bandwidth else '#' }}"
                                     data-bs-toggle="dropdown" rel="nofollow noindex" aria-expanded="false" id="comm_options_{{ community.id }}"
                                     aria-label="{{ _('Community options') }}">
-                                    <span class="fe fe-options" title="Options"> </span>
+                                    <span class="fe fe-options" title="{{ _('Options') }}"> </span>
                                 </a>
                                 <ul class="dropdown-menu" style="width: 320px" aria-labelledby="comm_options_{{ community.id }}">
                                     {% if community_membership(current_user, community) not in [SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}

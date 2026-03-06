@@ -554,6 +554,11 @@ fieldset legend {
   font-size: inherit;
 }
 
+.form-control::placeholder {
+  color: rgba(var(--bs-secondary-color-rgb), 0.5);
+  font-style: italic;
+}
+
 .form-check-input {
   margin-top: 0;
 }
@@ -776,6 +781,14 @@ tg-spoiler:hover {
   top: 0; /* Bring the link back into view when it receives focus */
 }
 
+.ml-3 {
+  margin-left: 1rem !important;
+}
+
+.home .ml-3 {
+  margin-left: 1px !important;
+}
+
 #outer_container a:not(.btn):hover, footer a:not(.btn):hover {
   text-decoration: underline;
 }
@@ -787,9 +800,13 @@ tg-spoiler:hover {
 }
 
 div.navbar {
-  border-bottom: 1px solid rgba(0, 40, 100, 0.12);
   min-height: 60px;
   background-color: var(--bs-body-bg);
+}
+@media (min-width: 992px) {
+  div.navbar {
+    border-bottom: 1px solid rgba(0, 40, 100, 0.12);
+  }
 }
 @media (min-width: 1400px) {
   div.navbar .container-lg {
@@ -802,6 +819,7 @@ div.navbar {
 }
 .navbar-brand img {
   margin-right: 20px;
+  margin-top: -1px;
 }
 
 .navbar-light .navbar-nav .nav-link {
@@ -814,10 +832,18 @@ div.navbar {
 }
 @media (min-width: 992px) {
   .navbar .dropdown-menu .dropdown-item {
-    max-width: 200px;
+    width: 200px;
   }
 }
 
+@media (min-width: 992px) {
+  .navbar-collapse {
+    margin-right: calc(var(--bs-navbar-nav-link-padding-x) * -1);
+  }
+  .navbar-collapse.authenticated {
+    margin-right: calc(var(--bs-navbar-nav-link-padding-x) * -2);
+  }
+}
 @media (min-width: 992px) {
   ul.navbar-nav {
     width: 100%;
@@ -1029,6 +1055,10 @@ form .mb-3.required > label:after {
 }
 .card .card-body > p > img, .card .card-body > p > a > img {
   max-width: 100%;
+}
+.card .card-body .list-group-item {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 #breadcrumb_nav {
@@ -1695,6 +1725,28 @@ time {
   max-width: 100%;
 }
 
+details {
+  margin-bottom: 1rem;
+}
+
+.spoiler_block {
+  margin: 3px 0 0 1em;
+  padding: 0.5em 0.5em 0.5em 0.2em;
+  border-left-style: solid;
+  border-left-width: 2px;
+  background-color: var(--bs-secondary-bg-subtle);
+  border-left-color: var(--bs-secondary-border-subtle);
+}
+.spoiler_block p:last-child {
+  margin-bottom: 0;
+}
+.spoiler_block table, .spoiler_block img {
+  padding: 0.5em;
+}
+.spoiler_block > details {
+  margin-bottom: 0;
+}
+
 .render_username {
   display: inline;
 }
@@ -2288,6 +2340,18 @@ a.unread:before, div.unread:before {
   background: var(--bs-secondary-bg);
   padding: 0.25rem 0.5rem;
   border-radius: 5px;
+  position: relative;
+}
+.post_body p > code .btn, .comment_body p > code .btn, #preview p > code .btn, .reply_preview p > code .btn, .accordion-body p > code .btn, .post_col p > code .btn {
+  --bs-btn-padding-x: 0.25rem ! important;
+  --bs-btn-padding-y: 0 ! important;
+}
+.post_body code .before, .comment_body code .before, #preview code .before, .reply_preview code .before, .accordion-body code .before, .post_col code .before {
+  float: right;
+}
+.post_body code .btn:hover, .comment_body code .btn:hover, #preview code .btn:hover, .reply_preview code .btn:hover, .accordion-body code .btn:hover, .post_col code .btn:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
 }
 .post_body table.table, .comment_body table.table, #preview table.table, .reply_preview table.table, .accordion-body table.table, .post_col table.table {
   display: block;
@@ -2514,12 +2578,6 @@ h1 .warning_badge {
   background-color: #d1ecf1;
   border-color: #bee5eb;
 }
-@media (min-width: 992px) {
-  .alert-info, .alert-message, .alert-error {
-    padding-left: 1.8rem;
-    padding-right: 1.8rem;
-  }
-}
 
 .alert-error {
   color: #722047;
@@ -2527,10 +2585,15 @@ h1 .warning_badge {
 }
 
 .main_pane {
-  border: solid 1px #ddd;
-  border-radius: 5px;
-  padding-top: 8px;
+  /* Ensure a little space after pagination on mobile. */
   padding-bottom: 12px;
+}
+@media (min-width: 992px) {
+  .main_pane {
+    border: solid 1px #ddd;
+    border-radius: 5px;
+    padding-top: 8px;
+  }
 }
 .main_pane .url_thumbnail {
   width: 120px;
@@ -2689,6 +2752,10 @@ form h5 {
   background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
 }
 
+.coolfieldset.expanded .coolfieldset.collapsed legend {
+  background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+}
+
 .domain_link {
   color: #777;
   font-size: 73%;
@@ -2707,6 +2774,10 @@ form h5 {
 .post_flair_body {
   padding-left: 0;
 }
+.hide_flair .post_flair {
+  display: none;
+}
+
 #image_preview {
   max-width: 200px;
   display: none;
@@ -2801,10 +2872,12 @@ form h5 {
   margin-bottom: 10px;
 }
 
-.alert {
-  width: 96%;
+@media (min-width: 992px) {
+  .alert {
+    /* To match .row */
+    margin-left: calc(var(--bs-gutter-x) * -0.5);
+  }
 }
-
 #insertImageDialog {
   max-width: 1000px;
 }
@@ -3253,6 +3326,11 @@ form h5 {
   overflow-y: auto;
 }
 
+.instance_name {
+  max-width: 152px;
+  text-wrap: nowrap;
+}
+
 .user-suggestion-box {
   position: absolute;
   background: var(--bs-body-bg, #fff);
@@ -3270,6 +3348,11 @@ form h5 {
   padding-right: 3px;
 }
 
+#registration_captcha label {
+  width: 100%;
+  display: inline-block;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .render_username a .gif {
     display: none !important;
@@ -3282,6 +3365,17 @@ form h5 {
 .blink {
   animation: blink-animation 1s steps(2, start) infinite;
   -webkit-animation: blink-animation 1s steps(2, start) infinite;
+}
+
+#outer_container .share_desktop a {
+  text-decoration: none !important;
+}
+#outer_container .share_desktop a:hover {
+  text-decoration: none !important;
+}
+#outer_container .share_desktop a img {
+  width: 20px;
+  height: 20px;
 }
 
 @keyframes blink-animation {
@@ -3383,7 +3477,11 @@ form h5 {
   color: white;
 }
 
-[data-bs-theme=dark] .coolfieldset legend, .coolfieldset.expanded legend {
+.coolfieldset.expanded legend {
+  background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+}
+
+[data-bs-theme=dark] .coolfieldset legend {
   background: #424549 url(/static/images/expanded.gif) no-repeat center left;
 }
 
@@ -3401,6 +3499,10 @@ form h5 {
 
 [data-bs-theme=dark] .skip-link {
   color: black;
+}
+
+[data-bs-theme=dark] .share_desktop img {
+  filter: invert(1);
 }
 
 :root {

@@ -61,6 +61,7 @@ dependencies = [
     "sqlakeyset~=2.0.0",
     "rich",
     "gunicorn",
+    "tatsu==5.13.2",
 ]
 
 [project.optional-dependencies]
