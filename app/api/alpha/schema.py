@@ -1809,3 +1809,33 @@ class GetModLogResponse(DefaultSchema):
     admin_purged_posts = fields.List(fields.Nested(AdminPurgePostView), required=True)
     admin_purged_comments = fields.List(fields.Nested(AdminPurgeCommentView), required=True)
     hidden_communities = fields.List(fields.Nested(ModHideCommunityView), required=True)
+
+
+class UserRegistration(DefaultSchema):
+    answer = fields.String(required=True, allow_none=True)
+    applied_at = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    country_code = fields.String()
+    email = fields.String(required=True, allow_none=True)
+    ip_address = fields.String(required=True, allow_none=True)
+    throwaway_email = fields.Boolean()
+    user_id = fields.Integer(required=True)
+    user_name = fields.String(required=True)
+    status = fields.String(validate=validate.OneOf(["approved", "awaiting review"]), required=True)
+    approved_by = fields.Nested(Person)
+    approved_at = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class GetRegistrationList(DefaultSchema):
+    limit = fields.Integer(metadata={"default": 30})
+    page = fields.Integer(metadata={"default": 1})
+    pending_only = fields.Boolean(metadata={"default": True})
+    sort = fields.String(validate=validate.OneOf(["Old", "New"]), metadata={"default": "New"})
+
+
+class GetRegistrationListResponse(DefaultSchema):
+    registrations = fields.List(fields.Nested(UserRegistration), required=True)
+
+
+class RegistrationApproveRequest(DefaultSchema):
+    approve = fields.Boolean(required=True)
+    user_id = fields.Integer(required=True)
