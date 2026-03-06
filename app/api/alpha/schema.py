@@ -1834,3 +1834,8 @@ class GetRegistrationList(DefaultSchema):
 
 class GetRegistrationListResponse(DefaultSchema):
     registrations = fields.List(fields.Nested(UserRegistration), required=True)
+
+
+class RegistrationApproveRequest(DefaultSchema):
+    approve = fields.Boolean(required=True)
+    user_id = fields.Integer(required=True)
