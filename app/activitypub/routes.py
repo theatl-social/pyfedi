@@ -2077,7 +2077,7 @@ def post_ap_context(post_id):
 
 
 @bp.route('/activities/<type>/<id>')
-@cache.cached(timeout=600)
+@cache.cached(timeout=2400)
 def activities_json(type, id):
     activity = ActivityPubLog.query.filter_by(
         activity_id=f"{current_app.config['SERVER_URL']}/activities/{type}/{id}").first()
@@ -2088,10 +2088,10 @@ def activities_json(type, id):
             activity_json = {}
         resp = jsonify(activity_json)
         resp.content_type = 'application/activity+json'
-        resp.headers['Cache-Control'] = 'public, max-age=1200'
-        return resp
     else:
-        abort(404)
+        resp = make_response('', 404)
+    resp.headers['Cache-Control'] = 'public, max-age=2400'
+    return resp
 
 
 # Other instances can query the result of their POST to the inbox by using this endpoint. The ID of the activity they
