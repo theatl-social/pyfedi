@@ -6,8 +6,8 @@ from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityM
     PostReply, utcnow, User
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
-                      recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-                      recently_downvoted_post_replies, get_recipient_language, get_task_session
+    recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
+    recently_downvoted_post_replies, get_recipient_language, get_task_session, patch_db_session
 
 from flask import current_app
 from flask_babel import _, force_locale, gettext
@@ -55,7 +55,8 @@ import re
 def make_reply(send_async, reply_id, parent_id):
     session = get_task_session()
     try:
-        send_reply(reply_id, parent_id, session=session)
+        with patch_db_session(session):
+            send_reply(reply_id, parent_id, session=session)
     except Exception:
         session.rollback()
         raise
@@ -67,7 +68,8 @@ def make_reply(send_async, reply_id, parent_id):
 def edit_reply(send_async, reply_id, parent_id):
     session = get_task_session()
     try:
-        send_reply(reply_id, parent_id, edit=True, session=session)
+        with patch_db_session(session):
+            send_reply(reply_id, parent_id, edit=True, session=session)
     except Exception:
         session.rollback()
         raise
