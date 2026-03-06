@@ -3,7 +3,7 @@ from flask_babel import _, g
 from flask_login import current_user
 from sqlalchemy import or_, desc, text
 
-from app import limiter, db
+from app import limiter, db, current_app
 from app.activitypub.util import resolve_remote_post_from_search
 from app.community.forms import RetrieveRemotePost
 from app.community.util import search_for_community
@@ -43,6 +43,8 @@ def run_search():
     if community_id == 0 and community:
         if not community.startswith('!'):
             community = f'!{community}'
+        if not "@" in community:
+            community = community + "@" + current_app.config['SERVER_NAME']
         community_obj = search_for_community(community, allow_fetch=False)
         if community_obj:
             community_id = community_obj.id
