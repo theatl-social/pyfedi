@@ -7,7 +7,7 @@ import os
 from flask import Flask, request, current_app, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_bootstrap import Bootstrap5
 from flask_mail import Mail
 from flask_babel import Babel, lazy_gettext as _l
@@ -26,7 +26,9 @@ from config import Config
 
 def get_locale():
     try:
-        if session.get("ui_language", None):
+        if current_user.is_authenticated and current_user.interface_language:
+            return current_user.interface_language
+        elif session.get("ui_language", None):
             return session["ui_language"]
         else:
             try:
@@ -50,24 +52,14 @@ def get_ip_address() -> str:
     return ip
 
 
-# Configure database with connection pooling for PostgreSQL
-# SQLite doesn't support pool_size/max_overflow parameters
-db_url = os.environ.get("DATABASE_URL", "")
-if db_url.startswith("sqlite"):
-    # SQLite configuration - no pooling parameters
-    db = SQLAlchemy(
-        session_options={"autoflush": False},
-    )
-else:
-    # PostgreSQL configuration - with connection pooling
-    db = SQLAlchemy(
-        session_options={"autoflush": False},
-        engine_options={
-            "pool_size": Config.DB_POOL_SIZE,
-            "max_overflow": Config.DB_MAX_OVERFLOW,
-            "pool_recycle": 3600,
-        },
-    )
+db = SQLAlchemy(
+    session_options={"autoflush": False},
+    engine_options={
+        "pool_size": Config.DB_POOL_SIZE,
+        "max_overflow": Config.DB_MAX_OVERFLOW,
+        "pool_recycle": 3600,
+    },
+)
 make_searchable(db.metadata)
 migrate = Migrate()
 login = LoginManager()
@@ -84,18 +76,40 @@ limiter = Limiter(
     else Config.CACHE_REDIS_URL,
 )
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
-httpx_client = httpx.Client(
-    http2=True,
-    limits=httpx.Limits(
-        max_connections=100,  # Max total connections
-        max_keepalive_connections=20,  # Max idle connections to keep alive
-        keepalive_expiry=30.0,  # Close idle connections after 30s
-    ),
-)
+httpx_client = httpx.Client(http2=True)
 oauth = OAuth()
 redis_client = None  # Will be initialized in create_app()
 rest_api = Api()
 app_bcrypt = Bcrypt()
+
+
+class StripCookieVaryForAnonymous:
+    """WSGI middleware that removes 'Cookie' from the Vary header for requests
+    that have no session cookie. This allows Cloudflare to cache responses for
+    anonymous users, which Flask's session middleware prevents by always adding
+    Vary: Cookie when it processes the session."""
+
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        has_session_cookie = "session=" in environ.get("HTTP_COOKIE", "")
+
+        def custom_start_response(status, headers, exc_info=None):
+            if not has_session_cookie:
+                new_headers = []
+                for name, value in headers:
+                    if name.lower() == "vary":
+                        value = ", ".join(
+                            part.strip()
+                            for part in value.split(",")
+                            if part.strip().lower() != "cookie"
+                        )
+                    new_headers.append((name, value))
+                headers = new_headers
+            return start_response(status, headers, exc_info)
+
+        return self.app(environ, custom_start_response)
 
 
 def create_app(config_class=Config):
@@ -118,10 +132,10 @@ def create_app(config_class=Config):
             enable_tracing=False,
         )
 
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+    app.wsgi_app = StripCookieVaryForAnonymous(ProxyFix(app.wsgi_app, x_for=1))
 
-    app.config["API_TITLE"] = "PieFed 1.6 Alpha API"
-    app.config["API_VERSION"] = "alpha 1.6"
+    app.config["API_TITLE"] = "PieFed 1.7 Alpha API"
+    app.config["API_VERSION"] = "alpha 1.7"
     app.config["OPENAPI_VERSION"] = "3.1.1"
     if app.config["SERVE_API_DOCS"]:
         app.config["OPENAPI_URL_PREFIX"] = "/api/alpha"
@@ -158,7 +172,7 @@ def create_app(config_class=Config):
                 {"url": "https://piefed.world"},
             ],
             "info": {
-                "title": "PieFed 1.6 Alpha API",
+                "title": "PieFed 1.7 Alpha API",
                 "contact": {
                     "name": "Developer",
                     "url": "https://codeberg.org/rimu/pyfedi",
@@ -318,6 +332,7 @@ def create_app(config_class=Config):
         post_bp,
         upload_bp,
         private_message_bp,
+        admin_bp,
     )
 
     rest_api.register_blueprint(site_bp)
@@ -330,6 +345,7 @@ def create_app(config_class=Config):
     rest_api.register_blueprint(post_bp)
     rest_api.register_blueprint(upload_bp)
     rest_api.register_blueprint(private_message_bp)
+    rest_api.register_blueprint(admin_bp)
 
     # send error reports via email
     if app.config["MAIL_SERVER"] and app.config["ERRORS_TO"]:
@@ -371,12 +387,6 @@ def create_app(config_class=Config):
     from app.plugins import load_plugins
 
     load_plugins()
-
-    # Run startup validations to fix any data integrity issues
-    from app.startup_validation import run_startup_validations
-
-    with app.app_context():
-        run_startup_validations()
 
     return app
 

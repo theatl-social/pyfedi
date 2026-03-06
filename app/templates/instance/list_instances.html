@@ -163,7 +163,7 @@
                                 {{ instance.version if instance.version }}
                             </td>
                             <td>
-                                {{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}
+                                {{ localize_datetime(instance.last_seen, locale) if instance.last_seen }}
                             </td>
                             <td>
                                 {% if instance.dormant and instance.gone_forever -%}

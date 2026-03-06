@@ -25,7 +25,7 @@ class AddCopyFeedForm(FlaskForm):
         validators=[Optional()],
         render_kw={"class": "form-select"},
     )
-    show_child_posts = BooleanField("Show posts from child feeds")
+    show_child_posts = BooleanField(_l("Show posts from child feeds"))
     communities = TextAreaField(
         _l("Communities"), validators=[DataRequired()], render_kw={"rows": 5}
     )
@@ -33,8 +33,8 @@ class AddCopyFeedForm(FlaskForm):
     banner_file = FileField(_l("Banner image"), render_kw={"accept": "image/*"})
     nsfw = BooleanField("NSFW")
     nsfl = BooleanField("NSFL")
-    public = BooleanField("Public", default=True)
-    is_instance_feed = BooleanField("Add to main menu")
+    public = BooleanField(_l("Public"), default=True)
+    is_instance_feed = BooleanField(_l("Add to main menu"))
     submit = SubmitField(_l("Save"))
 
     def validate(self, extra_validators=None):
@@ -94,7 +94,7 @@ class EditFeedForm(FlaskForm):
         validators=[Optional()],
         render_kw={"class": "form-select"},
     )
-    show_child_posts = BooleanField("Show posts from child feeds")
+    show_child_posts = BooleanField(_l("Show posts from child feeds"))
     communities = TextAreaField(
         _l("Communities"), validators=[DataRequired()], render_kw={"rows": 5}
     )
@@ -102,8 +102,8 @@ class EditFeedForm(FlaskForm):
     banner_file = FileField(_l("Banner image"), render_kw={"accept": "image/*"})
     nsfw = BooleanField("NSFW")
     nsfl = BooleanField("NSFL")
-    public = BooleanField("Public")
-    is_instance_feed = BooleanField("Add to main menu")
+    public = BooleanField(_l("Public"))
+    is_instance_feed = BooleanField(_l("Add to main menu"))
     submit = SubmitField(_l("Save"))
 
     def validate(self, extra_validators=None):

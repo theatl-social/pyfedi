@@ -10,10 +10,10 @@
             {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
         </a>
         {% if user.created_recently() -%}
-            <span class="fe fe-new-account" title="New account"> </span>
+            <span class="fe fe-new-account" title="{{ _('New account') }}"> </span>
         {% endif -%}
         {% if user.bot or user.bot_override -%}
-            <span class="fe fe-bot-account" title="Bot account"> </span>
+            <span class="fe fe-bot-account" title="{{ _('Bot account') }}"> </span>
         {% endif -%}
         {% if user_flair and user.id in user_flair %}
             <span class="user_flair">{{ user_flair[user.id] }}</span>

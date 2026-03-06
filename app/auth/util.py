@@ -422,7 +422,7 @@ def render_registration_form(form):
         form=form,
         site=g.site,
         instance_chooser_enabled=get_setting("enable_instance_chooser", False),
-        google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
+        # google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
         mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
         discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"],
     )

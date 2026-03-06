@@ -5,6 +5,7 @@ import math
 import os
 import uuid
 import re
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timedelta
 from time import time
@@ -131,6 +132,14 @@ class Instance(db.Model):
     nodeinfo_href = db.Column(db.String(100))
     admin_note = db.Column(db.Text)
 
+    __table_args__ = (
+        Index(
+            "ix_instance_created_at_active",
+            created_at.desc(),
+            postgresql_where=text("gone_forever = false AND dormant = false"),
+        ),
+    )
+
     posts = db.relationship("Post", backref="instance", lazy="dynamic")
     post_replies = db.relationship("PostReply", backref="instance", lazy="dynamic")
     communities = db.relationship("Community", backref="instance", lazy="dynamic")
@@ -156,14 +165,14 @@ class Instance(db.Model):
 
     def post_count(self):
         return db.session.execute(
-            text('SELECT COUNT(id) as c FROM "post" WHERE instance_id = :instance_id'),
+            text('SELECT count(*) as c FROM "post" WHERE instance_id = :instance_id'),
             {"instance_id": self.id},
         ).scalar()
 
     def post_replies_count(self):
         return db.session.execute(
             text(
-                'SELECT COUNT(id) as c FROM "post_reply" WHERE instance_id = :instance_id'
+                'SELECT COUNT(*) as c FROM "post_reply" WHERE instance_id = :instance_id'
             ),
             {"instance_id": self.id},
         ).scalar()
@@ -171,14 +180,14 @@ class Instance(db.Model):
     def known_communities_count(self):
         return db.session.execute(
             text(
-                'SELECT COUNT(id) as c FROM "community" WHERE instance_id = :instance_id'
+                'SELECT COUNT(*) as c FROM "community" WHERE instance_id = :instance_id'
             ),
             {"instance_id": self.id},
         ).scalar()
 
     def known_users_count(self):
         return db.session.execute(
-            text('SELECT COUNT(id) as c FROM "user" WHERE instance_id = :instance_id'),
+            text('SELECT COUNT(*) as c FROM "user" WHERE instance_id = :instance_id'),
             {"instance_id": self.id},
         ).scalar()
 
@@ -451,7 +460,7 @@ class File(db.Model):
                 if self.file_path.startswith("app/")
                 else self.file_path
             )
-            return f"/{file_path}"
+            return f"{current_app.config['SERVER_URL']}/{file_path}"
         else:
             return ""
 
@@ -463,7 +472,7 @@ class File(db.Model):
         file_path = (
             self.file_path[4:] if self.file_path.startswith("app/") else self.file_path
         )
-        return f"/{file_path}"
+        return f"{current_app.config['SERVER_URL']}/{file_path}"
 
     def thumbnail_url(self):
         if self.thumbnail_path is None:
@@ -478,7 +487,7 @@ class File(db.Model):
             if self.thumbnail_path.startswith("app/")
             else self.thumbnail_path
         )
-        return f"/{thumbnail_path}"
+        return f"{current_app.config['SERVER_URL']}/{thumbnail_path}"  # image paths must include fqdn (not just starting with /) because apps need to make a request from outside
 
     def delete_from_disk(self, purge_cdn=True):
         purge_from_cache = []
@@ -1073,7 +1082,7 @@ class Community(db.Model):
                 result.append(
                     {
                         "type": "lemmy:CommunityTag",
-                        "id": f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
+                        "id": f'{current_app.config["SERVER_URL"]}/c/{self.link()}/tag/{flair.id}',
                         "display_name": flair.flair,
                         "text_color": flair.text_color,
                         "background_color": flair.background_color,
@@ -1365,9 +1374,14 @@ class User(UserMixin, db.Model):
         lazy="dynamic",
         foreign_keys="ModLog.target_user_id",
         back_populates="target_user",
+        cascade="all, delete-orphan",
     )
     modlog_actor = db.relationship(
-        "ModLog", lazy="dynamic", foreign_keys="ModLog.user_id", back_populates="author"
+        "ModLog",
+        lazy="dynamic",
+        foreign_keys="ModLog.user_id",
+        back_populates="author",
+        cascade="all, delete-orphan",
     )
 
     hide_read_posts = db.Column(db.Boolean, default=False)
@@ -1379,6 +1393,10 @@ class User(UserMixin, db.Model):
     )
     hidden_post = db.relationship(
         "Post", secondary=hidden_posts, back_populates="hidden_by", lazy="dynamic"
+    )
+
+    __table_args__ = (
+        db.Index("idx_user_user_name_lower", db.text("lower(user_name)")),
     )
 
     def __repr__(self):
@@ -1417,7 +1435,13 @@ class User(UserMixin, db.Model):
     def display_name(self):
         if self.deleted is False:
             if self.title:
-                return self.title.strip()
+                # Sanitize some special unicode formatting characters
+                # ref: https://krvtz.net/posts/input-validation-of-free-form-unicode-text-in-python.html
+                title = self.title.strip()
+                clean_title = "".join(
+                    c for c in title if unicodedata.category(c) != "Cf"
+                )
+                return clean_title
             else:
                 return self.user_name.strip()
         else:
@@ -1480,11 +1504,11 @@ class User(UserMixin, db.Model):
     def num_content(self):
         content = 0
         content += db.session.execute(
-            text('SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id'),
+            text('SELECT COUNT(*) as c FROM "post" WHERE user_id = :user_id'),
             {"user_id": self.id},
         ).scalar()
         content += db.session.execute(
-            text('SELECT COUNT(id) as c FROM "post_reply" WHERE user_id = :user_id'),
+            text('SELECT COUNT(*) as c FROM "post_reply" WHERE user_id = :user_id'),
             {"user_id": self.id},
         ).scalar()
         return content
@@ -1704,14 +1728,14 @@ class User(UserMixin, db.Model):
         if posts:
             self.post_count = db.session.execute(
                 text(
-                    'SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id AND deleted = false'
+                    'SELECT COUNT(*) as c FROM "post" WHERE user_id = :user_id AND deleted = false'
                 ),
                 {"user_id": self.id},
             ).scalar()
         if replies:
             self.post_reply_count = db.session.execute(
                 text(
-                    'SELECT COUNT(id) as c FROM "post_reply" WHERE user_id = :user_id AND deleted = false'
+                    'SELECT COUNT(*) as c FROM "post_reply" WHERE user_id = :user_id AND deleted = false'
                 ),
                 {"user_id": self.id},
             ).scalar()
@@ -1813,6 +1837,14 @@ class User(UserMixin, db.Model):
                 UserRegistration.user_id == self.id
             ).delete()
         db.session.execute(
+            text('DELETE FROM "post_vote" WHERE user_id = :user_id'),
+            {"user_id": self.id},
+        )
+        db.session.execute(
+            text('DELETE FROM "post_reply_vote" WHERE user_id = :user_id'),
+            {"user_id": self.id},
+        )
+        db.session.execute(
             text('DELETE FROM "user_role" WHERE user_id = :user_id'),
             {"user_id": self.id},
         )
@@ -1863,12 +1895,6 @@ class User(UserMixin, db.Model):
             PostReplyBookmark.user_id == self.id
         ).delete()
         db.session.query(Reminder).filter(Reminder.user_id == self.id).delete()
-        db.session.query(ModLog).filter(ModLog.user_id == self.id).update(
-            {ModLog.user_id: None}
-        )
-        db.session.query(ModLog).filter(ModLog.target_user_id == self.id).update(
-            {ModLog.target_user_id: None}
-        )
         db.session.query(CommunityWikiPageRevision).filter(
             CommunityWikiPageRevision.user_id == self.id
         ).update({CommunityWikiPageRevision.user_id: None})
@@ -1978,6 +2004,17 @@ class User(UserMixin, db.Model):
             return user_note.body
         else:
             return ""
+
+    def can_send_pm(self, recipient):
+        if (
+            self.created_very_recently()
+            or self.reputation <= -10
+            or self.banned
+            or not self.verified
+        ) and not (self.is_admin_or_staff() or recipient.is_admin_or_staff()):
+            return False
+
+        return True
 
 
 class ActivityLog(db.Model):
@@ -2160,6 +2197,9 @@ class Post(db.Model):
             "community_id",
             "created_at",
             postgresql_where=db.text("from_bot = false"),
+        ),
+        db.Index(
+            "idx_post_reports_gt_0", "id", postgresql_where=db.text("reports > 0")
         ),
     )
 
@@ -2598,7 +2638,7 @@ class Post(db.Model):
             community.last_active = utcnow()
             db.session.execute(
                 text(
-                    'UPDATE "user" SET post_count = post_count + 1 WHERE id = :user_id'
+                    'UPDATE "user" SET post_count = post_count + 1, last_seen = now() WHERE id = :user_id'
                 ),
                 {"user_id": user.id},
             )
@@ -2980,6 +3020,11 @@ class Post(db.Model):
             parsed_url = urlparse(self.url)
             query_params = parse_qs(parsed_url.query)
 
+            # Handle playlists
+            if "list" in query_params:
+                playlist_id = query_params["list"][0]
+                return f"videoseries?list={playlist_id}"
+
             if "v" in query_params:
                 video_id = query_params.pop("v")[0]
                 if rel:
@@ -3130,7 +3175,7 @@ class Post(db.Model):
             return_value.append(
                 {
                     "type": "lemmy:CommunityTag",
-                    "id": f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
+                    "id": f'{current_app.config["SERVER_URL"]}/c/{self.community.link()}/tag/{flair.id}',
                     "display_name": flair.flair,
                     "text_color": flair.text_color,
                     "background_color": flair.background_color,
@@ -3141,7 +3186,7 @@ class Post(db.Model):
             return_value.append(
                 {
                     "type": "Hashtag",
-                    "href": f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
+                    "href": f'{current_app.config["SERVER_URL"]}/tag/{tag.name}',
                     "name": f"#{tag.name}",
                 }
             )
@@ -3187,7 +3232,7 @@ class Post(db.Model):
     def post_reply_count_recalculate(self):
         self.post_reply_count = db.session.execute(
             text(
-                'SELECT COUNT(id) as c FROM "post_reply" WHERE post_id = :post_id AND deleted is false'
+                'SELECT COUNT(*) as c FROM "post_reply" WHERE post_id = :post_id AND deleted is false'
             ),
             {"post_id": self.id},
         ).scalar()
@@ -3351,7 +3396,9 @@ class Post(db.Model):
                 self.update_reaction_cache()
 
             # Calculate new ranking values
-            self.ranking = self.post_ranking(self.score, self.created_at)
+            self.ranking = self.post_ranking(
+                self.score + self.reply_count, self.created_at
+            )
             self.ranking_scaled = int(self.ranking + self.community.scale_by())
 
             db.session.commit()
@@ -3668,7 +3715,7 @@ class PostReply(db.Model):
                 post.community.last_active = post.last_active = utcnow()
             session.execute(
                 text(
-                    'UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'
+                    'UPDATE "user" SET post_reply_count = post_reply_count + 1, last_seen = now() WHERE id = :user_id'
                 ),
                 {"user_id": user.id},
             )
@@ -3688,6 +3735,9 @@ class PostReply(db.Model):
                     {"reply_count_cross_posted": total}, synchronize_session=False
                 )
 
+                session.commit()
+            else:
+                post.reply_count_cross_posted = post.reply_count
                 session.commit()
 
         # LLM Detection
@@ -4332,7 +4382,8 @@ class UserRegistration(db.Model):
         return (
             User.query.filter(
                 or_(
-                    User.user_name == self.user.user_name, User.title == self.user.title
+                    func.lower(User.user_name) == self.user.user_name.lower(),
+                    User.title == self.user.title,
                 ),
                 User.id != self.user.id,
             )
@@ -4799,6 +4850,61 @@ class Site(db.Model):
             .order_by(User.id)
             .all()
         )
+
+    def active_now(self):
+        return db.session.execute(
+            text(
+                "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '5 minutes' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
+            )
+        ).scalar()
+
+    def active_daily(self):
+        from app.activitypub.util import active_day
+
+        return active_day()
+
+    def active_weekly(self):
+        from app.activitypub.util import active_week
+
+        return active_week()
+
+    def active_monthly(self):
+        from app.activitypub.util import active_month
+
+        return active_month()
+
+    def active_6monthly(self):
+        from app.activitypub.util import active_half_year
+
+        return active_half_year()
+
+    def all_active_6monthly(self):
+        return db.session.execute(
+            text(
+                "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '6 months' AND banned is false AND deleted is false"
+            )
+        ).scalar()
+
+    def all_active_monthly(self):
+        return db.session.execute(
+            text(
+                "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 month' AND banned is false AND deleted is false"
+            )
+        ).scalar()
+
+    def all_active_weekly(self):
+        return db.session.execute(
+            text(
+                "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 week' AND banned is false AND deleted is false"
+            )
+        ).scalar()
+
+    def all_active_daily(self):
+        return db.session.execute(
+            text(
+                "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 day' AND banned is false AND deleted is false"
+            )
+        ).scalar()
 
 
 # class IngressQueue(db.Model):

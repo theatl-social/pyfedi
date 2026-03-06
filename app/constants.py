@@ -1,4 +1,4 @@
-VERSION = "1.6.0 (PeachPie fork)"
+VERSION = "1.7.0-dev"
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2

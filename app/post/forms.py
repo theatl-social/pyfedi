@@ -22,7 +22,7 @@ class NewReplyForm(FlaskForm):
     body = TextAreaField(
         _l("Body"),
         render_kw={
-            "placeholder": "What are your thoughts?",
+            "placeholder": _l("What are your thoughts?"),
             "rows": 5,
             "class": "autoresize",
         },
@@ -88,7 +88,7 @@ class CrossPostForm(FlaskForm):
         render_kw={
             "list": "community_suggestions",
             "hx-post": "/post/search_community_suggestions",
-            "hx-trigger": "keyup changed delay:500ms",
+            "hx-trigger": "keyup delay:500ms",
             "hx-target": "#community_suggestions",
             "hx-swap": "innerHTML settle:0ms",
             "autocomplete": "off",
@@ -172,7 +172,7 @@ class MovePostForm(FlaskForm):
         render_kw={
             "list": "community_suggestions",
             "hx-post": "/post/search_community_suggestions",
-            "hx-trigger": "keyup changed delay:500ms",
+            "hx-trigger": "keyup delay:500ms",
             "hx-target": "#community_suggestions",
             "hx-swap": "innerHTML settle:0ms",
             "autocomplete": "off",

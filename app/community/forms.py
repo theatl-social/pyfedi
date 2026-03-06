@@ -58,8 +58,10 @@ class AddCommunityForm(FlaskForm):
     invitations = SelectField(
         _l("Joining process"), coerce=int, choices=joining_options
     )
-    publicize = BooleanField("Announce this community to newcommunities@lemmy.world")
-    question_answer = BooleanField("Question & answer community")
+    publicize = BooleanField(
+        _l("Announce this community to newcommunities@lemmy.world")
+    )
+    question_answer = BooleanField(_l("Question & answer community"))
     languages = MultiCheckboxField(
         _l("Languages"),
         coerce=int,
@@ -138,7 +140,7 @@ class EditCommunityForm(FlaskForm):
     invitations = SelectField(
         _l("Joining process"), coerce=int, choices=joining_options
     )
-    question_answer = BooleanField("Question & answer community")
+    question_answer = BooleanField(_l("Question & answer community"))
     restricted_to_mods = BooleanField(_l("Only moderators can post"))
     new_mods_wanted = BooleanField(_l("New moderators wanted"))
     downvote_accept_modes = [
@@ -351,7 +353,7 @@ class CreatePostForm(FlaskForm):
     timezone = SelectField(
         _("Timezone"),
         validators=[DataRequired()],
-        render_kw={"id": "timezone", "class": "form-control tom-select"},
+        render_kw={"id": "timezone", "class": "form-control"},
     )
     submit = SubmitField(_l("Publish"))
 

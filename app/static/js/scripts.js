@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
         preventDoubleFormSubmissions,
         setupSelectAllCheckbox,
         setupFontSizeChangers,
-        setupAddPassKey,
+        setupAddPassKeyAndCaptcha,
         setupFancySelects,
         setupImagePreview,
         setupNotificationPermission,
@@ -65,6 +65,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setupEmojiAutoSubmit,
         setupReactionDialog,
         setupScrollChat,
+        setupCodeBlockCopy,
+        setupShareIcons
     ];
 
     // Run critical setups immediately
@@ -399,16 +401,18 @@ function setupLightDark() {
 
     const showActiveTheme = (theme) => {
         if (theme === 'dark') {
-            elem.setAttribute('aria-label', 'Light mode');
-            elem.setAttribute('title', 'Light mode');
-            elem.setAttribute('data-bs-original-title', 'Light mode');
+            const title = elem.dataset['light'];
+            elem.setAttribute('aria-label', title);
+            elem.setAttribute('title', title);
+            elem.setAttribute('data-bs-original-title', title);
             elem.setAttribute('data-bs-theme-value', 'light');
             icon.classList.remove('fe-moon');
             icon.classList.add('fe-sun');
         } else {
-            elem.setAttribute('aria-label', 'Dark mode');
-            elem.setAttribute('title', 'Dark mode');
-            elem.setAttribute('data-bs-original-title', 'Dark mode');
+            const title = elem.dataset['dark'];
+            elem.setAttribute('aria-label', title);
+            elem.setAttribute('title', title);
+            elem.setAttribute('data-bs-original-title', title);
             elem.setAttribute('data-bs-theme-value', 'dark');
             icon.classList.remove('fe-sun');
             icon.classList.add('fe-moon');
@@ -535,10 +539,11 @@ function collapseReply(comment_id) {
 // every element with the 'confirm_first' class gets a popup confirmation dialog
 function setupConfirmFirst() {
     const show_first = document.querySelectorAll('.confirm_first');
+    const translation = document.querySelector('#areYouSureTranslation');
     show_first.forEach(element => {
         if (!element.dataset.confirmFirstSetup) {
             element.addEventListener("click", function(event) {
-                if (!confirm("Are you sure?")) {
+                if (!confirm(translation.value)) {
                   event.preventDefault(); // As the user clicked "Cancel" in the dialog, prevent the default action.
                   event.stopImmediatePropagation(); // Stop other event listeners from running
                   event.action_cancelled = true; // Custom flag for setupSendPost handlers
@@ -1185,7 +1190,16 @@ function setupFontSizeChangers() {
     }
 }
 
-function setupAddPassKey() {
+function setupAddPassKeyAndCaptcha() {
+    const captchaImage = document.getElementById('captcha-image');
+    if (captchaImage) {
+        captchaImage.addEventListener('click', () => {
+            const captchaEntry = document.getElementById('captcha');
+            if(captchaEntry) {
+                captchaEntry.focus();
+            }
+        })
+    }
     const passkeyButton = document.getElementById('add_passkey_button');
     if(passkeyButton) {
         document.getElementById('add_passkey_button').addEventListener('click', () => {
@@ -1357,7 +1371,7 @@ function setupNotificationPermission() {
         if(Notification.permission !== "granted") {
             permissionButton.addEventListener('click', () => {
                 Notification.requestPermission().then((permission) => {
-                  permissionButton.innerText = 'Granted'
+                  permissionButton.innerText = permissionButton.dataset['granted'];
                 });
             });
         }
@@ -1663,6 +1677,7 @@ function setupDynamicContent() {
     setupUserMentionSuggestions();
     setupTranslateAll();
     setupReactionDialog();
+    setupCodeBlockCopy();
 
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {
@@ -2402,4 +2417,116 @@ function setupScrollChat() {
 
 function stickToBottom(el) {
     return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 1;
+}
+
+function copyToClipboard(value) {
+    let isSuccessful = false;
+    try {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(value);
+        isSuccessful = true;
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.textContent = value;
+        document.body.appendChild(textarea);
+        textarea.focus({ preventScroll: true });
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        isSuccessful = true;
+      }
+    }
+    catch {
+      isSuccessful = false;
+    }
+    return isSuccessful;
+}
+
+// copies to clipboard the code block associated with the provided button
+function buttonHandlerCopy(button) {
+    let success = false;
+
+    // determine string to be copied
+    let codeblock = button.parentElement;
+    let copyString = codeblock.innerText;
+
+    // copy string to clipboard
+    success = copyToClipboard(copyString);
+
+    // temporarily change icon to a checkmark if copy happened
+    if (success){
+      // get copy icon size/color
+      let style = window.getComputedStyle(button);
+      var iconSize = style.getPropertyValue('font-size');
+      var iconColor = style.getPropertyValue('color');
+
+      // change icon to green checkmark
+      while (button.firstChild) button.removeChild(button.lastChild);
+      button.appendChild(checkmark(iconSize));
+
+      // after short amount of time, change icon back
+      setTimeout(function() {
+        while (button.firstChild) button.removeChild(button.lastChild);
+        button.appendChild(copyIcon(iconSize, iconColor));
+      }, 1000);
+    }
+}
+
+const copyIcon = () => {
+  const span = document.createElement("span");
+  span.className = "fe fe-copy";
+  return span;
+};
+
+const checkmark = (size = "16", color = "#26a269") => {
+  const span = document.createElement("span");
+  span.className = "fe fe-check";
+  return span;
+};
+
+function setupCodeBlockCopy() {
+  // add buttons to each code block
+  document.querySelectorAll("code").forEach(code => {
+    // check if there is already a copy button - this setup function could be called by the mutation handler
+    if(code.getElementsByTagName("button").length > 0) {
+        return;
+    }
+    // get element properties for the new button to match
+    let style = window.getComputedStyle(code);
+    var fontSize = style.getPropertyValue('font-size');
+    var color = style.getPropertyValue('color');
+
+    // create button
+    var button = document.createElement('button');
+    button.classList.add("btn");
+    button.appendChild(copyIcon(fontSize, color));
+    button.addEventListener("click", function(event){ buttonHandlerCopy(event.target.parentElement); });
+    button.addEventListener("tap", function(event){ buttonHandlerCopy(event.target.parentElement); });
+
+    // place the button at the beginning/end of the code block
+    // depending on whether it is a multi-line block or an inline block
+    if (code.parentElement.tagName.toLowerCase() === "pre"){
+      // place button at the beginning of the multi-line code block
+      button.classList.add("before");
+      code.insertBefore(button, code.firstChild);
+    } else {
+      // place button at the end of the inline code block
+      button.classList.add("after");
+      code.appendChild(button);
+    }
+  });
+}
+
+function setupShareIcons() {
+    document.querySelectorAll('.share_mobile a').forEach(shareAnchor => {
+        shareAnchor.addEventListener("click", function(event) {
+            event.preventDefault();
+            if (navigator.share) {
+              navigator.share({ url: location.href });
+            } else {
+              navigator.clipboard.writeText(location.href);
+              alert("Link copied to clipboard");
+            }
+        });
+    });
 }

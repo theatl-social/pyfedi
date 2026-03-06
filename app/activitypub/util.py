@@ -119,7 +119,7 @@ def public_key():
 
 
 def community_members(community_id):
-    sql = 'SELECT COUNT(id) as c FROM "user" as u '
+    sql = 'SELECT COUNT(*) as c FROM "user" as u '
     sql += "INNER JOIN community_member cm on u.id = cm.user_id "
     sql += "WHERE u.banned is false AND u.deleted is false AND cm.is_banned is false and cm.community_id = :community_id"
     return db.session.execute(text(sql), {"community_id": community_id}).scalar()
@@ -128,7 +128,7 @@ def community_members(community_id):
 def users_total():
     return db.session.execute(
         text(
-            'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false'
+            'SELECT COUNT(*) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false'
         )
     ).scalar()
 
@@ -136,7 +136,7 @@ def users_total():
 def active_half_year():
     return db.session.execute(
         text(
-            "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '6 months' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
+            "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '6 months' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
         )
     ).scalar()
 
@@ -144,7 +144,7 @@ def active_half_year():
 def active_month():
     return db.session.execute(
         text(
-            "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 month' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
+            "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 month' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
         )
     ).scalar()
 
@@ -152,7 +152,7 @@ def active_month():
 def active_week():
     return db.session.execute(
         text(
-            "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 week' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
+            "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 week' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
         )
     ).scalar()
 
@@ -160,7 +160,7 @@ def active_week():
 def active_day():
     return db.session.execute(
         text(
-            "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 day' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
+            "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 day' AND ap_id is null AND verified is true AND banned is false AND deleted is false"
         )
     ).scalar()
 
@@ -168,7 +168,7 @@ def active_day():
 def local_posts():
     return db.session.execute(
         text(
-            'SELECT COUNT(id) as c FROM "post" WHERE instance_id = 1 AND deleted is false'
+            'SELECT COUNT(*) as c FROM "post" WHERE instance_id = 1 AND deleted is false'
         )
     ).scalar()
 
@@ -176,14 +176,14 @@ def local_posts():
 def local_comments():
     return db.session.execute(
         text(
-            'SELECT COUNT(id) as c FROM "post_reply" WHERE instance_id = 1 and deleted is false'
+            'SELECT COUNT(*) as c FROM "post_reply" WHERE instance_id = 1 and deleted is false'
         )
     ).scalar()
 
 
 def local_communities():
     return db.session.execute(
-        text('SELECT COUNT(id) as c FROM "community" WHERE instance_id = 1')
+        text('SELECT COUNT(*) as c FROM "community" WHERE instance_id = 1')
     ).scalar()
 
 
@@ -2296,6 +2296,15 @@ def make_image_sizes_async(
 
                                         if store_files_in_s3():
                                             content_type = guess_mime_type(final_place)
+                                            extra_args = {"ContentType": content_type}
+                                            if current_app.config.get(
+                                                "S3_STORAGE_CLASS"
+                                            ):
+                                                extra_args["StorageClass"] = (
+                                                    current_app.config[
+                                                        "S3_STORAGE_CLASS"
+                                                    ]
+                                                )
                                             boto3_session = boto3.session.Session()
                                             s3 = boto3_session.client(
                                                 service_name="s3",
@@ -2323,7 +2332,7 @@ def make_image_sizes_async(
                                                 + "/"
                                                 + new_filename
                                                 + final_ext,
-                                                ExtraArgs={"ContentType": content_type},
+                                                ExtraArgs=extra_args,
                                             )
                                             os.unlink(final_place)
                                             final_place = (
@@ -2381,6 +2390,15 @@ def make_image_sizes_async(
                                             content_type = guess_mime_type(
                                                 final_place_thumbnail
                                             )
+                                            extra_args = {"ContentType": content_type}
+                                            if current_app.config.get(
+                                                "S3_STORAGE_CLASS"
+                                            ):
+                                                extra_args["StorageClass"] = (
+                                                    current_app.config[
+                                                        "S3_STORAGE_CLASS"
+                                                    ]
+                                                )
                                             if boto3_session is None and s3 is None:
                                                 boto3_session = boto3.session.Session()
                                                 s3 = boto3_session.client(
@@ -2410,7 +2428,7 @@ def make_image_sizes_async(
                                                 + new_filename
                                                 + "_thumbnail"
                                                 + thumbnail_ext,
-                                                ExtraArgs={"ContentType": content_type},
+                                                ExtraArgs=extra_args,
                                             )
                                             os.unlink(final_place_thumbnail)
                                             final_place_thumbnail = (
@@ -2991,7 +3009,7 @@ def site_ban_remove_data(blocker_id, blocked):
     # Images attached to posts can't be restored, but site ban reversals don't have a 'removeData' field anyway.
     files = db.session.query(File).join(Post).filter(Post.user_id == blocked.id).all()
     for file in files:
-        file.delete_from_disk()
+        file.delete_from_disk(purge_cdn=True)
         file.source_url = ""
     if blocked.avatar_id:
         blocked.avatar.delete_from_disk()
@@ -4369,7 +4387,9 @@ def update_post_from_activity(post: Post, request_json: dict):
             post.up_votes = upvotes * multiplier
             post.down_votes = downvotes
             post.score = upvotes - downvotes
-            post.ranking = post.post_ranking(post.score, post.posted_at)
+            post.ranking = post.post_ranking(
+                post.score + post.reply_count, post.posted_at
+            )
             post.ranking_scaled = int(post.ranking + post.community.scale_by())
             # return now for PeerTube, otherwise rest of this function breaks the post
             db.session.commit()
@@ -5627,6 +5647,7 @@ def is_vote(activity: dict) -> bool:
 
 
 def proactively_delete_content(community: Community, ap_id: str):
+    return  # disable for now, seems buggy
     deletor = None
     # Try to find a local moderator to send the Delete
     for moderator in community.moderators():

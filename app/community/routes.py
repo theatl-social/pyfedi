@@ -18,7 +18,7 @@ from flask import (
 )
 from markupsafe import Markup, escape
 from flask_login import current_user
-from flask_babel import _, force_locale, gettext
+from flask_babel import _, force_locale, gettext, ngettext
 from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
@@ -230,6 +230,9 @@ def add_local():
             form.local_only.data = True
             show_popular = False
             show_all = False
+            private = True
+        else:
+            private = False
         if form.local_only.data:
             private_key = None
             public_key = None
@@ -246,7 +249,7 @@ def add_local():
             description_html=markdown_to_html(form.description.data),
             local_only=form.local_only.data,
             posting_warning=form.posting_warning.data,
-            private=form.private.data,
+            private=private,
             invitations=form.invitations.data,
             show_popular=show_popular,
             show_all=show_all,
@@ -319,7 +322,9 @@ def add_local():
         cache.delete_memoized(community_membership_private, current_user.id)
         return redirect("/c/" + community.name)
     else:
-        form.publicize.data = not current_app.debug
+        form.publicize.data = (
+            not current_app.debug and not current_app.config["CONTENT_WARNING"]
+        )
 
     return render_template(
         "community/add_local.html",
@@ -371,7 +376,13 @@ def add_remote():
             new_community = search_for_community("!" + community + "@" + server)
         else:
             message = Markup(
-                'Accepted address formats: !community@server.name or https://server.name/{c|m}/community. Search on <a href="https://lemmyverse.net/communities">Lemmyverse.net</a> to find some.'
+                _(
+                    "Accepted address formats: !community@server.name or https://server.name/c/community."
+                )
+                + " "
+                + _(
+                    'Search on <a href="https://lemmyverse.net/communities">Lemmyverse.net</a> to find some.'
+                )
             )
             flash(message, "error")
         if new_community is None:
@@ -550,10 +561,14 @@ def show_community(community: Community):
     if community.private_mods:
         mod_list = []
         inactive_mods = User.query.filter(
-            User.id.in_(mod_user_ids), User.last_seen < utcnow() - timedelta(days=60)
+            User.id.in_(mod_user_ids),
+            User.last_seen < utcnow() - timedelta(days=60),
+            User.deleted == False,
         ).all()
     else:
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+        mod_list = User.query.filter(
+            User.id.in_(mod_user_ids), User.deleted.is_(False)
+        ).all()
         inactive_mods = []
         for mod in mod_list:
             if mod.last_seen < utcnow() - timedelta(days=60):
@@ -1019,9 +1034,14 @@ def show_community(community: Community):
             sticky_posts=sticky_posts,
         )
     )
+    resp.headers.set(
+        "ETag", f"{community.id}{sort}{post_layout}_{hash(community.last_active)}"
+    )
     if current_user.is_anonymous:
+        resp.headers.set("Vary", "Accept, Accept-Language")
         resp.headers.set("Cache-Control", "public, max-age=30")
     else:
+        resp.headers.set("Vary", "Accept, Cookie, Accept-Language")
         resp.headers.set("Cache-Control", "private, max-age=15, must-revalidate")
 
     return resp
@@ -1734,8 +1754,10 @@ def community_edit(community_id: int):
                 form.local_only.data = True
                 community.show_popular = False
                 community.show_all = False
+                community.private = True
             else:
                 form.invitations.data = 0
+                community.private = False
             community.title = form.title.data
             community.description = piefed_markdown_to_lemmy_markdown(
                 form.description.data
@@ -1747,7 +1769,6 @@ def community_edit(community_id: int):
             community.nsfw = form.nsfw.data
             community.ai_generated = form.ai_generated.data
             community.local_only = form.local_only.data
-            community.private = form.private.data
             community.invitations = form.invitations.data
             community.restricted_to_mods = form.restricted_to_mods.data
             community.new_mods_wanted = form.new_mods_wanted.data
@@ -3478,12 +3499,18 @@ def community_invite(actor):
                         total_invites += 1
 
             flash(
-                _(
-                    "Invited %(total_invites)d people using %(chat_invites)d chat messages and %(email_invites)d emails.",
-                    total_invites=total_invites,
-                    chat_invites=chat_invites,
-                    email_invites=email_invites,
+                ngettext(
+                    "Invited %(num)d person", "Invited %(num)d people", total_invites
                 )
+                + " "
+                + ngettext(
+                    "using %(num)d chat message",
+                    "using %(num)d chat messages",
+                    chat_invites,
+                )
+                + " "
+                + ngettext("and %(num)d email", "and %(num)d emails", email_invites)
+                + "."
             )
             return redirect("/c/" + community.link())
 

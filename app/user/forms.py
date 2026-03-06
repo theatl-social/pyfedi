@@ -92,7 +92,7 @@ class ProfileForm(FlaskForm):
     banner_file = FileField(_l("Top banner image"), render_kw={"accept": "image/*"})
     bot = BooleanField(_l("This profile is a bot"))
     timezone = SelectField(
-        _("Timezone"),
+        _l("Timezone"),
         validators=[DataRequired()],
         render_kw={"id": "timezone", "class": "form-control tom-select"},
     )
@@ -113,7 +113,7 @@ class ProfileForm(FlaskForm):
             raise ValidationError(_l("Matrix user ids start with @"))
 
     def validate_title(self, field):
-        if field.data.strip.lower() == "[deleted]":
+        if field.data.strip().lower() == "[deleted]":
             raise ValidationError(_l("Invalid display name"))
 
 

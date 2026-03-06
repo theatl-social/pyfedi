@@ -48,7 +48,7 @@
             <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% elif community.icon_id and not low_bandwidth -%}
             <div class="row mb-3">
-                <nav class="mb-3"  id="breadcrumb_nav" title="Navigation">
+                <nav class="mb-3"  id="breadcrumb_nav" title="{{ _('Navigation') }}">
                     <ol class="breadcrumb">
                         {% for breadcrumb in breadcrumbs -%}
                             <li class="breadcrumb-item">

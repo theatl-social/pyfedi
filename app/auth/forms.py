@@ -76,7 +76,7 @@ class RegistrationForm(FlaskForm):
         _l("I agree to the terms of service & privacy policy (see links in footer)"),
         validators=[DataRequired()],
     )
-    captcha = CaptchaField(_l("Enter captcha code"), validators=[DataRequired()])
+    captcha = CaptchaField(_l("Enter captcha code below"), validators=[DataRequired()])
     timezone = HiddenField(render_kw={"id": "timezone"})
 
     submit = SubmitField(_l("Register"))

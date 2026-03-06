@@ -33,7 +33,7 @@ dependencies = [
     "flask-caching~=2.3.0",
     "Pillow",
     "pillow-heif",
-    "pillow-avif-plugin",
+    "pillow-avif-plugin>=1.5.5",
     "feedgen==0.9.0",
     "celery==5.3.6",
     "redis~=5.2.0",
@@ -49,7 +49,7 @@ dependencies = [
     "webauthn~=2.5.0",
     "ldap3~=2.9.0",
     "sqlalchemy~=2.0.0",
-    "orjson~=3.10.0",
+    "orjson>=3.10.0",
     "marshmallow~=4.0.0",
     "flask-smorest~=0.46.1",
     "ics~=0.7.0",
@@ -61,6 +61,7 @@ dependencies = [
     "sqlakeyset~=2.0.0",
     "rich",
     "gunicorn",
+    "tatsu==5.13.2",
 ]
 
 [project.optional-dependencies]

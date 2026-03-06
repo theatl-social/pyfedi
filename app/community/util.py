@@ -897,11 +897,14 @@ def save_icon_file(icon_file, directory="communities") -> File:
             )
             # Upload main image
             s3_path = f"{s3_directory}/{new_filename}{final_ext}"
+            extra_args = {"ContentType": guess_mime_type(final_place)}
+            if current_app.config.get("S3_STORAGE_CLASS"):
+                extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
             s3.upload_file(
                 final_place,
                 current_app.config["S3_BUCKET"],
                 s3_path,
-                ExtraArgs={"ContentType": guess_mime_type(final_place)},
+                ExtraArgs=extra_args,
             )
             file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
 
@@ -910,11 +913,14 @@ def save_icon_file(icon_file, directory="communities") -> File:
                 s3_thumbnail_path = (
                     f"{s3_directory}/{new_filename}_thumbnail{thumbnail_ext}"
                 )
+                extra_args = {"ContentType": guess_mime_type(final_place_thumbnail)}
+                if current_app.config.get("S3_STORAGE_CLASS"):
+                    extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
                 s3.upload_file(
                     final_place_thumbnail,
                     current_app.config["S3_BUCKET"],
                     s3_thumbnail_path,
-                    ExtraArgs={"ContentType": guess_mime_type(final_place_thumbnail)},
+                    ExtraArgs=extra_args,
                 )
                 file.thumbnail_path = (
                     f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
@@ -1048,11 +1054,14 @@ def save_banner_file(banner_file, directory="communities") -> File:
             )
             # Upload main image
             s3_path = f"{s3_directory}/{new_filename}{final_ext}"
+            extra_args = {"ContentType": guess_mime_type(final_place)}
+            if current_app.config.get("S3_STORAGE_CLASS"):
+                extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
             s3.upload_file(
                 final_place,
                 current_app.config["S3_BUCKET"],
                 s3_path,
-                ExtraArgs={"ContentType": guess_mime_type(final_place)},
+                ExtraArgs=extra_args,
             )
             file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
 
@@ -1060,11 +1069,14 @@ def save_banner_file(banner_file, directory="communities") -> File:
             s3_thumbnail_path = (
                 f"{s3_directory}/{new_filename}_thumbnail{thumbnail_ext}"
             )
+            extra_args = {"ContentType": guess_mime_type(final_place_thumbnail)}
+            if current_app.config.get("S3_STORAGE_CLASS"):
+                extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
             s3.upload_file(
                 final_place_thumbnail,
                 current_app.config["S3_BUCKET"],
                 s3_thumbnail_path,
-                ExtraArgs={"ContentType": guess_mime_type(final_place_thumbnail)},
+                ExtraArgs=extra_args,
             )
             file.thumbnail_path = (
                 f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
@@ -1340,5 +1352,6 @@ def is_bad_name(community_name: str) -> bool:
         "tits",
         "greentext",
         "4chan",
+        "fauxbait",
     ]
     return any(badword in name_lower for badword in seven_things_plus)

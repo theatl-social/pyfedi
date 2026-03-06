@@ -58,6 +58,9 @@ from app.utils import (
     can_upload_video,
     debug_checkpoint,
     compaction_level,
+    humanize_number,
+    get_site_as_dict,
+    localize_datetime,
 )
 
 app = create_app()
@@ -123,6 +126,8 @@ with app.app_context():
     app.jinja_env.globals["csrf_token"] = generate_csrf
     app.jinja_env.globals["debug_checkpoint"] = debug_checkpoint
     app.jinja_env.globals["compaction_level"] = compaction_level
+    app.jinja_env.globals["humanize_number"] = humanize_number
+    app.jinja_env.globals["localize_datetime"] = localize_datetime
     app.jinja_env.filters["community_links"] = community_link_to_href
     app.jinja_env.filters["feed_links"] = feed_link_to_href
     app.jinja_env.filters["person_links"] = person_link_to_href
@@ -145,7 +150,8 @@ def before_request():
     if (
         request.path != "/inbox" and not request.path.startswith("/static/")
     ):  # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
-        g.site = Site.query.get(1)
+        site = get_site_as_dict()
+        g.site = Site(**site)
         g.admin_ids = get_setting("admin_ids")  # get_setting is cached in redis
         if g.admin_ids is None:
             g.admin_ids = list(
@@ -240,14 +246,7 @@ def after_request(response):
             )
             response.headers.setdefault("Vary", "Accept-Language, Cookie")
         else:
-            response.headers.setdefault("Vary", "Accept-Language, Cookie")
-            # Prevent Flask from setting session cookie for anonymous users
-            # This must be done by marking session as not modified, since Flask sets
-            # the cookie after after_request handlers run
-            if "session" in dir(flask):
-                from flask import session
-
-                session.modified = False
+            response.headers.setdefault("Vary", "Accept-Language")
     return response
 
 

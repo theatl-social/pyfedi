@@ -1,4 +1,4 @@
-# code in this file is from Takahe https://github.com/jointakahe/takahe
+# code in this file was originally from Takahe https://github.com/jointakahe/takahe
 #
 # Copyright 2022 Andrew Godwin
 #
@@ -30,7 +30,9 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
+import time
 from datetime import datetime, timedelta
 from email.utils import formatdate
 from typing import Literal, TypedDict, cast
@@ -327,6 +329,68 @@ class HttpSignature:
     Allows for calculation and verification of HTTP signatures
     """
 
+    # Class-level cache for deserialized private keys
+    _private_key_cache = {}  # key: hash of private_key, value: RSAPrivateKey instance
+    _public_key_cache = {}  # key: hash of public_key, value: RSAPublicKey instance
+    _cache_max_size = 1000  # Limit to prevent unbounded growth
+
+    @classmethod
+    def _get_private_key_instance(cls, private_key: str) -> rsa.RSAPrivateKey:
+        """
+        Get a deserialized private key instance from cache, or load and cache it.
+        Uses SHA-256 hash of the private key as the cache key to avoid storing large strings.
+        """
+        # Use hash of private key as cache key (shorter than full PEM string)
+        key_hash = hashlib.sha256(private_key.encode()).hexdigest()
+
+        if key_hash not in cls._private_key_cache:
+            # Simple size limit: clear oldest half when full
+            if len(cls._private_key_cache) >= cls._cache_max_size:
+                # Remove first half
+                keys_to_remove = list(cls._private_key_cache.keys())[
+                    : cls._cache_max_size // 2
+                ]
+                for k in keys_to_remove:
+                    del cls._private_key_cache[k]
+
+            # Deserialize and cache
+            cls._private_key_cache[key_hash] = cast(
+                rsa.RSAPrivateKey,
+                serialization.load_pem_private_key(
+                    private_key.encode("ascii"),
+                    password=None,
+                ),
+            )
+
+        return cls._private_key_cache[key_hash]
+
+    @classmethod
+    def _get_public_key_instance(cls, public_key: str) -> rsa.RSAPublicKey:
+        """
+        Get a deserialized public key instance from cache, or load and cache it.
+        Uses SHA-256 hash of the public key as the cache key to avoid storing large strings.
+        """
+        # Use hash of public key as cache key (shorter than full PEM string)
+        key_hash = hashlib.sha256(public_key.encode()).hexdigest()
+
+        if key_hash not in cls._public_key_cache:
+            # Simple size limit: clear oldest half when full
+            if len(cls._public_key_cache) >= cls._cache_max_size:
+                # Remove first half
+                keys_to_remove = list(cls._public_key_cache.keys())[
+                    : cls._cache_max_size // 2
+                ]
+                for k in keys_to_remove:
+                    del cls._public_key_cache[k]
+
+            # Deserialize and cache
+            cls._public_key_cache[key_hash] = cast(
+                rsa.RSAPublicKey,
+                serialization.load_pem_public_key(public_key.encode("ascii")),
+            )
+
+        return cls._public_key_cache[key_hash]
+
     @classmethod
     def calculate_digest(cls, data, algorithm="sha-256") -> str:
         """
@@ -400,10 +464,7 @@ class HttpSignature:
         cleartext: str,
         public_key: str,
     ):
-        public_key_instance: rsa.RSAPublicKey = cast(
-            rsa.RSAPublicKey,
-            serialization.load_pem_public_key(public_key.encode("ascii")),
-        )
+        public_key_instance = cls._get_public_key_instance(public_key)
         try:
             public_key_instance.verify(
                 signature,
@@ -495,13 +556,10 @@ class HttpSignature:
         signed_string = "\n".join(
             f"{name.lower()}: {value}" for name, value in headers.items()
         )
-        private_key_instance: rsa.RSAPrivateKey = cast(
-            rsa.RSAPrivateKey,
-            serialization.load_pem_private_key(
-                private_key.encode("ascii"),
-                password=None,
-            ),
-        )
+
+        private_key_instance = cls._get_private_key_instance(private_key)
+
+        # RSA signature generation
         signature = private_key_instance.sign(
             signed_string.encode("ascii"),
             padding.PKCS1v15(),

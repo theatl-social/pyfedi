@@ -7,7 +7,7 @@
   "text": {{ post.body|tojson }},
   {% endif -%}
   {% if post.url -%}
-  "url": {{ post.url|tojson }},
+  "url": {{ post.ap_id|tojson }},
   {% endif -%}
   {% if post.image and post.type == POST_TYPE_LINK -%}
   "image": {{ post.image.source_url|tojson }},

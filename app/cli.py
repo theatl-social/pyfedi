@@ -150,6 +150,31 @@ def register(app):
                 )
                 return
 
+            # check database encoding - must be UTF8 for proper Unicode support
+            try:
+                result = db.session.execute(text("SHOW SERVER_ENCODING")).fetchone()
+                encoding = result[0] if result else None
+
+                if encoding and encoding.upper() not in ("UTF8", "UTF-8"):
+                    print(
+                        f"Error: Database encoding is '{encoding}' but must be UTF8 for proper Unicode support."
+                    )
+                    print(
+                        "\nThis will cause errors when storing Unicode characters (emojis, special symbols, etc.)."
+                    )
+                    print("\nTo fix this, create a new database with UTF8 encoding:")
+                    print("  1. createdb -E UTF8 -T template0 pyfedi_new")
+                    print("  2. Update your DATABASE_URL in .env to use pyfedi_new")
+                    print("  3. Run 'flask db upgrade' on the new database")
+                    print("  4. Run 'flask init-db' again")
+                    return
+            except Exception as e:
+                # if the check fails just warn and continue
+                print(f"Warning: Could not check database encoding: {e}")
+                print(
+                    "If using PostgreSQL, please ensure your database uses UTF8 encoding."
+                )
+
             db.drop_all()
 
             # Drop PostgreSQL functions that are created by migrations but not dropped by drop_all()
@@ -192,7 +217,7 @@ def register(app):
                 "exploding-heads.com",
                 "hexbear.net",
                 "hilariouschaos.com",
-                "threads.net",
+                "threads.com",
                 "noauthority.social",
                 "pieville.net",
                 "links.hackliberty.org",
@@ -242,11 +267,13 @@ def register(app):
             db.session.add(Language(code="en", name="English"))
             db.session.add(Language(code="de", name="Deutsch"))
             db.session.add(Language(code="es", name="Español"))
+            db.session.add(Language(code="fi", name="Finnish"))
             db.session.add(Language(code="fr", name="Français"))
             db.session.add(Language(code="hi", name="हिन्दी"))
             db.session.add(Language(code="ja", name="日本語"))
             db.session.add(Language(code="zh", name="中文"))
             db.session.add(Language(code="pl", name="Polski"))
+            db.session.add(Language(code="uk", name="Українська"))
 
             # Initial roles
             # These roles will create rows in the 'role' table with IDs of 1,2,3,4. There are some constants (ROLE_*) in
@@ -982,6 +1009,9 @@ def register(app):
             for file_id in file_ids:
                 file = File.query.get(file_id)
                 content_type = guess_mime_type(file.source_url)
+                extra_args = {"ContentType": content_type}
+                if current_app.config.get("S3_STORAGE_CLASS"):
+                    extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
                 new_path = file.source_url.replace("/static/media/", "/")
                 s3_path = new_path.replace(f"https://{server_name}/", "")
                 new_path = new_path.replace(
@@ -996,7 +1026,7 @@ def register(app):
                             local_file,
                             current_app.config["S3_BUCKET"],
                             s3_path,
-                            ExtraArgs={"ContentType": content_type},
+                            ExtraArgs=extra_args,
                         )
                     except Exception as e:
                         print(f"Error uploading {local_file}: {e}")

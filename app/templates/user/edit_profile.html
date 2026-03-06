@@ -13,7 +13,7 @@
 {% block app_content %}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav class="mb-2"  id="breadcrumb_nav" title="Navigation">
+        <nav class="mb-2"  id="breadcrumb_nav" title="{{ _('Navigation') }}">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
             <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
@@ -77,8 +77,8 @@
             {{ render_field(form.timezone) }}
             {{ render_field(form.bot) }}
             {{ render_field(form.matrixuserid) }}
-            <small class="field_hint">e.g. @something:matrix.org. Include leading @ and use : before server</small>
-            <h5>{{ ('Profile Images') }}</h5>
+            <small class="field_hint">{{ _('e.g. @something:matrix.org. Include leading @ and use : before server') }}</small>
+            <h5>{{ _('Profile Images') }}</h5>
             {{ render_field(form.profile_file) }}
             <small class="field_hint">{{ _('Provide a square image that looks good when small.') }}</small>
             {% if user.avatar_id %}

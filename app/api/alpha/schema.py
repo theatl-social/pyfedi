@@ -81,6 +81,24 @@ nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
 search_nsfw = ["Exclude", "Include", "Only"]
+modlog_type_list = [
+    "All",
+    "ModRemovePost",
+    "ModLockPost",
+    "ModFeaturePost",
+    "ModRemoveComment",
+    "ModRemoveCommunity",
+    "ModBanFromCommunity",
+    "ModAddCommunity",
+    "ModTransferCommunity",
+    "ModAdd",
+    "ModBan",
+    "ModHideCommunity",
+    "AdminPurgePerson",
+    "AdminPurgeCommunity",
+    "AdminPurgePost",
+    "AdminPurgeComment",
+]
 
 
 def validate_datetime_string(text):
@@ -167,6 +185,18 @@ class LanguageView(DefaultSchema):
 
 class Site(DefaultSchema):
     actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social"})
+    announcement_md = fields.String(
+        metadata={
+            "description": "The banner at the top of the home page",
+            "format": "markdown",
+        }
+    )
+    announcement = fields.String(
+        metadata={
+            "description": "The banner at the top of the home page",
+            "format": "html",
+        }
+    )
     name = fields.String(required=True)
     all_languages = fields.List(fields.Nested(LanguageView))
     description = fields.String()
@@ -646,11 +676,12 @@ class CommunityFlair(DefaultSchema):
         },
     )
     blur_images = fields.Boolean(required=True)
-    ap_id = fields.Url(
+    ap_id = fields.String(
         required=True,
         allow_none=True,
         metadata={
-            "description": "Legacy tags that existed prior to 1.2 and some tags for remote communities might not have a defined ap_id"
+            "description": "Legacy tags that existed prior to 1.2 and some tags for remote communities might not have a defined ap_id",
+            "format": "url",
         },
     )
 
@@ -1131,6 +1162,11 @@ class FeedListRequest(DefaultSchema):
 
 class FeedListResponse(DefaultSchema):
     feeds = fields.List(fields.Nested(FeedView), required=True)
+
+
+class FollowFeedRequest(DefaultSchema):
+    feed_id = fields.Integer(required=True)
+    follow = fields.Boolean(required=True)
 
 
 class TopicView(DefaultSchema):
@@ -2144,326 +2180,376 @@ class PollVoteResponse(DefaultSchema):
     post_view = fields.Nested(PostView, required=True)
 
 
-# Admin API Schemas (Fork-specific)
+class GetModLogRequest(DefaultSchema):
+    mod_person_id = fields.Integer()
+    community_id = fields.Integer()
+    page = fields.Integer()
+    limit = fields.Integer()
+    type_ = fields.String(validate=validate.OneOf(modlog_type_list))
+    other_person_id = fields.Integer()
+    post_id = fields.Integer()
+    comment_id = fields.Integer()
 
 
-class AdminPrivateRegistrationRequest(DefaultSchema):
-    username = fields.String(
-        required=True,
-        validate=validate.Length(min=3, max=50),
-        metadata={
-            "description": "Username (3-50 characters, alphanumeric + underscore)"
-        },
-    )
-    email = fields.Email(required=True, metadata={"description": "Valid email address"})
-    display_name = fields.String(
-        validate=validate.Length(min=1, max=100),
-        metadata={"description": "Display name (1-100 characters)"},
-    )
-    password = fields.String(
-        validate=validate.Length(min=8, max=128),
-        metadata={
-            "description": "Password (8-128 characters). If omitted, a secure password will be generated"
-        },
-    )
-    auto_activate = fields.Boolean(
-        metadata={"description": "Skip email verification", "default": True}
-    )
-    send_welcome_email = fields.Boolean(
-        metadata={"description": "Send welcome email to user", "default": False}
-    )
-    bio = fields.String(
-        validate=validate.Length(max=5000),
-        metadata={"description": "User biography (max 5000 characters)"},
-    )
-    timezone = fields.String(
-        metadata={"description": "User timezone", "default": "UTC"}
-    )
-
-
-class AdminPrivateRegistrationResponse(DefaultSchema):
-    success = fields.Boolean(
-        required=True, metadata={"description": "Registration success status"}
-    )
-    user_id = fields.Integer(required=True, metadata={"description": "Created user ID"})
-    username = fields.String(
-        required=True, metadata={"description": "Created username"}
-    )
-    email = fields.String(required=True, metadata={"description": "User email address"})
-    display_name = fields.String(metadata={"description": "User display name"})
-    generated_password = fields.String(
-        metadata={
-            "description": "Generated password (only if password was not provided)"
-        }
-    )
-    activation_required = fields.Boolean(
-        required=True,
-        metadata={"description": "Whether email verification is required"},
-    )
-    message = fields.String(required=True, metadata={"description": "Success message"})
-
-
-class AdminPrivateRegistrationError(DefaultSchema):
-    success = fields.Boolean(
-        required=True, metadata={"description": "Always false for errors"}
-    )
-    error = fields.String(
-        required=True,
-        metadata={
-            "description": "Error type",
-            "enum": [
-                "invalid_secret",
-                "rate_limited",
-                "validation_failed",
-                "user_exists",
-                "feature_disabled",
-                "ip_unauthorized",
-            ],
-        },
-    )
-    message = fields.String(
-        required=True, metadata={"description": "Human readable error message"}
-    )
-    details = fields.Dict(
-        metadata={
-            "description": "Additional error details including field-specific errors"
-        }
-    )
-
-
-class AdminUserValidationRequest(DefaultSchema):
-    username = fields.String(required=True, validate=validate.Length(min=3, max=50))
-    email = fields.Email(required=True)
-
-
-class AdminUserValidationResponse(DefaultSchema):
-    username_available = fields.Boolean(required=True)
-    email_available = fields.Boolean(required=True)
-    username_suggestions = fields.List(
-        fields.String(),
-        metadata={"description": "Alternative username suggestions if taken"},
-    )
-    validation_errors = fields.Dict(
-        metadata={"description": "Field-specific validation errors"}
-    )
-
-
-class AdminUserListRequest(DefaultSchema):
-    local_only = fields.Boolean(
-        metadata={"description": "Filter to local users only", "default": True}
-    )
-    verified = fields.Boolean(metadata={"description": "Filter by verification status"})
-    active = fields.Boolean(metadata={"description": "Filter by active/banned status"})
-    search = fields.String(
-        validate=validate.Length(max=100),
-        metadata={"description": "Search username or email"},
-    )
-    sort = fields.String(
-        validate=validate.OneOf(
-            [
-                "created_desc",
-                "created_asc",
-                "username_asc",
-                "username_desc",
-                "last_seen_desc",
-                "last_seen_asc",
-                "post_count_desc",
-            ]
-        ),
-        metadata={"description": "Sort order", "default": "created_desc"},
-    )
-    page = fields.Integer(validate=validate.Range(min=1), metadata={"default": 1})
-    limit = fields.Integer(
-        validate=validate.Range(min=1, max=100), metadata={"default": 50}
-    )
-    last_seen_days = fields.Integer(
-        validate=validate.Range(min=1),
-        metadata={"description": "Users active within N days"},
-    )
-
-
-class AdminUserInfo(DefaultSchema):
+class ModRemovePost(DefaultSchema):
     id = fields.Integer(required=True)
-    username = fields.String(required=True)
-    email = fields.String(required=True)
-    display_name = fields.String()
-    created_at = fields.DateTime(required=True, format="iso")
-    last_seen = fields.DateTime(format="iso")
-    is_verified = fields.Boolean(required=True)
-    is_banned = fields.Boolean(required=True)
-    is_local = fields.Boolean(required=True)
-    post_count = fields.Integer(required=True)
-    comment_count = fields.Integer()
-    reputation = fields.Integer()
-    bio = fields.String()
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    post_id = fields.Integer(required=True, allow_none=True)
+    reason = fields.String(allow_none=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
 
 
-class AdminUserListPagination(DefaultSchema):
-    page = fields.Integer(required=True)
-    limit = fields.Integer(required=True)
-    total = fields.Integer(required=True)
-    total_pages = fields.Integer(required=True)
-    has_next = fields.Boolean(required=True)
-    has_prev = fields.Boolean(required=True)
+class ModRemovePostView(DefaultSchema):
+    mod_remove_post = fields.Nested(ModRemovePost, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    post = fields.Nested(Post, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
-class AdminUserListResponse(DefaultSchema):
-    users = fields.List(fields.Nested(AdminUserInfo), required=True)
-    pagination = fields.Nested(AdminUserListPagination, required=True)
+class ModLockPost(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    post_id = fields.Integer(required=True, allow_none=True)
+    locked = fields.Boolean(required=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
 
 
-class AdminUserLookupRequest(DefaultSchema):
-    username = fields.String(validate=validate.Length(min=1, max=50))
-    email = fields.Email()
-    id = fields.Integer(validate=validate.Range(min=1))
-
-    @validates_schema
-    def validate_at_least_one_field(self, data, **kwargs):
-        if not any([data.get("username"), data.get("email"), data.get("id")]):
-            raise ValidationError(
-                "At least one of username, email, or id must be provided"
-            )
+class ModLockPostView(DefaultSchema):
+    mod_lock_post = fields.Nested(ModLockPost, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    post = fields.Nested(Post, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
-class AdminUserLookupResponse(DefaultSchema):
-    found = fields.Boolean(required=True)
-    user = fields.Nested(AdminUserInfo)
+class ModFeaturePost(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    post_id = fields.Integer(required=True, allow_none=True)
+    featured = fields.Boolean(required=True)
+    is_featured_community = fields.Boolean(required=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
 
 
-class AdminHealthResponse(DefaultSchema):
-    private_registration = fields.Dict(required=True)
-    database = fields.String(required=True)
-    timestamp = fields.DateTime(required=True, format="iso")
+class ModFeaturePostView(DefaultSchema):
+    mod_feature_post = fields.Nested(ModFeaturePost, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    post = fields.Nested(Post, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
-# Phase 2: User Management Schemas
+class ModRemoveComment(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    comment_id = fields.Integer(required=True, allow_none=True)
+    reason = fields.String(allow_none=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
 
 
-class AdminUserUpdateRequest(DefaultSchema):
-    display_name = fields.String(validate=validate.Length(min=1, max=100))
-    bio = fields.String(validate=validate.Length(max=2000))
-    timezone = fields.String(validate=validate.Length(max=50))
-    email = fields.Email()
-    verified = fields.Boolean()
-    newsletter = fields.Boolean()
-    searchable = fields.Boolean()
+class ModRemoveCommentView(DefaultSchema):
+    mod_remove_comment = fields.Nested(ModRemoveComment, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    comment = fields.Nested(Comment, allow_none=True)
+    commenter = fields.Nested(Person, allow_none=True)
+    post = fields.Nested(Post, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
-class AdminUserUpdateResponse(DefaultSchema):
-    success = fields.Boolean(required=True)
+class ModRemoveCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    community_id = fields.Integer(required=True, allow_none=True)
+    reason = fields.String(allow_none=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class ModRemoveCommunityView(DefaultSchema):
+    mod_remove_community = fields.Nested(ModRemoveCommunity, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
+
+
+class ModBanFromCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    other_person_id = fields.Integer(required=True, allow_none=True)
+    community_id = fields.Integer(required=True, allow_none=True)
+    reason = fields.String(allow_none=True)
+    banned = fields.Boolean(required=True)
+    expires = fields.String(
+        allow_none=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class ModBanFromCommunityView(DefaultSchema):
+    mod_ban_from_community = fields.Nested(ModBanFromCommunity, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
+    banned_person = fields.Nested(Person, allow_none=True)
+
+
+class ModBan(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    other_person_id = fields.Integer(required=True, allow_none=True)
+    reason = fields.String(allow_none=True)
+    banned = fields.Boolean(required=True)
+    expires = fields.String(
+        allow_none=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class ModBanView(DefaultSchema):
+    mod_ban = fields.Nested(ModBan, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    banned_person = fields.Nested(Person, allow_none=True)
+
+
+class ModAddCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    other_person_id = fields.Integer(required=True, allow_none=True)
+    community_id = fields.Integer(required=True, allow_none=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class ModAddCommunityView(DefaultSchema):
+    mod_add_community = fields.Nested(ModAddCommunity, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
+    modded_person = fields.Nested(Person, allow_none=True)
+
+
+class ModTransferCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    other_person_id = fields.Integer(required=True, allow_none=True)
+    community_id = fields.Integer(required=True, allow_none=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class ModTransferCommunityView(DefaultSchema):
+    mod_transfer_community = fields.Nested(ModTransferCommunity, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    community = fields.Nested(Community, required=True)
+    modded_person = fields.Nested(Person, allow_none=True)
+
+
+class ModAdd(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    other_person_id = fields.Integer(required=True, allow_none=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class ModAddView(DefaultSchema):
+    mod_add = fields.Nested(ModAdd, required=True)
+    moderator = fields.Nested(Person, allow_none=True)
+    modded_person = fields.Nested(Person, allow_none=True)
+
+
+class AdminPurgePerson(DefaultSchema):
+    id = fields.Integer(required=True)
+    admin_person_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class AdminPurgePersonView(DefaultSchema):
+    admin_purge_person = fields.Nested(AdminPurgePerson, required=True)
+    admin = fields.Nested(Person)
+
+
+class AdminPurgeCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    admin_person_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class AdminPurgeCommunityView(DefaultSchema):
+    admin_purge_community = fields.Nested(AdminPurgeCommunity, required=True)
+    admin = fields.Nested(Person)
+
+
+class AdminPurgePost(DefaultSchema):
+    id = fields.Integer(required=True)
+    admin_person_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True, allow_none=True)
+    reason = fields.String(allow_none=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class AdminPurgePostView(DefaultSchema):
+    admin_purge_post = fields.Nested(AdminPurgePost, required=True)
+    admin = fields.Nested(Person)
+    community = fields.Nested(Community, required=True)
+
+
+class AdminPurgeComment(DefaultSchema):
+    id = fields.Integer(required=True)
+    admin_person_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class AdminPurgeCommentView(DefaultSchema):
+    admin_purge_comment = fields.Nested(AdminPurgeComment, required=True)
+    admin = fields.Nested(Person)
+    post = fields.Nested(Post, required=True)
+
+
+class ModHideCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True, allow_none=True)
+    mod_person_id = fields.Integer(required=True, allow_none=True)
+    reason = fields.String(allow_none=True)
+    hidden = fields.Boolean(required=True)
+    when_ = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class ModHideCommunityView(DefaultSchema):
+    mod_hide_community = fields.Nested(ModHideCommunity, required=True)
+    admin = fields.Nested(Person)
+    community = fields.Nested(Community, required=True)
+
+
+class GetModLogResponse(DefaultSchema):
+    removed_posts = fields.List(fields.Nested(ModRemovePostView), required=True)
+    locked_posts = fields.List(fields.Nested(ModLockPostView), required=True)
+    featured_posts = fields.List(fields.Nested(ModFeaturePostView), required=True)
+    removed_comments = fields.List(fields.Nested(ModRemoveCommentView), required=True)
+    removed_communities = fields.List(
+        fields.Nested(ModRemoveCommunityView), required=True
+    )
+    banned_from_community = fields.List(
+        fields.Nested(ModBanFromCommunityView), required=True
+    )
+    banned = fields.List(fields.Nested(ModBanView), required=True)
+    added_to_community = fields.List(fields.Nested(ModAddCommunityView), required=True)
+    transferred_to_community = fields.List(
+        fields.Nested(ModTransferCommunityView), required=True
+    )
+    added = fields.List(fields.Nested(ModAddView), required=True)
+    admin_purged_persons = fields.List(
+        fields.Nested(AdminPurgePersonView), required=True
+    )
+    admin_purged_communities = fields.List(
+        fields.Nested(AdminPurgeCommunityView), required=True
+    )
+    admin_purged_posts = fields.List(fields.Nested(AdminPurgePostView), required=True)
+    admin_purged_comments = fields.List(
+        fields.Nested(AdminPurgeCommentView), required=True
+    )
+    hidden_communities = fields.List(fields.Nested(ModHideCommunityView), required=True)
+
+
+class UserRegistration(DefaultSchema):
+    answer = fields.String(required=True, allow_none=True)
+    applied_at = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    country_code = fields.String()
+    email = fields.String(required=True, allow_none=True)
+    ip_address = fields.String(required=True, allow_none=True)
+    throwaway_email = fields.Boolean()
     user_id = fields.Integer(required=True)
-    message = fields.String(required=True)
-    updated_fields = fields.List(fields.String())
-
-
-class AdminUserActionRequest(DefaultSchema):
-    reason = fields.String(
-        validate=validate.Length(min=1, max=500),
-        metadata={"description": "Reason for action (required for ban/disable)"},
+    user_name = fields.String(required=True)
+    status = fields.String(
+        validate=validate.OneOf(["approved", "awaiting review"]), required=True
     )
-    expires_at = fields.DateTime(
-        format="iso",
-        metadata={"description": "Optional expiry date for temporary actions"},
-    )
-    notify_user = fields.Boolean(
-        metadata={"description": "Send notification email to user", "default": False}
+    approved_by = fields.Nested(Person)
+    approved_at = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
     )
 
 
-class AdminUserActionResponse(DefaultSchema):
-    success = fields.Boolean(required=True)
+class GetRegistrationList(DefaultSchema):
+    limit = fields.Integer(metadata={"default": 30})
+    page = fields.Integer(metadata={"default": 1})
+    pending_only = fields.Boolean(metadata={"default": True})
+    sort = fields.String(
+        validate=validate.OneOf(["Old", "New"]), metadata={"default": "New"}
+    )
+
+
+class GetRegistrationListResponse(DefaultSchema):
+    registrations = fields.List(fields.Nested(UserRegistration), required=True)
+
+
+class RegistrationApproveRequest(DefaultSchema):
+    approve = fields.Boolean(required=True)
     user_id = fields.Integer(required=True)
-    action = fields.String(
-        required=True,
-        validate=validate.OneOf(
-            ["disabled", "enabled", "banned", "unbanned", "deleted"]
-        ),
-    )
-    message = fields.String(required=True)
-    performed_by = fields.String(metadata={"description": "Admin who performed action"})
-    timestamp = fields.DateTime(required=True, format="iso")
-
-
-class AdminBulkUserRequest(DefaultSchema):
-    operation = fields.String(
-        required=True,
-        validate=validate.OneOf(["disable", "enable", "ban", "unban", "delete"]),
-    )
-    user_ids = fields.List(
-        fields.Integer(validate=validate.Range(min=1)),
-        required=True,
-        validate=validate.Length(min=1, max=100),
-    )
-    reason = fields.String(validate=validate.Length(min=1, max=500))
-    notify_users = fields.Boolean(metadata={"default": False})
-
-
-class AdminBulkUserResponse(DefaultSchema):
-    success = fields.Boolean(required=True)
-    operation = fields.String(required=True)
-    total_requested = fields.Integer(required=True)
-    successful = fields.Integer(required=True)
-    failed = fields.Integer(required=True)
-    results = fields.List(fields.Dict(), metadata={"description": "Per-user results"})
-    message = fields.String(required=True)
-
-
-class AdminUserStatsResponse(DefaultSchema):
-    total_users = fields.Integer(required=True)
-    local_users = fields.Integer(required=True)
-    remote_users = fields.Integer(required=True)
-    verified_users = fields.Integer(required=True)
-    banned_users = fields.Integer(required=True)
-    active_24h = fields.Integer(required=True)
-    active_7d = fields.Integer(required=True)
-    active_30d = fields.Integer(required=True)
-    registrations_today = fields.Integer(required=True)
-    registrations_7d = fields.Integer(required=True)
-    registrations_30d = fields.Integer(required=True)
-    timestamp = fields.DateTime(required=True, format="iso")
-
-
-class AdminRegistrationStatsRequest(DefaultSchema):
-    days = fields.Integer(
-        validate=validate.Range(min=1, max=365),
-        metadata={"description": "Number of days to analyze", "default": 30},
-    )
-    include_hourly = fields.Boolean(
-        metadata={"description": "Include hourly breakdown", "default": False}
-    )
-
-
-class AdminRegistrationStatsResponse(DefaultSchema):
-    period_days = fields.Integer(required=True)
-    total_registrations = fields.Integer(required=True)
-    private_registrations = fields.Integer(required=True)
-    public_registrations = fields.Integer(required=True)
-    daily_breakdown = fields.List(
-        fields.Dict(), metadata={"description": "Daily registration counts"}
-    )
-    hourly_breakdown = fields.List(
-        fields.Dict(), metadata={"description": "Hourly breakdown (if requested)"}
-    )
-    timestamp = fields.DateTime(required=True, format="iso")
-
-
-class AdminUserExportRequest(DefaultSchema):
-    format = fields.String(
-        validate=validate.OneOf(["csv", "json"]),
-        metadata={"description": "Export format", "default": "csv"},
-    )
-    export_fields = fields.List(
-        fields.String(), metadata={"description": "Fields to include in export"}
-    )
-    filters = fields.Dict(
-        metadata={"description": "Same filters as user list endpoint"}
-    )
-
-
-class AdminUserExportResponse(DefaultSchema):
-    success = fields.Boolean(required=True)
-    format = fields.String(required=True)
-    total_records = fields.Integer(required=True)
-    download_url = fields.String(metadata={"description": "Temporary download URL"})
-    expires_at = fields.DateTime(format="iso")
-    message = fields.String(required=True)

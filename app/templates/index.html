@@ -9,10 +9,13 @@
 {% set active_child = 'home' %}
 
 {% block app_content %}
-<div class="row">
+<div class="row home">
     <main class="col-12 col-lg-8 position-relative main_pane">
         {% if announcement -%}
             <div id="home_announcement">{{ announcement|safe }}</div>
+        {% endif -%}
+        {% if current_user.is_anonymous -%}
+            <div class="alert alert-info ml-3" role="alert">{{ _('Create an account to tailor this feed to your interests.') }}</div>
         {% endif -%}
         <div class="row">
             <div class="col-6 pe-1">
@@ -22,7 +25,7 @@
                 {% include "_view_filter_nav.html" %}
             </div>
         </div>
-        <div class="post_list h-feed">
+        <div class="post_list h-feed hide_flair">
             {% for post in instance_stickies -%}
                 <div class="bg-success bg-opacity-10 instance_sticky">
                     {% include 'post/_post_teaser.html' %}
@@ -83,7 +86,7 @@
                         </li>
                     {% endfor %}
                 </ul>
-                <p class="mt-4"><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a>
+                <p class="mt-4 mb-0"><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a>
                     {% if has_topics -%}
                         <a class="btn btn-primary" href="/topics">{{ _('Browse topics') }}</a>
                     {% endif -%}
@@ -122,11 +125,49 @@
                 {% endif -%}
                 {% if rss_feed %}
                 <p class="mt-4">
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> {{ _('RSS feed') }}</a>
                 </p>
-                {% endif %}
+                {% endif -%}
+                {% cache 60*5, g.locale %}
+                    {% set active_monthly = g.site.active_monthly() -%}
+                    {% if active_monthly > 100 -%}
+                        <hr>
+                        <h4>{{ _('This server') }}</h4>
+                        <div>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ ngettext('%(count)s Daily User', '%(count)s Daily Users', g.site.active_daily(), count=humanize_number(g.site.active_daily())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ ngettext('%(count)s Weekly User', '%(count)s Weekly Users', g.site.active_weekly(), count=humanize_number(g.site.active_weekly())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ ngettext('%(count)s Monthly User', '%(count)s Monthly Users', active_monthly, count=humanize_number(active_monthly)) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ ngettext('%(count)s User / 6 Months', '%(count)s Users / 6 Months', g.site.active_6monthly(), count=humanize_number(g.site.active_6monthly())) }}</span>
+                        </div>
+                        <h4 class="mt-3">{{ _('Whole network') }}</h4>
+                        <div>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ ngettext('%(count)s Daily User', '%(count)s Daily Users', g.site.all_active_daily(), count=humanize_number(g.site.all_active_daily())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ ngettext('%(count)s Weekly User', '%(count)s Weekly Users', g.site.all_active_weekly(), count=humanize_number(g.site.all_active_weekly())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ ngettext('%(count)s Monthly User', '%(count)s Monthly Users', g.site.all_active_monthly(), count=humanize_number(g.site.all_active_monthly())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ ngettext('%(count)s User / 6 Months', '%(count)s Users / 6 Months', g.site.all_active_6monthly(), count=humanize_number(g.site.all_active_6monthly())) }}</span>
+                        </div>
+                    {% endif -%}
+                {% endcache -%}
             </div>
         </div>
+
+        {% if new_instances and len(new_instances) > 0 -%}
+        <div class="card mb-3 mt-3">
+            <div class="card-header">
+                 <h2>{{ _('New instances') }}</h2>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for instance in new_instances %}
+                        <li class="list-group-item">
+                            <a href="https://{{ instance.domain }}">{{ instance.domain }}</a> <span class="text-muted">({{ instance.software }})</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <p class="mb-0 mt-2"><a href="/instances" class="btn btn-outline-secondary">{{ _('More instances') }}</a></p>
+            </div>
+        </div>
+        {% endif -%}
 
         {% include "_inoculation_links.html" %}
     </aside>

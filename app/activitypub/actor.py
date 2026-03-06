@@ -6,7 +6,7 @@ from random import randint
 
 import httpx
 from flask import current_app
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from app import cache, db
 from app.activitypub.util import (
@@ -361,7 +361,7 @@ def find_actor_by_url(
         return user
     else:
         user: User = (
-            User.query.filter(or_(User.user_name == actor_url))
+            User.query.filter(or_(func.lower(User.user_name) == actor_url.lower()))
             .filter_by(ap_id=None)
             .first()
         )
