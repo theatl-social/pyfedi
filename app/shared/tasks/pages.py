@@ -63,7 +63,8 @@ import re
 def make_post(send_async, post_id):
     session = get_task_session()
     try:
-        send_post(post_id, session=session)
+        with patch_db_session(session):
+            send_post(post_id, session=session)
     except Exception:
         session.rollback()
         raise
@@ -75,7 +76,8 @@ def make_post(send_async, post_id):
 def edit_post(send_async, post_id):
     session = get_task_session()
     try:
-        send_post(post_id, edit=True, session=session)
+        with patch_db_session(session):
+            send_post(post_id, edit=True, session=session)
     except Exception:
         session.rollback()
         raise
