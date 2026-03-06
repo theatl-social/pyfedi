@@ -816,6 +816,11 @@ class FeedListResponse(DefaultSchema):
     feeds = fields.List(fields.Nested(FeedView), required=True)
 
 
+class FollowFeedRequest(DefaultSchema):
+    feed_id = fields.Integer(required=True)
+    follow = fields.Boolean(required=True)
+
+
 class TopicView(DefaultSchema):
     children = fields.List(fields.Nested(lambda: TopicView()), required=True)
     communities = fields.List(fields.Nested(Community), required=True)
