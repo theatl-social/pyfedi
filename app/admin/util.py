@@ -248,7 +248,9 @@ def move_community_images_to_here(community_id):
                                     )
                                     extra_args = {"ContentType": content_type}
                                     if current_app.config.get("S3_STORAGE_CLASS"):
-                                        extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
+                                        extra_args["StorageClass"] = current_app.config[
+                                            "S3_STORAGE_CLASS"
+                                        ]
                                     new_path = post.image.source_url.replace(
                                         "app/static/media/", ""
                                     )
