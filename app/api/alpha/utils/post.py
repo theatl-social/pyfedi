@@ -923,9 +923,14 @@ def get_post_replies(auth, data):
 
 
 def post_post_like(auth, data):
+    user = authorise_api_user(auth, return_type="model")
+
+    if not user:
+        raise Exception("incorrect login")
+
     post_id = data['post_id']
     score = data['score']
-    private = data['private'] if 'private' in data else False
+    private = data['private'] if 'private' in data else bool(user.vote_privately)
     emoji = data['emoji'] if 'emoji' in data else None
     if score == 1:
         direction = 'upvote'

@@ -393,6 +393,11 @@ def get_reply(auth, data):
 
 
 def post_reply_like(auth, data):
+    user = authorise_api_user(auth, return_type="model")
+
+    if not user:
+        raise Exception("incorrect login")
+
     score = data['score']
     reply_id = data['comment_id']
     emoji = data['emoji'] if 'emoji' in data else None
@@ -403,7 +408,7 @@ def post_reply_like(auth, data):
     else:
         score = 0
         direction = 'reversal'
-    private = data['private'] if 'private' in data else False
+    private = data['private'] if 'private' in data else bool(user.vote_privately)
 
     user_id = vote_for_reply(reply_id, direction, not private, emoji, SRC_API, auth)
     reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
