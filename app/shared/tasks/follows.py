@@ -3,7 +3,7 @@ from app.constants import *
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, CommunityBan, CommunityJoinRequest, User, Feed, FeedJoinRequest
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, get_task_session, \
-    feed_membership, menu_subscribed_feeds
+    feed_membership, menu_subscribed_feeds, patch_db_session
 
 from flask import current_app, flash
 from markupsafe import Markup
@@ -39,67 +39,68 @@ sync:
 def join_community(send_async, user_id, community_id, src):
     session = get_task_session()
     try:
-        user = session.query(User).get(user_id)
-        community = session.query(Community).filter_by(id=community_id).one()
+        with patch_db_session(session):
+            user = session.query(User).get(user_id)
+            community = session.query(Community).filter_by(id=community_id).one()
 
-        pre_load_message = {}
-        banned = session.query(CommunityBan).filter_by(user_id=user_id, community_id=community_id).first()
-        if banned:
-            if not send_async:
-                if src == SRC_WEB:
-                    flash(_('You cannot join this community'))
-                    return
-                elif src == SRC_PLD:
-                    pre_load_message['user_banned'] = True
-                    return pre_load_message
-                elif src == SRC_API:
-                    raise Exception('banned_from_community')
-            return
+            pre_load_message = {}
+            banned = session.query(CommunityBan).filter_by(user_id=user_id, community_id=community_id).first()
+            if banned:
+                if not send_async:
+                    if src == SRC_WEB:
+                        flash(_('You cannot join this community'))
+                        return
+                    elif src == SRC_PLD:
+                        pre_load_message['user_banned'] = True
+                        return pre_load_message
+                    elif src == SRC_API:
+                        raise Exception('banned_from_community')
+                return
 
-        if (not community.is_local() and
-            (user.has_blocked_instance(community.instance.id) or
-             instance_banned(community.instance.domain))):
-            if not send_async:
-                if src == SRC_WEB:
-                    flash(_('Community is on banned or blocked instance'))
-                    return
-                elif src == SRC_PLD:
-                    pre_load_message['community_on_banned_or_blocked_instance'] = True
-                    return pre_load_message
-                elif src == SRC_API:
-                    raise Exception('community_on_banned_or_blocked_instance')
-            return
+            if (not community.is_local() and
+                (user.has_blocked_instance(community.instance.id) or
+                 instance_banned(community.instance.domain))):
+                if not send_async:
+                    if src == SRC_WEB:
+                        flash(_('Community is on banned or blocked instance'))
+                        return
+                    elif src == SRC_PLD:
+                        pre_load_message['community_on_banned_or_blocked_instance'] = True
+                        return pre_load_message
+                    elif src == SRC_API:
+                        raise Exception('community_on_banned_or_blocked_instance')
+                return
 
-        if not community.is_local() and community.instance.online():
-            join_request = CommunityJoinRequest(user_id=user_id, community_id=community_id)
-            session.add(join_request)
-            session.commit()
+            if not community.is_local() and community.instance.online():
+                join_request = CommunityJoinRequest(user_id=user_id, community_id=community_id)
+                session.add(join_request)
+                session.commit()
 
-            follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
-            follow = {
-              'id': follow_id,
-              'type': 'Follow',
-              'actor': user.public_url(),
-              'object': community.public_url(),
-              '@context': default_context(),
-              'to': [community.public_url()],
-            }
-            send_post_request(community.ap_inbox_url, follow, user.private_key,
-                              user.public_url() + '#main-key', timeout=10)
+                follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
+                follow = {
+                  'id': follow_id,
+                  'type': 'Follow',
+                  'actor': user.public_url(),
+                  'object': community.public_url(),
+                  '@context': default_context(),
+                  'to': [community.public_url()],
+                }
+                send_post_request(community.ap_inbox_url, follow, user.private_key,
+                                  user.public_url() + '#main-key', timeout=10)
 
-        # for communities on local or offline instances, joining is instant
-        cache.delete_memoized(community_membership, user, community)
-        cache.delete_memoized(joined_communities, user.id)
+            # for communities on local or offline instances, joining is instant
+            cache.delete_memoized(community_membership, user, community)
+            cache.delete_memoized(joined_communities, user.id)
 
-        if src == SRC_WEB:
-            flash(Markup(_('You joined %(community_name)s',
-                           community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
-            return
-        elif src == SRC_PLD:
-            pre_load_message['status'] = 'joined'
-            return pre_load_message
+            if src == SRC_WEB:
+                flash(Markup(_('You joined %(community_name)s',
+                               community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
+                return
+            elif src == SRC_PLD:
+                pre_load_message['status'] = 'joined'
+                return pre_load_message
 
-        return True
+            return True
     except Exception:
         session.rollback()
         raise
@@ -111,43 +112,44 @@ def join_community(send_async, user_id, community_id, src):
 def leave_community(send_async, user_id, community_id):
     session = get_task_session()
     try:
-        user = session.query(User).get(user_id)
-        community = session.query(Community).filter_by(id=community_id).one()
+        with patch_db_session(session):
+            user = session.query(User).get(user_id)
+            community = session.query(Community).filter_by(id=community_id).one()
 
-        cache.delete_memoized(community_membership, user, community)
-        cache.delete_memoized(joined_communities, user.id)
+            cache.delete_memoized(community_membership, user, community)
+            cache.delete_memoized(joined_communities, user.id)
 
-        if community.is_local():
-            return
+            if community.is_local():
+                return
 
-        join_request = session.query(CommunityJoinRequest).filter_by(user_id=user_id, community_id=community_id).first()
-        session.delete(join_request)
-        session.commit()
+            join_request = session.query(CommunityJoinRequest).filter_by(user_id=user_id, community_id=community_id).first()
+            session.delete(join_request)
+            session.commit()
 
-        if (not community.instance.online() or
-           user.has_blocked_instance(community.instance.id) or
-           instance_banned(community.instance.domain)):
-            return
+            if (not community.instance.online() or
+               user.has_blocked_instance(community.instance.id) or
+               instance_banned(community.instance.domain)):
+                return
 
-        follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
-        follow = {
-          'id': follow_id,
-          'type': 'Follow',
-          'actor': user.public_url(),
-          'object': community.public_url(),
-          'to': [community.public_url()]
-        }
-        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
-        undo = {
-          'id': undo_id,
-          'type': 'Undo',
-          'actor': user.public_url(),
-          'object': follow,
-          '@context': default_context(),
-          'to': [community.public_url()]
-        }
+            follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
+            follow = {
+              'id': follow_id,
+              'type': 'Follow',
+              'actor': user.public_url(),
+              'object': community.public_url(),
+              'to': [community.public_url()]
+            }
+            undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
+            undo = {
+              'id': undo_id,
+              'type': 'Undo',
+              'actor': user.public_url(),
+              'object': follow,
+              '@context': default_context(),
+              'to': [community.public_url()]
+            }
 
-        send_post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key', timeout=10)
+            send_post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key', timeout=10)
     except Exception:
         session.rollback()
         raise
@@ -159,47 +161,48 @@ def leave_community(send_async, user_id, community_id):
 def leave_feed(send_async, user_id, feed_id):
     session = get_task_session()
     try:
-        user = session.query(User).get(user_id)
-        feed = session.query(Feed).filter_by(id=feed_id).one()
+        with patch_db_session(session):
+            user = session.query(User).get(user_id)
+            feed = session.query(Feed).filter_by(id=feed_id).one()
 
-        cache.delete_memoized(feed_membership, user, feed)
-        cache.delete_memoized(menu_subscribed_feeds, user_id)
-        cache.delete_memoized(joined_communities, user_id)
+            cache.delete_memoized(feed_membership, user, feed)
+            cache.delete_memoized(menu_subscribed_feeds, user_id)
+            cache.delete_memoized(joined_communities, user_id)
 
-        if feed.is_local():
-            return
-        
-        join_request = session.query(FeedJoinRequest).filter_by(user_id=user_id, feed_id=feed_id).first()
-        if join_request:
-            uuid = join_request.uuid
-        session.query(FeedJoinRequest).filter_by(user_id=user_id, feed_id=feed_id).delete()
-        session.commit()
+            if feed.is_local():
+                return
 
-        if (not feed.instance.online()
-            or user.has_blocked_instance(feed.instance.id)
-            or instance_banned(feed.instance.domain)):
-            return
-        
-        # This code is based on feed.feed_unsubscribe and leave_community above
-        if not feed.instance.gone_forever:
-            follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{uuid}"
-            undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
-            follow = {
-                "actor": user.public_url(),
-                "to": [feed.public_url()],
-                "object": feed.public_url(),
-                "type": "Follow",
-                "id": follow_id
-            }
-            undo = {
-                'actor': user.public_url(),
-                'to': [feed.public_url()],
-                'type': 'Undo',
-                'id': undo_id,
-                'object': follow
-            }
-            send_post_request(feed.ap_inbox_url, undo, user.private_key,
-                                user.public_url() + '#main-key', timeout=10)
+            join_request = session.query(FeedJoinRequest).filter_by(user_id=user_id, feed_id=feed_id).first()
+            if join_request:
+                uuid = join_request.uuid
+            session.query(FeedJoinRequest).filter_by(user_id=user_id, feed_id=feed_id).delete()
+            session.commit()
+
+            if (not feed.instance.online()
+                or user.has_blocked_instance(feed.instance.id)
+                or instance_banned(feed.instance.domain)):
+                return
+
+            # This code is based on feed.feed_unsubscribe and leave_community above
+            if not feed.instance.gone_forever:
+                follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{uuid}"
+                undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
+                follow = {
+                    "actor": user.public_url(),
+                    "to": [feed.public_url()],
+                    "object": feed.public_url(),
+                    "type": "Follow",
+                    "id": follow_id
+                }
+                undo = {
+                    'actor': user.public_url(),
+                    'to': [feed.public_url()],
+                    'type': 'Undo',
+                    'id': undo_id,
+                    'object': follow
+                }
+                send_post_request(feed.ap_inbox_url, undo, user.private_key,
+                                    user.public_url() + '#main-key', timeout=10)
 
     except Exception:
         session.rollback()

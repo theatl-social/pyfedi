@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from flask import current_app, g
 from sqlalchemy import text, func, or_
 from sqlalchemy.orm.exc import NoResultFound
@@ -1312,3 +1314,38 @@ def blocked_instances_view(user) -> list[dict]:
     for blocked_instance in Instance.query.filter(Instance.id.in_(blocked_ids)).all():
         blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_instance, variant=1)})
     return blocked
+
+
+def registration_view(registration) -> dict:
+    if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/tmp/disposable_domains.txt'):
+        with open('app/static/tmp/disposable_domains.txt', 'r', encoding='utf-8') as f:
+            disposable_domains = [line.rstrip('\n') for line in f]
+    else:
+        disposable_domains = []
+
+    v1 = dict()
+    v1["answer"] = registration.answer
+    v1["applied_at"] = registration.created_at.isoformat(timespec="microseconds") + 'Z'
+    v1["email"] = registration.user.email
+    v1["user_id"] = registration.user.id
+    v1["user_name"] = registration.user.display_name()
+    
+    if registration.user.ip_address:
+        v1["ip_address"] = registration.user.ip_address
+
+    if registration.user.ip_address_country:
+        v1["country_code"] = registration.user.ip_address_country
+    
+    if registration.user.email_domain() in disposable_domains:
+        v1["throwaway_email"] = True
+    
+    if registration.status == 1:
+        v1["status"] = "approved"
+        if registration.approved_by:
+            v1["approved_by"] = user_view(registration.approved_by, variant=1)
+        if registration.approved_at:
+            v1["approved_at"] = registration.approved_at.isoformat(timespec="microseconds") + 'Z'
+    else:
+        v1["status"] = "awaiting review"
+    
+    return v1
