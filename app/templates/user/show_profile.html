@@ -176,13 +176,13 @@
         {% endif -%}
         <ul class="nav nav-tabs nav-justified mt-4">
           <li class="nav-item">
-            <a href="#overview_tab" class="nav-link {{ 'active' if post_prev_url is none and replies_prev_url is none }}" id="overview-pill" data-bs-toggle="pill" role="tab" aria-current="page">Overview</a>
+            <a href="#overview_tab" class="nav-link {{ 'active' if post_prev_url is none and replies_prev_url is none }}" id="overview-pill" data-bs-toggle="pill" role="tab" aria-current="page">{{ _('Overview') }}</a>
           </li>
           <li class="nav-item">
-            <a href="#post_list_tab" class="nav-link {{ 'active' if post_prev_url is not none }}" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">Posts</a>
+            <a href="#post_list_tab" class="nav-link {{ 'active' if post_prev_url is not none }}" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">{{ _('Posts') }}</a>
           </li>
           <li class="nav-item">
-            <a href="#comments_tab" class="nav-link {{ 'active' if replies_prev_url is not none }}" id="comments-pill" data-bs-toggle="pill" role="tab">Comments</a>
+            <a href="#comments_tab" class="nav-link {{ 'active' if replies_prev_url is not none }}" id="comments-pill" data-bs-toggle="pill" role="tab">{{ _('Comments') }}</a>
           </li>
         </ul>
         <div class="tab-content">
@@ -193,7 +193,7 @@
                       <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
                   </p>
               {% endif -%}
-              <h4 class="mt-2">Posts and Comments by {{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}</h4>
+              <h4 class="mt-2">{{ _('Posts and Comments by %(user_name)s', user_name=user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id) }}</h4>
               <div class="post_list comments">
                   {% for item in overview_items %}
                     {% if item.__class__.__name__ == 'Post' %}
@@ -229,10 +229,10 @@
             <div class="tab-pane border-0 {{ 'active' if post_prev_url is not none }}" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
               {% if rss_feed -%}
                   <p class="mt-2 d-block" style="float: right;">
-                      <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                      <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> {{ _('RSS feed') }}</a>
                   </p>
               {% endif -%}
-              <h4 class="mt-2">Posts by {{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}</h4>
+              <h4 class="mt-2">{{ _('Posts by %(user_name)s', user_name=user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id) }}</h4>
               <div class="post_list">
                   {% for post in posts.items %}
                       {% include 'post/_post_teaser.html' %}
@@ -259,7 +259,7 @@
 
           {% if post_replies %}
             <div class="tab-pane border-0 {{ 'active' if replies_prev_url is not none }}" id="comments_tab" role="tabpanel" aria-labelled-by="comments-pill">
-              <h4 class="mt-2" id="comments">Comments by {{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}</h4>
+              <h4 class="mt-2" id="comments">{{ _('Comments by %(user_name)s', user_name=user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id) }}</h4>
               <div class="post_list comments">
                   {% for post_reply in post_replies.items %}
                       {% with teaser=True %}
@@ -364,7 +364,7 @@
                         </ul>
                     {% endif %}
                     {% if len(moderates) > 0 %}
-                        <h4>Moderates</h4>
+                        <h4>{{ _('Moderates') }}</h4>
                         <ul class="list-group list-group-flush">
                             {% for community in moderates %}
                                 <li class="list-group-item">

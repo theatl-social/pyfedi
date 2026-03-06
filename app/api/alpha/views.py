@@ -1120,6 +1120,14 @@ def site_view(user) -> dict:
     elif g.site.sidebar:
         site['sidebar'] = g.site.sidebar
     
+    announcement = get_setting('announcement')
+    if announcement:
+        site['announcement_md'] = announcement
+    
+    announcement_html = get_setting('announcement_html')
+    if announcement_html:
+        site['announcement'] = announcement_html
+    
     if g.site.description:
         site['description'] = g.site.description
     for language in Language.query.all():

@@ -4,16 +4,7 @@
   <head>
     {% block head -%}
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0, shrink-to-fit=no">
         <meta http-equiv="Content-Language" content="en" />
-        <meta name="msapplication-TileColor" content="#007BBF">
-        <meta name="theme-color" content="#007BBF">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="HandheldFriendly" content="True">
-        <meta name="MobileOptimized" content="320">
-        <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% block styles -%}
             <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" />
             <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
@@ -26,18 +17,6 @@
             {% endif -%}
         {% endblock -%}
         <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
-        <link rel="apple-touch-icon" sizes="152x152" href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png' }}">
-        <link rel="icon" type="image/png" sizes="32x32" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
-        <link rel="icon" type="image/png" sizes="16x16" href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
-        <link rel="manifest" href="/static/manifest.json">
-        <link rel="shortcut icon" type="image/png" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
-        <link href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon.ico' }}" rel='icon' type='image/x-icon'>
-        <meta name="msapplication-TileColor" content="#da532c">
-        <meta name="msapplication-config" content="/static/browserconfig.xml">
-        <meta name="theme-color" content="#ffffff">
-        {% if canonical -%}
-            <link rel="canonical" href="{{ canonical }}" />
-        {% endif -%}
         {% if description -%}
             <meta name="description" content="{{ description }}" />
         {% endif -%}
@@ -52,9 +31,10 @@
         {% endif -%}
     {% endblock -%}
   </head>
-  <body class="{{ ' low_bandwidth' if low_bandwidth }}" bgcolor="#f8f8ff">
-    <a href="#middle_column" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
-    <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
+  <body class="{{ ' low_bandwidth' if low_bandwidth }}">
+    {%- include "translation.html" -%}
+    <a href="#middle_column" class="skip-link" role="navigation" aria-label="{{ _('Skip main navigation') }}" tabindex="">{{ _('Skip to main content') }}</a>
+    <a href="#side_pane" class="skip-link" role="navigation" aria-label="{{ _('Go to side pane') }}" tabindex="">{{ _('Go to side pane') }}</a>
     <!-- Page content -->
     <table width="100%" border="0">
         <thead>
@@ -77,7 +57,7 @@
                     {% if current_user.is_authenticated -%}
                         {% if current_user.unread_notifications -%}
                         <p><a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
-                            <span class="fe fe-bell red"></span>Unread notifications: <span class="red">{{ current_user.unread_notifications }}</span>
+                            <span class="fe fe-bell red"></span>{{ _('Unread notifications') }}: <span class="red">{{ current_user.unread_notifications }}</span>
                         </a></p>
                         {% endif -%}
                     {% endif -%}
@@ -200,12 +180,11 @@
             <td> </td>
             <td align="middle">
                 <footer class="footer mt-auto" role="contentinfo">
-                    <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
                     <p class="text-center"><a href="/donate">{{ _('Donate') }}</a></p>
                     <p class="text-center"><a href="/about">{{ _('About') }}</a></p>
                     <p class="text-center"><a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a></p>
-                    <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">PieFed is free and open source</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
-                    <p class="text-center"><a href="/privacy">Privacy policy</a></p>
+                    <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />{{ _('Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.') }}</p>
+                    <p class="text-center"><a href="/privacy">{{ _('Privacy policy') }}</a></p>
                 </footer>
             </td>
             <td> </td>

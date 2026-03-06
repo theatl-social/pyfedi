@@ -132,9 +132,12 @@ tg-spoiler {
 }
 
 div.navbar {
-  border-bottom: 1px solid rgba(0, 40, 100, 0.12);
   min-height: 60px;
   background-color: var(--bs-body-bg);
+
+  @include breakpoint(tablet) {
+    border-bottom: 1px solid rgba(0, 40, 100, 0.12);
+  }
 
   @media (min-width: 1400px) {
     .container-lg {
@@ -161,10 +164,20 @@ div.navbar {
   .dropdown-menu {
     .dropdown-item {
       @include breakpoint(tablet) {
-        max-width: 200px;
+        width: 200px;
       }
       white-space: break-spaces;
       break-inside: avoid;
+    }
+  }
+}
+
+@include breakpoint(tablet) {
+  .navbar-collapse {
+    margin-right: calc(var(--bs-navbar-nav-link-padding-x) * -1);
+
+    &.authenticated {
+      margin-right: calc(var(--bs-navbar-nav-link-padding-x) * -2);
     }
   }
 }
@@ -1169,6 +1182,31 @@ time {
   }
 }
 
+details {
+  margin-bottom: 1rem;
+}
+
+.spoiler_block {
+  margin: 3px 0 0 1em;
+  padding: 0.5em 0.5em 0.5em 0.2em;
+  border-left-style: solid;
+  border-left-width: 2px;
+  background-color: var(--bs-secondary-bg-subtle);
+  border-left-color: var(--bs-secondary-border-subtle);
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  table, img {
+    padding: 0.5em;
+  }
+
+  > details {
+    margin-bottom: 0;
+  }
+}
+
 .render_username {
   display: inline;
   a img {
@@ -2143,10 +2181,6 @@ h1 .warning_badge {
   color: #0c5460;
   background-color: #d1ecf1;
   border-color: #bee5eb;
-  @include breakpoint(tablet) {
-    padding-left: 1.8rem;
-    padding-right: 1.8rem;
-  }
 }
 
 .alert-error {
@@ -2155,10 +2189,14 @@ h1 .warning_badge {
 }
 
 .main_pane {
-  border: solid 1px $light-grey;
-  border-radius: 5px;
-  padding-top: 8px;
+  /* Ensure a little space after pagination on mobile. */
   padding-bottom: 12px;
+
+  @include breakpoint(tablet) {
+    border: solid 1px $light-grey;
+    border-radius: 5px;
+    padding-top: 8px;
+  }
 
   .url_thumbnail {
     width: 120px;
@@ -2465,8 +2503,11 @@ form {
   margin-bottom: 10px;
 }
 
-.alert {
-  width: 96%;
+@include breakpoint(tablet) {
+  .alert {
+    /* To match .row */
+    margin-left: calc(var(--bs-gutter-x) * -.5);
+  }
 }
 
 #insertImageDialog {
@@ -3103,3 +3144,4 @@ form {
 
 @import "scss/compact";
 @import "scss/print";
+

@@ -554,6 +554,11 @@ fieldset legend {
   font-size: inherit;
 }
 
+.form-control::placeholder {
+  color: rgba(var(--bs-secondary-color-rgb), 0.5);
+  font-style: italic;
+}
+
 .form-check-input {
   margin-top: 0;
 }
@@ -795,9 +800,13 @@ tg-spoiler:hover {
 }
 
 div.navbar {
-  border-bottom: 1px solid rgba(0, 40, 100, 0.12);
   min-height: 60px;
   background-color: var(--bs-body-bg);
+}
+@media (min-width: 992px) {
+  div.navbar {
+    border-bottom: 1px solid rgba(0, 40, 100, 0.12);
+  }
 }
 @media (min-width: 1400px) {
   div.navbar .container-lg {
@@ -823,10 +832,18 @@ div.navbar {
 }
 @media (min-width: 992px) {
   .navbar .dropdown-menu .dropdown-item {
-    max-width: 200px;
+    width: 200px;
   }
 }
 
+@media (min-width: 992px) {
+  .navbar-collapse {
+    margin-right: calc(var(--bs-navbar-nav-link-padding-x) * -1);
+  }
+  .navbar-collapse.authenticated {
+    margin-right: calc(var(--bs-navbar-nav-link-padding-x) * -2);
+  }
+}
 @media (min-width: 992px) {
   ul.navbar-nav {
     width: 100%;
@@ -1708,6 +1725,28 @@ time {
   max-width: 100%;
 }
 
+details {
+  margin-bottom: 1rem;
+}
+
+.spoiler_block {
+  margin: 3px 0 0 1em;
+  padding: 0.5em 0.5em 0.5em 0.2em;
+  border-left-style: solid;
+  border-left-width: 2px;
+  background-color: var(--bs-secondary-bg-subtle);
+  border-left-color: var(--bs-secondary-border-subtle);
+}
+.spoiler_block p:last-child {
+  margin-bottom: 0;
+}
+.spoiler_block table, .spoiler_block img {
+  padding: 0.5em;
+}
+.spoiler_block > details {
+  margin-bottom: 0;
+}
+
 .render_username {
   display: inline;
 }
@@ -2539,12 +2578,6 @@ h1 .warning_badge {
   background-color: #d1ecf1;
   border-color: #bee5eb;
 }
-@media (min-width: 992px) {
-  .alert-info, .alert-message, .alert-error {
-    padding-left: 1.8rem;
-    padding-right: 1.8rem;
-  }
-}
 
 .alert-error {
   color: #722047;
@@ -2552,10 +2585,15 @@ h1 .warning_badge {
 }
 
 .main_pane {
-  border: solid 1px #ddd;
-  border-radius: 5px;
-  padding-top: 8px;
+  /* Ensure a little space after pagination on mobile. */
   padding-bottom: 12px;
+}
+@media (min-width: 992px) {
+  .main_pane {
+    border: solid 1px #ddd;
+    border-radius: 5px;
+    padding-top: 8px;
+  }
 }
 .main_pane .url_thumbnail {
   width: 120px;
@@ -2834,10 +2872,12 @@ form h5 {
   margin-bottom: 10px;
 }
 
-.alert {
-  width: 96%;
+@media (min-width: 992px) {
+  .alert {
+    /* To match .row */
+    margin-left: calc(var(--bs-gutter-x) * -0.5);
+  }
 }
-
 #insertImageDialog {
   max-width: 1000px;
 }

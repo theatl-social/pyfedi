@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from flask import redirect, url_for, flash, request, make_response, current_app, abort, g, json
 from markupsafe import Markup, escape
 from flask_login import current_user
-from flask_babel import _, force_locale, gettext
+from flask_babel import _, force_locale, gettext, ngettext
 from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
@@ -193,7 +193,7 @@ def add_remote():
             server, community = extract_domain_and_actor(address)
             new_community = search_for_community('!' + community + '@' + server)
         else:
-            message = Markup('Accepted address formats: !community@server.name or https://server.name/{c|m}/community. Search on <a href="https://lemmyverse.net/communities">Lemmyverse.net</a> to find some.')
+            message = Markup(_('Accepted address formats: !community@server.name or https://server.name/c/community.') + ' ' + _('Search on <a href="https://lemmyverse.net/communities">Lemmyverse.net</a> to find some.'))
             flash(message, 'error')
         if new_community is None:
             if g.site.enable_nsfw:
@@ -2449,8 +2449,9 @@ def community_invite(actor):
                                 sent_to.add(line)
                         total_invites += 1
 
-            flash(_('Invited %(total_invites)d people using %(chat_invites)d chat messages and %(email_invites)d emails.',
-                  total_invites=total_invites, chat_invites=chat_invites, email_invites=email_invites))
+            flash(ngettext('Invited %(num)d person', 'Invited %(num)d people', total_invites) + ' ' +
+                  ngettext('using %(num)d chat message', 'using %(num)d chat messages', chat_invites) + ' ' +
+                  ngettext('and %(num)d email', 'and %(num)d emails', email_invites) + '.')
             return redirect('/c/' + community.link())
 
         if community.is_local() and community.local_only:

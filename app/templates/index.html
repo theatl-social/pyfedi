@@ -125,7 +125,7 @@
                 {% endif -%}
                 {% if rss_feed %}
                 <p class="mt-4">
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> {{ _('RSS feed') }}</a>
                 </p>
                 {% endif -%}
                 {% cache 60*5, g.locale %}
@@ -134,17 +134,17 @@
                         <hr>
                         <h4>{{ _('This server') }}</h4>
                         <div>
-                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ humanize_number(g.site.active_daily()) }} {{ _('Daily Users') }}</span>
-                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ humanize_number(g.site.active_weekly()) }} {{ _('Weekly Users') }}</span>
-                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ humanize_number(active_monthly) }} {{ _('Monthly Users') }}</span>
-                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ humanize_number(g.site.active_6monthly()) }} {{ _('Users / 6 Months') }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ ngettext('%(count)s Daily User', '%(count)s Daily Users', g.site.active_daily(), count=humanize_number(g.site.active_daily())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ ngettext('%(count)s Weekly User', '%(count)s Weekly Users', g.site.active_weekly(), count=humanize_number(g.site.active_weekly())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ ngettext('%(count)s Monthly User', '%(count)s Monthly Users', active_monthly, count=humanize_number(active_monthly)) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ ngettext('%(count)s User / 6 Months', '%(count)s Users / 6 Months', g.site.active_6monthly(), count=humanize_number(g.site.active_6monthly())) }}</span>
                         </div>
                         <h4 class="mt-3">{{ _('Whole network') }}</h4>
                         <div>
-                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ humanize_number(g.site.all_active_daily()) }} {{ _('Daily Users') }}</span>
-                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ humanize_number(g.site.all_active_weekly()) }} {{ _('Weekly Users') }}</span>
-                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ humanize_number(g.site.all_active_monthly()) }} {{ _('Monthly Users') }}</span>
-                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ humanize_number(g.site.all_active_6monthly()) }} {{ _('Users / 6 Months') }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ ngettext('%(count)s Daily User', '%(count)s Daily Users', g.site.all_active_daily(), count=humanize_number(g.site.all_active_daily())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ ngettext('%(count)s Weekly User', '%(count)s Weekly Users', g.site.all_active_weekly(), count=humanize_number(g.site.all_active_weekly())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ ngettext('%(count)s Monthly User', '%(count)s Monthly Users', g.site.all_active_monthly(), count=humanize_number(g.site.all_active_monthly())) }}</span>
+                            <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ ngettext('%(count)s User / 6 Months', '%(count)s Users / 6 Months', g.site.all_active_6monthly(), count=humanize_number(g.site.all_active_6monthly())) }}</span>
                         </div>
                     {% endif -%}
                 {% endcache -%}

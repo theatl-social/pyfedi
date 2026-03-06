@@ -8,12 +8,12 @@
 {% block app_content %}
 <div class="row">
 {% if active_ban %}
-  <h5> Active Ban</h5> 
+  <h5>{{ _('Active Ban') }}</h5>
   <table class="table">
     <tr>
-      <th>Reason</th>
-      <th>From</th>
-      <th>Until</th>
+      <th>{{ _('Reason') }}</th>
+      <th>{{ _('From') }}</th>
+      <th>{{ _('Until') }}</th>
     </tr>
     <tr>
       <td>{{ active_ban.reason }}</td>
@@ -22,12 +22,12 @@
   </table>
 {% endif %}
 {% if past_bans.count() > 0 %}
-  <h5> Ban History</h5>
+  <h5>{{ _('Ban History') }}</h5>
   <table class="table">
     <tr>
-      <th>Reason</th>
-      <th>From</th>
-      <th>Type</th>
+      <th>{{ _('Reason') }}</th>
+      <th>{{ _('From') }}</th>
+      <th>{{ _('Type') }}</th>
     </tr>
     {% for past_ban in past_bans %}
     <tr>

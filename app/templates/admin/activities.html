@@ -12,26 +12,26 @@
 <div class="row">
     <div class="col">
         <h1>{{ _('Activities') }}</h1>
-        Result Filter: 
-        <a href="{{ url_for('admin.admin_activities', direction=request.args.get('direction')) }}">All</a> |
-        <a href="{{ url_for('admin.admin_activities', result='failure', direction=request.args.get('direction')) }}">Failure</a> |
-        <a href="{{ url_for('admin.admin_activities', result='success', direction=request.args.get('direction')) }}">Success</a> |
-        <a href="{{ url_for('admin.admin_activities', result='ignored', direction=request.args.get('direction')) }}">Ignored</a> |
-        <a href="{{ url_for('admin.admin_activities', result='processing', direction=request.args.get('direction')) }}">Processing</a> ---
-        Direction Filter:
-        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result')) }}">Both</a> |
-        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result'), direction='in') }}">In</a> |
-        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result'), direction='out') }}">Out</a>
+        {{ _('Result Filter') }}:
+        <a href="{{ url_for('admin.admin_activities', direction=request.args.get('direction')) }}">{{ _('All') }}</a> |
+        <a href="{{ url_for('admin.admin_activities', result='failure', direction=request.args.get('direction')) }}">{{ _('Failure') }}</a> |
+        <a href="{{ url_for('admin.admin_activities', result='success', direction=request.args.get('direction')) }}">{{ _('Success') }}</a> |
+        <a href="{{ url_for('admin.admin_activities', result='ignored', direction=request.args.get('direction')) }}">{{ _('Ignored') }}</a> |
+        <a href="{{ url_for('admin.admin_activities', result='processing', direction=request.args.get('direction')) }}">{{ _('Processing') }}</a> ---
+        {{ _('Direction Filter') }}:
+        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result')) }}">{{ _('Both') }}</a> |
+        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result'), direction='in') }}">{{ _('In') }}</a> |
+        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result'), direction='out') }}">{{ _('Out') }}</a>
         <div>
             <table class="table">
                 <tr>
-                <th>When</th>
-                <th>Direction</th>
-                <th>ID</th>
-                <th>Type</th>
-                <th>Result</th>
-                <th>Message</th>
-                <th>JSON</th>
+                <th>{{ _('When') }}</th>
+                <th>{{ _('Direction') }}</th>
+                <th>{{ _('ID') }}</th>
+                <th>{{ _('Type') }}</th>
+                <th>{{ _('Result') }}</th>
+                <th>{{ _('Message') }}</th>
+                <th>{{ _('JSON') }}</th>
                 </tr>
                 {% for activity in activities.items %}
                     <tr>
@@ -49,9 +49,9 @@
                         <td>{{ activity.exception_message if activity.exception_message else '' }}</td>
                         <td>
                         {% if activity.activity_json is none %}
-                            None
+                            {{ _('None') }}
                         {% else %}
-                            <a href="{{ url_for('admin.activity_json', activity_id=activity.id) }}">View</a>
+                            <a href="{{ url_for('admin.activity_json', activity_id=activity.id) }}">{{ _('View') }}</a>
                         {% endif %}
                         </td>
                     </tr>

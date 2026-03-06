@@ -1589,6 +1589,9 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                                         if store_files_in_s3():
                                             content_type = guess_mime_type(final_place)
+                                            extra_args = {'ContentType': content_type}
+                                            if current_app.config.get('S3_STORAGE_CLASS'):
+                                                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
                                             boto3_session = boto3.session.Session()
                                             s3 = boto3_session.client(
                                                 service_name='s3',
@@ -1600,7 +1603,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                             s3.upload_file(final_place, current_app.config['S3_BUCKET'],
                                                            original_directory + '/' +
                                                            new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
-                                                           ExtraArgs={'ContentType': content_type})
+                                                           ExtraArgs=extra_args)
                                             os.unlink(final_place)
                                             final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
                                                           '/' + new_filename + final_ext
@@ -1631,6 +1634,9 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                                         if store_files_in_s3():
                                             content_type = guess_mime_type(final_place_thumbnail)
+                                            extra_args = {'ContentType': content_type}
+                                            if current_app.config.get('S3_STORAGE_CLASS'):
+                                                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
                                             if boto3_session is None and s3 is None:
                                                 boto3_session = boto3.session.Session()
                                                 s3 = boto3_session.client(
@@ -1643,7 +1649,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                             s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'],
                                                            original_directory + '/' +
                                                            new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_thumbnail' + thumbnail_ext,
-                                                           ExtraArgs={'ContentType': content_type})
+                                                           ExtraArgs=extra_args)
                                             os.unlink(final_place_thumbnail)
                                             final_place_thumbnail = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
                                                                     '/' + new_filename + '_thumbnail' + thumbnail_ext

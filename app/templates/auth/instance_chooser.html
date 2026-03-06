@@ -55,13 +55,13 @@
         <!-- Loading indicator -->
         <div id="loading-indicator" class="text-center d-none mt-3">
             <div class="spinner-border" role="status">
-                <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">{{ _('Loading...') }}</span>
             </div>
         </div>
         
         <!-- Results will be populated here by JavaScript -->
         <hr>
-        <div id="search-results" class="row mt-3 instance_chooser_results">
+        <div id="search-results" class="row mt-3 instance_chooser_results" data-error="{{ _('Failed to search instances. Please try again.') }}">
         </div>
         <div class="row">
             <div class="col"><p>{{ _('These servers are ordered by speed so it may vary depending on time of day, etc') }}</p></div>
@@ -75,7 +75,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="instanceModalLabel">{{ _('Server details') }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
       </div>
       <div class="modal-body">
         <div class="row">
@@ -141,7 +141,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="helpModalLabel">{{ _('Help') }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
       </div>
       <div class="modal-body">
         <div class="row">
@@ -295,7 +295,7 @@
             renderResults(data.result || []);
         } catch (error) {
             console.error('Error searching instances:', error);
-            renderError('Failed to search instances. Please try again.');
+            renderError(resultsContainer.dataset['error']);
         } finally {
             // Hide loading indicator
             loadingIndicator.classList.add('d-none');

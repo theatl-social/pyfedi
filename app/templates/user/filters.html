@@ -9,7 +9,7 @@
 {% block app_content %}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav class="mb-2"  id="breadcrumb_nav" title="Navigation">
+        <nav class="mb-2"  id="breadcrumb_nav" title="{{ _('Navigation') }}">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
             <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
@@ -20,7 +20,7 @@
         {% include "user/_user_nav.html" %}
         <form method='post' enctype="multipart/form-data" role="form">
             {{ form.csrf_token() }}
-            <h5> Visibility </h5>
+            <h5>{{ _('Visibility') }}</h5>
             {{ render_field(form.ignore_bots) }}
             {{ render_field(form.hide_nsfw) }}
             {{ render_field(form.hide_nsfl) }}
@@ -36,7 +36,7 @@
         </form>
         <hr />
 
-        <h5>Keyword Filters</h5>
+        <h5>{{ _('Keyword Filters') }}</h5>
         <div class="rh_action_buttons">
             <a class="btn btn-primary" href="{{ url_for('user.user_settings_filters_add') }}">{{ _('Add filter') }}</a>
         </div>
@@ -57,8 +57,8 @@
                         <td>{{ _('Invisible') if filter.hide_type == 1 else _('Semi-transparent') }}</td>
                         <td>{{ filter.expire_after if filter.expire_after }}</td>
                         <td>
-                            <a href="{{ url_for('user.user_settings_filters_edit', filter_id=filter.id) }}">Edit</a> |
-                            <a href='#' data-url="{{ url_for('user.user_settings_filters_delete', filter_id=filter.id) }}" class="confirm_first send_post">Delete</a>
+                            <a href="{{ url_for('user.user_settings_filters_edit', filter_id=filter.id) }}">{{ _('Edit') }}</a> |
+                            <a href='#' data-url="{{ url_for('user.user_settings_filters_delete', filter_id=filter.id) }}" class="confirm_first send_post">{{ _('Delete') }}</a>
                         </td>
                     </tr>
                 {% endfor %}
@@ -67,7 +67,7 @@
             <p>{{ _('No filters defined yet.') }}</p>
         {% endif %}
 
-        <h5>Blocks</h5>
+        <h5>{{ _('Blocks') }}</h5>
         <p class="card-text">{{ _('Manage which users, communities, domains or instances you want to block. Blocking them means you will no longer see any posts associated with them.') }}</p>
         <p class="card-text">{{ _("Add new blocks when you see content you don't like - click the 3 dot menu on the post or comment to see blocking options.") }}</p>
 

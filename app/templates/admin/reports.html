@@ -17,10 +17,10 @@
                 <input type="search" name="search" placeholder="{{ _('Query') }}" value="{{ search }}">
                 <label for="local_remote_local">
                     <input type="radio" name="local_remote" value="local"
-                           id="local_remote_local" {{ 'checked' if local_remote == 'local' }} /> Local</label>
+                           id="local_remote_local" {{ 'checked' if local_remote == 'local' }} /> {{ _('Local') }}</label>
                 <label for="local_remote_remote">
                     <input type="radio" name="local_remote" value="remote"
-                           id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }} /> Remote</label>
+                           id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }} /> {{ _('Remote') }}</label>
                 <select name="report_types" id="report_types" class="form-select" style="width: 200px">
                     {% for value, label in report_types_list %}
                         <option value="{{ value }}" {% if value in report_types %}selected{% endif %}>
@@ -29,7 +29,7 @@
                     {% endfor %}
                 </select>
 
-                <input type="submit" name="submit" value="Search" class="btn btn-primary"/>
+                <input type="submit" name="submit" value="{{ _('Search') }}" class="btn btn-primary"/>
             </form>
             <table class="table table-striped">
                 {% for report in reports.items %}

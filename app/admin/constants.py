@@ -1,3 +1,4 @@
+from flask_babel import _
 
 # 3 is unused
 class ReportTypes:
@@ -10,9 +11,9 @@ class ReportTypes:
     @classmethod
     def get_choices(cls):
         return [
-            (cls.ALL, "All"),
-            (cls.USER, "User"),
-            (cls.POST, "Post"),
-            (cls.COMMENT, "Comment"),
-            (cls.DM, "Direct Message"),
+            (cls.ALL, _("All")),
+            (cls.USER, _("User")),
+            (cls.POST, _("Post")),
+            (cls.COMMENT, _("Comment")),
+            (cls.DM, _("Direct Message")),
         ]

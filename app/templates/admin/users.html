@@ -20,19 +20,19 @@
                 <input type="submit" name="submit_search" value="{{ _('Search') }}" class="btn btn-primary">
             </div>
             <div style="display:inline;">
-                <label for="local_remote">Local/Remote: </label>
+                <label for="local_remote">{{ _('Local/Remote') }}: </label>
                 <select name="local_remote" class="form-control-sm submit_on_change">
-                    <option value="">All</option>
-                    <option value="local" {{ 'selected' if local_remote == 'local' }}>Local</option>
-                    <option value="remote" {{ 'selected' if local_remote == 'remote' }}>Remote</option>
+                    <option value="">{{ _('All') }}</option>
+                    <option value="local" {{ 'selected' if local_remote == 'local' }}>{{ _('Local') }}</option>
+                    <option value="remote" {{ 'selected' if local_remote == 'remote' }}>{{ _('Remote') }}</option>
                 </select>
             </div>
             <div style="display:inline;">
-                <label for="last_seen">Active: </label>
+                <label for="last_seen">{{ _('Active') }}: </label>
                 <select name="last_seen" class="form-control-sm submit_on_change">
-                    <option value="0">All</option>
-                    <option value="7" {{ 'selected' if last_seen == 7 }}>7 days</option>
-                    <option value="30" {{ 'selected' if last_seen == 30 }}>30 days</option>
+                    <option value="0">{{ _('All') }}</option>
+                    <option value="7" {{ 'selected' if last_seen == 7 }}>{{ _('7 days') }}</option>
+                    <option value="30" {{ 'selected' if last_seen == 30 }}>{{ _('30 days') }}</option>
                 </select>
             </div>
             <div style="display:inline">
@@ -40,9 +40,9 @@
                     {{ _('Email verified?' ) }}
                 </label>
                 <select name="verified" class="form-control-sm submit_on_change">
-                    <option value="">Any</option>
-                    <option value="verified" {{ 'selected' if verified == 'verified' }}>Yes</option>
-                    <option value="unverified" {{ 'selected' if verified == 'unverified' }}>No</option>
+                    <option value="">{{ _('Any') }}</option>
+                    <option value="verified" {{ 'selected' if verified == 'verified' }}>{{ _('Yes') }}</option>
+                    <option value="unverified" {{ 'selected' if verified == 'unverified' }}>{{ _('No') }}</option>
                 </select>
             <div>
             <input type="hidden" name="sort_by" value="{{ sort_by }}">
@@ -96,21 +96,23 @@
             {% for user in users.items %}
                 <tr>
                     <td><span title="{{ _('Name') }}">{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</span></td>
-                    <td><span title="{{ _('Banned') }}">{{ '<span class="red">Banned</span>'|safe if user.banned }}
-                        {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
-                        {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</span></td>
+                    <td><span title="{{ _('Banned') }}">
+                        {% if user.banned %}<span class="red">{{ _('Banned') }}</span>{% endif %}
+                        {% if user.ban_posts %}<span class="red">{{ _('Banned posts') }}</span>{% endif %}
+                        {% if user.ban_comments %}<span class="red">{{ _('Banned comments') }}</span>{% endif %}
+                    </span></td>
                     <td><span title="{{ _('Reports') }}">{{ user.reports if user.reports > 0 }}</span></td>
                     <td><span title="{{ _('Attitude') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span></td>
                     <td><span title="{{ _('Reputation') }}">{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</span></td>
-                    <td><span title="{{ _('Created') }}: {{ user.created }}">{{ localize_datetime(user.created, locale=locale) }}</span></td>
-                    <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ localize_datetime(user.last_seen, locale=locale) }}</span></td>
-                    <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">{{ ('Edit') }}</a>,
-                        <a href="#" data-url="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first send_post">{{ ('Delete') }}</a>,
+                    <td><span title="{{ _('Created') }}: {{ user.created }}">{{ localize_datetime(user.created, locale) }}</span></td>
+                    <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ localize_datetime(user.last_seen, locale) }}</span></td>
+                    <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">{{ _('Edit') }}</a>,
+                        <a href="#" data-url="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first send_post">{{ _('Delete') }}</a>,
                         <br />
                         {% if user.banned %}
-                            <a href="#" data-url="{{ url_for('user.unban_profile', actor=user.link(), redirect="/admin/users") }}" class="confirm_first send_post">{{ ('Unban') }}</a>
+                            <a href="#" data-url="{{ url_for('user.unban_profile', actor=user.link(), redirect="/admin/users") }}" class="confirm_first send_post">{{ _('Unban') }}</a>
                         {% else %}
-                            <a href="{{ url_for('user.ban_profile', actor=user.link()) }}" class="">{{ ('Ban') }}</a>
+                            <a href="{{ url_for('user.ban_profile', actor=user.link()) }}" class="">{{ _('Ban') }}</a>
                         {% endif %}
                     </td>
                 </tr>

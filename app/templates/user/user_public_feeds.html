@@ -14,11 +14,11 @@
     <table class="communities_table table table-striped mt-1">
         <thead>
         <tr>
-            <th>Name</th>
-            <th># Communities</th>
-            <th>Creator</th>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('# Communities') }}</th>
+            <th>{{ _('Creator') }}</th>
             {% if current_user.is_authenticated %}
-            <th>Actions</th>
+            <th>{{ _('Actions') }}</th>
             {% endif %}
         </tr>
         </thead>

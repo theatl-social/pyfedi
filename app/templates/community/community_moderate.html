@@ -29,9 +29,9 @@
         {% if reports.items %}
         <form method="get">
             <input type="search" name="search" value="{{ search }}">
-            <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
-            <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> Remote</label>
-            <input type="submit" name="submit" value="Search" class="btn btn-primary btn-sm">
+            <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> {{ _('Local') }}</label>
+            <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> {{ _('Remote') }}</label>
+            <input type="submit" name="submit" value="{{ _('Search') }}" class="btn btn-primary btn-sm">
         </form>
         <table class="table table-striped">
             <tr>
@@ -56,13 +56,13 @@
                           </button>
                           <ul class="dropdown-menu">
                             {% if report.suspect_conversation_id %}
-                                <li><a class="dropdown-item" href="/chat/{{ report.suspect_conversation_id }}#message">View</a></li>
+                                <li><a class="dropdown-item" href="/chat/{{ report.suspect_conversation_id }}#message">{{ _('View') }}</a></li>
                             {% elif report.suspect_post_reply_id %}
-                                <li><a class="dropdown-item" href="/post/{{ report.suspect_post_id }}#comment_{{ report.suspect_post_reply_id }}">View</a></li>
+                                <li><a class="dropdown-item" href="/post/{{ report.suspect_post_id }}#comment_{{ report.suspect_post_reply_id }}">{{ _('View') }}</a></li>
                             {% elif report.suspect_post_id %}
-                                <li><a class="dropdown-item" href="/post/{{ report.suspect_post_id }}">View</a></li>
+                                <li><a class="dropdown-item" href="/post/{{ report.suspect_post_id }}">{{ _('View') }}</a></li>
                             {% elif report.suspect_user_id %}
-                                <li><a class="dropdown-item" href="/user/{{ report.suspect_user_id }}">View</a></li>
+                                <li><a class="dropdown-item" href="/user/{{ report.suspect_user_id }}">{{ _('View') }}</a></li>
                             {% endif %}
                             <div class="dropdown-divider"></div>
                             <li><a class="dropdown-item" href="{{ url_for('community.community_moderate_report_escalate', community_id=community.id, report_id=report.id) }}">{{ _('Escalate') }}</a></li>

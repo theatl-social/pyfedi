@@ -170,6 +170,9 @@ def move_community_images_to_here(community_id):
                                                    {'post_type': POST_TYPE_IMAGE, 'community_id': community_id}).scalars())
 
                 if store_files_in_s3():
+                    extra_args = {'ContentType': content_type}
+                    if current_app.config.get('S3_STORAGE_CLASS'):
+                        extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
                     boto3_session = boto3.session.Session()
                     s3 = boto3_session.client(
                         service_name='s3',
@@ -187,7 +190,7 @@ def move_community_images_to_here(community_id):
                                     content_type = guess_mime_type(post.image.source_url)
                                     new_path = post.image.source_url.replace('app/static/media/', "")
                                     s3.upload_file(post.image.source_url, current_app.config['S3_BUCKET'], new_path,
-                                                   ExtraArgs={'ContentType': content_type})
+                                                   ExtraArgs=extra_args)
                                     os.unlink(post.image.source_url)
                                     post.image.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                                     db.session.commit()
@@ -225,9 +228,12 @@ def move_community_images_to_here(community_id):
 
                                             # Upload to S3
                                             content_type = guess_mime_type(tmp_file)
+                                            extra_args = {'ContentType': content_type}
+                                            if current_app.config.get('S3_STORAGE_CLASS'):
+                                                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
                                             new_path = f"posts/{new_filename[0:2]}/{new_filename[2:4]}/{new_filename}{file_extension}"
                                             s3.upload_file(tmp_file, current_app.config['S3_BUCKET'], new_path,
-                                                           ExtraArgs={'ContentType': content_type})
+                                                           ExtraArgs=extra_args)
 
                                             # Delete temporary file
                                             os.unlink(tmp_file)

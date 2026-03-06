@@ -45,13 +45,13 @@
         <div class="table-responsive-lg">
             <table class="table table-striped mt-1">
                 <tr>
-                   <th>Name</th>
+                   <th>{{ _('Name') }}</th>
                    <th>
                        <form method="get" style="display: inline;">
                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
                            <input type="hidden" name="search" value="{{ search }}">
                            <button name="sort_by_btn" value="local_remote{{' DESC' if sort_by == 'local_remote ASC' else ' ASC' }}" class="btn btn-link p-0 text-decoration-none">
-                               Local/Remote
+                               {{ _('Local/Remote') }}
                                <span class="{{ 'fe fe-chevron-up' if sort_by == 'local_remote DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'local_remote ASC' }}"></span>
                            </button>
                        </form>
@@ -61,7 +61,7 @@
                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
                            <input type="hidden" name="search" value="{{ search }}">
                            <button name="sort_by_btn" value="joined{{' DESC' if sort_by == 'joined ASC' else ' ASC' }}" class="btn btn-link p-0 text-decoration-none">
-                               Joined
+                               {{ _('Joined') }}
                                <span class="{{ 'fe fe-chevron-up' if sort_by == 'joined DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'joined ASC' }}"></span>
                            </button>
                        </form>
@@ -71,12 +71,12 @@
                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
                            <input type="hidden" name="search" value="{{ search }}">
                            <button name="sort_by_btn" value="last_seen{{' DESC' if sort_by == 'last_seen ASC' else ' ASC' }}" class="btn btn-link p-0 text-decoration-none">
-                               Last Seen
+                               {{ _('Last Seen') }}
                                <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen ASC' }}"></span>
                            </button>
                        </form>
                    </th>
-                   <th>Actions</th>
+                   <th>{{ _('Actions') }}</th>
                 </tr>
                 {% for user, joined_date in subscribers.items %}
                     <tr>
@@ -92,8 +92,8 @@
                                 {{ _('Actions') }}
                               </button>
                               <ul class="dropdown-menu">
-                                {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a></li>{% endif %}
-                                <li><a class="dropdown-item" href="/u/{{ user.link() }}/report">Report</a></li>
+                                {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">{{ _('Send Message') }}</a></li>{% endif %}
+                                <li><a class="dropdown-item" href="/u/{{ user.link() }}/report">{{ _('Report') }}</a></li>
                                 <div class="dropdown-divider"></div>
                                 <li><a class="dropdown-item" href="{{ url_for('community.community_ban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Ban') }}</a></li>
                               </ul>
@@ -123,9 +123,9 @@
         {% if banned_people %}
             <form method="get">
                 <input type="search" name="search" value="{{ search }}">
-                <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
-                <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> Remote</label>
-                <input type="submit" name="submit" value="Search" class="btn btn-primary">
+                <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> {{ _('Local') }}</label>
+                <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> {{ _('Remote') }}</label>
+                <input type="submit" name="submit" value="{{ _('Search') }}" class="btn btn-primary">
             </form>
             <div class="table-responsive-lg">
             <table class="table table-striped mt-1">
@@ -146,11 +146,11 @@
                                 Actions
                               </button>
                               <ul class="dropdown-menu">
-                                {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a></li>
-                                <li><a class="dropdown-item" href="/u/{{ user.link() }}">View</a></li>
+                                {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">{{ _('Send Message') }}</a></li>
+                                <li><a class="dropdown-item" href="/u/{{ user.link() }}">{{ _('View') }}</a></li>
                             {% else %}
-                                <li><a class="dropdown-item" href="/u/{{ user.link() }}">View local</a> </li>
-                                <li><a class="dropdown-item"href="{{ user.ap_profile_id }}">View remote</a></li>
+                                <li><a class="dropdown-item" href="/u/{{ user.link() }}">{{ _('View local') }}</a> </li>
+                                <li><a class="dropdown-item" href="{{ user.ap_profile_id }}">{{ _('View remote') }}</a></li>
                             {% endif %}
                                 <div class="dropdown-divider"></div>
                                 <li><a class="dropdown-item" href="{{ url_for('community.community_unban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Unban') }}</a></li>

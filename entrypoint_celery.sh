@@ -1,4 +1,4 @@
 #!/bin/sh
 
-celery -A celery_worker_docker.celery worker --autoscale=5,1 --queues=celery,background,send
+celery -A celery_worker_docker.celery worker --concurrency=4 --queues=celery,background,send
 

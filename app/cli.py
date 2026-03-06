@@ -141,7 +141,7 @@ def register(app):
             db.session.add(Settings(name='federation', value=json.dumps(True)))
             banned_instances = ['anonib.al', 'lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com',
                                 'hexbear.net', 'hilariouschaos.com',
-                                'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
+                                'threads.com', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
                                 'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
                                 'detroitriotcity.com', 'gregtech.eu',
                                 'pawoo.net', 'shitposter.club', 'spinster.xyz', 'catgirl.life', 'gameliberty.club',
@@ -171,11 +171,13 @@ def register(app):
             db.session.add(Language(code='en', name='English'))
             db.session.add(Language(code='de', name='Deutsch'))
             db.session.add(Language(code='es', name='Español'))
+            db.session.add(Language(code='fi', name='Finnish'))
             db.session.add(Language(code='fr', name='Français'))
             db.session.add(Language(code='hi', name='हिन्दी'))
             db.session.add(Language(code='ja', name='日本語'))
             db.session.add(Language(code='zh', name='中文'))
             db.session.add(Language(code='pl', name='Polski'))
+            db.session.add(Language(code='uk', name='Українська'))
 
             # Initial roles
             # These roles will create rows in the 'role' table with IDs of 1,2,3,4. There are some constants (ROLE_*) in
@@ -765,6 +767,9 @@ def register(app):
             for file_id in file_ids:
                 file = File.query.get(file_id)
                 content_type = guess_mime_type(file.source_url)
+                extra_args = {'ContentType': content_type}
+                if current_app.config.get('S3_STORAGE_CLASS'):
+                    extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
                 new_path = file.source_url.replace('/static/media/', "/")
                 s3_path = new_path.replace(f'https://{server_name}/', '')
                 new_path = new_path.replace(server_name, current_app.config['S3_PUBLIC_URL'])
@@ -772,7 +777,7 @@ def register(app):
                 if os.path.isfile(local_file):
                     try:
                         s3.upload_file(local_file, current_app.config['S3_BUCKET'], s3_path,
-                                       ExtraArgs={'ContentType': content_type})
+                                       ExtraArgs=extra_args)
                     except Exception as e:
                         print(f"Error uploading {local_file}: {e}")
                     os.unlink(local_file)

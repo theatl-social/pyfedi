@@ -19,7 +19,7 @@
                 {{ _("Create offline instance") }}
             </a>
         </form>
-        Status Filter:
+        {{ _('Status Filter') }}:
         <a href="{{ url_for('admin.admin_instances', filter='online') }}">{{ _('Online') }}</a> |
         <a href="{{ url_for('admin.admin_instances', filter='dormant') }}">{{ _('Dormant') }}</a> |
         <a href="{{ url_for('admin.admin_instances', filter='gone_forever') }}">{{ _('Gone forever') }}</a> |

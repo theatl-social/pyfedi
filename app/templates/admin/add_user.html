@@ -22,12 +22,12 @@
                 <img class="user_icon_big rounded-circle" src="{{ user.avatar_image() }}" width="120" height="120" />
             {% endif %}
             {{ render_field(form.profile_file) }}
-            <small class="field_hint">Provide a square image that looks good when small.</small>
+            <small class="field_hint">{{ _('Provide a square image that looks good when small.') }}</small>
             {% if user.cover_id %}
                 <a href="{{ user.cover_image() }}"><img class="user_icon_big" src="{{ user.cover_image() }}" style="width: 300px; height: auto;" /></a>
             {% endif %}
             {{ render_field(form.banner_file) }}
-            <small class="field_hint">Provide a wide image - letterbox orientation.</small>
+            <small class="field_hint">{{ _('Provide a wide image - letterbox orientation.') }}</small>
             {{ render_field(form.bot) }}
             {{ render_field(form.verified) }}
             {{ render_field(form.banned) }}

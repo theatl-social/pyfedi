@@ -12,11 +12,11 @@
                     <div class="card-body p-6">
                         <div class="card-title">{{ _('Retrieve Remote Post') }}</div>
                         {% if community %}
-                            <p>Enter the full URL of the post submitted to {{ community.ap_id }}</p>
+                            <p>{{ _('Enter the full URL of the post submitted to %(community_name)s', community_name=community.ap_id) }}</p>
                         {% else %}
-                            <p>Enter the full URL of the post</p>
+                            <p>{{ _('Enter the full URL of the post') }}</p>
                         {% endif %}
-                        <p>Note: URL needs to match the one from the post author's instance (which may be different than the community's instance)</p>
+                        <p>{{ _('Note: URL needs to match the one from the post author's instance (which may be different than the community's instance)') }}</p>
                         {{ render_form(form) }}
                     </div>
                 </div>

@@ -513,6 +513,9 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         # Move uploaded file to S3
         if store_files_in_s3():
             session = boto3.session.Session()
+            extra_args = {'ContentType': guess_mime_type(final_place)}
+            if current_app.config.get('S3_STORAGE_CLASS'):
+                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
             s3 = session.client(
                 service_name='s3',
                 region_name=current_app.config['S3_REGION'],
@@ -522,7 +525,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
             )
             s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
                            new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
-                           ExtraArgs={'ContentType': guess_mime_type(final_place)})
+                           ExtraArgs=extra_args)
             url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
             s3.close()

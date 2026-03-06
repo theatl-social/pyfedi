@@ -298,7 +298,7 @@ def suggest_topics():
     if not current_user.trustworthy():
         return redirect(url_for('topic.suggestion_denied'))
     if form.validate_on_submit():
-        subject = f'New topic suggestion from {g.site.name}'
+        subject = _('New topic suggestion from %(site_name)s', site_name=g.site.name)
         recipients = g.site.contact_email
         topic_name = form.topic_name.data
         communities_for_topic = form.communities_for_topic.data
@@ -306,7 +306,7 @@ def suggest_topics():
         flash(_('Thank you for the topic suggestion, it has been sent to the site administrator(s).'))
         return redirect(url_for('main.list_topics'))
     else:
-        return render_template('topic/suggest_topics.html', form=form, title=_('Suggest a topic"'),
+        return render_template('topic/suggest_topics.html', form=form, title=_('Suggest a topic'),
                                )
 
 

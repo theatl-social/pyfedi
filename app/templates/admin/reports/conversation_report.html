@@ -2,7 +2,7 @@
     <td width="*">
         <div class="overflow-ellipses-parent text-truncate">
             <div class="child my-1">
-                <h6>Conversation Reported</h6>
+                <h6>{{ _('Conversation Reported') }}</h6>
             </div>
         </div>
         <div class="child">
@@ -12,7 +12,7 @@
                         <p>Original Comment Body:  </p>
                     </div> -->
                     <div class="flex-column flex-grow-1 pl-1">
-                        <a href="/chat/{{ report.targets.suspect_conversation_id }}">Reported Conversation</a>
+                        <a href="/chat/{{ report.targets.suspect_conversation_id }}">{{ _('Reported Conversation') }}</a>
                     </div>
                 </div>                      
             </div>

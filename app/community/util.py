@@ -643,13 +643,19 @@ def save_icon_file(icon_file, directory='communities') -> File:
             )
             # Upload main image
             s3_path = f'{s3_directory}/{new_filename}{final_ext}'
-            s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
+            extra_args = {'ContentType': guess_mime_type(final_place)}
+            if current_app.config.get('S3_STORAGE_CLASS'):
+                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs=extra_args)
             file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
 
             # Upload thumbnail (if different from main image)
             if final_place_thumbnail != final_place:
                 s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail{thumbnail_ext}'
-                s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs={'ContentType': guess_mime_type(final_place_thumbnail)})
+                extra_args = {'ContentType': guess_mime_type(final_place_thumbnail)}
+                if current_app.config.get('S3_STORAGE_CLASS'):
+                    extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+                s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs=extra_args)
                 file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
                 os.unlink(final_place_thumbnail)
             else:
@@ -757,12 +763,18 @@ def save_banner_file(banner_file, directory='communities') -> File:
             )
             # Upload main image
             s3_path = f'{s3_directory}/{new_filename}{final_ext}'
-            s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
+            extra_args = {'ContentType': guess_mime_type(final_place)}
+            if current_app.config.get('S3_STORAGE_CLASS'):
+                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs=extra_args)
             file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
             
             # Upload thumbnail
             s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail{thumbnail_ext}'
-            s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs={'ContentType': guess_mime_type(final_place_thumbnail)})
+            extra_args = {'ContentType': guess_mime_type(final_place_thumbnail)}
+            if current_app.config.get('S3_STORAGE_CLASS'):
+                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+            s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs=extra_args)
             file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
             
             s3.close()

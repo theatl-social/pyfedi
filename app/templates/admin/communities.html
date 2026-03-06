@@ -17,12 +17,12 @@
             <div class="col">
                 <form id="searchCommunities" method="get">
                     <input type="search" name="search" placeholder="{{ _('Search') }}" value="{{ search }}"> 
-                    <input type="submit" name="submit" value="Search">
+                    <input type="submit" name="submit" value="{{ _('Search') }}">
                 </form>
-                Result Filter:
-                <a href="{{ url_for('admin.admin_communities') }}">All</a> | 
-                <a href="{{ url_for('admin.admin_communities_no_topic') }}">No topic</a> |
-                <a href="{{ url_for('admin.admin_communities_low_quality') }}">Low Quality</a>
+                {{ _('Result Filter') }}:
+                <a href="{{ url_for('admin.admin_communities') }}">{{ _('All') }}</a> |
+                <a href="{{ url_for('admin.admin_communities_no_topic') }}">{{ _('No topic') }}</a> |
+                <a href="{{ url_for('admin.admin_communities_low_quality') }}">{{ _('Low Quality') }}</a>
             </div>
             <div class="col-auto">
                 <div class="btn-group">

@@ -1,5 +1,5 @@
 {% if len(community.flair) -%}
-<div class="mb-3"><label class="form-label" for="flair">Flair</label>
+<div class="mb-3"><label class="form-label" for="flair">{{ _('Flair') }}</label>
     <ul class="form-control form-multicheck-columns" id="flair">
         {% for flair in community.flair -%}
             <li><input class="form-multicheck-columns" id="flair-{{ loop.index }}" name="flair" type="checkbox" value="{{ flair.id }}">

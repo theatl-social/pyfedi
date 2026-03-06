@@ -31,14 +31,14 @@
                  <h2>{{ community.title }}</h2>
             </div>
             <div class="card-body">
-                <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
+                {{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
                 <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}<br>
                     {{ _('Posts') }}: {{ community.post_count }}<br>
                     {{ _('Comments') }}: {{ community.post_reply_count }}
                 </p>
                 {% if len(mods) > 0 and not community.private_mods -%}
-                    <h3>Moderators</h3>
+                    <h3>{{ _('Moderators') }}</h3>
                     <ul class="moderator_list">
                         {% for mod in mods -%}
                             <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
@@ -59,7 +59,7 @@
                 {% endif -%}
                 {% if rss_feed -%}
                 <p class="mt-4">
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> {{ _('RSS feed') }}</a>
                 </p>
                 {% endif -%}
             </div>
@@ -96,7 +96,7 @@
                     <p><a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="btn btn-primary">{{ _('Settings') }}</a></p>
                 {% endif -%}
                 {% if community.is_local() and (community.is_owner() or current_user.is_admin()) -%}
-                    <p><a class="btn btn-primary btn-warning" href="{{ url_for('community.community_delete', community_id=community.id) }}" rel="nofollow">Delete community</a></p>
+                    <p><a class="btn btn-primary btn-warning" href="{{ url_for('community.community_delete', community_id=community.id) }}" rel="nofollow">{{ _('Delete community') }}</a></p>
                 {% endif -%}
             </div>
         </div>
@@ -130,7 +130,7 @@
     <p>{{ g.site.sidebar|safe }}</p>
     {% if rss_feed %}
     <p class="mt-4">
-        <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+        <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> {{ _('RSS feed') }}</a>
     </p>
     {% endif %}
 

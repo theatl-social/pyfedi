@@ -140,7 +140,7 @@ def feed_add_remote():
             new_feed = search_for_feed('~' + feed + '@' + server)
         else:
             message = Markup(
-                'Accepted address formats: ~feedname@server.name or https://server.name/f/feedname.')
+                _('Accepted address formats: ~feedname@server.name or https://server.name/f/feedname.'))
             flash(message, 'error')
         if new_feed is None:
             if g.site.enable_nsfw:

@@ -99,8 +99,7 @@
                       {{ _('This community is private and only visible to members.') }}
                     </p>
                 {% endif -%}
-                <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
-
+                {{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}
                 {% if current_user.is_authenticated or (community_flair and len(community_flair) > 0) -%}
                     <hr>
                     <h3>{{ _('Flair') }}</h3>
@@ -112,7 +111,7 @@
                 {% if not (community.private and (current_user.is_anonymous or not community.is_member(current_user))) -%}
                     {% if len(mods) > 0 and not community.private_mods -%}
                         <hr><a href="/modlog?communities={{ community.id }}" class="modlog_link">{{ _('Modlog') }}</a>
-                        <h3>Moderators</h3>
+                        <h3>{{ _('Moderators') }}</h3>
                         <ul class="moderator_list">
                             {% for mod in mods -%}
                                 <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
@@ -141,22 +140,22 @@
                     {% endif -%}
                     <hr>
                     <div>
-                        <span class="badge text-bg-secondary">{{ community.humanize_subscribers() }} {{ _('Subscribers') }}</span>
-                        <span class="badge text-bg-secondary">{{ community.humanize_subscribers(total=False) }} {{ _('Local Subscribers') }}</span>
+                        <span class="badge text-bg-secondary">{{ ngettext('%(count)s Subscriber', '%(count)s Subscribers', community.subscriptions_count, count=community.humanize_subscribers()) }}</span>
+                        <span class="badge text-bg-secondary">{{ ngettext('%(count)s Local Subscriber', '%(count)s Local Subscribers', community.total_subscriptions_count if community.total_subscriptions_count else community.subscriptions_count, count=community.humanize_subscribers(total=False)) }}</span>
                     </div>
                     <div>
-                        <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_count) }} {{ _('Posts') }}</span>
-                        <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_reply_count) }} {{ _('Comments') }}</span>
+                        <span class="badge text-bg-secondary">{{ ngettext('%(count)s Post', '%(count)s Posts', community.post_count, count=community.humanize_subscribers(value=community.post_count)) }}</span>
+                        <span class="badge text-bg-secondary">{{ ngettext('%(count)s Comment', '%(count)s Comments', community.post_reply_count, count=community.humanize_subscribers(value=community.post_reply_count)) }}</span>
                     </div>
                     <div>
-                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ community.humanize_subscribers(value=community.active_daily) }} {{ _('Daily Users') }}</span>
-                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ community.humanize_subscribers(value=community.active_weekly) }} {{ _('Weekly Users') }}</span>
-                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ community.humanize_subscribers(value=community.active_monthly) }} {{ _('Monthly Users') }}</span>
-                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ community.humanize_subscribers(community.active_6monthly) }} {{ _('Users / 6 Months') }}</span>
+                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ ngettext('%(count)s Daily User', '%(count)s Daily Users', community.active_daily, count=community.humanize_subscribers(value=community.active_daily)) }}</span>
+                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ ngettext('%(count)s Weekly User', '%(count)s Weekly Users', community.active_weekly, count=community.humanize_subscribers(value=community.active_weekly)) }}</span>
+                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ ngettext('%(count)s Monthly User', '%(count)s Monthly Users', community.active_monthly, count=community.humanize_subscribers(value=community.active_monthly)) }}</span>
+                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ ngettext('%(count)s Users / 6 Months', '%(count)s User / 6 Months', community.active_6monthly, count=community.humanize_subscribers(community.active_6monthly)) }}</span>
                     </div>
                     {% if rss_feed -%}
                     <p class="mt-2 mb-0">
-                        <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                        <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> {{ _('RSS feed') }}</a>
                     </p>
                     {% endif -%}
                 {% endif -%}

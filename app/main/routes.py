@@ -664,7 +664,7 @@ def honey_pot(whatever=None):
     count = redis_client.zcount(key, now - 86400, now)
 
     if count >= 3:
-        redis_client.set(f"ban:{ip}", 1, ex=86400 * 7)
+        redis_client.set(f"ban:{ip}", 1, ex=86400 * 7 * 4)  # ban scraper for 4 weeks
 
     if whatever:
         try:
