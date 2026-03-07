@@ -6,9 +6,8 @@ from sqlalchemy import desc, text
 from app import db
 from app.api.alpha.views import feed_view
 from app.constants import *
-from app.feed.routes import do_feed_subscribe
 from app.models import User, Feed
-from app.shared.feed import leave_feed
+from app.shared.feed import leave_feed, join_feed
 from app.utils import authorise_api_user, blocked_communities, blocked_or_banned_instances, filtered_out_communities, \
     communities_banned_from, moderating_communities_ids, joined_or_modding_communities, feed_tree_public, feed_tree, \
     subscribed_feeds
@@ -132,23 +131,8 @@ def post_feed_follow(auth, data):
     user = authorise_api_user(auth, return_type='model')
     feed = Feed.query.get(feed_id)
     if follow:
-        do_feed_subscribe(feed.link(), user.id, SRC_API)
+        join_feed(feed.link(), user.id, SRC_API)
     else:
         leave_feed(feed_id, SRC_API, auth)
 
-    g.user = user
-
-    blocked_community_ids = blocked_communities(user.id)
-    blocked_instance_ids = blocked_or_banned_instances(user.id)
-
-    subscribed = subscribed_feeds(user.id)
-    banned_from = communities_banned_from(user.id)
-    communities_moderating = moderating_communities_ids(user.id)
-    communities_joined = joined_or_modding_communities(user.id)
-
-    feed_json = feed_view(feed=feed, variant=1, user_id=user.id, subscribed=subscribed,
-                                     include_communities=True, communities_moderating=communities_moderating,
-                                     banned_from=banned_from, communities_joined=communities_joined,
-                                     blocked_community_ids=blocked_community_ids,
-                                     blocked_instance_ids=blocked_instance_ids)
-    return feed_json
+    return feed

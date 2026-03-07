@@ -425,7 +425,7 @@ def get_alpha_feed_list(data):
 
 
 @feed_bp.route("/feed/follow", methods=["POST"])
-@feed_bp.doc(summary="Follow / subscribe to a feed.")
+@feed_bp.doc(summary="Follow / subscribe / leave / unsubscribe to a feed.")
 @feed_bp.arguments(FollowFeedRequest)
 @feed_bp.response(200, FeedView)
 @feed_bp.alt_response(400, schema=DefaultError)
@@ -433,8 +433,10 @@ def post_alpha_community_follow(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
-    resp = post_feed_follow(auth, data)
-    return FeedView().load(resp)
+    feed = post_feed_follow(auth, data)
+    resp = get_feed(auth, {'id': feed.id})
+    validated = FeedView().load(resp)
+    return orjson_response(validated)
 
 
 # Post
