@@ -13,7 +13,7 @@ default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
                   "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Old", "Scaled", "Active"]
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
-community_sort_list = ["Hot", "Top", "New", "Active", "TopAll"]
+community_sort_list = ["Hot", "Top", "New", "Old", "Active", "TopAll", "TopPosts", "TopSubscribers", "NewFederated", "OldFederated"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
 community_listing_type_list = ["All", "Local", "Subscribed", "Moderating", "ModeratorView"]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
@@ -1828,6 +1828,7 @@ class UserRegistration(DefaultSchema):
     status = fields.String(validate=validate.OneOf(["approved", "awaiting review"]), required=True)
     approved_by = fields.Nested(Person)
     approved_at = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    referrer = fields.String()
 
 
 class GetRegistrationList(DefaultSchema):
