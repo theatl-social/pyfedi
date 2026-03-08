@@ -725,6 +725,42 @@ class DeleteCommunityRequest(DefaultSchema):
     deleted = fields.Boolean(required=True)
 
 
+class CreateFeedRequest(DefaultSchema):
+    name = fields.String(required=True, metadata={"description": "URL-safe name/slug for the feed"})
+    title = fields.String(required=True)
+    description = fields.String(metadata={"format": "markdown"})
+    icon_url = fields.String(allow_none=True, metadata={"format": "url"})
+    banner_url = fields.String(allow_none=True, metadata={"format": "url"})
+    nsfw = fields.Boolean()
+    nsfl = fields.Boolean()
+    public = fields.Boolean(metadata={"description": "Whether the feed is publicly visible", "default": True})
+    communities = fields.String(metadata={"description": "Newline-separated list of community ap_ids to include in the feed"})
+    is_instance_feed = fields.Boolean(metadata={"description": "Whether this is an instance-level feed (admin only)"})
+    show_child_posts = fields.Boolean(metadata={"description": "Whether to show posts from child feeds"})
+    parent_feed_id = fields.Integer(allow_none=True, metadata={"description": "ID of parent feed, if any"})
+
+
+class EditFeedRequest(DefaultSchema):
+    feed_id = fields.Integer(required=True)
+    url = fields.String(metadata={"description": "URL-safe name/slug for the feed"})
+    title = fields.String()
+    description = fields.String(metadata={"format": "markdown"})
+    icon_url = fields.String(allow_none=True, metadata={"format": "url"})
+    banner_url = fields.String(allow_none=True, metadata={"format": "url"})
+    nsfw = fields.Boolean()
+    nsfl = fields.Boolean()
+    public = fields.Boolean()
+    communities = fields.String(metadata={"description": "Newline-separated list of community ap_ids; omit to keep existing communities"})
+    is_instance_feed = fields.Boolean()
+    show_child_posts = fields.Boolean()
+    parent_feed_id = fields.Integer(allow_none=True)
+
+
+class DeleteFeedRequest(DefaultSchema):
+    feed_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
 class ListCommunitiesRequest(DefaultSchema):
     limit = fields.Integer()
     page = fields.Integer()

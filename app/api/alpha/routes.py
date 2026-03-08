@@ -10,7 +10,7 @@ from app.api.alpha.utils.community import get_community, get_community_list, pos
     post_community_moderate_post_nsfw, post_community_mod, post_community_flair_create, put_community_flair_edit, \
     post_community_flair_delete, post_community_leave_all
 from app.api.alpha.utils.domain import post_domain_block
-from app.api.alpha.utils.feed import get_feed_list, get_feed, post_feed_follow
+from app.api.alpha.utils.feed import get_feed_list, get_feed, post_feed_follow, post_feed, put_feed, post_feed_delete
 from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion, get_modlog
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
@@ -437,6 +437,47 @@ def post_alpha_community_follow(data):
     resp = get_feed(auth, {'id': feed.id})
     validated = FeedView().load(resp)
     return orjson_response(validated)
+
+
+@feed_bp.route("/feed", methods=["POST"])
+@feed_bp.doc(summary="Create a new feed.")
+@feed_bp.arguments(CreateFeedRequest)
+@feed_bp.response(200, FeedView)
+@feed_bp.alt_response(400, schema=DefaultError)
+@feed_bp.alt_response(429, schema=DefaultError)
+def post_alpha_feed(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    with limiter.limit('10/day'):
+        auth = request.headers.get('Authorization')
+        resp = post_feed(auth, data)
+        return FeedView().load(resp)
+
+
+@feed_bp.route("/feed", methods=["PUT"])
+@feed_bp.doc(summary="Edit feed.")
+@feed_bp.arguments(EditFeedRequest)
+@feed_bp.response(200, FeedView)
+@feed_bp.alt_response(400, schema=DefaultError)
+def put_alpha_feed(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = put_feed(auth, data)
+    return FeedView().load(resp)
+
+
+@feed_bp.route("/feed/delete", methods=["POST"])
+@feed_bp.doc(summary="Delete a feed.")
+@feed_bp.arguments(DeleteFeedRequest)
+@feed_bp.response(200, FeedView)
+@feed_bp.alt_response(400, schema=DefaultError)
+def post_alpha_feed_delete(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = post_feed_delete(auth, data)
+    return FeedView().load(resp)
 
 
 # Post
