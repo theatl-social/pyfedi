@@ -65,8 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setupEmojiAutoSubmit,
         setupReactionDialog,
         setupScrollChat,
-        setupCodeBlockCopy,
-        setupShareIcons
+        setupCodeBlockCopy
     ];
     
     // Run critical setups immediately
@@ -1678,6 +1677,7 @@ function setupDynamicContent() {
     setupTranslateAll();
     setupReactionDialog();
     setupCodeBlockCopy();
+    setupShareIcons();
     
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {
@@ -2519,14 +2519,17 @@ function setupCodeBlockCopy() {
 
 function setupShareIcons() {
     document.querySelectorAll('.share_mobile a').forEach(shareAnchor => {
-        shareAnchor.addEventListener("click", function(event) {
-            event.preventDefault();
-            if (navigator.share) {
-              navigator.share({ url: location.href });
-            } else {
-              navigator.clipboard.writeText(location.href);
-              alert("Link copied to clipboard");
-            }
-        });
+        if (!shareAnchor.dataset.shareIconSetup) {
+            shareAnchor.addEventListener("click", function(event) {
+                event.preventDefault();
+                if (navigator.share) {
+                  navigator.share({ url: location.href });
+                } else {
+                  navigator.clipboard.writeText(location.href);
+                  alert("Link copied to clipboard");
+                }
+                shareAnchor.dataset.shareIconSetup = 'true';
+            });
+        }
     });
 }
