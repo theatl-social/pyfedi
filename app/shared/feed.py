@@ -9,7 +9,7 @@ from slugify import slugify
 from sqlalchemy import text
 
 from app import db, cache, celery
-from app.activitypub.signature import send_post_request, default_context
+from app.activitypub.signature import send_post_request, default_context, RsaKeys
 from app.activitypub.util import find_actor_or_create, make_image_sizes
 from app.constants import *
 from app.models import User, Feed, FeedMember, FeedItem, Community, FeedJoinRequest, CommunityMember, \
@@ -156,6 +156,83 @@ def leave_feed(feed: int | Feed, src, auth=None, bulk_leave=False):
         return
 
 
+def make_feed(input, src, auth=None, uploaded_icon_file=None, uploaded_banner_file=None):
+    if src == SRC_API:
+        url = input['url']
+        title = input['title']
+        public = input['public']
+        description = input['description']
+        icon_url = input['icon_url']
+        banner_url = input['banner_url']
+        nsfw = input['nsfw']
+        nsfl = input['nsfl']
+        communities = input['communities']
+        is_instance_feed = input['is_instance_feed']
+        show_child_posts = input['show_child_posts']
+        parent_feed_id = input['parent_feed_id']
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        url = input.url.data
+        title = input.title.data
+        public = input.public.data
+        description = piefed_markdown_to_lemmy_markdown(input.description.data)
+        icon_url = process_upload(uploaded_icon_file, destination='feeds') if uploaded_icon_file else None
+        banner_url = process_upload(uploaded_banner_file, destination='feeds') if uploaded_banner_file else None
+        nsfw = input.nsfw.data
+        nsfl = input.nsfl.data
+        communities = input.communities.data
+        is_instance_feed = input.is_instance_feed.data
+        show_child_posts = input.show_child_posts.data
+        parent_feed_id = input.parent_feed_id.data
+        user = current_user
+
+    private_key, public_key = RsaKeys.generate_keypair()
+    feed = Feed(user_id=user.id, title=title, name=url, machine_name=url,
+                description=piefed_markdown_to_lemmy_markdown(description),
+                description_html=markdown_to_html(description),
+                show_posts_in_children=show_child_posts,
+                nsfw=nsfw, nsfl=nsfl,
+                private_key=private_key,
+                public_key=public_key,
+                public=public, is_instance_feed=is_instance_feed,
+                ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/f/' + url.lower(),
+                ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + url,
+                ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + url + '/followers',
+                ap_following_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + url + '/following',
+                ap_outbox_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + url + '/outbox',
+                ap_domain=current_app.config['SERVER_NAME'],
+                subscriptions_count=1, instance_id=1)
+    if parent_feed_id:
+        feed.parent_feed_id = parent_feed_id
+    else:
+        feed.parent_feed_id = None
+
+    if icon_url and is_image_url(icon_url):
+        file = File(source_url=icon_url)
+        db.session.add(file)
+        db.session.commit()
+        feed.icon_id = file.id
+        make_image_sizes(feed.icon_id, 40, 250, 'feeds', False)
+    if banner_url and is_image_url(banner_url):
+        file = File(source_url=banner_url)
+        db.session.add(file)
+        db.session.commit()
+        feed.image_id = file.id
+        make_image_sizes(feed.image_id, 878, 1600, 'feeds', False)
+
+    db.session.add(feed)
+    db.session.commit()
+
+    membership = FeedMember(user_id=user.id, feed_id=feed.id, is_owner=True)
+    db.session.add(membership)
+    db.session.commit()
+
+    new_communities = form_communities_to_ids(communities)  # the communities that are in the feed now
+
+    for added_community in new_communities:
+        _feed_add_community(added_community, 0, feed.id, user.id)
+
+
 def edit_feed(input, feed, src, auth=None, uploaded_icon_file=None, uploaded_banner_file=None, from_scratch=False):
     if src == SRC_API:
         url = input['url']
@@ -274,12 +351,32 @@ def edit_feed(input, feed, src, auth=None, uploaded_icon_file=None, uploaded_ban
 
 def delete_feed(feed_id: int, src, auth=None):
     if src == SRC_API:
-        user = authorise_api_user(auth, return_type='model')
+        user_id = authorise_api_user(auth)
     else:
-        user = current_user
+        user_id = current_user.id
 
     feed = db.session.query(Feed).get(feed_id)
 
+    # does the user own the feed
+    if feed.user_id != user_id:
+        abort(404)
+
+    # announce the change to any potential subscribers
+    # have to do it here before the feed members are cleared out
+    if feed.public:
+        if current_app.debug:
+            announce_feed_delete_to_subscribers(user_id, feed.id)
+        else:
+            announce_feed_delete_to_subscribers.delay(user_id, feed.id)
+
+    # strip out any feedmembers before deleting
+    db.session.query(FeedMember).filter(FeedMember.feed_id == feed.id).delete()
+
+    # delete the feed
+    if feed.num_communities > 0:
+        db.session.query(FeedItem).filter(FeedItem.feed_id == feed.id).delete()
+    db.session.delete(feed)
+    db.session.commit()
 
 
 def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, user_id: int):

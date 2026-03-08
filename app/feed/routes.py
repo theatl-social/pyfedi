@@ -25,7 +25,7 @@ from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Community, NotificationSubscription, \
     CommunityMember, User, FeedJoinRequest, Instance, Topic, CommunityJoinRequest
 from app.shared.feed import join_feed, _feed_add_community, announce_feed_delete_to_subscribers, edit_feed, \
-    form_communities_to_ids
+    form_communities_to_ids, make_feed, delete_feed
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, \
     user_filters_posts, joined_communities, menu_instance_feeds, validation_required, feed_membership, \
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
@@ -56,47 +56,8 @@ def feed_new():
         form.url.data = slugify(form.url.data.strip().split('/')[0], separator='_').lower()
         if not form.public.data:
             form.url.data = slugify(form.url.data.strip(), separator='_').lower() + '/' + current_user.user_name.lower()
-        private_key, public_key = RsaKeys.generate_keypair()
-        feed = Feed(user_id=current_user.id, title=form.title.data, name=form.url.data, machine_name=form.url.data,
-                    description=piefed_markdown_to_lemmy_markdown(form.description.data),
-                    description_html=markdown_to_html(form.description.data),
-                    show_posts_in_children=form.show_child_posts.data,
-                    nsfw=form.nsfw.data, nsfl=form.nsfl.data,
-                    private_key=private_key,
-                    public_key=public_key,
-                    public=form.public.data, is_instance_feed=form.is_instance_feed.data,
-                    ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data.lower(),
-                    ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data,
-                    ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/followers',
-                    ap_following_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/following',
-                    ap_outbox_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/outbox',
-                    ap_domain=current_app.config['SERVER_NAME'],
-                    subscriptions_count=1, instance_id=1)
-        if form.parent_feed_id.data:
-            feed.parent_feed_id = form.parent_feed_id.data
-        else:
-            feed.parent_feed_id = None
-        icon_file = request.files['icon_file']
-        if icon_file and icon_file.filename != '':
-            file = save_icon_file(icon_file, directory='feeds')
-            if file:
-                feed.icon = file
-        banner_file = request.files['banner_file']
-        if banner_file and banner_file.filename != '':
-            file = save_banner_file(banner_file, directory='feeds')
-            if file:
-                feed.image = file
-        db.session.add(feed)
-        db.session.commit()
 
-        membership = FeedMember(user_id=current_user.id, feed_id=feed.id, is_owner=True)
-        db.session.add(membership)
-        db.session.commit()
-
-        new_communities = form_communities_to_ids(form.communities.data)  # the communities that are in the feed now
-
-        for added_community in new_communities:
-            _feed_add_community(added_community, 0, feed.id, current_user.id)
+        make_feed(form, SRC_WEB, None, form.icon_file.data, form.banner_file.data)
 
         flash(_('Your new Feed has been created.'))
         return redirect(url_for('user.user_myfeeds', actor=current_user.link()))
@@ -226,41 +187,15 @@ def feed_edit(feed_id: int):
 @bp.route('/feed/<int:feed_id>/delete', methods=['POST'])
 @login_required
 def feed_delete(feed_id: int):
-    # get the user_id
-    user_id = int(request.args.get('user_id'))
-    # get the feed
+
     feed = Feed.query.get_or_404(feed_id)
 
-    # is it an instance_feed?
-    instance_feed = feed.is_instance_feed
-
-    # does the user own the feed
-    if feed.user_id != user_id:
-        abort(404)
-
-    # announce the change to any potential subscribers
-    # have to do it here before the feed members are cleared out
-    if feed.public:
-        if current_app.debug:
-            announce_feed_delete_to_subscribers(user_id, feed.id)
-        else:
-            announce_feed_delete_to_subscribers.delay(user_id, feed.id)
-
-    # strip out any feedmembers before deleting
-    db.session.query(FeedMember).filter(FeedMember.feed_id == feed.id).delete()
-
-    # delete the feed
-    if feed.num_communities > 0:
-        db.session.query(FeedItem).filter(FeedItem.feed_id == feed.id).delete()
-    db.session.delete(feed)
-
-    # commit the  removal changes
-    db.session.commit()
+    delete_feed(feed_id, SRC_WEB)
 
     flash(_('Feed deleted'))
 
     # clear instance feeds for dropdown menu cache
-    if instance_feed:
+    if feed.is_instance_feed:
         cache.delete_memoized(menu_instance_feeds)
 
     # send the user back to the page they came from or main
