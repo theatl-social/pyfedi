@@ -38,6 +38,14 @@
             {% endif -%}
         {% endif -%}
     {% endif -%}
+    {% if not post.deleted -%}
+        <li class="share_mobile d-lg-none">
+            <a href="{{ url_for('post.post_share_mastodon', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                <span class="fe fe-share"></span>
+                {{ _('Share') }}
+            </a>
+        </li>
+    {% endif -%}
     {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
         <li>
             <a href="{{ url_for('post.post_set_flair', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
@@ -207,6 +215,15 @@
             </a>
         </li>
     {% endif -%}
+{% else -%}
+    {% if not post.deleted -%}
+        <li class="share_mobile d-lg-none">
+            <a href="{{ url_for('post.post_share_mastodon', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                <span class="fe fe-share"></span>
+                {{ _('Share') }}
+            </a>
+        </li>
+    {% endif -%}
 {% endif -%}
 {% if post.ap_id -%}
     <li>
@@ -227,12 +244,6 @@
     </a>
 </li>
 {% if not post.deleted -%}
-<li>
-    <a href="{{ url_for('post.post_share_mastodon', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
-        <span class="fe fe-share"></span>
-        {{ _('Share on Mastodon') }}
-    </a>
-</li>
 <li>
     <a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
         <span class="fe fe-report"></span>
