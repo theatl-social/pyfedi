@@ -775,8 +775,7 @@ def handle_blockquotes(text: str) -> str:
     # Step 1: Extract inline and block code, replacing with placeholders
     code_snippets, text = stash_code_html(text, placeholder)
 
-    # Step 2: Regex to capture all groups of lines preceded by > (based on markdown2 regex)
-    # md_quotes = re.compile(r'((^[ \t]*>[ \t]?.*\n)+)', re.M)
+    # Step 2: Regex to capture all groups of lines preceded by > (roughly based on markdown2 regex)
     md_quotes = re.compile(r'((^[ \t]*>[ \t]?.*(\n|$))+)', re.M)
 
     # Step 3: Function to do replacements
