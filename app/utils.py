@@ -816,9 +816,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         markdown_text = escape_non_html_angle_brackets(
             markdown_text)  # To handle situations like https://ani.social/comment/9666667
         
-        print(f"before func:\n{markdown_text}")
         markdown_text = handle_blockquotes(markdown_text) # handle blockquotes ourselves to do it better in some cases
-        print(f"after func:\n{markdown_text}")
         markdown_text = handle_bold_em(markdown_text)  # Some preprocessing to better handle bold and italics
         markdown_text = handle_lemmy_autocomplete(markdown_text)
         markdown_text = handle_naked_spoilers(markdown_text)
