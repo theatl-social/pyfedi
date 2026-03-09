@@ -776,7 +776,8 @@ def handle_blockquotes(text: str) -> str:
     code_snippets, text = stash_code_html(text, placeholder)
 
     # Step 2: Regex to capture all groups of lines preceded by > (based on markdown2 regex)
-    md_quotes = re.compile(r'((^[ \t]*>[ \t]?.*\n)+)', re.M)
+    # md_quotes = re.compile(r'((^[ \t]*>[ \t]?.*\n)+)', re.M)
+    md_quotes = re.compile(r'((^[ \t]*>[ \t]?.*(\n|$))+)', re.M)
 
     # Step 3: Function to do replacements
     def wrap_blockquotes(match):
@@ -816,7 +817,9 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         markdown_text = escape_non_html_angle_brackets(
             markdown_text)  # To handle situations like https://ani.social/comment/9666667
         
+        print(f"before func:\n{markdown_text}")
         markdown_text = handle_blockquotes(markdown_text) # handle blockquotes ourselves to do it better in some cases
+        print(f"after func:\n{markdown_text}")
         markdown_text = handle_bold_em(markdown_text)  # Some preprocessing to better handle bold and italics
         markdown_text = handle_lemmy_autocomplete(markdown_text)
         markdown_text = handle_naked_spoilers(markdown_text)
