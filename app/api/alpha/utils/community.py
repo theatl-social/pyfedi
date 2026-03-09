@@ -59,7 +59,7 @@ def get_community_list(auth, data):
         member_check = db.session.query(CommunityMember.community_id).filter(
             CommunityMember.user_id == user_id,
             CommunityMember.is_banned == False
-        ).subquery()
+        )
         communities = communities.filter(
             or_(
                 Community.private == False,
