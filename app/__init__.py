@@ -110,8 +110,8 @@ def create_app(config_class=Config):
 
     app.wsgi_app = StripCookieVaryForAnonymous(ProxyFix(app.wsgi_app, x_for=1))
 
-    app.config["API_TITLE"] = "PieFed 1.7 Alpha API"
-    app.config["API_VERSION"] = "alpha 1.7"
+    app.config["API_TITLE"] = "PieFed 1.6 Alpha API"
+    app.config["API_VERSION"] = "alpha 1.6"
     app.config["OPENAPI_VERSION"] = "3.1.1"
     if app.config["SERVE_API_DOCS"]:
         app.config["OPENAPI_URL_PREFIX"] = "/api/alpha"
@@ -152,7 +152,7 @@ def create_app(config_class=Config):
                 }
             ],
             "info": {
-                "title": "PieFed 1.7 Alpha API",
+                "title": "PieFed 1.6 Alpha API",
                 "contact": {
                     "name": "Developer",
                     "url": "https://codeberg.org/rimu/pyfedi"
