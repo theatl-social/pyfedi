@@ -105,6 +105,10 @@ def resend_email():
         form.email.data = form.email.data.strip()
         user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None, deleted=False).first()
 
+        if user is None:
+            flash(_("No user found with that email address."), 'error')
+            return redirect(url_for('auth.resend_email'))
+
         # Create verification token if it doesn't exist already or else verification is impossible
         if not user.verification_token:
             user.verification_token = random_token(16)
