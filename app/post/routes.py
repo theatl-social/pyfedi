@@ -61,7 +61,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
     site_language_code, block_honey_pot, joined_communities, moderating_communities, user_pronouns, \
-    instance_sticky_posts, instance_sticky_post_ids
+    instance_sticky_posts, instance_sticky_post_ids, user_access
 
 
 def post_cache_key(post_id, sort, low_bandwidth, autoplay):
@@ -1131,7 +1131,7 @@ def post_edit(post_id: int):
 def post_delete(post_id: int):
     post = Post.query.get_or_404(post_id)
     community = post.community
-    if post.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
+    if post.user_id == current_user.id or community.is_moderator() or current_user.is_admin() or user_access('administer all communities'):
         if post.community.id in communities_banned_from(current_user.id):
             abort(403)
         form = DeleteConfirmationForm()
@@ -1495,7 +1495,7 @@ def post_mea_culpa(post_id: int):
 @login_required
 def post_sticky(post_id: int, mode):
     post = Post.query.get_or_404(post_id)
-    if post.community.is_moderator(current_user) or current_user.is_admin():
+    if post.community.is_moderator(current_user) or current_user.is_admin() or user_access('administer all communities'):
         sticky_post(post.id, mode == 'yes', SRC_WEB)
     if mode == 'yes':
         flash(_('%(name)s has been stickied.', name=post.title))
@@ -1543,7 +1543,7 @@ def post_hide(post_id: int, mode):
 @login_required
 def post_set_flair(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin():
+    if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin() or user_access('administer all communities'):
 
         if request.headers.get("HX-Request"):
             curr_url = request.headers.get("HX-Current-Url")
@@ -1657,7 +1657,7 @@ def post_reply_lock(post_id: int, post_reply_id: int, mode):
 @login_required
 def post_move(post_id: int):
     post = Post.query.get_or_404(post_id)
-    if current_user.id == post.user_id or post.community.is_moderator(current_user) or (post.community.is_local() and post.community.is_admin_or_staff(current_user)):
+    if current_user.id == post.user_id or post.community.is_moderator(current_user) or (post.community.is_local() and (post.community.is_admin_or_staff(current_user)  or user_access('administer all communities'))):
         form = MovePostForm()
         if form.validate_on_submit():
             search = form.which_community.data.lower().strip()
@@ -1883,11 +1883,11 @@ def post_reply_delete(post_id: int, comment_id: int):
 
     form = ConfirmationMultiDeleteForm()
 
-    if not (community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff()):
+    if not (community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff() or user_access('administer all communities')):
         form.also_delete_replies.label = Label(field_id="also_delete_replies",
                                                text=_("Delete all my comments in this chain"))
 
-    if post_reply.user_id == current_user.id or community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff():
+    if post_reply.user_id == current_user.id or community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff() or user_access('administer all communities'):
         if form.validate_on_submit():
             if form.also_delete_replies.data:
                 num_deleted = 0
@@ -1940,7 +1940,7 @@ def post_reply_restore(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
 
-    if post_reply.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+    if post_reply.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin() or user_access('administer all communities'):
         if post_reply.deleted_by == post_reply.user_id:
             was_mod_deletion = False
         else:
@@ -2024,7 +2024,7 @@ def post_reply_purge(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     if not post_reply.deleted:
         abort(404)
-    if post_reply.deleted_by == current_user.id or post.community.is_moderator() or current_user.is_admin():
+    if post_reply.deleted_by == current_user.id or post.community.is_moderator() or current_user.is_admin() or user_access('administer all communities'):
         if not post_reply.has_replies():
             from app import redis_client
             with redis_client.lock(f"lock:post_reply:{post_reply.id}", timeout=10, blocking_timeout=6):

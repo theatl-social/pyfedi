@@ -20,8 +20,8 @@
     
     {# Delete/Restore section #}
     {% if not post_reply.deleted -%}
-        {# Normal delete permissions (unchanged) #}
-        {% if post_reply.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
+        {# Normal delete permissions #}
+        {% if post_reply.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids or user_access('administer all communities') -%}
             <li>
                 <a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow">
                     <span class="fe fe-delete"></span>
@@ -31,7 +31,7 @@
         {% endif -%}
     {% else -%}
         {# Special restore permissions for deleted replies #}
-        {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids or current_user.is_staff() -%}
+        {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids or current_user.is_staff() or user_access('administer all communities') -%}
             <li>
                 <a href='#' data-url="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow">
                     <span class="fe fe-arrow-up"></span>
@@ -47,9 +47,9 @@
             </li>
         {% endif -%}
         
-        {# Purge option - keep as is #}
+        {# Purge option #}
         {% if not post_reply.has_replies() -%}
-            {% if post.community.is_moderator() or current_user.get_id() in admin_ids or (post_reply.user_id == current_user.id and post_reply.deleted_by == post_reply.user_id) -%}
+            {% if post.community.is_moderator() or current_user.get_id() in admin_ids or (post_reply.user_id == current_user.id and post_reply.deleted_by == post_reply.user_id) or user_access('administer all communities') -%}
                 <li>
                     <a href='#' data-url="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow">
                         <span class="fe fe-delete red"></span>
@@ -135,7 +135,7 @@
             </li>
         {% endif -%}
     {% endif -%}
-    {% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff() or post_reply.community.is_moderator() ) -%}
+    {% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff() or post_reply.community.is_moderator() ) or user_access('administer all communities') -%}
         {% if post_reply.replies_enabled -%}
             <li>
                 <a href="#" data-url="{{ url_for('post.post_reply_lock', post_id=post_reply.post_id, post_reply_id=post_reply.id, mode='yes') }}" 
