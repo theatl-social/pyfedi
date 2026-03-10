@@ -7,7 +7,7 @@
             </a>
         </li>
     {% endif -%}
-    {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids or user_access('administer all communities') -%}
+    {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids or user_access('administer all communities', current_user.get_id()) -%}
         {% if post.deleted -%}
             <li>
                 <a href="#" data-url="{{ url_for('post.post_restore', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline confirm_first send_post" rel="nofollow noindex">
@@ -28,7 +28,7 @@
                     {{ _('Delete') }}
                 </a>
             </li>
-            {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or (post.community.is_local() and current_user.get_id() in admin_ids) or user_access('administer all communities') -%}
+            {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or (post.community.is_local() and current_user.get_id() in admin_ids) or user_access('administer all communities', current_user.get_id()) -%}
                 <li>
                     <a href="{{ url_for('post.post_move', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
                         <span class="fe fe-move"></span>
@@ -46,7 +46,7 @@
             </a>
         </li>
     {% endif -%}
-    {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids or user_access('administer all communities') -%}
+    {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids or user_access('administer all communities', current_user.get_id()) -%}
         <li>
             <a href="{{ url_for('post.post_set_flair', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
                 <span class="fe fe-label"></span>
@@ -257,7 +257,7 @@
     </a>
 </li>
 {% endif -%}
-{% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff() or post.community.is_moderator() or user_access('administer all communities')) -%}
+{% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff() or post.community.is_moderator() or user_access('administer all communities', current_user.get_id())) -%}
     <li>
         <a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
             <span class="fe fe-sticky-left"></span>
