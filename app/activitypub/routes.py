@@ -1865,7 +1865,10 @@ def community_outbox(actor):
         for post in posts:
             community_data['orderedItems'].append(post_to_activity(post, community))
 
-        return jsonify(community_data)
+        resp = jsonify(community_data)
+        resp.content_type = 'application/activity+json'
+        resp.headers.set('Cache-Control', 'public, max-age=10')
+        return resp
     else:
         abort(404)
 
@@ -1888,7 +1891,9 @@ def community_featured(actor):
         for post in posts:
             community_data['orderedItems'].append(post_to_page(post))
 
-        return jsonify(community_data)
+        resp = jsonify(community_data)
+        resp.content_type = 'application/activity+json'
+        return resp
     else:
         abort(404)
 
@@ -1933,7 +1938,7 @@ def community_followers(actor):
         }
         resp = jsonify(result)
         resp.content_type = 'application/activity+json'
-        resp.headers.set('Cache-Control', 'public, max-age=120')
+        resp.headers.set('Cache-Control', 'public, max-age=10')
         return resp
     else:
         abort(404)
