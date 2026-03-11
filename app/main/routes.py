@@ -8,7 +8,7 @@ from pyld import jsonld
 from sqlalchemy import or_, and_, func
 from ua_parser import parse as uaparse
 
-from app import db, cache
+from app import db, cache, limiter
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature, HttpSignature
@@ -258,6 +258,7 @@ def _base_list_communities_context():
 
 
 @bp.route('/communities', methods=['GET'])
+@limiter.limit("20 per 1 minutes", methods=['GET', 'POST'])
 @login_required_if_private_instance
 def list_communities():
     verification_warning()
@@ -448,6 +449,7 @@ def list_communities():
 
 
 @bp.route('/modlog', methods=['GET'])
+@limiter.limit("20 per 1 minutes", methods=['GET', 'POST'])
 def modlog():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'

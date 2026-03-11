@@ -327,6 +327,7 @@ class EditUserForm(FlaskForm):
     role = SelectField(_l('Role'), choices=role_options, default=2, coerce=int, render_kw={'class': 'form-select'})
     remove_avatar = BooleanField(_l('Remove avatar'))
     remove_banner = BooleanField(_l('Remove banner'))
+    admin_note = TextAreaField(_l('Notes about this user (only visible to other admins)'))
     submit = SubmitField(_l('Save'))
 
 
