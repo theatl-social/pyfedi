@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: tkz@tkz.es\n"
 "POT-Creation-Date: 2026-02-10 11:32+1300\n"
-"PO-Revision-Date: 2026-02-16 19:01+0000\n"
+"PO-Revision-Date: 2026-03-11 01:15+0000\n"
 "Last-Translator: f <felipe@disroot.org>\n"
 "Language-Team: Spanish <http://translate.piefed.social/projects/piefed/"
 "main-web-app/es/>\n"
@@ -25,14 +25,14 @@ msgid "Please log in to access this page."
 msgstr "Por favor, inicia sesión para acceder a esta página."
 
 #: app/cli.py:651
-#, fuzzy, python-format
+#, python-format
 msgid "Reminder: %(title)s"
-msgstr "Revisiones de %(title)s"
+msgstr "Recordatorio: %(title)s"
 
 #: app/cli.py:656
 #, fuzzy, python-format
 msgid "Reminder: comment on %(title)s"
-msgstr "Respuestas a mi comentario en %(post_title)s"
+msgstr "Recordatorio: comentar en %(title)s"
 
 #: app/cli.py:854 app/main/routes.py:785
 msgid "[PieFed] You have unread notifications"
@@ -69,9 +69,8 @@ msgid "Comments are disabled on this post"
 msgstr "Los comentarios están deshabilitados en esta publicación"
 
 #: app/models.py:2609
-#, fuzzy
 msgid "Banned from commenting"
-msgstr "Bloquear en la comunidad"
+msgstr "Bloqueado, no podrás comentar más"
 
 #: app/models.py:2636
 msgid "Blocked phrase in comment"
@@ -80,7 +79,7 @@ msgstr "Bloquear oración en comentario"
 #: app/models.py:2647
 #, fuzzy
 msgid "Replier blocked"
-msgstr "Bloqueada"
+msgstr "Usuario bloqueado"
 
 #: app/models.py:2650
 msgid "Duplicate reply"
@@ -88,7 +87,7 @@ msgstr "Respuesta duplicada"
 
 #: app/models.py:2658
 msgid "Gif comment ignored"
-msgstr ""
+msgstr "Comentario Gif ignorado"
 
 #: app/models.py:2661
 msgid "Low quality reply"
@@ -233,7 +232,7 @@ msgstr "No se puede usar '-' en la URL. ¿Usar '_' en su lugar?"
 #: app/utils.py:3396
 #, fuzzy
 msgid "Feed urls can only contain letters, numbers, and underscores."
-msgstr "las URLs del feed solo pueden contener letras, números y guion bajo."
+msgstr "las URLs del feed solo pueden contener letras, números y guiones bajos."
 
 #: app/utils.py:3406
 msgid "A Feed with this url already exists."
@@ -368,7 +367,7 @@ msgstr "Permitir comunidades y publicaciones NSFL"
 
 #: app/admin/forms.py:45
 msgid "Bar people from these countries from accessing NSFW and NSFL content"
-msgstr ""
+msgstr "Bloquear a usuarios de estos países de accesar a contenido NSFW y NSFL"
 
 #: app/admin/forms.py:46
 msgid "Only admins can create new local communities"
@@ -387,7 +386,6 @@ msgid "Require CAPTCHA for new account registration"
 msgstr "Requerir CAPTCHA para registro de cuentas nuevas"
 
 #: app/admin/forms.py:50
-#, fuzzy
 msgid "Open"
 msgstr "Abierto"
 
@@ -412,18 +410,17 @@ msgid "Registration approved email"
 msgstr "Correo electrónico para aprobación de registro"
 
 #: app/admin/forms.py:55
+#, fuzzy
 msgid "Provide a list of topics to subscribe to"
-msgstr ""
+msgstr "Proporcionar una lista de temas para suscribirse"
 
 #: app/admin/forms.py:56
-#, fuzzy
 msgid "Trump Musk filter setup"
-msgstr "Configuración del filtro de contenido"
+msgstr "Configuración del filtro Trump Musk"
 
 #: app/admin/forms.py:57
-#, fuzzy
 msgid "Ignore registrations from these countries"
-msgstr "Bloquear registros de estos referentes (uno por línea)"
+msgstr "Ignorar registros de estos países"
 
 #: app/admin/forms.py:58
 msgid "Block registrations from these referrers (one per line)"
@@ -470,13 +467,15 @@ msgstr "Filtro de inicio predeterminado"
 
 #: app/admin/forms.py:70
 msgid "Cache remote images locally"
-msgstr ""
+msgstr "Almacenar imágenes remotas en caché localmente"
 
 #: app/admin/forms.py:71
 msgid ""
 "Report comments containing an em dash (—) from newly created users - "
 "likely spam / AI."
 msgstr ""
+"Reportar comentarios que contengan guion largo (—) De usuarios recientemente "
+"creados - posible spam / IA."
 
 #: app/admin/forms.py:72
 msgid "Log ActivityPub JSON for debugging"
@@ -500,7 +499,7 @@ msgstr "Permitir a no administradores añadir comunidades remotas"
 
 #: app/admin/forms.py:77
 msgid "Honeypot to block bad crawlers"
-msgstr ""
+msgstr "Señuelo (honeypot) para bloquear rastreadores web maliciosos"
 
 #: app/admin/forms.py:83
 msgid "Enable instance chooser"
@@ -508,7 +507,7 @@ msgstr "Habilitar selector de instancia"
 
 #: app/admin/forms.py:84
 msgid "One-sentence elevator pitch"
-msgstr ""
+msgstr "Presentación en una frase"
 
 #: app/admin/forms.py:85
 msgid "Number of admins with emergency access"
@@ -517,6 +516,8 @@ msgstr "Número de administradores con acceso de emergencia"
 #: app/admin/forms.py:86
 msgid "Non-admins donate enough to pay for hosting"
 msgstr ""
+"Las donaciones de no administradores son suficientes para costear el "
+"alojamiento web"
 
 #: app/admin/forms.py:87
 msgid "This instance has automated daily backups"
@@ -525,17 +526,15 @@ msgstr "Esta instancia tiene respaldos automáticos diarios"
 #: app/admin/forms.py:92
 #, fuzzy
 msgid "Federation mode"
-msgstr "Federación"
+msgstr "Modo de federación"
 
 #: app/admin/forms.py:93
-#, fuzzy
 msgid "Blocklist - deny federation with specified instances"
-msgstr "Denegar federación con estas instancias"
+msgstr "Lista de bloqueo - Denegar federación con estas instancias"
 
 #: app/admin/forms.py:94
-#, fuzzy
 msgid "Allowlist - only allow federation with specified instances"
-msgstr "Permitir federación con estas instancias"
+msgstr "Lista de autorización - Permitir federación con estas instancias"
 
 #: app/admin/forms.py:96
 msgid "Allow federation with these instances"
@@ -576,9 +575,8 @@ msgid "Automatically add new remote communities"
 msgstr "Añadir comunidades remotas automáticamente"
 
 #: app/admin/forms.py:107
-#, fuzzy
 msgid "Closing down announcement for home page"
-msgstr "Anuncio en la parte superior de la página de inicio"
+msgstr "Anuncio de cierre en la página de inicio"
 
 #: app/admin/forms.py:108
 msgid "Yes, close my instance"
@@ -664,9 +662,8 @@ msgid "Rules"
 msgstr "Reglas"
 
 #: app/admin/forms.py:138 app/community/forms.py:91
-#, fuzzy
 msgid "NSFW community"
-msgstr "Comunidad pornográfica"
+msgstr "Comunidad NSFW"
 
 #: app/admin/forms.py:139 app/community/forms.py:32
 msgid "Only AI-generated content"
@@ -820,9 +817,8 @@ msgid "Override remote language setting"
 msgstr "Ignorar la configuración de idioma remoto"
 
 #: app/admin/forms.py:177
-#, fuzzy
 msgid "Override remote AI content setting"
-msgstr "Ignorar la configuración de idioma remoto"
+msgstr "Ignorar la configuración de contenido remoto generado por IA"
 
 #: app/admin/forms.py:178
 msgid "Always show translation icon on posts"
@@ -1060,9 +1056,8 @@ msgid "Flag their posts as from a bot"
 msgstr "Marcar publicaciones de este usuario como actividad de bot"
 
 #: app/admin/forms.py:310
-#, fuzzy
 msgid "Suppress cross-posts"
-msgstr "Mostrar cross-posts"
+msgstr "Suprimir cross-posts"
 
 #: app/admin/forms.py:313
 msgid "Ban posts"
@@ -1119,7 +1114,7 @@ msgstr "Ya existe una comunidad local con esta URL."
 
 #: app/admin/forms.py:353
 msgid "URL path"
-msgstr ""
+msgstr "Ruta de URL"
 
 #: app/admin/forms.py:354
 msgid "e.g., /about-us"
@@ -1168,9 +1163,8 @@ msgid "Category"
 msgstr "Categoría"
 
 #: app/admin/routes.py:65
-#, fuzzy
 msgid "Storage used"
-msgstr "Moderar usuario"
+msgstr "Almacenamiento usado"
 
 #: app/admin/routes.py:220 app/admin/routes.py:252 app/admin/routes.py:294
 #: app/feed/routes.py:238
@@ -1293,9 +1287,8 @@ msgid "Communities with no topic"
 msgstr "Comunidades sin tema"
 
 #: app/admin/routes.py:1196
-#, fuzzy
 msgid "Communities with low_quality == True"
-msgstr "Comunidades sin tema"
+msgstr "Comunidades con low_quality == True"
 
 #: app/admin/routes.py:1268 app/admin/routes.py:1374 app/admin/routes.py:1398
 #: app/admin/routes.py:1659 app/admin/routes.py:1931 app/admin/routes.py:1961
@@ -1402,8 +1395,9 @@ msgid "Verification email sent!"
 msgstr "¡Verificación por correo electrónico enviada!"
 
 #: app/admin/routes.py:1697
+#, fuzzy
 msgid "Problem sending email: "
-msgstr ""
+msgstr "Problema enviando correo electrónico: "
 
 #: app/admin/routes.py:1754
 msgid "User added"
@@ -1460,6 +1454,8 @@ msgid ""
 "%(community_name)s is now %(new_url)s. Contact the initiator of this "
 "request to let them know."
 msgstr ""
+"%(community_name)s cambió a %(new_url)s. Contacta al iniciador de esta "
+"solicitud para informarle."
 
 #: app/admin/routes.py:2020
 msgid "Ensure this community has the right moderators."
@@ -1591,9 +1587,8 @@ msgstr ""
 "el pie de página)"
 
 #: app/auth/forms.py:36
-#, fuzzy
 msgid "Enter captcha code below"
-msgstr "Ingresa el código captcha"
+msgstr "Introduce el código captcha"
 
 #: app/auth/forms.py:39 app/auth/util.py:356 app/templates/base.html:266
 #: app/templates/themes/dillo/base.html:108
@@ -1612,9 +1607,8 @@ msgstr ""
 
 #: app/auth/forms.py:72 app/auth/forms.py:76 app/community/forms.py:76
 #: app/community/forms.py:80 app/feed/forms.py:47
-#, fuzzy
 msgid "This name is in use already."
-msgstr "Este nombre ya ha sido utilizado"
+msgstr "Este nombre ya está en uso."
 
 #: app/auth/forms.py:86
 msgid "Maximum password length is 128 characters."
@@ -1659,15 +1653,17 @@ msgid "Choose some topics you are interested in"
 msgstr "Elige algunos temas que te interesen"
 
 #: app/auth/forms.py:141
-#, fuzzy
 msgid "Set email"
-msgstr "definir correo electrónico"
+msgstr "definir el correo electrónico"
 
 #: app/auth/oauth_util.py:38
+#, fuzzy
 msgid ""
 "An account with this email already exists, please login and connect this "
 "account over \"Connect OAuth\" setting."
 msgstr ""
+"Una cuenta con esta dirección de correo electrónico ya existe, por favor "
+"inicia sesión y conecta esta cuenta en la configuración \"Connect OAuth\"."
 
 #: app/auth/oauth_util.py:128 app/auth/oauth_util.py:131
 msgid "Account registrations are currently closed."
@@ -1835,8 +1831,9 @@ msgid "Sorry, you cannot use that user name"
 msgstr "Lo sentimos, no puedes usar ese nombre de usuario"
 
 #: app/auth/util.py:194
+#, fuzzy
 msgid "Registration not allowed based on your referrer."
-msgstr ""
+msgstr "Registro rechazado debido a tu referente."
 
 #: app/auth/util.py:238
 #, python-format
@@ -2007,7 +2004,6 @@ msgid "NSFW"
 msgstr "NSFW"
 
 #: app/community/forms.py:33
-#, fuzzy
 msgid "Local only"
 msgstr "Solo local"
 
@@ -2032,17 +2028,17 @@ msgid "Invitation by owner required"
 msgstr "Se necesita una invitación del dueño"
 
 #: app/community/forms.py:42 app/community/forms.py:102
+#, fuzzy
 msgid "Joining process"
-msgstr ""
+msgstr "Proceso de inscripción"
 
 #: app/community/forms.py:43
 msgid "Announce this community to newcommunities@lemmy.world"
-msgstr ""
+msgstr "Anuncia esta comunidad en newcommunities@lemmy.world"
 
 #: app/community/forms.py:44
-#, fuzzy
 msgid "Question & answer community"
-msgstr "Publicar cruzado en otra comunidad"
+msgstr "Comunidad de preguntas y respuestas"
 
 #: app/community/forms.py:47
 msgid "Create"
@@ -2099,16 +2095,16 @@ msgstr "Tipo de publicación predeterminado"
 
 #: app/community/forms.py:132
 msgid "Friendly urls"
-msgstr ""
+msgstr "URLs amigables"
 
 #: app/community/forms.py:133
+#, fuzzy
 msgid "Post ids only"
-msgstr ""
+msgstr "solo IDs de publicación"
 
 #: app/community/forms.py:134
-#, fuzzy
 msgid "Post url structure to use in this community"
-msgstr "Estructura de URLs de publicación a usar en esta comunidad"
+msgstr "Estructura de URLs de la publicación a usar en esta comunidad"
 
 #: app/community/forms.py:142 app/community/forms.py:217 app/post/forms.py:15
 msgid "Body"
@@ -2181,11 +2177,12 @@ msgstr "Buscar"
 #: app/community/forms.py:179
 #, fuzzy
 msgid "Address is required."
-msgstr "Se requiere URL."
+msgstr "La dirección es obligatoria."
 
 #: app/community/forms.py:185
+#, fuzzy
 msgid "Address must start with !"
-msgstr ""
+msgstr "La dirección debe comenzar con !"
 
 #: app/community/forms.py:188
 msgid "Address must include @"
@@ -2297,7 +2294,7 @@ msgstr "No se permiten publicaciones NSFL."
 
 #: app/community/forms.py:258
 msgid "Choose a time in the future."
-msgstr ""
+msgstr "Escoge una fecha en el futuro."
 
 #: app/community/forms.py:278
 msgid "Alt text (for links to images)"
@@ -2340,7 +2337,6 @@ msgid "End"
 msgstr "Fin"
 
 #: app/community/forms.py:375
-#, fuzzy
 msgid "Banner"
 msgstr "Báner"
 
@@ -2365,7 +2361,6 @@ msgid "Online"
 msgstr "En línea"
 
 #: app/community/forms.py:382
-#, fuzzy
 msgid "Online link"
 msgstr "Enlace en línea"
 
@@ -2382,7 +2377,6 @@ msgid "Country"
 msgstr "País"
 
 #: app/community/forms.py:391
-#, fuzzy
 msgid "Free"
 msgstr "Gratuito"
 
@@ -2391,14 +2385,12 @@ msgid "Donation"
 msgstr "Donación"
 
 #: app/community/forms.py:391
-#, fuzzy
 msgid "Paid"
-msgstr "Con costo"
+msgstr "Remunerado"
 
 #: app/community/forms.py:415 app/community/forms.py:417
-#, fuzzy
 msgid "This time is in the past."
-msgstr "Este fecha está en el pasado."
+msgstr "Este fecha ya ha pasado."
 
 #: app/community/forms.py:420
 msgid "Start must be less than end."
@@ -2532,7 +2524,6 @@ msgid "Retrieve"
 msgstr "Recuperar"
 
 #: app/community/forms.py:559
-#, fuzzy
 msgid "To"
 msgstr "A"
 
@@ -2559,7 +2550,7 @@ msgstr "La comunidad antigua está bloqueada."
 #: app/community/forms.py:574
 #, fuzzy
 msgid "Move notification post in old community"
-msgstr "Mover la publicación de notificación en la comunidad antigua."
+msgstr "Mover la publicación de notificaciones a la comunidad antigua"
 
 #: app/community/forms.py:575
 #, fuzzy
@@ -2575,8 +2566,9 @@ msgid "Background color"
 msgstr "Color de fondo"
 
 #: app/community/forms.py:582
+#, fuzzy
 msgid "Blur images and thumbnails for posts with this flair"
-msgstr ""
+msgstr "Desenfoca imágenes y miniaturas de publicaciones con este flair"
 
 #: app/community/routes.py:83
 msgid "Community creation has been restricted to admins on this site"
@@ -2614,6 +2606,8 @@ msgid ""
 "Accepted address formats: !community@server.name or "
 "https://server.name/{c|m}/community."
 msgstr ""
+"Formatos de dirección aceptados: !community@server.name or https://"
+"server.name/{c|m}/community."
 
 #: app/community/routes.py:196
 msgid ""
@@ -3146,11 +3140,14 @@ msgstr "Resultado de búsqueda para comunidad remota"
 #: app/feed/routes.py:1132
 #, fuzzy
 msgid "Searching for remote feeds requires login"
-msgstr "Resultado de búsqueda para comunidad remota"
+msgstr "Búsqueda de feeds remotas requiere inicio de sesión"
 
 #: app/instance/routes.py:54
+#, fuzzy
 msgid "Limiting results to blocked instances disables filters other than search"
 msgstr ""
+"Limitar los resultados a instancias bloqueadas desactiva otros filtros, "
+"excepto la búsqueda"
 
 #: app/instance/routes.py:56
 msgid "Limiting results to allowed instances disables filters other than search"
@@ -3718,7 +3715,7 @@ msgstr "%(name)s ha sido bloqueado."
 #: app/shared/reply.py:501
 #, python-format
 msgid "Your answer was chosen as an answer to %(post_title)s"
-msgstr ""
+msgstr "Tu respuesta fue elegida como una respuesta a %(post_title)s"
 
 #: app/shared/user.py:29 app/user/routes.py:814 app/user/routes.py:1511
 msgid "You cannot block yourself."
@@ -5060,7 +5057,7 @@ msgstr "Ignorar"
 
 #: app/templates/admin/activities.html:20
 msgid "Processing"
-msgstr ""
+msgstr "Procesando"
 
 #: app/templates/admin/activities.html:21
 #, fuzzy
@@ -5203,7 +5200,7 @@ msgstr "Aprobar"
 
 #: app/templates/admin/approve_registrations.html:62
 msgid "Deny"
-msgstr ""
+msgstr "Denegar"
 
 #: app/templates/admin/approve_registrations.html:68
 #: app/templates/admin/approve_registrations.html:105
@@ -5246,11 +5243,11 @@ msgstr "Eliminar página CMS"
 
 #: app/templates/admin/cms_page_delete.html:16
 msgid "Back to Pages"
-msgstr ""
+msgstr "Volver a Páginas"
 
 #: app/templates/admin/cms_page_delete.html:20
 msgid "Are you sure you want to delete this page?"
-msgstr ""
+msgstr "¿Estás seguro(a) de querer eliminar esta página?"
 
 #: app/templates/admin/cms_page_delete.html:21
 msgid "This action cannot be undone."
@@ -5321,7 +5318,7 @@ msgstr "Formato básico:"
 
 #: app/templates/admin/cms_page_edit.html:66
 msgid "Lists, tables, and other Markdown features are supported."
-msgstr ""
+msgstr "Listas, tablas y otras características de Markdown están disponibles."
 
 #: app/templates/admin/cms_pages.html:16
 msgid "Add new page"
@@ -5600,7 +5597,7 @@ msgstr ""
 
 #: app/templates/admin/home.html:38
 msgid "Post translation available:"
-msgstr ""
+msgstr "Traducción de la publicación disponible:"
 
 #: app/templates/admin/home.html:50
 msgid "Installed Plugins"
@@ -5741,13 +5738,15 @@ msgstr "Ajustes de contenido"
 
 #: app/templates/admin/misc.html:25
 msgid "CSS in this field will be added to every page."
-msgstr ""
+msgstr "El CSS de este campo se agregará a cada página."
 
 #: app/templates/admin/misc.html:27
 msgid ""
 "JavaScript in this field will be added to every page. Do not include "
 "&lt;script&gt; tags."
 msgstr ""
+"El código JavaScript en este campo se agregará a cada página. No incluyas "
+"etiquetas &lt;script&gt;."
 
 #: app/templates/admin/misc.html:29
 msgid "This is for anonymous users. Logged-in users always default to Subscribed"
@@ -5796,7 +5795,7 @@ msgstr ""
 #: app/templates/admin/misc.html:88
 #, python-format
 msgid "You are about to close the instance \"<strong>%(domain)s</strong>.\""
-msgstr ""
+msgstr "Estás a punto de cerrar la instancia \"<strong>%(domain)s</strong>.\""
 
 #: app/templates/admin/misc.html:89
 msgid ""
@@ -5850,6 +5849,8 @@ msgid ""
 "It is best to use the PNG file format as that is most widely compatible "
 "for PWA icons."
 msgstr ""
+"Es mejor usar el formato de imagen PNG porque es el más compatible de iconos "
+"para PWA."
 
 #: app/templates/admin/site.html:29
 msgid "About this instance"
@@ -7336,9 +7337,8 @@ msgid "Federation Status"
 msgstr "Ajustes de federación"
 
 #: app/templates/instance/list_instances.html:61
-#, fuzzy
 msgid "Allowed instances"
-msgstr "Instancias"
+msgstr "Instancias permitidas"
 
 #: app/templates/instance/list_instances.html:62
 #: app/templates/instance/list_instances.html:103
@@ -7352,9 +7352,8 @@ msgid "Blocked instances"
 msgstr "No hay instancias bloqueadas"
 
 #: app/templates/instance/list_instances.html:74
-#, fuzzy
 msgid "Federated instances"
-msgstr "Instancias confiables"
+msgstr "Instancias federadas"
 
 #: app/templates/instance/list_instances.html:75
 #: app/templates/instance/list_instances.html:112
@@ -9156,6 +9155,8 @@ msgid ""
 "These notifications only include replies, mentions, and posts <a "
 "href=\"/alerts\">you subscribe to</a>."
 msgstr ""
+"Estas notificaciones solo incluyen respuestas, menciones y publicaciones <a "
+"href=\"/alerts\">a los que estás suscrito</a>."
 
 #: app/templates/user/notifications.html:102
 #: app/templates/user/show_profile.html:382
@@ -9810,9 +9811,8 @@ msgid "Default post sort"
 msgstr "Orden predeterminado de publicaciones"
 
 #: app/user/forms.py:92
-#, fuzzy
 msgid "Default comment sort"
-msgstr "Orden predeterminado de publicaciones"
+msgstr "Orden predeterminado de comentarios"
 
 #: app/user/forms.py:102
 msgid "Theme"
@@ -9862,9 +9862,8 @@ msgid "Code syntax highlighting color scheme"
 msgstr ""
 
 #: app/user/forms.py:124
-#, fuzzy
 msgid "All instances"
-msgstr "Instancias"
+msgstr "Todas las instancias"
 
 #: app/user/forms.py:126
 msgid "Accept private messages from"
