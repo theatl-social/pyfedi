@@ -444,7 +444,7 @@ def user_outbox(actor):
     }
     resp = jsonify(outbox)
     resp.content_type = 'application/activity+json'
-    resp.headers.set('Cache-Control', 'public, max-age=1500')
+    resp.headers.set('Cache-Control', 'public, max-age=10')
     resp.headers.set('Vary', 'Accept')
     return resp
 
