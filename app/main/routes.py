@@ -80,12 +80,6 @@ def index(sort=None, view_filter=None):
                      tag=request.args.get('tag', ''))
 
 
-def home_page_cache_key(sort, view_filter, page, result_id, low_bandwidth, tag):
-    # this is almost the same as cache.memoized except prepends current_user.get_id() which is 0 for all anonymous users
-    return f"{current_user.get_id()}_{sort}_{view_filter}_{page}_{result_id}_{low_bandwidth}_{tag}"
-
-
-@cache.cached(timeout=3, make_cache_key=home_page_cache_key)
 def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
 
     page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
