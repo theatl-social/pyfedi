@@ -55,7 +55,8 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
     approval_required, permission_required, aged_account_required, communities_banned_from_all_users, \
-    moderating_communities_ids_all_users, block_honey_pot, user_pronouns, community_membership_private
+    moderating_communities_ids_all_users, block_honey_pot, user_pronouns, community_membership_private, \
+    show_reason_why_no_federation
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.shared.community import leave_community
@@ -515,6 +516,8 @@ def show_community(community: Community):
 
     community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).\
         filter(FeedItem.community_id == community.id).filter(Feed.public == True).all()
+
+    show_reason_why_no_federation(community.instance_id)
 
     # Upcoming events
     upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
