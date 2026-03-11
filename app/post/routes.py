@@ -61,7 +61,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
     site_language_code, block_honey_pot, joined_communities, moderating_communities, user_pronouns, \
-    instance_sticky_posts, instance_sticky_post_ids, user_access
+    instance_sticky_posts, instance_sticky_post_ids, user_access, show_reason_why_no_federation
 
 
 def post_cache_key(post_id, sort, low_bandwidth, autoplay):
@@ -140,6 +140,8 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
         if current_user.is_authenticated:
             if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
                 form.distinguished.render_kw = {'disabled': True}
+
+            show_reason_why_no_federation(community.instance_id)
 
         if current_user.is_authenticated and current_user.verified and form.validate_on_submit() and not post.deleted:
             try:
@@ -667,6 +669,8 @@ def continue_discussion(post_id, comment_id):
         recently_downvoted = recently_downvoted_posts(current_user.id)
         recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
         recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+
+        show_reason_why_no_federation(post.community.instance_id)
     else:
         recently_upvoted = []
         recently_downvoted = []
