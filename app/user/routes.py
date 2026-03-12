@@ -1120,7 +1120,7 @@ def notifications():
     notification_types = defaultdict(int)
     notification_links = defaultdict(set)
     notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(
-        desc(Notification.created_at)).limit(100).all()
+        desc(Notification.created_at)).limit(50).all()
     # Build a list of the types of notifications this person has, by going through all their notifications
     for notification in notification_list:
         has_notifications = True
