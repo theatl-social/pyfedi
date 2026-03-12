@@ -13,7 +13,7 @@ default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
                   "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Old", "Scaled", "Active"]
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
-community_sort_list = ["Hot", "Top", "New", "Active", "TopAll"]
+community_sort_list = ["Hot", "Top", "New", "Old", "Active", "TopAll", "TopPosts", "TopSubscribers", "NewFederated", "OldFederated"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
 community_listing_type_list = ["All", "Local", "Subscribed", "Moderating", "ModeratorView"]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
@@ -722,6 +722,42 @@ class EditCommunityRequest(DefaultSchema):
 
 class DeleteCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
+class CreateFeedRequest(DefaultSchema):
+    name = fields.String(required=True, metadata={"description": "URL-safe name/slug for the feed"})
+    title = fields.String(required=True)
+    description = fields.String(metadata={"format": "markdown"})
+    icon_url = fields.String(allow_none=True, metadata={"format": "url"})
+    banner_url = fields.String(allow_none=True, metadata={"format": "url"})
+    nsfw = fields.Boolean()
+    nsfl = fields.Boolean()
+    public = fields.Boolean(metadata={"description": "Whether the feed is publicly visible", "default": True})
+    communities = fields.String(metadata={"description": "Newline-separated list of community ap_ids to include in the feed"})
+    is_instance_feed = fields.Boolean(metadata={"description": "Whether this is an instance-level feed (admin only)"})
+    show_child_posts = fields.Boolean(metadata={"description": "Whether to show posts from child feeds"})
+    parent_feed_id = fields.Integer(allow_none=True, metadata={"description": "ID of parent feed, if any"})
+
+
+class EditFeedRequest(DefaultSchema):
+    feed_id = fields.Integer(required=True)
+    url = fields.String(metadata={"description": "URL-safe name/slug for the feed"})
+    title = fields.String()
+    description = fields.String(metadata={"format": "markdown"})
+    icon_url = fields.String(allow_none=True, metadata={"format": "url"})
+    banner_url = fields.String(allow_none=True, metadata={"format": "url"})
+    nsfw = fields.Boolean()
+    nsfl = fields.Boolean()
+    public = fields.Boolean()
+    communities = fields.String(metadata={"description": "Newline-separated list of community ap_ids; omit to keep existing communities"})
+    is_instance_feed = fields.Boolean()
+    show_child_posts = fields.Boolean()
+    parent_feed_id = fields.Integer(allow_none=True)
+
+
+class DeleteFeedRequest(DefaultSchema):
+    feed_id = fields.Integer(required=True)
     deleted = fields.Boolean(required=True)
 
 
@@ -1828,6 +1864,7 @@ class UserRegistration(DefaultSchema):
     status = fields.String(validate=validate.OneOf(["approved", "awaiting review"]), required=True)
     approved_by = fields.Nested(Person)
     approved_at = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    referrer = fields.String()
 
 
 class GetRegistrationList(DefaultSchema):

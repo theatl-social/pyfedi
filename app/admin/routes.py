@@ -1636,6 +1636,7 @@ def admin_user_edit(user_id):
         user.ban_comments = form.ban_comments.data
         user.hide_nsfw = form.hide_nsfw.data
         user.hide_nsfl = form.hide_nsfl.data
+        user.admin_note = form.admin_note.data
         if form.verified.data and not user.verified:
             finalize_user_setup(user)
         user.verified = form.verified.data
@@ -1683,6 +1684,7 @@ def admin_user_edit(user_id):
         form.ban_comments.data = user.ban_comments
         form.hide_nsfw.data = user.hide_nsfw
         form.hide_nsfl.data = user.hide_nsfl
+        form.admin_note.data = user.admin_note
         if user.roles and user.roles.count() > 0:
             form.role.data = user.roles[0].id
 

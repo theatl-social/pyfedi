@@ -1892,7 +1892,7 @@ a.unread, div.unread {
     background-color: var(--bs-secondary-bg-subtle);
     border-left-color: var(--bs-secondary-border-subtle);
 
-    p {
+    p:last-child {
       margin-bottom: 0px;
     }
   }

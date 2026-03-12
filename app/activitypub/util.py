@@ -775,6 +775,9 @@ def refresh_community_profile_task(community_id, activity_json):
                     community.ap_fetched_at = utcnow()
                     community.public_key = activity_json['publicKey']['publicKeyPem']
 
+                    if 'postUrlType' in activity_json and activity_json['postUrlType']:
+                        community.post_url_type = activity_json['postUrlType']
+
                     if 'summary' in activity_json:
                         description_html = activity_json['summary']
                     elif 'content' in activity_json:
@@ -1219,6 +1222,7 @@ def actor_json_to_model(activity_json, address, server):
                               instance_id=find_instance_id(server),
                               content_retention=current_app.config['DEFAULT_CONTENT_RETENTION'],
                               first_federated_at=utcnow(),
+                              post_url_type=activity_json['postUrlType'] if 'postUrlType' in activity_json else None,
                               )
         if get_setting('meme_comms_low_quality', False):
             community.low_quality = 'memes' in activity_json['preferredUsername'] or 'shitpost' in activity_json['preferredUsername']

@@ -767,6 +767,44 @@ def handle_reddit_spoilers(text: str) -> str:
     return text
 
 
+def handle_blockquotes(text: str) -> str:
+    """Handle blockquotes so that special syntax is handled correctly (spoiler blocks, etc.)"""
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_html(text, placeholder)
+
+    # Step 2: Regex to capture all groups of lines preceded by > (roughly based on markdown2 regex)
+    md_quotes = re.compile(r'((^[ \t]*>[ \t]?.*(\n|$))+)', re.M)
+
+    # Step 3: Function to do replacements
+    def wrap_blockquotes(match):
+        contents = match.group(1)
+
+        # Add attribute so that markdown2 later knows to format the contents of this html tag
+        output = '<blockquote markdown="1">'
+
+        # Remove one layer of > from the contents since we are directly appending html around it
+        strip_leading_angle = re.compile(r'(^[ \t]*>[ \t]?)', re.M)
+        contents = strip_leading_angle.sub(r'', contents)
+        output += contents + "</blockquote>\n"
+
+        # Recursively handle blockquotes to deal with more layers of quoting
+        if re.search(strip_leading_angle, contents):
+            output = handle_blockquotes(output)
+        
+        return output
+    
+    # Step 4: Do the regex substitution work
+    text = re.sub(md_quotes, wrap_blockquotes, text)
+
+    # Step 5: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_target="_blank", test_env=False) -> str:
@@ -778,6 +816,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         markdown_text = escape_non_html_angle_brackets(
             markdown_text)  # To handle situations like https://ani.social/comment/9666667
         
+        markdown_text = handle_blockquotes(markdown_text) # handle blockquotes ourselves to do it better in some cases
         markdown_text = handle_bold_em(markdown_text)  # Some preprocessing to better handle bold and italics
         markdown_text = handle_lemmy_autocomplete(markdown_text)
         markdown_text = handle_naked_spoilers(markdown_text)
@@ -795,7 +834,8 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
                                             'tag-friendly': True,
                                             'smarty-pants': True,
                                             'enhanced-images': True,
-                                            'footnotes': True})
+                                            'footnotes': True,
+                                            'markdown-in-html': True})
             raw_html = md.convert(markdown_text)
             # Apply enhanced image attributes after markdown processing
             raw_html = apply_enhanced_image_attributes(raw_html, md)
@@ -4205,3 +4245,15 @@ def localize_datetime(inp, locale='en'):
         return arrow.get(inp).humanize(locale=locale)
     except ValueError:
         return arrow.get(inp).humanize(locale='en')
+
+
+def show_reason_why_no_federation(instance_id):
+    if instance_id in blocked_instances(current_user.get_id()):
+        instance = Instance.query.get(instance_id)
+        flash(_('You have blocked %(instance_name)s which hosts this community so none of your posts or comments will be sent there.',
+                instance_name=instance.domain), 'warning')
+
+    if instance_id in banned_instances(current_user.get_id()):
+        instance = Instance.query.get(instance_id)
+        flash(_('You have been banned from %(instance_name)s which hosts this community so none of your posts or comments will be accepted by them.',
+                instance_name=instance.domain), 'warning')
