@@ -147,3 +147,6 @@ sudo docker compose -f compose.dev.yaml up
 ### BUT WAIT THERE'S MORE
 
 Refer to the bare metal install instructions for details about setting up email, S3, cdn and much more.
+
+If your server has 4 GB of RAM or less then the default postgresql configuration in compose.yaml might use too much RAM.
+See [this discussion](https://piefed.social/c/piefed_help/p/1867393/re-kopitalk-piefed-website-inaccessible) for tuning ideas.
