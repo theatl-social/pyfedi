@@ -21,35 +21,42 @@
 
         {% if has_notifications %}
             <div class="nav nav-tabs nav-justified" id="typeTab" role="tablist" aria-label="{{ _('Filter notifications') }}">
-                <a class="nav-link{% if current_filter == ''%} active{% endif %}" type="button" role="tab" href='/notifications'>{{ _('All') }}</a>
+                <a class="nav-link{% if current_filter == ''%} active{% endif %}" type="button" role="tab" href='{{ url_for('user.notifications', type='', filter_unread=filter_unread) }}'>{{ _('All') }}</a>
                 {% for notification_type, new_notifications in notification_types.items() %}
                     <a class="nav-link{% if current_filter == str(notification_links[notification_type]) %} active{% endif %}"
-                       id="notif_type_{{ notification_type }}" type="button" role="tab" href="?type={{ notification_links[notification_type] }}"
+                       id="notif_type_{{ notification_type }}" type="button" role="tab" href="?type={{ notification_links[notification_type] }}&filter_unread={{ filter_unread }}"
                        style="view-transition-name: site">{{ notification_type }} {% if new_notifications %}({{ new_notifications }}){% endif %}</a>
                 {% endfor -%}
             </div>
             <table class="table table-striped notification-table">
                 {% for notification in notifications %}
-                    {% if notification.targets.gen == "0" %}
-                        {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
-                    {% else %}
-                        <tr class="align-middle">
-                            <td width="*">
-                                <div class="overflow-ellipses-parent text-truncate">
-                                    <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                                        <a class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
-                                            {{ notification.title }}
-                                        </a>
-                                    </div>
-                                </div>
-                            </td>
-                            {% include "user/notifs/_time_and_buttons.html" %}
-                        </tr>
+                    {% if not filter_unread == 'True' or not notification.read %}
+                       {% if notification.targets.gen == "0" %}
+                            {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
+                       {% else %}
+                           <tr class="align-middle">
+                               <td width="*">
+                                   <div class="overflow-ellipses-parent text-truncate">
+                                       <div class="child my-1 {% if not notification.read %}unread{% endif %}">
+                                           <a class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                                               {{ notification.title }}
+                                           </a>
+                                       </div>
+                                   </div>
+                               </td>
+                               {% include "user/notifs/_time_and_buttons.html" %}
+                           </tr>
+                       {% endif %}
                     {% endif %}
                 {% endfor %}
             </table>
         {% else %}
             <p>{{ _('No notifications to show.') }}</p>
+        {% endif %}
+        {% if filter_unread == 'False' %}
+            <a href="{{ url_for('user.notifications', type=current_filter, filter_unread='True') }}"> {{ _('Only show unread notifications') }}</a>
+        {% else %}
+            <a href="{{ url_for('user.notifications', type=current_filter) }}"> {{ _('Show active notifications') }}</a>
         {% endif %}
     </main>
 
