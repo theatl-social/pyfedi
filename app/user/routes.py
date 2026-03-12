@@ -1116,7 +1116,7 @@ def notifications():
     type_ = request.args.get('type', '')
     current_filter = type_
     has_notifications = False
-    filter_unread = request.args.get('filter_unread', 'False')
+    filter_unread = request.args.get('filter_unread', 'True')
 
     notification_types = defaultdict(int)
     notification_links = defaultdict(set)

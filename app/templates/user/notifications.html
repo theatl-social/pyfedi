@@ -54,9 +54,9 @@
             <p>{{ _('No notifications to show.') }}</p>
         {% endif %}
         {% if filter_unread == 'False' %}
-            <a href="{{ url_for('user.notifications', type=current_filter, filter_unread='True') }}"> {{ _('Only show unread notifications') }}</a>
+            <a href="{{ url_for('user.notifications', type=current_filter) }}"> {{ _('Only show unread notifications') }}</a>
         {% else %}
-            <a href="{{ url_for('user.notifications', type=current_filter) }}"> {{ _('Show active notifications') }}</a>
+            <a href="{{ url_for('user.notifications', type=current_filter, filter_unread='False') }}"> {{ _('Show active notifications') }}</a>
         {% endif %}
     </main>
 
