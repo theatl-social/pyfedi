@@ -148,13 +148,6 @@ def leave_feed(feed: int | Feed, src, auth=None, bulk_leave=False):
             flash(_('You cannot leave your own feed'), 'warning')
             return
 
-    if src == SRC_API:
-        # this is just modeled off leave_community...api is not tested
-        return user_id
-    else:
-        # let calling function handle redirect
-        return
-
 
 def make_feed(input, src, auth=None, uploaded_icon_file=None, uploaded_banner_file=None):
     if src == SRC_API:
