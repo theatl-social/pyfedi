@@ -429,7 +429,7 @@ def get_alpha_feed_list(data):
 @feed_bp.arguments(FollowFeedRequest)
 @feed_bp.response(200, FeedView)
 @feed_bp.alt_response(400, schema=DefaultError)
-def post_alpha_community_follow(data):
+def post_alpha_feed_follow(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
