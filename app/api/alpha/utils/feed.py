@@ -127,10 +127,14 @@ def post_feed_follow(auth, data):
 
     user = authorise_api_user(auth, return_type='model')
     feed = Feed.query.get(feed_id)
+
+    if not feed:
+        raise Exception('could not find feed')
+
     if follow:
         join_feed(feed.link(), user.id, SRC_API)
     else:
-        leave_feed(feed_id, SRC_API, auth)
+        leave_feed(feed, SRC_API, auth)
 
     return feed
 
