@@ -7,7 +7,8 @@ from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, vali
 # Lists used in schema for validation
 reg_mode_list = ["Closed", "RequireApplication", "Open"]
 sort_list = ["Active", "Hot", "New", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
-             "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled", "Old", "Relevance"]
+             "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled", "Old", "Relevance",
+             "TopPosts", "TopSubscribers", "NewFederated", "OldFederated"]
 default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
@@ -294,18 +295,19 @@ class SearchRequest(DefaultSchema):
     limit = fields.Integer()
     listing_type = fields.String(validate=validate.OneOf(listing_type_list), metadata={
         "description": "Only some types are supported for each `type_`.\n\n"
-        "For `Comments` and `Communities`, `Popular` will return the same results as `All`.\n\n"
-        "For `Users`, only `Local` will differ from `All`.\n\n"
-        "All listing types supported for `Posts` and `Url` (simply an alias for `Posts`)."
+        "- `Comments` and `Communities`: `Popular` will return the same results as `All`.\n"
+        "- `Users`: only `Local` will differ from `All`.\n"
+        "- `Posts` and `Url`: These types are equivalent."
     })
     page = fields.Integer()
     sort = fields.String(validate=validate.OneOf(sort_list), metadata={
-        "description": "Only some sorting options supported for each `type_`.\n\n"
-        "For `Comments`, `Scaled` is not supported and `Hot` will be returned instead.\n\n"
-        "For `Communities`, all `Top` sorts are equivalent. The `New` and `Old` sorts are supported. And all others are "
-        "equivalent to `Active`.\n\n"
-        "For `Users`, only `New` and `Top` (by number of posts) are supported. Otherwise will be sorted by user id.\n\n"
-        "All sorting methods supported for `Posts`. `Url` is simply an alias for `Posts`."
+        "description": "Only some sorting options supported for each `type_`. `NewFederated` and `OldFederated` are "
+        "equivalent to `New` and `Old` respectively for each type except for `Communities`.\n\n"
+        "- `Comments`: `Scaled` is not supported and `Hot` will be returned instead.\n"
+        "- `Communities`: `Top` sorts that are not present in `/community/list` are equivalent to `Top`.\n"
+        "- `Users`: only `New`, `Old`, and `Top` (by number of posts, all `Top` sorts are equivalent) are supported. "
+        "Otherwise will be sorted by user id.\n"
+        "- `Posts` and `Url`: These types are equivalent. `TopPosts` and `TopSubscribers` are equivalent to `Top`."
     })
     community_name = fields.String()
     community_id = fields.Integer()
