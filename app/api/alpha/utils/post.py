@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from flask import current_app, g
-from sqlalchemy import desc, text, and_, exists, asc
+from sqlalchemy import desc, text, and_, exists, asc, or_
 from sqlakeyset import get_page
 from sqlalchemy.exc import IntegrityError
 
@@ -110,14 +110,14 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     if type == "Local":
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
-                                  Post.domain_id.not_in(blocked_domain_ids),
+                                  or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                   Post.community_id.not_in(blocked_community_ids)). \
             join(Community, Community.id == Post.community_id).filter_by(ap_id=None)
     elif type == "Popular":
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
                                   Post.community_id.not_in(blocked_community_ids),
-                                  Post.domain_id.not_in(blocked_domain_ids),
+                                  or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                   Post.instance_id.not_in(blocked_instance_ids)). \
             join(Community, Community.id == Post.community_id).filter(Community.show_popular == True, Post.score > 100,
                                                                       Community.instance_id.not_in(
@@ -126,7 +126,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
                                   Post.community_id.not_in(blocked_community_ids),
-                                  Post.domain_id.not_in(blocked_domain_ids),
+                                  or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                   Post.instance_id.not_in(blocked_instance_ids)). \
             join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(is_banned=False,
                                                                                                user_id=user_id). \
@@ -150,7 +150,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
                                                                           Community.name == name,
@@ -163,7 +163,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.id == community_id,
                                                                           Community.instance_id.not_in(
@@ -188,7 +188,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.id.in_(feed_community_ids),
                                                                           Community.instance_id.not_in(
@@ -213,7 +213,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.id.in_(topic_community_ids),
                                                                           Community.instance_id.not_in(
@@ -223,7 +223,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             segregate_instance_stickies = False
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids), Post.user_id == person_id). \
                 join(Community, Community.id == Post.community_id).filter(
                 Community.instance_id.not_in(blocked_instance_ids))
@@ -231,7 +231,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
                                                                           Community.instance_id.not_in(
@@ -341,7 +341,10 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             desc(Post.up_votes - Post.down_votes))
     elif sort == "TopAll":
         posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == "New":
+    elif sort.startswith("Top"):
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort.startswith("New"):
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Scaled":
         posts = posts.filter(Post.ranking_scaled != None, Post.from_bot == False).order_by(desc(Post.ranking_scaled)).order_by(
@@ -349,7 +352,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     elif sort == "Active":
         posts = posts.filter(Post.reply_count > 0)
         posts = posts.order_by(desc(Post.last_active))
-    elif sort == "Old":
+    elif sort.startswith("Old"):
         posts = posts.order_by(asc(Post.posted_at))
     elif sort == "Relevance":
         pass    # sorting by relevance is already done by posts = posts.search(query, sort=True)
@@ -475,14 +478,14 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
     if type == "Local":
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
-                                  Post.domain_id.not_in(blocked_domain_ids),
+                                  or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                   Post.community_id.not_in(blocked_community_ids)). \
             join(Community, Community.id == Post.community_id).filter_by(ap_id=None)
     elif type == "Popular":
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
                                   Post.community_id.not_in(blocked_community_ids),
-                                  Post.domain_id.not_in(blocked_domain_ids),
+                                  or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                   Post.instance_id.not_in(blocked_instance_ids)). \
             join(Community, Community.id == Post.community_id).filter(Community.show_popular == True, Post.score > 100,
                                                                       Community.instance_id.not_in(
@@ -491,7 +494,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
                                   Post.community_id.not_in(blocked_community_ids),
-                                  Post.domain_id.not_in(blocked_domain_ids),
+                                  or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                   Post.instance_id.not_in(blocked_instance_ids)). \
             join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(is_banned=False,
                                                                                                user_id=user_id). \
@@ -514,7 +517,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
                                                                           Community.name == name,
@@ -526,7 +529,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.id == community_id,
                                                                           Community.instance_id.not_in(
@@ -550,7 +553,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.id.in_(feed_community_ids),
                                                                           Community.instance_id.not_in(
@@ -574,7 +577,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.id.in_(topic_community_ids),
                                                                           Community.instance_id.not_in(
@@ -583,7 +586,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
         elif person_id:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids), Post.user_id == person_id). \
                 join(Community, Community.id == Post.community_id).filter(
                 Community.instance_id.not_in(blocked_instance_ids))
@@ -591,7 +594,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
-                                      Post.domain_id.not_in(blocked_domain_ids),
+                                      or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
                 join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
                                                                           Community.instance_id.not_in(
