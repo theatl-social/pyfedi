@@ -1137,6 +1137,10 @@ def notifications():
         notification_list = Notification.query.filter_by(user_id=current_user.id).filter(
             Notification.notif_type.in_(type_)).order_by(desc(Notification.created_at)).all()
 
+    if filter_unread == 'True':
+        # Filter out all read notifications
+        notification_list = list(filter(lambda notification : not notification.read, notification_list))
+
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
                            notification_types=notification_types, has_notifications=has_notifications,
                            user=current_user, notification_links=notification_links, current_filter=current_filter,
