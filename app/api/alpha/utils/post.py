@@ -341,7 +341,10 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             desc(Post.up_votes - Post.down_votes))
     elif sort == "TopAll":
         posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == "New":
+    elif sort.startswith("Top"):
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort.startswith("New"):
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Scaled":
         posts = posts.filter(Post.ranking_scaled != None, Post.from_bot == False).order_by(desc(Post.ranking_scaled)).order_by(
@@ -349,7 +352,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     elif sort == "Active":
         posts = posts.filter(Post.reply_count > 0)
         posts = posts.order_by(desc(Post.last_active))
-    elif sort == "Old":
+    elif sort.startswith("Old"):
         posts = posts.order_by(asc(Post.posted_at))
     elif sort == "Relevance":
         pass    # sorting by relevance is already done by posts = posts.search(query, sort=True)
