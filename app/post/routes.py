@@ -915,6 +915,11 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                nonce=nonce)
 
 
+@bp.route('/comment/<int:comment_id>/cancel_inline', methods=['POST'])
+def cancel_inline(comment_id:int):
+    return f'<div id="reply_to_{comment_id}" class="hidable"></div>' # Hide the form
+
+
 @bp.route('/post/<int:post_id>/options_menu', methods=['GET'])
 @block_bots
 def post_options(post_id: int):
