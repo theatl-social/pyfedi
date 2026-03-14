@@ -306,7 +306,7 @@ LINK_PATTERN = re.compile(
             (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
             \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
             [^<>\s\"']*                   # rest of url
-            (?<![?!.,:*_~);])             # exclude trailing punctuation
+            (?<![?!.,:*_~;])(?<!\)\))     # exclude trailing punctuation
             (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
         )
     """,
@@ -412,6 +412,8 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
         # Handle closing tags by removing the leading slash before extracting tag name
         if tag_content.startswith('/'):
             tag_name = tag_content[1:].split()[0]
+        elif tag_content.endswith('/'):
+            tag_name = tag_content[:-1].split()[0]
         else:
             tag_name = tag_content.split()[0]
         
@@ -805,6 +807,43 @@ def handle_blockquotes(text: str) -> str:
     return text
 
 
+def links_with_parens(text: str) -> str:
+    """Try to fix links that have trailing parentheses"""
+
+    soup = BeautifulSoup(text, 'html.parser')
+
+    for link in soup.find_all("a"):
+        target_url = link.get("href")
+        contents = link.text
+        following_text = link.next_sibling
+
+        num_left_paren = target_url.count("(")
+        num_right_paren = target_url.count(")")
+
+        if following_text and following_text.startswith(")"):
+            if num_left_paren - num_right_paren == 1:
+                # Link dropped the trailing paren, add it back and remove it from trailing text
+                link['href'] = link['href'] + ")"
+                following_text.replace_with(following_text[1:])
+                link.string = contents + ")"
+        elif target_url.endswith(")"):
+            if num_right_paren - num_left_paren == 1:
+                # Trailing paren added to link, strip it and add it to trailing text
+                link['href'] = link['href'][:-1]
+                link.string = contents[:-1]
+                if not following_text:
+                    link.insert_after(")")
+                else:
+                    following_text.replace_with(")" + following_text)
+    
+    better_html = str(soup)
+
+    # This escapes <hr/> for some reason, so need to fix that
+    better_html.replace("<hr/>;", "<hr />")
+
+    return better_html
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_target="_blank", test_env=False) -> str:
@@ -864,6 +903,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         
         raw_html = handle_lemmy_spoilers(raw_html)
         raw_html = make_quotes_straight(raw_html)
+        raw_html = links_with_parens(raw_html)
 
         return allowlist_html(raw_html, a_target=a_target if anchors_new_tab else '', test_env=test_env)
     else:

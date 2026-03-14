@@ -42,6 +42,28 @@ class TestMarkdownToHtml(unittest.TestCase):
         result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
         correct_html = '<p>This link has a tilde: <a href="https://site.tld/~user" rel="nofollow ugc" target="_blank">https://site.tld/~user</a></p>\n'
         self.assertEqual(result, correct_html)
+    
+    def test_links_w_parens(self):
+        """Test links with parentheses."""
+        markdown = "https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p><a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a></p>\n'
+        self.assertEqual(result, correct_html)
+
+        markdown = "(https://en.wikipedia.org/wiki/Venison_Creek_(Ontario))"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>(<a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a>)</p>\n'
+        self.assertEqual(result, correct_html)
+
+        markdown = "(here is a link: https://en.wikipedia.org/wiki/Drosophila)"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>(here is a link: <a href="https://en.wikipedia.org/wiki/Drosophila" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Drosophila</a>)</p>\n'
+        self.assertEqual(result, correct_html)
+
+        markdown = "(here is a link: https://en.wikipedia.org/wiki/Venison_Creek_(Ontario))"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>(here is a link: <a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a>)</p>\n'
+        self.assertEqual(result, correct_html)
 
     def test_code_blocks(self):
         """Test code blocks formatting"""
