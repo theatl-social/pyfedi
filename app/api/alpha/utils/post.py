@@ -763,13 +763,13 @@ def get_post_replies(auth, data):
         user = None
 
     if parent_id:
-        parent = PostReply.query.filter_by(id=parent_id).one()
+        parent = PostReply.query.get(parent_id)
         if post_id is None:
             post_id = parent.post_id
-        post = Post.query.filter_by(id=post_id).one()
+        post = Post.query.get(post_id)
         replies = get_comment_branch(post, parent.id, sort.lower(), user)
     else:
-        post = Post.query.filter_by(id=post_id).one()
+        post = Post.query.get(post_id)
         replies = post_replies(post, sort.lower(), user)
 
     is_user_banned_from_community = post.community_id in user_details['user_ban_community_ids'] if user_details else False
@@ -1026,7 +1026,7 @@ def post_post(auth, data):
 
 def put_post(auth, data):
     post_id = data['post_id']
-    post = Post.query.filter_by(id=post_id).one()
+    post = Post.query.get(post_id)
 
     title = data['title'] if 'title' in data else post.title
     body = data['body'] if 'body' in data else post.body
@@ -1094,7 +1094,7 @@ def post_post_report(auth, data):
     report_remote = data['report_remote'] if 'report_remote' in data else True
     input = {'reason': reason, 'description': description, 'report_remote': report_remote}
 
-    post = Post.query.filter_by(id=post_id).one()
+    post = Post.query.get(post_id)
     user_id, report = report_post(post, input, SRC_API, auth)
 
     post_json = post_report_view(report=report, post_id=post_id, user_id=user_id)

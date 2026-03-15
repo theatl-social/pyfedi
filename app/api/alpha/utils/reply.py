@@ -442,7 +442,7 @@ def post_reply(auth, data):
         language_id = site_language_id()
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
-    post = Post.query.filter_by(id=post_id).one()
+    post = Post.query.get(post_id)
 
     user_id, reply = make_reply(input, post, parent_id, SRC_API, auth)
 
@@ -452,7 +452,7 @@ def post_reply(auth, data):
 
 def put_reply(auth, data):
     reply_id = data['comment_id']
-    reply = PostReply.query.filter_by(id=reply_id).one()
+    reply = PostReply.query.get(reply_id)
 
     body = data['body'] if 'body' in data else reply.body
     language_id = data['language_id'] if 'language_id' in data else reply.language_id
@@ -463,7 +463,7 @@ def put_reply(auth, data):
         distinguished = False
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id, 'distinguished': distinguished}
-    post = Post.query.filter_by(id=reply.post_id).one()
+    post = Post.query.get(reply.post_id)
 
     user_id, reply = edit_reply(input, reply, post, SRC_API, auth)
 
@@ -491,7 +491,7 @@ def post_reply_report(auth, data):
     report_remote = data['report_remote'] if 'report_remote' in data else True
     input = {'reason': reason, 'description': description, 'report_remote': report_remote}
 
-    reply = PostReply.query.filter_by(id=reply_id).one()
+    reply = PostReply.query.get(reply_id)
     user_id, report = report_reply(reply, input, SRC_API, auth)
 
     reply_json = reply_report_view(report=report, reply_id=reply_id, user_id=user_id)
@@ -522,7 +522,7 @@ def post_reply_mark_as_read(auth, data):
 
     # no real support for this. Just marking the Notification for the reply really
     # notification has its own id, which would be handy, but reply_view is currently just returning the reply.id for that
-    reply = PostReply.query.filter_by(id=reply_id).one()
+    reply = PostReply.query.get(reply_id)
 
     reply_url = '#comment_' + str(reply.id)
     mention_url = '/comment/' + str(reply.id)
@@ -611,7 +611,7 @@ def get_reply_like_list(auth, data):
         limit = current_app.config["PAGE_LENGTH"]
 
     user = authorise_api_user(auth, return_type='model')
-    post_reply = PostReply.query.filter_by(id=comment_id).one()
+    post_reply = PostReply.query.get(comment_id)
 
     if post_reply.community.is_moderator(user) or user.is_admin() or user.is_staff():
         banned_from_site_user_ids = list(db.session.execute(text('SELECT id FROM "user" WHERE banned = true')).scalars())
