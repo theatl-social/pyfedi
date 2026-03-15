@@ -18,10 +18,12 @@ from app.topic.routes import get_all_child_topic_ids
 from app.utils import render_template, permission_required, user_filters_posts, blocked_or_banned_instances, \
     blocked_users, \
     blocked_domains, mimetype_from_url, \
-    blocked_communities, login_required, moderating_communities_ids, community_membership_private
+    blocked_communities, login_required, moderating_communities_ids, community_membership_private, \
+    login_required_if_private_instance
 
 
 @bp.route('/tag/<tag>', methods=['GET'])
+@login_required_if_private_instance
 def show_tag(tag):
     page = request.args.get('page', 1, type=int)
     category = request.args.get('category', '')
@@ -168,6 +170,7 @@ def show_tag_rss(tag):
 
 
 @bp.route('/tags', methods=['GET'])
+@login_required_if_private_instance
 def tags():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
@@ -239,6 +242,7 @@ def tag_unban(tag):
 
 
 @bp.route('/tags/cloud/<type>/<int:category_id>', methods=['GET'])
+@login_required_if_private_instance
 def tag_cloud(type, category_id: int):
     community = None
     topic = None
@@ -339,6 +343,7 @@ def tag_cloud(type, category_id: int):
 
 
 @bp.route('/tags/posts/<int:tag_id>')
+@login_required_if_private_instance
 def tag_posts(tag_id):
     posts = Post.query.join(Community, Community.id == Post.community_id). \
         join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag_id). \

@@ -1165,7 +1165,9 @@ def notifications():
     notification_links = defaultdict(set)
     notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(
         desc(Notification.created_at)).limit(50).all()
+
     # Build a list of the types of notifications this person has, by going through all their notifications
+    unread = 0
     for notification in notification_list:
         has_notifications = True
         if notification.notif_type != NOTIF_DEFAULT:
@@ -1173,19 +1175,23 @@ def notifications():
                 notification_types[notif_id_to_string(notification.notif_type)] += 0
             else:
                 notification_types[notif_id_to_string(notification.notif_type)] += 1
+                unread += 1
             notification_links[notif_id_to_string(notification.notif_type)].add(notification.notif_type)
 
-    if type_:
-        type_ = tuple(int(x.strip()) for x in type_.strip('{}').split(','))  # convert '{41, 10}' to a tuple containing 41 and 10
-        notification_list = Notification.query.filter_by(user_id=current_user.id).filter(
-            Notification.notif_type.in_(type_)).order_by(desc(Notification.created_at)).all()
+    notification_list = Notification.query.filter_by(user_id=current_user.id)
 
-    if filter_unread == 'True':
-        # Filter out all read notifications
-        notification_list = list(filter(lambda notification : not notification.read, notification_list))
+    # filter by type
+    if type_:
+        if type_ == 'Unread':
+            notification_list = notification_list.filter(Notification.read == False)
+        else:
+            type_ = tuple(int(x.strip()) for x in type_.strip('{}').split(','))  # convert '{41, 10}' to a tuple containing 41 and 10
+            notification_list = notification_list.filter(Notification.notif_type.in_(type_))
+
+    notification_list = notification_list.order_by(desc(Notification.created_at))
 
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
-                           notification_types=notification_types, has_notifications=has_notifications,
+                           notification_types=notification_types, has_notifications=has_notifications, unread=unread,
                            user=current_user, notification_links=notification_links, current_filter=current_filter,
                            filter_unread=filter_unread, site=g.site, markdown_to_html=markdown_to_html,
                            )

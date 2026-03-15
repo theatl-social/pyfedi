@@ -3465,6 +3465,8 @@ def notif_id_to_string(notif_id) -> str:
         return _('Admin')
     if notif_id == NOTIF_NEW_MOD:
         return _('Admin')
+    if notif_id == NOTIF_ANSWER:
+        return _('Answer')
 
     # --- mod/admin level ---
     if notif_id == NOTIF_REPORT:
