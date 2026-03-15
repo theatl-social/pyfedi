@@ -721,7 +721,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
 
 
 # just for deletes by owner (mod deletes are classed as 'remove')
-def delete_post(post_id: int, src, auth):
+def delete_post(post_id: int, federate_deletion, src, auth):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
@@ -730,17 +730,20 @@ def delete_post(post_id: int, src, auth):
         else:
             user_id = 1     # for remove_old_community_content()
 
-    post = db.session.query(Post).get(post_id)
-    if post.url:
-        post.calculate_cross_posts(delete_only=True)
+    from app import redis_client
+    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
+        post = db.session.query(Post).get(post_id)
+        if post.url:
+            post.calculate_cross_posts(delete_only=True)
 
-    post.deleted = True
-    post.deleted_by = user_id
-    post.author.post_count -= 1
-    post.community.post_count -= 1
-    db.session.commit()
+        post.deleted = True
+        post.deleted_by = user_id
+        post.author.post_count -= 1
+        post.community.post_count -= 1
+        db.session.commit()
 
-    task_selector('delete_post', user_id=user_id, post_id=post.id)
+    if federate_deletion and post.status == POST_STATUS_PUBLISHED:
+        task_selector('delete_post', user_id=user_id, post_id=post.id)
 
     # remove any notifications about the post
     notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)

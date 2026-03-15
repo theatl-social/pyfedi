@@ -2003,7 +2003,7 @@ def post_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
         post: Post = Post.query.get_or_404(post_id)
         if post.is_local():
-            if post.community.local_only or post.community.private:
+            if post.community.local_only or post.community.private or post.status < POST_STATUS_PUBLISHED:
                 abort(403)
             if request.method == 'GET':
                 post_data = post_to_page(post)

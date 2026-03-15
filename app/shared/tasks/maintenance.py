@@ -11,11 +11,11 @@ from sqlalchemy import text, select, func
 
 from app import celery, cache, httpx_client
 from app.activitypub.util import find_actor_or_create, find_language_or_create, find_instance_id
-from app.constants import NOTIF_UNBAN
+from app.constants import NOTIF_UNBAN, SRC_WEB
 from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
     DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, InstanceChooser, \
     InstanceBan, Emoji
-from app.post.routes import post_delete_post
+from app.shared.post import delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
     shorten_string, patch_db_session, archive_post, get_setting, set_setting, communities_banned_from_all_users, \
     banned_instances, blocked_or_banned_instances, get_emoji_replacements
@@ -134,14 +134,14 @@ def remove_old_community_content():
         with patch_db_session(session):
             for community in communities:
                 cut_off = utcnow() - timedelta(days=community.content_retention)
-                old_posts = session.query(Post).filter_by(
+                post_ids = [p[0] for p in session.query(Post.id).filter_by(
                     deleted=False,
                     sticky=False,
                     community_id=community.id
-                ).filter(Post.posted_at < cut_off).all()
+                ).filter(Post.posted_at < cut_off).all()]
 
-                for post in old_posts:
-                    post_delete_post(community, post, 1, reason=None, federate_deletion=False)  # posts are deleted by user ID 1 (super admin) so that delete_old_soft_deleted_content() hard-deletes it.
+                for post_id in post_ids:
+                    delete_post(post_id, False, SRC_WEB, None)
 
         session.commit()
     except Exception:
@@ -175,7 +175,7 @@ def remove_old_bot_content():
                     posts = session.query(Post).filter(Post.id.in_(batch_ids)).all()
 
                     for post in posts:
-                        post_delete_post(post.community, post, post.user_id, reason=None, federate_deletion=post.author.is_local())
+                        delete_post(post.id, post.author.is_local(), SRC_WEB, None)
 
     except Exception:
         session.rollback()

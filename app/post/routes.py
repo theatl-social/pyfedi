@@ -1140,7 +1140,11 @@ def post_delete(post_id: int):
             abort(403)
         form = DeleteConfirmationForm()
         if form.validate_on_submit():
-            post_delete_post(community, post, current_user.id, form.reason.data)
+            if post.user_id != current_user.id:
+                mod_remove_post(post.id, form.reason.data, SRC_WEB, None)
+            else:
+                delete_post(post.id, True, SRC_WEB, None)
+            flash(_('Post deleted.'))
             ref = request.form.get('referrer')
             if '/post/' not in ref:
                 return redirect(ref)
@@ -1154,27 +1158,6 @@ def post_delete(post_id: int):
                                    title=_('Are you sure you want to delete the post "%(post_title)s"?',
                                            post_title=post.title),
                                    form=form)
-
-
-def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_deletion=True):
-    user: User = db.session.query(User).get(user_id)
-    from app import redis_client
-    with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
-        if post.url:
-            post.calculate_cross_posts(delete_only=True)
-        post.deleted = True
-        post.deleted_by = user_id
-        post.author.post_count -= 1
-        community.post_count -= 1
-        if hasattr(g, 'site'):  # g.site is invalid when running from cli
-            flash(_('Post deleted.'))
-        db.session.commit()
-
-    if federate_deletion:
-        if post.user_id != user.id:
-            mod_remove_post(post.id, reason, SRC_WEB, None)
-        else:
-            delete_post(post.id, SRC_WEB, None)
 
 
 @bp.route('/post/<int:post_id>/restore', methods=['POST'])

@@ -3399,6 +3399,18 @@ def move_file_to_s3(file_id, s3):
 
 
 def days_to_add_for_next_month(start_date):
+    """
+    Calculate days to add to get to the same day next month.
+    Uses the "try and backtrack" approach:
+    1. Try to use the same day as start_date
+    2. If that's invalid (e.g., Feb 31), subtract a day and try again
+    3. Repeat until we find a valid date
+    
+    This ensures that posts scheduled for the 31st will:
+    - Use the 31st in months that have 31 days
+    - Use the last day (28-30) in months that don't have 31 days
+    - Return to the 31st in subsequent months that have 31 days
+    """
     # Calculate the new month and year
     new_month = start_date.month + 1
     new_year = start_date.year
@@ -3407,23 +3419,23 @@ def days_to_add_for_next_month(start_date):
         new_month = 1
         new_year += 1
 
-    # Get the last day of the new month
-    if new_month in {1, 3, 5, 7, 8, 10, 12}:
-        last_day = 31
-    elif new_month in {4, 6, 9, 11}:
-        last_day = 30
-    else:  # February
-        # Check for leap year
-        if (new_year % 4 == 0 and new_year % 100 != 0) or (new_year % 400 == 0):
-            last_day = 29
-        else:
-            last_day = 28
-
-    # Calculate the new day
-    new_day = min(start_date.day, last_day)
+    # Try to use the same day as start_date, backing off if needed
+    new_day = start_date.day
+    
+    # Try to create the date, backing off one day at a time if invalid
+    while True:
+        try:
+            target_date = datetime(new_year, new_month, new_day)
+            break  # Success!
+        except ValueError:
+            # Invalid date (e.g., Feb 31), try the previous day
+            new_day -= 1
+            if new_day < 1:
+                # Should never happen, but just in case
+                new_day = 1
 
     # Calculate the number of days to add
-    days_to_add = (datetime(new_year, new_month, new_day) - start_date).days
+    days_to_add = (target_date - start_date).days
 
     return days_to_add
 

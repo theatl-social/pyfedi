@@ -1079,7 +1079,7 @@ def post_post_delete(auth, data):
     with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
 
         if deleted == True:
-            user_id, post = delete_post(post_id, SRC_API, auth)
+            user_id, post = delete_post(post_id, True, SRC_API, auth)
         else:
             user_id, post = restore_post(post_id, SRC_API, auth)
 
