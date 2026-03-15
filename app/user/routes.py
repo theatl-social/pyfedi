@@ -1187,7 +1187,7 @@ def notifications():
             type_ = tuple(int(x.strip()) for x in type_.strip('{}').split(','))  # convert '{41, 10}' to a tuple containing 41 and 10
             notification_list = notification_list.filter(Notification.notif_type.in_(type_))
 
-    notification_list = notification_list.order_by(desc(Notification.created_at))
+    notification_list = notification_list.order_by(desc(Notification.created_at)).limit(50)
 
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
                            notification_types=notification_types, has_notifications=has_notifications, unread=unread,
