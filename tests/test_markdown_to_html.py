@@ -65,6 +65,42 @@ class TestMarkdownToHtml(unittest.TestCase):
         correct_html = '<p>(here is a link: <a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a>)</p>\n'
         self.assertEqual(result, correct_html)
 
+        # Link embedded in a sentence with trailing period
+        markdown = "Check out https://en.wikipedia.org/wiki/Venison_Creek_(Ontario) for more info."
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>Check out <a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a> for more info.</p>\n'
+        self.assertEqual(result, correct_html)
+
+        # Link followed by bold text — next_sibling is a Tag, not a NavigableString (caused a crash before fix)
+        markdown = "https://en.wikipedia.org/wiki/Venison_Creek_(Ontario) **bold text**"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p><a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a> <strong>bold text</strong></p>\n'
+        self.assertEqual(result, correct_html)
+
+        # Parenthetical sentence containing a link with parens in path
+        markdown = "(See https://en.wikipedia.org/wiki/Venison_Creek_(Ontario) for details)"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>(See <a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a> for details)</p>\n'
+        self.assertEqual(result, correct_html)
+
+        # Markdown-style named link with parens in URL
+        markdown = "[Ontario Creek](https://en.wikipedia.org/wiki/Venison_Creek_(Ontario))"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p><a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">Ontario Creek</a></p>\n'
+        self.assertEqual(result, correct_html)
+
+        # Multiple links with parens in one sentence
+        markdown = "Compare https://en.wikipedia.org/wiki/Venison_Creek_(Ontario) and https://en.wikipedia.org/wiki/Python_(programming_language) side by side."
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>Compare <a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a> and <a href="https://en.wikipedia.org/wiki/Python_(programming_language)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Python_(programming_language)</a> side by side.</p>\n'
+        self.assertEqual(result, correct_html)
+
+        # Link with parens followed by a comma
+        markdown = "Visit https://en.wikipedia.org/wiki/Venison_Creek_(Ontario), then read more."
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>Visit <a href="https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)" rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Venison_Creek_(Ontario)</a>, then read more.</p>\n'
+        self.assertEqual(result, correct_html)
+
     def test_code_blocks(self):
         """Test code blocks formatting"""
         markdown = "```\ncode block\n```"

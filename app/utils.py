@@ -27,7 +27,7 @@ import httpx
 import jwt
 import markdown2
 import redis
-from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
+from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning, NavigableString
 from babel.numbers import format_compact_decimal
 import orjson
 
@@ -820,7 +820,7 @@ def links_with_parens(text: str) -> str:
         num_left_paren = target_url.count("(")
         num_right_paren = target_url.count(")")
 
-        if following_text and following_text.startswith(")"):
+        if following_text and isinstance(following_text, NavigableString) and following_text.startswith(")"):
             if num_left_paren - num_right_paren == 1:
                 # Link dropped the trailing paren, add it back and remove it from trailing text
                 link['href'] = link['href'] + ")"
@@ -831,7 +831,7 @@ def links_with_parens(text: str) -> str:
                 # Trailing paren added to link, strip it and add it to trailing text
                 link['href'] = link['href'][:-1]
                 link.string = contents[:-1]
-                if not following_text:
+                if not following_text or not isinstance(following_text, NavigableString):
                     link.insert_after(")")
                 else:
                     following_text.replace_with(")" + following_text)
