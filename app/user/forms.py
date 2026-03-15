@@ -112,7 +112,7 @@ class SettingsForm(FlaskForm):
              ('roboto', _l('Roboto - pretty')),
              ]
     font = SelectField(_l('Font'), choices=fonts, validators=[Optional()], coerce=str,
-                               render_kw={'class': 'form-select'})
+                       render_kw={'class': 'form-select'})
     code_styles = ['autumn', 'borland', 'bw', 'colorful', 'default', 'emacs', 'friendly', 'fruity', 'manni', 'monokai',
                    'murphy', 'native', 'pastie', 'perldoc', 'tango', 'trac', 'vim', 'vs']
     code_style = SelectField(_l('Code syntax highlighting color scheme'), choices=code_styles, coerce=str,
@@ -124,7 +124,16 @@ class SettingsForm(FlaskForm):
         ('3', _l('All instances')),
     ]
     accept_private_messages = SelectField(_l('Accept private messages from'), choices=accept_from, coerce=int, render_kw={'class': 'form-select'})
-    max_hours_per_day = IntegerField(_l('Warn me after using PieFed for this many hours per day'), validators=[Optional()])
+    max_hours_per_day = IntegerField(_l('Stop me from using PieFed after this many hours per day'), validators=[Optional()])
+    max_hours_change_restriction = SelectField(_l('When changes to this limit will be possible'),
+                                               choices=[
+                                                  ('anytime', _l('Anytime')),
+                                                  ('1day', _l('In 1 day')),
+                                                  ('1month', _l('In 1 month')),
+                                                  ('2months', _l('In 2 months'))
+                                               ],
+                                               coerce=str,
+                                               render_kw={'class': 'form-select'})
     additional_css = TextAreaField(_l('Additional CSS'))
     submit = SubmitField(_l('Save settings'))
 

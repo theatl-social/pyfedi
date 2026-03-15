@@ -599,10 +599,52 @@ def user_settings():
         flash(_('Your changes have been saved.'), 'success')
 
         resp = make_response(redirect(url_for('user.user_settings')))
-        if form.max_hours_per_day.data:
-            resp.set_cookie('max_hours_per_day', str(form.max_hours_per_day.data), expires=datetime(year=2099, month=12, day=30))
+        
+        # Handle max_hours_per_day changes with restriction logic
+        current_max_hours = request.cookies.get('max_hours_per_day', '')
+        new_max_hours = form.max_hours_per_day.data
+        new_restriction_setting = form.max_hours_change_restriction.data
+        
+        resp.set_cookie('max_hours_change_restriction', new_restriction_setting,
+                        expires=datetime(year=2099, month=12, day=30))
+        
+        # Only handle restriction date logic if max_hours_per_day has actually changed
+        if str(new_max_hours) != str(current_max_hours):
+            restriction_cookie = request.cookies.get('max_hours_restriction_date')
+            current_date = datetime.now()
+            
+            if restriction_cookie and current_max_hours and int(current_max_hours) > 0:
+                restriction_date = datetime.fromisoformat(restriction_cookie)
+
+                # Check if restriction period has passed
+                if current_date < restriction_date:
+                    # Still restricted, don't allow change
+                    flash(_('You cannot change the daily usage limit until %(date)s',
+                           date=restriction_date.strftime('%Y-%m-%d %H:%M')), 'warning')
+                    # Revert to old value
+                    new_max_hours = current_max_hours
+                else:
+                    # Restriction period has passed, allow change and set new restriction
+                    if new_restriction_setting != 'anytime':
+                        future_date = _calculate_future_date(new_restriction_setting)
+                        resp.set_cookie('max_hours_restriction_date', future_date.isoformat(),
+                                        expires=datetime(year=2099, month=12, day=30))
+            else:
+                # No current restriction or no current limit set, set restriction if needed
+                if new_restriction_setting != 'anytime' and new_max_hours and int(new_max_hours) > 0:
+                    future_date = _calculate_future_date(new_restriction_setting)
+                    resp.set_cookie('max_hours_restriction_date', future_date.isoformat(), 
+                                    expires=datetime(year=2099, month=12, day=30))
+        
+        # Set the max_hours_per_day cookie (either new value or reverted old value)
+        if new_max_hours:
+            resp.set_cookie('max_hours_per_day', str(new_max_hours), expires=datetime(year=2099, month=12, day=30))
         else:
             resp.set_cookie('max_hours_per_day', '', expires=datetime.min)
+            # Clear restriction cookies if no limit is set
+            resp.set_cookie('max_hours_restriction_date', '', expires=datetime.min)
+            resp.set_cookie('max_hours_change_restriction', '', expires=datetime.min)
+        
         resp.set_cookie('compact_level', form.compaction.data, expires=datetime(year=2099, month=12, day=30))
         resp.set_cookie('low_bandwidth', '1' if form.low_bandwidth_mode.data else '0',
                         expires=datetime(year=2099, month=12, day=30))
@@ -635,6 +677,7 @@ def user_settings():
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
         form.max_hours_per_day.data = request.cookies.get('max_hours_per_day', '')
+        form.max_hours_change_restriction.data = request.cookies.get('max_hours_change_restriction', 'anytime')
 
     return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user)
 
@@ -2214,3 +2257,26 @@ def user_file_upload():
     form.referrer.data = referrer(url_for('user.user_files'))
 
     return render_template('user/file_upload.html', form=form, user=current_user)
+
+
+def _calculate_future_date(restriction_setting):
+    """Calculate future date based on restriction setting"""
+    current_date = datetime.now()
+    if restriction_setting == '1day':
+        return current_date + timedelta(days=1)
+    elif restriction_setting == '1month':
+        # Add 1 month by getting same day next month
+        if current_date.month == 12:
+            return current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            return current_date.replace(month=current_date.month + 1)
+    elif restriction_setting == '2months':
+        # Add 2 months
+        new_month = current_date.month + 2
+        new_year = current_date.year
+        if new_month > 12:
+            new_month -= 12
+            new_year += 1
+        return current_date.replace(year=new_year, month=new_month)
+    else:
+        return current_date
