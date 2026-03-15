@@ -147,7 +147,7 @@ def post_to_page(post: Post):
         "commentsEnabled": post.comments_enabled,
         "sensitive": post.nsfw or post.nsfl,
         "genAI": post.ai_generated,
-        "published": ap_datetime(post.created_at),
+        "published": ap_datetime(post.posted_at),
         "stickied": post.sticky,
         "audience": post.community.public_url(),
         "tag": post.tags_for_activitypub(),
