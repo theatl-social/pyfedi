@@ -3398,10 +3398,10 @@ def move_file_to_s3(file_id, s3):
                     db.session.commit()
 
 
-def days_to_add_for_next_month(today):
+def days_to_add_for_next_month(start_date):
     # Calculate the new month and year
-    new_month = today.month + 1
-    new_year = today.year
+    new_month = start_date.month + 1
+    new_year = start_date.year
 
     if new_month > 12:
         new_month = 1
@@ -3420,10 +3420,10 @@ def days_to_add_for_next_month(today):
             last_day = 28
 
     # Calculate the new day
-    new_day = min(today.day, last_day)
+    new_day = min(start_date.day, last_day)
 
     # Calculate the number of days to add
-    days_to_add = (datetime(new_year, new_month, new_day) - today).days + 1
+    days_to_add = (datetime(new_year, new_month, new_day) - start_date).days
 
     return days_to_add
 
@@ -3435,7 +3435,7 @@ def find_next_occurrence(post: Post) -> timedelta:
         elif post.repeat == 'weekly':
             return timedelta(days=7)
         elif post.repeat == 'monthly':
-            days_to_add = days_to_add_for_next_month(utcnow())
+            days_to_add = days_to_add_for_next_month(post.scheduled_for)
             return timedelta(days=days_to_add)
 
     return timedelta(seconds=0)
