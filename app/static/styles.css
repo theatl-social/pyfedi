@@ -1614,6 +1614,7 @@ time {
   position: absolute;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.7);
+  color: white;
   width: 100%;
   text-align: center;
 }
@@ -1669,12 +1670,6 @@ time {
   width: 20px;
   height: 20px;
   left: 7px;
-}
-#masonry .item .masonry_info .row .col .upvote_button.voted_up, #masonry .item .masonry_info .row .col .downvote_button.voted_up {
-  color: #00b550;
-}
-#masonry .item .masonry_info .row .col .upvote_button.voted_down, #masonry .item .masonry_info .row .col .downvote_button.voted_down {
-  color: red;
 }
 #masonry .item .masonry_info .row .col-3 {
   width: 20%;

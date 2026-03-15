@@ -1062,6 +1062,7 @@ time {
       position: absolute;
       bottom: 0;
       background-color: rgba(0, 0, 0, 0.7);
+      color: white;
       width: 100%;
       text-align: center;
 
@@ -1113,13 +1114,6 @@ time {
               width: 20px;
               height: 20px;
               left: 7px;
-            }
-
-            &.voted_up {
-              color: $green;
-            }
-            &.voted_down {
-              color: red;
             }
           }
         }
