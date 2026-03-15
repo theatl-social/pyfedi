@@ -237,7 +237,7 @@
     <a href="#" class="dropdown-item no-underline"
             hx-get="{{ url_for('post.post_source', post_id=post.id, state="show") }}" 
             hx-trigger="click throttle:1s" 
-            hx-target="previous .post_body" 
+            hx-target="previous .{{ post_body_class }}"
             hx-swap="innerHTML">
         <span class="fe fe-source"></span>
         {{ _('View markdown source') }}
