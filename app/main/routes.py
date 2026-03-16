@@ -38,7 +38,8 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, \
-    num_topics, referrer, block_honey_pot, user_pronouns, get_instance_stickies
+    num_topics, referrer, block_honey_pot, user_pronouns, get_instance_stickies, \
+    community_membership_private
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage, BannedInstances
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
@@ -89,8 +90,16 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
     low_quality_filter = 'AND c.low_quality is false' if current_user.is_authenticated and current_user.hide_low_quality else ''
     if current_user.is_authenticated:
         modded_communities = moderating_communities_ids(current_user.id)
+        pc = community_membership_private(current_user.id)
+        if len(pc) == 0:    # tuples must have at least 2 elements, I think?
+            private_communities = tuple([0, 0])
+        else:
+            private_communities = tuple(pc + [0])
     else:
         modded_communities = []
+        private_communities = ()
+    if len(private_communities) == 0:
+        private_communities = tuple([0, 0])
     enable_mod_filter = len(modded_communities) > 0
 
     if view_filter == 'subscribed' and current_user.is_authenticated:
@@ -103,14 +112,14 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
                 text(f'SELECT id FROM community as c WHERE c.private is false and c.instance_id = 1 {low_quality_filter}')).scalars()
         else:
             community_ids = db.session.execute(
-                text(f'SELECT id FROM community as c WHERE c.instance_id = 1 {low_quality_filter}')).scalars()
+                text(f'SELECT id FROM community as c WHERE (c.private is false OR c.id IN {private_communities}) AND c.instance_id = 1 {low_quality_filter}')).scalars()
     elif view_filter == 'popular':
         if current_user.is_anonymous:
             community_ids = db.session.execute(
                 text('SELECT id FROM community as c WHERE c.show_popular is true and c.private is false AND c.low_quality is false')).scalars()
         else:
             community_ids = db.session.execute(
-                text(f'SELECT id FROM community as c WHERE c.show_popular is true {low_quality_filter}')).scalars()
+                text(f'SELECT id FROM community as c WHERE (c.private is false OR c.id IN {private_communities}) AND c.show_popular is true {low_quality_filter}')).scalars()
     elif view_filter == 'all' or current_user.is_anonymous:
         community_ids = [-1]  # Special value to indicate 'All'
     elif view_filter == 'moderating':

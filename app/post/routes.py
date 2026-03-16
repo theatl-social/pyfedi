@@ -61,7 +61,8 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
     site_language_code, block_honey_pot, joined_communities, moderating_communities, user_pronouns, \
-    instance_sticky_posts, instance_sticky_post_ids, user_access, show_reason_why_no_federation
+    instance_sticky_posts, instance_sticky_post_ids, user_access, show_reason_why_no_federation, \
+    community_membership_private
 
 
 @login_required_if_private_instance
@@ -88,8 +89,14 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                 if post.nsfw or post.nsfl:
                     flash(_('This post is only visible to logged in users.'))
                     return redirect(url_for("auth.login", next=f"/post/{post_id}"))
+
+            if post.community.private:
+                abort(403)
         else:
             if (post.nsfw or post.nsfl) and user_in_restricted_country(current_user):
+                abort(403)
+
+            if post.community.private and post.community_id not in community_membership_private(current_user.id):
                 abort(403)
 
         # If nothing has changed since their last visit, return HTTP 304

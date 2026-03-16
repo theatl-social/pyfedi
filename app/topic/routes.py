@@ -23,7 +23,7 @@ from app.utils import render_template, user_filters_posts, validation_required, 
     recently_upvoted_posts, recently_downvoted_posts, blocked_or_banned_instances, blocked_users, \
     joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids, \
-    approval_required, block_honey_pot, user_pronouns
+    approval_required, block_honey_pot, user_pronouns, community_membership_private
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -64,14 +64,25 @@ def show_topic(topic_path):
     current_topic = topic
 
     if current_topic:
+        if current_user.is_authenticated:
+            pc = community_membership_private(current_user.id)
+            if len(pc) == 0:  # tuples must have at least 2 elements, I think?
+                private_communities = [0, 0]
+            else:
+                private_communities = pc + [0]
+        else:
+            private_communities = ()
+        if len(private_communities) == 0:
+            private_communities = [0, 0]
+
         # get posts from communities in that topic
         if current_topic.show_posts_in_children:  # include posts from child topics
             topic_ids = get_all_child_topic_ids(current_topic)
         else:
             topic_ids = [current_topic.id]
         community_ids = db.session.execute(
-            text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
-            {'topic_ids': tuple(topic_ids)}).scalars()
+            text('SELECT id FROM community WHERE (private is false OR id IN :private_communities) AND banned is false AND topic_id IN :topic_ids'),
+            {'topic_ids': tuple(topic_ids), 'private_communities': tuple(private_communities)}).scalars()
 
         community_ids = list(community_ids)
 
@@ -79,6 +90,7 @@ def show_topic(topic_path):
             Community.topic_id == current_topic.id, Community.banned == False, Community.total_subscriptions_count > 0).\
             filter(Community.instance_id.not_in(blocked_or_banned_instances(current_user.get_id()))).\
             filter(Community.id.not_in(blocked_communities(current_user.get_id()))).\
+            filter(or_(Community.private == False, Community.id.in_(community_membership_private(current_user.get_id())))).\
             order_by(desc(Community.total_subscriptions_count))
 
         posts = None

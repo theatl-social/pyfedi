@@ -16,10 +16,12 @@ from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, 
     vote_for_poll, hide_post
 from app.post.util import post_replies, get_comment_branch, tags_to_string, flair_to_string
 from app.topic.routes import get_all_child_topic_ids
-from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_or_banned_instances, recently_upvoted_posts, \
+from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_or_banned_instances, \
+    recently_upvoted_posts, \
     site_language_id, filtered_out_communities, joined_or_modding_communities, \
     user_filters_home, user_filters_posts, in_sorted_list, instance_sticky_posts, instance_sticky_post_ids, \
-    communities_banned_from_all_users, moderating_communities_ids_all_users, blocked_domains, SqlKeysetPagination
+    communities_banned_from_all_users, moderating_communities_ids_all_users, blocked_domains, SqlKeysetPagination, \
+    community_membership_private
 from app.shared.tasks import task_selector
 
 
@@ -90,11 +92,13 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         blocked_community_ids = blocked_communities(user_id)
         blocked_instance_ids = blocked_or_banned_instances(user_id)
         blocked_domain_ids = blocked_domains(user_id)
+        private_community_ids = community_membership_private(user_id)
     else:
         blocked_person_ids = []
         blocked_community_ids = []
         blocked_instance_ids = []
         blocked_domain_ids = []
+        private_community_ids = []
 
     content_filters = {}
     u_rp_ids = []
@@ -237,6 +241,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
             content_filters = user_filters_home(user_id) if user_id else {}
+
+    posts = posts.filter(or_(Community.private == False, Community.id.in_(private_community_ids)))
 
     if query:
         segregate_instance_stickies = False

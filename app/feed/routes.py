@@ -10,7 +10,7 @@ from markupsafe import Markup
 from flask_babel import _
 from flask_login import current_user
 from slugify import slugify
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, default_context, send_post_request
@@ -32,7 +32,8 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
     communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required, \
-    blocked_or_banned_instances, blocked_communities, block_honey_pot, user_pronouns, mimetype_from_url
+    blocked_or_banned_instances, blocked_communities, block_honey_pot, user_pronouns, mimetype_from_url, \
+    community_membership_private
 
 
 @bp.route('/feed/new', methods=['GET', 'POST'])
@@ -474,7 +475,9 @@ def show_feed(feed):
         # used for the posts searching
         feed_community_ids = []
         for fid in feed_ids:
-            feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == fid).all()
+            feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == fid).\
+                join(Community, Community.id == FeedItem.community_id).\
+                filter(or_(Community.private == False, Community.id.in_(community_membership_private(current_user.get_id())))).all()
             for item in feed_items:
                 feed_community_ids.append(item.community_id)
 
@@ -486,7 +489,8 @@ def show_feed(feed):
         feed_communities = Community.query.filter(
             Community.id.in_(feed_community_ids), Community.banned == False, Community.total_subscriptions_count > 0).\
             filter(Community.instance_id.not_in(blocked_or_banned_instances(current_user.get_id()))).\
-            filter(Community.id.not_in(blocked_communities(current_user.get_id()))).\
+            filter(Community.id.not_in(blocked_communities(current_user.get_id()))). \
+            filter(or_(Community.private == False, Community.id.in_(community_membership_private(current_user.get_id())))). \
             order_by(desc(Community.total_subscriptions_count))
 
         next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
