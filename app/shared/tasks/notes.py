@@ -26,6 +26,7 @@ from app.utils import (
     recently_downvoted_post_replies,
     get_recipient_language,
     get_task_session,
+    patch_db_session,
 )
 
 from flask import current_app
@@ -73,7 +74,8 @@ import re
 def make_reply(send_async, reply_id, parent_id):
     session = get_task_session()
     try:
-        send_reply(reply_id, parent_id, session=session)
+        with patch_db_session(session):
+            send_reply(reply_id, parent_id, session=session)
     except Exception:
         session.rollback()
         raise
@@ -85,7 +87,8 @@ def make_reply(send_async, reply_id, parent_id):
 def edit_reply(send_async, reply_id, parent_id):
     session = get_task_session()
     try:
-        send_reply(reply_id, parent_id, edit=True, session=session)
+        with patch_db_session(session):
+            send_reply(reply_id, parent_id, edit=True, session=session)
     except Exception:
         session.rollback()
         raise

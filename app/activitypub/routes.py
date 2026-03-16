@@ -606,7 +606,7 @@ def user_outbox(actor):
     }
     resp = jsonify(outbox)
     resp.content_type = "application/activity+json"
-    resp.headers.set("Cache-Control", "public, max-age=1500")
+    resp.headers.set("Cache-Control", "public, max-age=10")
     resp.headers.set("Vary", "Accept")
     return resp
 
@@ -669,6 +669,9 @@ def community_profile(actor):
                 "updated": ap_datetime(community.last_active),
                 "lemmy:tagsForPosts": community.flair_for_ap(version=1),
                 "tag": community.flair_for_ap(version=2),
+                "postUrlType": community.post_url_type
+                if community.post_url_type
+                else "friendly",
             }
             if community.description_html:
                 actor_data["summary"] = community.description_html
@@ -3276,7 +3279,10 @@ def community_outbox(actor):
         for post in posts:
             community_data["orderedItems"].append(post_to_activity(post, community))
 
-        return jsonify(community_data)
+        resp = jsonify(community_data)
+        resp.content_type = "application/activity+json"
+        resp.headers.set("Cache-Control", "public, max-age=10")
+        return resp
     else:
         abort(404)
 
@@ -3301,7 +3307,9 @@ def community_featured(actor):
         for post in posts:
             community_data["orderedItems"].append(post_to_page(post))
 
-        return jsonify(community_data)
+        resp = jsonify(community_data)
+        resp.content_type = "application/activity+json"
+        return resp
     else:
         abort(404)
 
@@ -3350,7 +3358,7 @@ def community_followers(actor):
         }
         resp = jsonify(result)
         resp.content_type = "application/activity+json"
-        resp.headers.set("Cache-Control", "public, max-age=120")
+        resp.headers.set("Cache-Control", "public, max-age=10")
         return resp
     else:
         abort(404)
@@ -3962,7 +3970,7 @@ def process_chat(user, store_ap_json, core_activity, session):
         ).get(
             recipient.id
         )  # for some reason find_actor_or_create_cached was giving me a user from the wrong DB session, causing an exception later on.
-        if sender.created_very_recently():
+        if sender.created_very_recently() and user.ap_domain != "fediseer.com":
             log_incoming_ap(
                 id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, "Sender is too new"
             )

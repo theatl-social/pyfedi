@@ -60,6 +60,18 @@ class TestMarkdownToHtml(unittest.TestCase):
         result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
         self.assertTrue("<blockquote>\n<p>This is a quote</p>\n</blockquote>" in result)
 
+    def test_nested_blockquotes(self):
+        """Test the handling of nesting blockquotes"""
+        markdown = "> This is a quote\n> > This is a nested quote *with* __formatting__.\n> \n> Ending the quote."
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        correct_html = "<blockquote>\n<p>This is a quote</p>\n<blockquote>\n<p>This is a nested quote <em>with</em> <strong>formatting</strong>.</p>\n</blockquote>\n<p>Ending the quote.</p>\n</blockquote>\n"
+        self.assertEqual(correct_html, result)
+
+        markdown = "> This is a quote\n> \n> ::: spoiler Summary\n> > This is a **formatted** blockquote in a spoiler in a blockquote.\n> :::\n> \n> Ending the quote."
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        correct_html = '<blockquote>\n<p>This is a quote</p>\n<details><summary>Summary</summary><div class="spoiler_block symmetric">\n<blockquote>\n<p>This is a <strong>formatted</strong> blockquote in a spoiler in a blockquote.</p>\n</blockquote>\n</div></details>\n<p>Ending the quote.</p>\n</blockquote>\n'
+        self.assertEqual(correct_html, result)
+
     def test_lists(self):
         """Test unordered and ordered lists"""
         markdown = "* Item 1\n* Item 2\n\n1. First\n2. Second"

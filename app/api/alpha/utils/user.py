@@ -1,7 +1,7 @@
 from flask import current_app, abort
 from flask_login import current_user
 from furl import furl
-from sqlalchemy import text, desc, func
+from sqlalchemy import text, desc, func, asc
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache
@@ -120,7 +120,7 @@ def get_user_list(auth, data):
     if type == "Local":
         users = User.query.filter_by(instance_id=1, deleted=False, verified=True)
     else:
-        users = User.query.filter(User.instance_id != 1, User.deleted == False)
+        users = User.query.filter(User.deleted == False)
 
     if query:
         if "@" in query:
@@ -130,6 +130,8 @@ def get_user_list(auth, data):
 
     if sort == "New":
         users = users.order_by(desc(User.created))
+    elif sort == "Old":
+        users = users.order_by(asc(User.created))
     elif sort.startswith("Top"):
         users = users.order_by(desc(User.post_count))
     else:

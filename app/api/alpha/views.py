@@ -1868,6 +1868,9 @@ def registration_view(registration) -> dict:
     if registration.user.email_domain() in disposable_domains:
         v1["throwaway_email"] = True
 
+    if registration.user.referrer:
+        v1["referrer"] = registration.user.referrer
+
     if registration.status == 1:
         v1["status"] = "approved"
         if registration.approved_by:

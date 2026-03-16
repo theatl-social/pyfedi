@@ -1566,7 +1566,7 @@ def notifications():
     notification_list = (
         Notification.query.filter_by(user_id=current_user.id)
         .order_by(desc(Notification.created_at))
-        .limit(100)
+        .limit(50)
         .all()
     )
     # Build a list of the types of notifications this person has, by going through all their notifications

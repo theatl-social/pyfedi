@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from flask import current_app, g
-from sqlalchemy import desc, text, and_, exists, asc
+from sqlalchemy import desc, text, and_, exists, asc, or_
 from sqlakeyset import get_page
 from sqlalchemy.exc import IntegrityError
 
@@ -176,7 +176,7 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                 Post.deleted == False,
                 Post.status > POST_STATUS_REVIEWING,
                 Post.user_id.not_in(blocked_person_ids),
-                Post.domain_id.not_in(blocked_domain_ids),
+                or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                 Post.community_id.not_in(blocked_community_ids),
             )
             .join(Community, Community.id == Post.community_id)
@@ -189,7 +189,7 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                 Post.status > POST_STATUS_REVIEWING,
                 Post.user_id.not_in(blocked_person_ids),
                 Post.community_id.not_in(blocked_community_ids),
-                Post.domain_id.not_in(blocked_domain_ids),
+                or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                 Post.instance_id.not_in(blocked_instance_ids),
             )
             .join(Community, Community.id == Post.community_id)
@@ -206,7 +206,7 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                 Post.status > POST_STATUS_REVIEWING,
                 Post.user_id.not_in(blocked_person_ids),
                 Post.community_id.not_in(blocked_community_ids),
-                Post.domain_id.not_in(blocked_domain_ids),
+                or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                 Post.instance_id.not_in(blocked_instance_ids),
             )
             .join(CommunityMember, Post.community_id == CommunityMember.community_id)
@@ -240,7 +240,10 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -260,7 +263,10 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -292,7 +298,10 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -324,7 +333,10 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -341,7 +353,10 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.deleted == False,
                     Post.status > POST_STATUS_REVIEWING,
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                     Post.user_id == person_id,
                 )
@@ -355,7 +370,10 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -490,7 +508,11 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
         )
     elif sort == "TopAll":
         posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == "New":
+    elif sort.startswith("Top"):
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(
+            desc(Post.up_votes - Post.down_votes)
+        )
+    elif sort.startswith("New"):
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Scaled":
         posts = (
@@ -502,7 +524,7 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
     elif sort == "Active":
         posts = posts.filter(Post.reply_count > 0)
         posts = posts.order_by(desc(Post.last_active))
-    elif sort == "Old":
+    elif sort.startswith("Old"):
         posts = posts.order_by(asc(Post.posted_at))
     elif sort == "Relevance":
         pass  # sorting by relevance is already done by posts = posts.search(query, sort=True)
@@ -654,7 +676,7 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                 Post.deleted == False,
                 Post.status > POST_STATUS_REVIEWING,
                 Post.user_id.not_in(blocked_person_ids),
-                Post.domain_id.not_in(blocked_domain_ids),
+                or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                 Post.community_id.not_in(blocked_community_ids),
             )
             .join(Community, Community.id == Post.community_id)
@@ -667,7 +689,7 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                 Post.status > POST_STATUS_REVIEWING,
                 Post.user_id.not_in(blocked_person_ids),
                 Post.community_id.not_in(blocked_community_ids),
-                Post.domain_id.not_in(blocked_domain_ids),
+                or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                 Post.instance_id.not_in(blocked_instance_ids),
             )
             .join(Community, Community.id == Post.community_id)
@@ -684,7 +706,7 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                 Post.status > POST_STATUS_REVIEWING,
                 Post.user_id.not_in(blocked_person_ids),
                 Post.community_id.not_in(blocked_community_ids),
-                Post.domain_id.not_in(blocked_domain_ids),
+                or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                 Post.instance_id.not_in(blocked_instance_ids),
             )
             .join(CommunityMember, Post.community_id == CommunityMember.community_id)
@@ -717,7 +739,10 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -736,7 +761,10 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -767,7 +795,10 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -798,7 +829,10 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
@@ -814,7 +848,10 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.deleted == False,
                     Post.status > POST_STATUS_REVIEWING,
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                     Post.user_id == person_id,
                 )
@@ -828,7 +865,10 @@ def get_post_list2(auth, data, user_id=None, search_type="Posts") -> dict:
                     Post.status > POST_STATUS_REVIEWING,
                     Post.user_id.not_in(blocked_person_ids),
                     Post.community_id.not_in(blocked_community_ids),
-                    Post.domain_id.not_in(blocked_domain_ids),
+                    or_(
+                        Post.domain_id == None,
+                        Post.domain_id.not_in(blocked_domain_ids),
+                    ),
                     Post.instance_id.not_in(blocked_instance_ids),
                 )
                 .join(Community, Community.id == Post.community_id)
