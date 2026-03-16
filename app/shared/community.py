@@ -586,7 +586,7 @@ def delete_community(community_id: int, src, auth=None):
     else:
         user = current_user
 
-    community = db.session.query(Community).filter_by(id=community_id).one()
+    community = db.session.query(Community).get(community_id)
     if not (
         community.is_owner(user)
         or community.is_moderator(user)

@@ -128,27 +128,6 @@ def feed_communities_for_edit(feed_id: int) -> str:
     return "\n".join(sorted(return_value))
 
 
-def existing_communities(feed_id: int) -> List:
-    return db.session.execute(
-        text("SELECT community_id FROM feed_item WHERE feed_id = :feed_id"),
-        {"feed_id": feed_id},
-    ).scalars()
-
-
-def form_communities_to_ids(form_communities: str) -> set:
-    result = set()
-    parts = form_communities.strip().split("\n")
-    for community_ap_id in parts:
-        if not community_ap_id.startswith("!"):
-            community_ap_id = "!" + community_ap_id
-        if not "@" in community_ap_id:
-            community_ap_id = community_ap_id + "@" + current_app.config["SERVER_NAME"]
-        community = search_for_community(community_ap_id.strip())
-        if community:
-            result.add(community.id)
-    return result
-
-
 def initialise_new_communities(feed):
     if feed.num_communities == 0:
         return

@@ -101,12 +101,8 @@ def get_community_list(auth, data):
     # filter private communities: show only to members
     if user_id:
         # for authenticated users, show non-private communities OR private communities where they are members
-        member_check = (
-            db.session.query(CommunityMember.community_id)
-            .filter(
-                CommunityMember.user_id == user_id, CommunityMember.is_banned == False
-            )
-            .subquery()
+        member_check = db.session.query(CommunityMember.community_id).filter(
+            CommunityMember.user_id == user_id, CommunityMember.is_banned == False
         )
         communities = communities.filter(
             or_(Community.private == False, Community.id.in_(member_check))
@@ -148,10 +144,16 @@ def get_community_list(auth, data):
 
     if sort == "New":
         communities = communities.order_by(desc(Community.created_at))
-    elif sort.startswith("Top"):
+    elif sort.startswith("Top") and sort != "TopSubscribers":
         communities = communities.order_by(desc(Community.post_count))
     elif sort == "Old":
         communities = communities.order_by(asc(Community.created_at))
+    elif sort == "NewFederated":
+        communities = communities.order_by(desc(Community.first_federated_at))
+    elif sort == "OldFederated":
+        communities = communities.order_by(asc(Community.first_federated_at))
+    elif sort == "TopSubscribers":
+        communities = communities.order_by(desc(Community.total_subscriptions_count))
     else:
         communities = communities.order_by(desc(Community.last_active))
 

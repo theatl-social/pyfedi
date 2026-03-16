@@ -186,6 +186,7 @@ from app.utils import (
     block_honey_pot,
     user_pronouns,
     community_membership_private,
+    show_reason_why_no_federation,
 )
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
@@ -807,6 +808,8 @@ def show_community(community: Community):
         .filter(Feed.public == True)
         .all()
     )
+
+    show_reason_why_no_federation(community.instance_id)
 
     # Upcoming events
     upcoming_events = db.session.execute(

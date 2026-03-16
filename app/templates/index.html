@@ -151,7 +151,7 @@
             </div>
         </div>
 
-        {% if new_instances and len(new_instances) > 0 -%}
+        {% if new_instances and new_instances|length > 0 -%}
         <div class="card mb-3 mt-3">
             <div class="card-header">
                  <h2>{{ _('New instances') }}</h2>

@@ -1315,6 +1315,7 @@ class User(UserMixin, db.Model):
     discord_oauth_id = db.Column(db.String(64), unique=True, index=True)
     password_updated_at = db.Column(db.DateTime, default=utcnow)
     code_style = db.Column(db.String(25), default="fruity")
+    admin_note = db.Column(db.Text)
 
     avatar = db.relationship(
         "File",

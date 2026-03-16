@@ -8,7 +8,7 @@ from pyld import jsonld
 from sqlalchemy import or_, and_, func
 from ua_parser import parse as uaparse
 
-from app import db, cache
+from app import db, cache, limiter
 from app.activitypub.util import (
     users_total,
     active_month,
@@ -168,12 +168,6 @@ def index(sort=None, view_filter=None):
     )
 
 
-def home_page_cache_key(sort, view_filter, page, result_id, low_bandwidth, tag):
-    # this is almost the same as cache.memoized except prepends current_user.get_id() which is 0 for all anonymous users
-    return f"{current_user.get_id()}_{sort}_{view_filter}_{page}_{result_id}_{low_bandwidth}_{tag}"
-
-
-@cache.cached(timeout=3, make_cache_key=home_page_cache_key)
 def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
     page_length = 20 if low_bandwidth else current_app.config["PAGE_LENGTH"]
 
@@ -454,6 +448,7 @@ def _base_list_communities_context():
 
 
 @bp.route("/communities", methods=["GET"])
+@limiter.limit("20 per 1 minutes", methods=["GET", "POST"])
 @login_required_if_private_instance
 def list_communities():
     verification_warning()
@@ -696,6 +691,7 @@ def list_communities():
 
 
 @bp.route("/modlog", methods=["GET"])
+@limiter.limit("20 per 1 minutes", methods=["GET", "POST"])
 def modlog():
     page = request.args.get("page", 1, type=int)
     low_bandwidth = request.cookies.get("low_bandwidth", "0") == "1"

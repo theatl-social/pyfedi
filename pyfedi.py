@@ -234,6 +234,10 @@ def after_request(response):
             if "/embed" not in request.path:
                 response.headers["X-Frame-Options"] = "DENY"
 
+    # API responses must never be cached by proxies
+    if request.path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store")
+
     # Caching headers for html pages - pages are automatically translated and should not be cached while logged in.
     if response.content_type.startswith("text/html"):
         if (

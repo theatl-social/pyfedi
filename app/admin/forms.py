@@ -584,6 +584,9 @@ class EditUserForm(FlaskForm):
     )
     remove_avatar = BooleanField(_l("Remove avatar"))
     remove_banner = BooleanField(_l("Remove banner"))
+    admin_note = TextAreaField(
+        _l("Notes about this user (only visible to other admins)")
+    )
     submit = SubmitField(_l("Save"))
 
 

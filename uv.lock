@@ -1864,7 +1864,7 @@ wheels = [
 
 [[package]]
 name = "pyfedi"
-version = "1.4.0"
+version = "1.6.12"
 source = { editable = "." }
 dependencies = [
     { name = "arrow" },
