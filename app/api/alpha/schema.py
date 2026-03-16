@@ -49,8 +49,7 @@ def validate_color_code(text):
 def validate_non_empty_string(text):
     # Makes sure a string has length >0 after removing whitespace
     stripped_title = re.sub(r'\s+', "", text, flags=re.U)
-    value = len(stripped_title) >= 1
-    if value:
+    if len(stripped_title) >= 1:
         return True
     else:
         raise ValidationError("Non-empty string required")
