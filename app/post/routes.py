@@ -920,10 +920,10 @@ def cancel_inline(comment_id:int):
     return f'<div id="reply_to_{comment_id}" class="hidable"></div>' # Hide the form
 
 
-@bp.route('/post/<int:post_id>/options_menu', defaults={'post_body_class': 'post_teaser_clickable'}, methods=['GET'])
-@bp.route('/post/<int:post_id>/<string:post_body_class>/options_menu', methods=['GET'])
+@bp.route('/post/<int:post_id>/options_menu', defaults={'offer_markdown_source': 'False'}, methods=['GET'])
+@bp.route('/post/<int:post_id>/<string:offer_markdown_source>/options_menu', methods=['GET'])
 @block_bots
-def post_options(post_id: int, post_body_class: str):
+def post_options(post_id: int, offer_markdown_source: str):
     post = Post.query.get_or_404(post_id)
     if post.deleted:
         if current_user.is_anonymous:
@@ -936,7 +936,7 @@ def post_options(post_id: int, post_body_class: str):
                                                       PostBookmark.user_id == current_user.id).first()
         hidden = current_user.has_hidden_post(post)
 
-    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark, hidden=hidden, post_body_class=post_body_class)
+    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark, hidden=hidden, offer_markdown_source=offer_markdown_source)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/options_menu', methods=['GET'])
