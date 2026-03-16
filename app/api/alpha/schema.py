@@ -46,6 +46,15 @@ def validate_color_code(text):
     except:
         raise ValidationError(f"Bad hex color code string: {text}")
 
+def validate_non_empty_string(text):
+    # Makes sure a string has length >0 after removing whitespace
+    stripped_title = re.sub(r'\s+', "", text, flags=re.U)
+    value = len(stripped_title) >= 1
+    if value:
+        return True
+    else:
+        raise ValidationError("Non-empty string required")
+
 
 class DefaultError(Schema):
     message = fields.String()
@@ -1333,7 +1342,7 @@ class SubscribePostRequest(DefaultSchema):
 
 
 class CreatePostRequest(DefaultSchema):
-    title = fields.String(required=True)
+    title = fields.String(required=True, validate=validate_non_empty_string)
     community_id = fields.Integer(required=True)
     alt_text = fields.String(metadata={"description": "Will be used for image posts or link posts that point to images"})
     body = fields.String()
