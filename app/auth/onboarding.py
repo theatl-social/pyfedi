@@ -50,6 +50,9 @@ def trump_musk():
 @bp.route('/choose_topics', methods=['GET', 'POST'])
 @login_required
 def choose_topics():
+    # As soon as the user gets to this page, the onboarding should be marked as finished
+    current_user.finished_onboarding = True
+    db.session.commit()
     if get_setting('choose_topics', True) and num_topics() > 0:
         form = ChooseTopicsForm()
         form.chosen_topics.choices = topics_for_form()
