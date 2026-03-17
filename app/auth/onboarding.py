@@ -50,9 +50,7 @@ def trump_musk():
 @bp.route('/choose_topics', methods=['GET', 'POST'])
 @login_required
 def choose_topics():
-    # As soon as the user gets to this page, the onboarding should be marked as finished
-    current_user.finished_onboarding = True
-    db.session.commit()
+    mark_onboarding_as_finished()
     if get_setting('choose_topics', True) and num_topics() > 0:
         form = ChooseTopicsForm()
         form.chosen_topics.choices = topics_for_form()
@@ -73,6 +71,9 @@ def choose_topics():
         flash(_('Please join some communities you\'re interested in and then go to the home page by clicking on the logo above.'))
         return redirect(url_for('main.list_communities'))
 
+def mark_onboarding_as_finished():
+    current_user.finished_onboarding = True
+    db.session.commit()
 
 def join_topic(topic_id):
     communities = Community.query.filter_by(topic_id=topic_id, banned=False).all()
