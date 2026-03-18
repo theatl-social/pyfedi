@@ -1234,6 +1234,8 @@ def actor_json_to_model(activity_json, address, server):
         else:
             description_html = ''
 
+        community.show_popular = db.session.query(Instance).get(community.instance_id).popular
+
         if description_html is not None and description_html != '':
             if not description_html.startswith('<'):  # PeerTube
                 description_html = '<p>' + description_html + '</p>'

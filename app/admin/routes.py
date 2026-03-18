@@ -1932,6 +1932,7 @@ def admin_instance_edit(instance_id):
         instance.gone_forever = form.gone_forever.data
         instance.trusted = form.trusted.data
         instance.posting_warning = form.posting_warning.data
+        instance.popular = form.popular.data
         instance.admin_note = form.admin_note.data
         instance.inbox = form.inbox.data
 
@@ -1950,6 +1951,7 @@ def admin_instance_edit(instance_id):
         form.gone_forever.data = instance.gone_forever
         form.trusted.data = instance.trusted
         form.posting_warning.data = instance.posting_warning
+        form.popular.data = instance.popular
         form.admin_note.data = instance.admin_note
         form.inbox.data = instance.inbox
         if instance.software == 'piefed':

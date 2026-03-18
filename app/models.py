@@ -96,6 +96,7 @@ class Instance(db.Model):
     posting_warning = db.Column(db.String(512))
     nodeinfo_href = db.Column(db.String(100))
     admin_note = db.Column(db.Text)
+    popular = db.Column(db.Boolean, default=True)  # New communities from here have their popular flag set
 
     __table_args__ = (
         Index('ix_instance_created_at_active', created_at.desc(),
@@ -3583,7 +3584,7 @@ class Site(db.Model):
     allowlist = db.Column(db.Text, default='')
     blocklist = db.Column(db.Text, default='')
     blocked_phrases = db.Column(db.Text, default='')  # discard incoming content with these phrases
-    auto_decline_referrers = db.Column(db.Text, default='rdrama.net\nahrefs.com\nkiwifarms.sh')  # automatically decline registration requests if the referrer is one of these
+    auto_decline_referrers = db.Column(db.Text, default='rdrama.net\nahrefs.com\nkiwifarms.sh\nkiwifarms.st')  # automatically decline registration requests if the referrer is one of these
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
     last_active = db.Column(db.DateTime, default=utcnow)

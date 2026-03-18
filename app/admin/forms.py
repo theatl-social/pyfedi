@@ -206,6 +206,7 @@ class EditInstanceForm(FlaskForm):
     gone_forever = BooleanField(_l('Gone forever'))
     trusted = BooleanField(_l('Trusted'))
     hide = BooleanField(_l('Hide from instance chooser'))
+    popular = BooleanField(_l('Communities become popular when added'))
     posting_warning = TextAreaField(_l('Posting warning'))
     admin_note = TextAreaField(_l('Notes about this instance (only visible to other admins)'))
     inbox = StringField(_l('Inbox'))
