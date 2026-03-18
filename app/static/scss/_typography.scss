@@ -1,4 +1,4 @@
-@import "scss/layout"; // ideally, typography should be using rem not px for responsiveness to zoom
+@import "_layout.scss";
 
 $fs0x95rem: 0.95rem; // body styles.scss
 $fs12px: 12px; // one in styles.scss
@@ -30,7 +30,8 @@ $h2: 1.8rem;
 $h3: 1.6rem;
 $h3post: 110%;
 $h4: 1.2rem;
-$h5: 1rem;
+// no h5 size specified
+$h6: 1rem;
 $h-letterspacing: -0.2px; // in styles.scss
 
 $small_text: 87%; // existing variable, moved to the top DUPLICATE
