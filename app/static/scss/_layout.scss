@@ -1,1 +1,109 @@
-$px10 = 10px; // negative instances look like -($px10)
+$px1bw: 1px; // for border, border-width to replace those using px1
+
+$factor1x6: 1.6; // line-height in _controls
+
+$px1: 1px; // lots of border, border-width values replaced in styles.scss, negative values -($px1) - border in _controls, _compact, _dark, _high_contrast, _typography (top)
+$px1x5: 1.5px; // message_reaction and border-width styles.scss
+$px2: 2px; // many instances of border-radius and border-width were replaced in styles.scss along with margins (and negative -(px2)), and box shadow in _controls
+$px3: 3px; // border radius, blur, _dark (border-radius)
+$px4: 4px; // lots of instances in styles.scss, top, _compact
+$px5: 5px; // negative is -($px5), note there is a border-radius with this value in _controls
+$px6: 6px; // locations, blur, border-radius instances (styles.scss)
+$px7: 7px; // styles.scss, positioning, margins, paddings
+$px8: 8px; // styles.scss, positioning, margins, paddings, width, height, gap, and in _compact
+$px9: 9px; // negative is -($px9), there is a blur instance (styles.scss)
+$px10: 10px; // negative instances look like -($px10)
+$px12: 12px; // negative is -($px12) - width, height instances not changed (styles.scss), font-size set in _typography
+$px13: 13px; // some in styles.scss, (font-size in _typography)
+$px14: 14px; // line-height, other instances on styles.scss
+$px15: 15px; // negative is -($px15)
+$px17: 17px; // styles.scss, top,and padding/margins, _typography (font-size defined as fs17px)
+$px20: 20px; // in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
+$px24: 24px; // line-height and many blur (styles.scss)
+$px26: 26px; // styles.scss line height x2
+$px30: 30px; // styles.scss line height, font-size, width, height, padding, margins, _compact line height, min-width, min-height
+$px40: 40px; // styles.scss line height
+$px46: 46px; // styles.scss line height and width (not changed)
+
+$px70: 70px; // footer in styles.scss (normal plus breakpoint), element width
+
+$rem0125: 0.125rem; // styles.scss (box shadow)
+$rem025: 0.25rem; // styles.scss for control elements
+$rem0275: 0.275rem; // _compact padding
+$rem03: 0.3rem; // _compact padding, styles.scss row-gap
+$rem0375: 0.375rem; // _dark padding, _controls padding
+$rem05: 0.5rem; // styles.scss
+$rem055: 0.55rem; // _compact padding
+$rem06: 0.6rem; // _compact.scss
+$rem075: 0.75rem; // styles.scss, plus for a flex gap value, _controls (form control), _dark (form control)
+$rem1: 1rem; // height, box-shadow, other styles.scss (h4 style moved to _typography)
+$rem1x1: 1.1rem; // styles.scss for bootstrap classes
+$rem1x2: 1.2rem; // styles.scss font-size
+$rem1x25: 1.25rem; // styles.scss margin-left (also a font-size in _typography)
+$rem1x3: 1.3rem; // _compact margin
+$rem2: 2rem; // _compact padding
+
+$em02: 0.2em; // spoiler_block styles.scss, blockquote
+$em025: 0.25em; // styles.scss post_teaser_title
+$em05: 0.5em; // spoiler_block styles.scss, table, img
+$em1: 1em; // styles.scss font-size i, margin for spoiler_block
+$em5: 5em; // scroll-margin-top for replies
+
+$pc16x9: 56.25%; /* 16:9 aspect ratio on video wrapper in styles.scss */
+$pc3: 3%; // margin for blockquote
+
+
+// As far as I can tell, these mixins are unused
+.pl-0 {
+  padding-left: 0!important;
+}
+
+.pl-1 {
+  padding-left: $px5!important;
+}
+
+.pl-2 {
+  padding-left: $px10!important;
+}
+
+.pl-3 {
+  padding-left: $px15!important;
+}
+
+.pl-4 {
+  padding-left: $px20!important;
+}
+
+.pl-0 {
+  padding-left: 0 !important;
+}
+
+.pr-0 {
+  padding-right: 0 !important;
+}
+
+.pl-md-0 {
+  @include breakpoint(phablet) {
+    padding-left: 0 !important;
+  }
+}
+
+.pr-md-0 {
+  @include breakpoint(phablet) {
+    padding-right: 0 !important;
+  }
+}
+
+.pl-lg-0 {
+  @include breakpoint(tablet) {
+    padding-left: 0 !important;
+  }
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.mr-auto {
+  margin-right: auto;
+}

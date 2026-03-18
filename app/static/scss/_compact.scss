@@ -1,3 +1,5 @@
+@import "scss/layout";
+
 :root {
   --bs-gutter-x-reduced: calc(var(--bs-gutter-x) * 0.95);
 }
@@ -5,8 +7,8 @@
 body.compact-min {
 
   .btn {
-    padding: 4px 8px;
-    font-size: 93%;
+    padding: $px4 $px8;
+    font-size: $fs93pc;
   }
   .post_teaser {
     .post_teaser_article_preview,
@@ -36,7 +38,7 @@ body.compact-min {
   .side_pane {
     h2 {
       margin-bottom: 0;
-      font-size: 1.5rem;
+      font-size: $fs1x5rem;
     }
   }
 
@@ -46,28 +48,28 @@ body.compact-min {
   }
 
   #outer_container {
-    margin-top: 0.6rem;
+    margin-top: $rem06;
   }
 
   .table > :not(caption) > * > * {
-    padding: .3rem .3rem;
+    padding: $rem03 $rem03;
   }
 
   .mt-4 {
-    margin-top: 1.3rem!important;
+    margin-top: $rem1x3!important;
   }
 
   .communities_table tbody tr th a {
-    padding-top: 4px;
-    padding-bottom: 4px;
+    padding-top: $px4;
+    padding-bottom: $px4;
   }
 
   .form-control {
-    padding: 0.275rem 0.55rem
+    padding: $rem0275 $rem055;
   }
 
   .form-select {
-    padding: .275rem 2rem .275rem .55rem
+    padding: $rem0275 $rem2 $rem0275 $rem055;
   }
 
   .ts-wrapper {
@@ -83,29 +85,29 @@ body.compact-max {
       display: none;
     }
 
-    border-bottom-width: 1px;
-    padding-top: 4px;
+    border-bottom-width: $px1;
+    padding-top: $px4;
 
     img, .thumbnail {
       display: none;
     }
 
     .post_utilities_bar {
-      min-height: 30px;
-      font-size: 93%;
+      min-height: $px30;
+      font-size: $fs93pc;
 
       div {
-        height: 30px;
-        line-height: 30px;
-        min-width: 30px;
+        height: $px30;
+        line-height: $fs30px;
+        min-width: $px30;
       }
 
       .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
-        min-width: 30px;
-        min-height: 30px;
+        min-width: $px30;
+        min-height: $px30;
 
         span {
-          line-height: 30px;
+          line-height: $px30;
         }
       }
     }
