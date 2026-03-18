@@ -43,7 +43,7 @@ def ban_from_site(send_async, user_id, mod_id, expiry, reason, remove_data):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                ban_person(session, user_id, mod_id, None, expiry, remove_data, reason)
+                ban_person(session, user_id, mod_id, None, expiry, reason, remove_data)
         except Exception:
             session.rollback()
             raise
@@ -71,7 +71,7 @@ def ban_from_community(send_async, user_id, mod_id, community_id, expiry, reason
         session = get_task_session()
         try:
             with patch_db_session(session):
-                ban_person(session, user_id, mod_id, community_id, expiry, False, reason)
+                ban_person(session, user_id, mod_id, community_id, expiry, reason, False)
         except Exception:
             session.rollback()
             raise
@@ -93,7 +93,7 @@ def unban_from_community(send_async, user_id, mod_id, community_id, expiry, reas
             session.close()
 
 
-def ban_person(session, user_id, mod_id, community_id, expiry, reason, remove_data, is_undo=False):
+def ban_person(session, user_id, mod_id, community_id, expiry, reason: str, remove_data: bool, is_undo=False):
     if expiry is None:
         expiry = datetime.datetime(year=2100, month=1, day=1)
     user = session.query(User).get(user_id)
