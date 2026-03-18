@@ -948,7 +948,7 @@ div.navbar {
 }
 
 .communities_menu h4 {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
 }
 
 .communities_menu h6 {
@@ -3250,7 +3250,7 @@ form h5 {
 
 @media (min-width: 992px) {
   .h4, h4 {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
 }
 
