@@ -39,13 +39,26 @@ $black: black;
 
 $black-tint-000: rgba(0, 0, 0, 0.075); // styles.scss user-suggestion-box box-shadow
 $black-tint-00: rgba(0, 0, 0, 0.1); // styles.scss box-shadow
+$black-tint-001: rgba(0, 0, 0, 0.15); // styles.scss voting-dialog box-shadow
 $black-tint-01: rgba(0, 0, 0, 0.2); // styles
 $black-tint-015: rgba(0, 0, 0, 0.3); // styles.scss code btn.hover
 $black-tint-02: rgba(0,0,0,0.4); // styles.scss thumbnail fe dark
+$black-tint-025: rgba(0, 0, 0, 0.5); // styles.scss backdrop
 $black-tint-03: rgba(0,0,0,0.6); // styles.scss breadcrumb bg
 $black-tint-04: rgba(0, 0, 0, 0.7); // styles.scss masonry_info
 
+$opacity-00: 0; // emoji-picker
+$opacity-01: 0.1; // comment_body
+$opacity-02: 0.2; // blocked
+$opacity-03: 0.3; // fe-discussion
+$opacity-04: 0.4; // _typography fe-external-noing
+$opacity-05: 0.5; // fe-video, img
+$opacity-08: 0.8; // missing_thumbnail
+$opacity-09: 0.9; // navbar-light
+$opacity-10: 1; // comment_time
 
+
+$bright-red: rgba(251, 74, 74, 0.846); // styles.scss voted_down
 $danger: #FF585B; // coral red, styles.scss nsfw, ai-generated flags
 $teal: #0c5460; // styles.scss alert
 $white-blue: #d1ecf1; // styles.scss alert bg
