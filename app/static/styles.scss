@@ -3,8 +3,7 @@
 @import "scss/mixins";
 @import "scss/typography";
 @import "scss/controls";
-
-$min-touch-target: 44px;
+@import "scss/layout";
 
 @view-transition {
   navigation: auto;
