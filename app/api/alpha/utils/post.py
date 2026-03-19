@@ -873,6 +873,10 @@ def get_post_replies(auth, data):
     inner_post_view = None
     inner_community_view = None
 
+    # Precompute once for all replies in this post
+    community_moderator_ids = {m.user_id for m in post.community.moderators()}
+    all_ban_data = communities_banned_from_all_users()
+
     # Process nested reply tree while preserving structure
     def process_nested_replies(reply_tree, is_top_level=True):
         """Process nested reply tree while preserving nested structure"""
@@ -890,6 +894,8 @@ def get_post_replies(auth, data):
             elif user_details and in_sorted_list(user_details['downvoted_reply_ids'], reply.id):
                 vote_effect = -1
             is_reply_subscribed = reply.id in user_details['subscribed_reply_ids'] if user_details else None
+            is_creator_banned = post.community_id in all_ban_data.get(reply.user_id, [])
+            is_creator_mod = reply.user_id in community_moderator_ids
 
             view = reply_view(reply=reply, variant=3, user_id=user_id,
                               is_user_banned_from_community=is_user_banned_from_community,
@@ -899,6 +905,8 @@ def get_post_replies(auth, data):
                               vote_effect=vote_effect,
                               is_reply_subscribed=is_reply_subscribed,
                               is_user_moderator=is_user_moderator,
+                              is_creator_banned_from_community=is_creator_banned,
+                              is_creator_moderator=is_creator_mod,
                               add_post_in_view=False,
                               add_community_in_view=False)
 

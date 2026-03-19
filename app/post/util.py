@@ -145,7 +145,7 @@ def post_replies(post: Post, sort_by: str, viewer: User, db_only=False) -> List[
         if archived_data and 'replies' in archived_data:
             archived_replies = convert_archived_replies_to_tree(archived_data['replies'], post)
             return archived_replies
-    
+
     comments = db.session.query(PostReply).filter_by(post_id=post.id)
     if viewer:
         instance_ids = blocked_or_banned_instances(viewer.id)
@@ -175,9 +175,10 @@ def post_replies(post: Post, sort_by: str, viewer: User, db_only=False) -> List[
 
     comments = comments.limit(2000)  # paginating indented replies is too hard so just get the first 2000.
 
-    comments_dict = {comment.id: {'comment': comment, 'replies': []} for comment in comments.all()}
+    all_comments = comments.all()
+    comments_dict = {comment.id: {'comment': comment, 'replies': []} for comment in all_comments}
 
-    for comment in comments:
+    for comment in all_comments:
         if comment.parent_id is not None:
             parent_comment = comments_dict.get(comment.parent_id)
             if parent_comment:
