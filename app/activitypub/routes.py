@@ -19,7 +19,7 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
     post_replies_for_ap, is_vote, find_instance_id, resolve_remote_post_from_search, proactively_delete_content, \
-    process_quote_boost
+    process_quote_boost, object_has_missing_fields
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
@@ -593,7 +593,7 @@ def shared_inbox():
     id = request_json['id']
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+        if object_has_missing_fields(object):
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
             else:
@@ -601,7 +601,7 @@ def shared_inbox():
                                 'Missing minimum expected fields in JSON Announce object')
             return '', 200
 
-        if isinstance(object['actor'], str) and object['actor'].startswith(
+        if 'actor' in object and isinstance(object['actor'], str) and object['actor'].startswith(
                 'https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json,
                             'Activity about local content which is already present')
@@ -715,20 +715,20 @@ def replay_inbox_request(request_json):
     id = request_json['id']
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+        if object_has_missing_fields(object):
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
             else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
             return
 
-        if isinstance(object['actor'], str) and object['actor'].startswith(
+        if 'actor' in object and isinstance(object['actor'], str) and object['actor'].startswith(
                 'https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
             return
 
     # Ignore unutilised PeerTube activity
-    if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
+    if 'actor' in request_json and isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
         log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, request_json, 'REPLAY: PeerTube View or CacheFile activity')
         return
 
@@ -835,7 +835,12 @@ def process_inbox_request(request_json, store_ap_json):
                             fake_activity['object'] = obj
                             process_inbox_request(fake_activity, store_ap_json)  # Process the Announce (with single object) as normal
                         return
-
+                    elif 'type' in request_json['object'] and request_json['object']['type'] == 'OrderedCollection':
+                        for obj in request_json['object']['orderedItems']:
+                            fake_activity = request_json.copy()
+                            fake_activity['object'] = obj
+                            process_inbox_request(fake_activity, store_ap_json)  # Process the Announce (with single object) as normal
+                        return
                     if not feed:
                         user = find_actor_or_create_cached(request_json['object']['actor'])
                         if user and isinstance(user, User):

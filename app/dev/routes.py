@@ -1,13 +1,16 @@
 import random
-from flask import request, flash, url_for, current_app, redirect, g, abort
+from json import JSONDecodeError
+
+from flask import request, flash, url_for, current_app, redirect, g, abort, json
 from flask_login import current_user
 from flask_babel import _, ngettext
 
 from app import db, cache
+from app.activitypub.routes import replay_inbox_request
 from app.activitypub.signature import RsaKeys
 from app.admin.routes import unsubscribe_everyone_then_delete
 from app.dev import bp
-from app.dev.forms import AddTestCommunities, AddTestTopics, DeleteTestCommunities, DeleteTestTopics
+from app.dev.forms import AddTestCommunities, AddTestTopics, DeleteTestCommunities, DeleteTestTopics, ActivityPubForm
 from app.inoculation import inoculation
 from app.models import Site, User, Community, CommunityMember, Language, Topic, utcnow
 from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, \
@@ -185,6 +188,24 @@ def tools():
                                topics_form=topics_form,
                                delete_communities_form=delete_communities_form,
                                delete_topics_form=delete_topics_form,
-                               
                                inoculation=inoculation[random.randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                )
+
+
+@bp.route('/dev/tools/activitypub', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def tools_activitypub():
+    if not current_app.debug:
+        abort(404)
+
+    form = ActivityPubForm()
+    if form.validate_on_submit():
+        try:
+            j = json.loads(form.json.data)
+            replay_inbox_request(j)
+            flash(_('ActivityPub has been sent to inbox.'))
+        except JSONDecodeError as e:
+            flash(_('Invalid json ' + str(e)), 'error')
+
+    return render_template('admin/dev_activitypub.html', title=_('Send ActivityPub to local inbox'), form=form)

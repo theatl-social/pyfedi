@@ -11,11 +11,19 @@ from app import db
 class AddTestCommunities(FlaskForm):
     communities_submit = SubmitField(_l('Populate Communities'))
 
+
 class AddTestTopics(FlaskForm):
     topics_submit = SubmitField(_l('Populate Topics'))
+
 
 class DeleteTestCommunities(FlaskForm):
     delete_communities_submit = SubmitField(_l('Delete Communities'))
 
+
 class DeleteTestTopics(FlaskForm):
     delete_topics_submit = SubmitField(_l('Delete Topics'))
+
+
+class ActivityPubForm(FlaskForm):
+    json = TextAreaField(_l('JSON'), validators=[DataRequired()], render_kw={'rows': 10})
+    submit = SubmitField(_l('Submit'))
