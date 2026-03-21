@@ -34,7 +34,7 @@ import urllib.request
 import uuid
 from typing import Dict, Optional, Tuple, Union
 
-from nntpserver import (
+from .nntpserver import (
     NNTPServer,
     NNTPGroup,
     NNTPConnectionHandler,
