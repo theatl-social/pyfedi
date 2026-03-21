@@ -12,7 +12,6 @@ from sqlalchemy.exc import IntegrityError
 from app import db, cache
 from app.activitypub.signature import RsaKeys
 from app.activitypub.util import make_image_sizes
-from app.api.alpha.views import cached_modlist_for_community, cached_modlist_for_user
 from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
@@ -487,6 +486,7 @@ def restore_community(community_id: int, src, auth=None):
 
 
 def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
+    from app.api.alpha.views import cached_modlist_for_community, cached_modlist_for_user
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
@@ -554,6 +554,7 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
 
 
 def remove_mod_from_community(community_id: int, person_id: int, src, auth=None):
+    from app.api.alpha.views import cached_modlist_for_community, cached_modlist_for_user
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
