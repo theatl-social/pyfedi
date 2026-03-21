@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from app import db, cache
 from app.activitypub.signature import RsaKeys
 from app.activitypub.util import make_image_sizes
+from app.api.alpha.views import cached_modlist_for_community, cached_modlist_for_user
 from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
@@ -543,6 +544,8 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
     cache.delete_memoized(moderating_communities_ids, new_moderator.id)
     cache.delete_memoized(moderating_communities_ids_all_users)
     cache.delete_memoized(Community.moderators, community)
+    cache.delete_memoized(cached_modlist_for_community)
+    cache.delete_memoized(cached_modlist_for_user, new_moderator)
 
     task_selector('add_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
 
@@ -580,6 +583,8 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
     cache.delete_memoized(moderating_communities_ids, old_moderator.id)
     cache.delete_memoized(moderating_communities_ids_all_users)
     cache.delete_memoized(Community.moderators, community)
+    cache.delete_memoized(cached_modlist_for_community)
+    cache.delete_memoized(cached_modlist_for_user, old_moderator)
 
     task_selector('remove_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
 

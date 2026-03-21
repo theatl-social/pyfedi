@@ -1244,7 +1244,7 @@ def federated_instances_view():
     return v1
 
 
-@cache.memoize(timeout=60)
+@cache.memoize(timeout=3000)
 def cached_modlist_for_community(community_id):
     moderator_ids = db.session.execute(
         text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and (is_moderator = True or is_owner = True)'),
@@ -1259,7 +1259,7 @@ def cached_modlist_for_community(community_id):
     return modlist
 
 
-@cache.memoize(timeout=60)
+@cache.memoize(timeout=3000)
 def cached_modlist_for_user(user):
     community_ids = db.session.execute(
         text('SELECT community_id FROM "community_member" WHERE user_id = :user_id and (is_moderator = True or is_owner = True)'),

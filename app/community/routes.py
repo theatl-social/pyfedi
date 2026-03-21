@@ -18,6 +18,7 @@ from app import db, cache, celery, httpx_client, limiter, plugins
 from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import extract_domain_and_actor, find_actor_or_create
 from app.activitypub.actor import schedule_actor_refresh
+from app.api.alpha.views import cached_modlist_for_community, cached_modlist_for_user
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
@@ -1389,7 +1390,10 @@ def community_make_owner(community_id: int, user_id: int):
 
         cache.delete_memoized(community_moderators, community_id)
         cache.delete_memoized(Community.moderators, community)
-    
+
+        cache.delete_memoized(cached_modlist_for_community)
+        cache.delete_memoized(cached_modlist_for_user, user)
+
     else:
         abort(401)
     
@@ -1428,6 +1432,9 @@ def community_remove_owner(community_id: int, user_id: int):
 
             cache.delete_memoized(community_moderators, community_id)
             cache.delete_memoized(Community.moderators, community)
+
+            cache.delete_memoized(cached_modlist_for_community)
+            cache.delete_memoized(cached_modlist_for_user, user)
 
     else:
         abort(401)
