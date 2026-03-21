@@ -1,10 +1,10 @@
 import re
 
-from flask import current_app
 from flask_babel import _, lazy_gettext as _l
 from flask_wtf import FlaskForm
 from sqlalchemy import func
-from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, RadioField, EmailField, TextAreaField
+from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, RadioField, EmailField, \
+    TextAreaField, SelectField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
 
 from app.models import User, Community, Feed
@@ -121,14 +121,30 @@ class ResendEmailForm(FlaskForm):
     submit = SubmitField(_l('Resend verification email'))
 
 
-class ChooseTrumpMuskForm(FlaskForm):
+class FilterSetupForm(FlaskForm):
     options = [(1, _l('Please make it stop')),
                (0, _l('A little is ok')),
                (-1, _l('Bring it on')),
                ]
     trump_musk_level = RadioField(_l('How tired of Trump and Musk news are you?'), choices=options, default=1, coerce=int,
                                   render_kw={'class': 'form-select'})
-    submit = SubmitField(_l('Choose'))
+    hide_type_choices = [(0, _l('Show')),
+                         (1, _l('Hide completely')),
+                         (2, _l('Blur thumbnail')),
+                         (3, _l('Make post semi-transparent'))]
+    ai_hide_type_choices = [(0, _l('Show')),
+                         (1, _l('Hide completely')),
+                         (2, _l('Label as AI')),
+                         (3, _l('Make post semi-transparent'))]
+    ignore_bots = SelectField(_l('Posts by bots'), choices=hide_type_choices,
+                              default=0, coerce=int, render_kw={'class': 'form-select'})
+    hide_nsfw = SelectField(_l('NSFW posts'), choices=hide_type_choices,
+                            default=0, coerce=int, render_kw={'class': 'form-select'})
+    hide_nsfl = SelectField(_l('NSFL posts'), choices=hide_type_choices,
+                            default=1, coerce=int, render_kw={'class': 'form-select'})
+    hide_gen_ai = SelectField(_l('AI-generated posts'), choices=ai_hide_type_choices,
+                            default=1, coerce=int, render_kw={'class': 'form-select'})
+    submit = SubmitField(_l('Save'))
 
 
 class ChooseTopicsForm(FlaskForm):

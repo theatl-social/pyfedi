@@ -226,7 +226,7 @@ def register_new_user(form, ip, country):
         return redirect(url_for("auth.check_email"))
 
     finalize_user_registration(user, form)
-    return redirect(url_for("auth.trump_musk"))
+    return redirect(url_for("auth.filter_selection"))
 
 
 def normalize_username(form):
@@ -497,14 +497,16 @@ def determine_next_page():
     if not next_page or urlsplit(next_page).netloc != "":
         check_user_finished_onboarding()
         next_page = url_for(
-            "auth.trump_musk" if not current_user.finished_onboarding else "main.index"
+            "auth.filter_selection" if not current_user.finished_onboarding else "main.index"
         )
     return next_page
+
 
 def check_user_finished_onboarding():
     if not current_user.finished_onboarding and current_user.communities():
         current_user.finished_onboarding = True
         db.session.commit()
+
 
 def configure_bandwidth_cookies(response, low_bandwidth_mode):
     mode = "1" if low_bandwidth_mode else "0"

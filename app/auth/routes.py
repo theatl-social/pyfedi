@@ -207,7 +207,7 @@ def verify_email(token):
             if user.communities():
                 return redirect(url_for('main.index'))
             else:
-                return redirect(url_for('auth.trump_musk'))
+                return redirect(url_for('auth.filter_selection'))
 
 
 @bp.route('/validation_required')
@@ -313,7 +313,7 @@ def mastodon_authorize():
                         application_id=user.registration_application.id,
                     )
                     return redirect(url_for("auth.please_wait"))
-                return redirect_next_page() if len(user.communities()) >= 0 else redirect(url_for('auth.trump_musk'))
+                return redirect_next_page() if len(user.communities()) >= 0 else redirect(url_for('auth.filter_selection'))
 
     return handle_oauth_authorize(
         provider='mastodon',

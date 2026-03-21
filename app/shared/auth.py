@@ -95,7 +95,7 @@ def log_user_in(input, src):
         next_page = request.args.get('next')
         if not next_page or urlsplit(next_page).netloc != '':
             if len(user.communities()) == 0:
-                next_page = url_for('auth.trump_musk')
+                next_page = url_for('auth.filter_selection')
             else:
                 next_page = url_for('main.index')
         response = make_response(redirect(next_page))
