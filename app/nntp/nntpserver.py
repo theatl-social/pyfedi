@@ -615,6 +615,12 @@ class NNTPConnectionHandler(socketserver.BaseRequestHandler):
 
     def list(self) -> None:
         self.server.refresh()
+        
+        # Check if authentication is required and user is not authenticated
+        if self.server.auth and not self._authed:
+            self.send_lines(["480 Authentication required"])
+            return
+        
         command, *tokens = self.data.strip().split()
         keyword = tokens[0] if len(tokens) != 0 else None
         argument = tokens[1] if len(tokens) > 1 else None

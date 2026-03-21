@@ -99,11 +99,11 @@ def _post_body_text(post) -> str:
     parts = []
     url = ''
     if post.url:
-        parts.append(f"URL: {post.url}")
+        parts.append(post.url)
         url = post.url
     if post.type == 3 and post.image:
         if post.image.source_url != url:
-            parts.append(f"Image: {post.image.source_url}")
+            parts.append(f"Image - {post.image.source_url}")
     if post.body:
         parts.append(post.body)
     return "\n\n".join(parts)
