@@ -2067,6 +2067,9 @@ class Post(db.Model):
                 if is_ai and is_ai.status_code == 200:
                     is_ai_result = is_ai.json()
                     if is_ai_result['confidence'] > 0.8:
+                        if is_ai_result['detection_result'] == 'ai':
+                            post.ai_generated = True
+                            db.session.commit()
                         # use redis to keep track of the posts this person has done in the last day and whether each is AI-generated
                         from app import redis_client
 

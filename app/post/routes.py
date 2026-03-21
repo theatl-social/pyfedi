@@ -2325,6 +2325,7 @@ def post_check_ai(post_id):
                 return f'<div class="w-100 alert {result_type}">Detection blocked</div>'
             output = f'<div class="w-100 alert {result_type}">'
             output += 'Post: ' + is_ai_result['detection_result'].upper()
+            output += f' <a href="#" hx-post="/post/{post.id}/set_ai">' + _('Set AI flag on this post') + '</a>'
             output += '<br>'
             output += f"{int(is_ai_result['confidence'] * 100)}% confident"
             output += '</div>'
@@ -2341,6 +2342,14 @@ def post_check_ai(post_id):
             return output
     else:
         return _('Not configured.')
+
+
+@bp.route('/post/<int:post_id>/set_ai', methods=['POST'])
+def post_set_ai(post_id):
+    post = Post.query.get(post_id)
+    post.ai_generated = True
+    db.session.commit()
+    return 'Done'
 
 
 @bp.route('/post_reply/<int:post_reply_id>/check_ai', methods=['POST'])
