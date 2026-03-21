@@ -9,7 +9,7 @@ from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 
 from app import create_app, db, cli
-import arrow
+import pendulum
 from flask import session, g, json, request, current_app
 from sqlalchemy import text
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, \
@@ -29,7 +29,7 @@ cli.register(app)
 @app.context_processor
 def app_context_processor():
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
-                arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None, notif_server=current_app.config['NOTIF_SERVER'],
+                pendulum=pendulum, locale=g.locale if hasattr(g, 'locale') else None, notif_server=current_app.config['NOTIF_SERVER'],
                 site=g.site if hasattr(g, 'site') else None, nonce=g.nonce if hasattr(g, 'nonce') else None,
                 admin_ids=g.admin_ids if hasattr(g, 'admin_ids') else [], low_bandwidth=g.low_bandwidth if hasattr(g, 'low_bandwidth') else None,
                 can_translate=current_app.config['TRANSLATE_ENDPOINT'] != '', can_detect_ai=current_app.config['DETECT_AI_ENDPOINT'] != '',

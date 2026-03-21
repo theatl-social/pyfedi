@@ -38,7 +38,7 @@ from email.utils import formatdate
 from typing import Literal, TypedDict, cast
 from urllib.parse import urlparse
 
-import arrow
+import pendulum
 import httpx
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
@@ -57,9 +57,9 @@ from app.utils import get_task_session
 
 def http_date(epoch_seconds=None):
     if epoch_seconds is None:
-        epoch_seconds = arrow.utcnow().timestamp()
+        epoch_seconds = pendulum.now('UTC').timestamp()
     return formatdate(epoch_seconds, usegmt=True)  # takahe uses formatdate so let's try that
-    # formatted_date = arrow.get(epoch_seconds).format('ddd, DD MMM YYYY HH:mm:ss ZZ', 'en_US')     # mastodon does not like this
+    # formatted_date = pendulum.from_timestamp(epoch_seconds).format('ddd, DD MMM YYYY HH:mm:ss ZZ', locale='en_US')     # mastodon does not like this
     # return formatted_date
 
 
@@ -71,7 +71,7 @@ def format_ld_date(value: datetime) -> str:
 
 
 def parse_http_date(http_date_str):
-    parsed_date = arrow.get(http_date_str, 'ddd, DD MMM YYYY HH:mm:ss Z')
+    parsed_date = pendulum.from_format(http_date_str, 'ddd, DD MMM YYYY HH:mm:ss Z')
     return parsed_date.datetime
 
 
@@ -392,7 +392,7 @@ class HttpSignature:
         # Verify date header
         if "date" in request.headers and not skip_date:
             header_date = parse_http_date(request.headers["date"])
-            if abs((arrow.utcnow() - header_date).total_seconds()) > 3600:
+            if abs((pendulum.now('UTC') - header_date).seconds) > 3600:
                 raise VerificationFormatError("Date is too far away")
 
         # Get the signature details

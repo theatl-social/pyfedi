@@ -1257,11 +1257,11 @@ def post_reminder(post_id: int):
     form = NewReminderForm()
     if form.validate_on_submit():
         import dateparser
-        import arrow
+        import pendulum
         remind_at = dateparser.parse(form.remind_at.data, settings={'RELATIVE_BASE': datetime.now(),
                                                                     "RETURN_AS_TIMEZONE_AWARE": True}, languages=[get_locale()])
-        remind_at_utc = arrow.get(remind_at).to('UTC')
-        reminder = Reminder(user_id=current_user.id, remind_at=remind_at_utc.naive, reminder_type=1, reminder_destination=post.id)
+        remind_at_utc = pendulum.instance(remind_at).in_tz('UTC')
+        reminder = Reminder(user_id=current_user.id, remind_at=remind_at_utc.naive(), reminder_type=1, reminder_destination=post.id)
         db.session.add(reminder)
         db.session.commit()
         flash(_('Reminder added for %(when)s', when=str(remind_at)))
@@ -1282,11 +1282,11 @@ def post_reply_reminder(post_reply_id: int):
     form = NewReminderForm()
     if form.validate_on_submit():
         import dateparser
-        import arrow
+        import pendulum
         remind_at = dateparser.parse(form.remind_at.data, settings={'RELATIVE_BASE': datetime.now(),
                                                                     "RETURN_AS_TIMEZONE_AWARE": True})
-        remind_at_utc = arrow.get(remind_at).to("UTC")
-        reminder = Reminder(user_id=current_user.id, remind_at=remind_at_utc.naive, reminder_type=2, reminder_destination=post_reply.id)
+        remind_at_utc = pendulum.instance(remind_at).in_tz("UTC")
+        reminder = Reminder(user_id=current_user.id, remind_at=remind_at_utc.naive(), reminder_type=2, reminder_destination=post_reply.id)
         db.session.add(reminder)
         db.session.commit()
         flash(_('Reminder added for %(when)s', when=str(remind_at)))

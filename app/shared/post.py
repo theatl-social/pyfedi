@@ -6,7 +6,6 @@ from zoneinfo import ZoneInfo
 from datetime import datetime
 
 import boto3
-import arrow
 from PIL import Image, ImageOps
 from flask import flash, request, current_app, g
 from flask_babel import _, force_locale, gettext

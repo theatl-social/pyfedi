@@ -45,7 +45,7 @@
                 {% if post_reply.edited_at -%}
                     {{ _('edited') }} <time datetime="{{ localize_datetime(post_reply.posted_at) }}" title="{{ localize_datetime(post_reply.posted_at) }}">{{ localize_datetime(post_reply.edited_at, locale) }}</time>
                 {% else -%}
-                    <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ localize_datetime(post_reply.posted_at, locale) }}</time>
+                    <time datetime="{{ pendulum.instance(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ pendulum.instance(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ localize_datetime(post_reply.posted_at, locale) }}</time>
                 {% endif -%}
             </a></span><span class="visually-hidden"> {{ _('depth: %(comment_depth)d', comment_depth=post_reply.depth + 1) }}</span>
             {% if post_reply.has_been_reported() -%}

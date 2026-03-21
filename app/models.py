@@ -13,7 +13,7 @@ from typing import List, Union
 from urllib.parse import urlparse, parse_qs, urlencode
 from zoneinfo import ZoneInfo
 
-import arrow
+import pendulum
 import jwt
 from flask import current_app, g, json
 from flask_babel import _, lazy_gettext as _l
@@ -2322,9 +2322,9 @@ class Post(db.Model):
     def posted_at_localized(self, sort, locale):
         # some locales do not have a definition for 'weeks' so are unable to display some dates in some languages. Fall back to english for those languages.
         try:
-            return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale=locale)
+            return pendulum.instance(self.last_active if sort == 'active' else self.posted_at).diff_for_humans(locale=locale)
         except ValueError:
-            return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale='en')
+            return pendulum.instance(self.last_active if sort == 'active' else self.posted_at).diff_for_humans(locale='en')
 
     def notify_new_replies(self, user_id: int) -> bool:
         existing_notification = db.session.query(NotificationSubscription).\
@@ -2858,9 +2858,9 @@ class PostReply(db.Model):
 
     def posted_at_localized(self, locale):
         try:
-            return arrow.get(self.posted_at).humanize(locale=locale)
+            return pendulum.instance(self.posted_at).diff_for_humans(locale=locale)
         except ValueError:
-            return arrow.get(self.posted_at).humanize(locale='en')
+            return pendulum.instance(self.posted_at).diff_for_humans(locale='en')
 
     # the ap_id of the parent object, whether it's another PostReply or a Post
     def in_reply_to(self):

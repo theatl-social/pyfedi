@@ -10,7 +10,7 @@ from random import randint
 from typing import Union, Tuple, List
 from urllib.parse import urlparse, parse_qs
 
-import arrow
+import pendulum
 import boto3
 import httpx
 import pytesseract
@@ -2180,12 +2180,12 @@ def ban_user(blocker, blocked, community, core_activity):
                 try:
                     ban_until = datetime.fromisoformat(core_activity['expires'])
                 except ValueError:
-                    ban_until = arrow.get(core_activity['expires']).datetime
+                    ban_until = pendulum.parse(core_activity['expires'])
             elif 'endTime' in core_activity:
                 try:
                     ban_until = datetime.fromisoformat(core_activity['endTime'])
                 except ValueError:
-                    ban_until = arrow.get(core_activity['endTime']).datetime
+                    ban_until = pendulum.parse(core_activity['endTime'])
 
             if ban_until:
                 # Ensure ban_until is timezone-aware for comparison
