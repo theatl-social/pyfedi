@@ -119,6 +119,7 @@ def _post_to_info(post, domain: str, seq_num: int) -> ArticleInfo:
     body = _post_body_text(post)
     community_name = _community_group_name(post.community)
     date = _ensure_utc(post.posted_at or post.created_at)
+    web_url = f"https://{domain}/post/{post.id}"
     return ArticleInfo(
         number=seq_num,
         subject=post.title or "(no subject)",
@@ -128,7 +129,11 @@ def _post_to_info(post, domain: str, seq_num: int) -> ArticleInfo:
         references='',
         bytes=len(body.encode('utf-8')),
         lines=body.count('\n') + 1,
-        headers={'Newsgroups': community_name},
+        headers={
+            'Newsgroups': community_name,
+            'Archived-At': f'<{web_url}>',
+            'X-Url': web_url,
+        },
     )
 
 
@@ -144,6 +149,7 @@ def _reply_to_info(reply, domain: str, seq_num: int) -> ArticleInfo:
     subject = "(no subject)"
     if reply.post:
         subject = f"Re: {reply.post.title or '(no subject)'}"
+    web_url = f"https://{domain}/post/{reply.post_id}#comment-{reply.id}"
     return ArticleInfo(
         number=seq_num,
         subject=subject,
@@ -153,7 +159,11 @@ def _reply_to_info(reply, domain: str, seq_num: int) -> ArticleInfo:
         references=references,
         bytes=len(body.encode('utf-8')),
         lines=body.count('\n') + 1,
-        headers={'Newsgroups': community_name},
+        headers={
+            'Newsgroups': community_name,
+            'Archived-At': f'<{web_url}>',
+            'X-Url': web_url,
+        },
     )
 
 
