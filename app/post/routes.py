@@ -2347,8 +2347,9 @@ def post_check_ai(post_id):
 @bp.route('/post/<int:post_id>/set_ai', methods=['POST'])
 def post_set_ai(post_id):
     post = Post.query.get(post_id)
-    post.ai_generated = True
-    db.session.commit()
+    if current_user.is_authenticated and (current_user.is_admin_or_staff() or post.user_id == current_user.id or post.community.is_moderator()):
+        post.ai_generated = True
+        db.session.commit()
     return 'Done'
 
 
