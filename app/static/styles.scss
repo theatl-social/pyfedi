@@ -1,10 +1,8 @@
-/* */
 @import "scss/colours";
 @import "scss/mixins";
 @import "scss/typography";
 @import "scss/controls";
-
-$min-touch-target: 44px;
+@import "scss/layout";
 
 @view-transition {
   navigation: auto;
@@ -17,38 +15,38 @@ html {
 }
 
 body {
-  font-size: 0.95rem;
+  font-size: $fs0x95rem;
   --bs-body-font-family: system-ui,-apple-system,"Inter",Roboto,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,sans-serif,"Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji";
 
   &.embed {
     .post_teaser_body h3 {
-      font-size: 1.2rem!important;
-      margin-bottom: 2px;
+      font-size: $fs1x2rem!important;
+      margin-bottom: $px2;
     }
 
     .embed_logo {
       float: right;
-      width: 40px;
-      margin-right: 10px;
+      width: $px40;
+      margin-right: $px10;
     }
   }
 }
 
 a {
   text-decoration: none;
-  border: solid 2px transparent;
+  border: solid $px2 transparent;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  letter-spacing: -0.2px;
+  letter-spacing: $h-letterspacing;
 }
 
 tg-spoiler {
   border-style: solid;
   border-color: var(--bs-warning);
-  border-width: 1px;
-  border-radius: 3px;
-  padding: 0px 10px;
+  border-width: $px1bw;
+  border-radius: $px3;
+  padding: 0px $px10;
   color: transparent;
   &:hover {
     color: var(--bs-body-color);
@@ -57,8 +55,8 @@ tg-spoiler {
 
 .container {
   width: 100%;
-  padding-right: 0.75rem;
-  padding-left: 0.75rem;
+  padding-right: $rem075;
+  padding-left: $rem075;
   margin-right: auto;
   margin-left: auto;
   max-width: inherit;
@@ -99,9 +97,9 @@ tg-spoiler {
 
 .skip-link {
     position: absolute;
-    top: -40px; /* Adjust as needed to hide the link off-screen */
+    top: -($px40); /* Adjust as needed to hide the link off-screen */
     left: 0;
-    background-color: #fff; /* Background color to cover the link for screen readers */
+    background-color: $white; /* Background color to cover the link for screen readers */
     z-index: 1060; /* Ensure it's above other content */
 }
 
@@ -110,11 +108,11 @@ tg-spoiler {
 }
 
 .ml-3 {
-  margin-left: 1rem !important;
+  margin-left: $rem1 !important;
 }
 
 .home .ml-3 {
-  margin-left: 1px !important;
+  margin-left: $px1 !important;
 }
 
 #outer_container, footer {
@@ -127,7 +125,7 @@ tg-spoiler {
   }
 
   a:not(.btn):active {
-    border: dotted 2px #0A5CA0;
+    border: dotted $px2 $primary-colour-hover;
   }
 }
 
@@ -136,21 +134,21 @@ div.navbar {
   background-color: var(--bs-body-bg);
 
   @include breakpoint(tablet) {
-    border-bottom: 1px solid rgba(0, 40, 100, 0.12);
+    border-bottom: $px1bw solid $blue-rgba;
   }
 
   @media (min-width: 1400px) {
     .container-lg {
-      padding-right: 20px;
+      padding-right: $px20;
     }
   }
 }
 
 .navbar-brand {
-  line-height: 46px;
+  line-height: $px46;
   img {
-    margin-right: 20px;
-    margin-top: -1px;
+    margin-right: $px20;
+    margin-top: -($px1);
   }
 }
 
@@ -193,7 +191,7 @@ div.navbar {
     }
 
     *> * {
-      margin-left: 10px;
+      margin-left: $px10;
     }
 
     .dropdown-menu li {
@@ -206,11 +204,11 @@ div.navbar {
 
     .content-center {
       a {
-        margin-left: 5px;
-        margin-right: 5px;
+        margin-left: $px5;
+        margin-right: $px5;
         span {
-          margin-left: 5px;
-          margin-right: 5px;
+          margin-left: $px5;
+          margin-right: $px5;
         }
       }
 
@@ -239,16 +237,16 @@ div.navbar {
 }
 
 .navbar-light .navbar-nav .active > .nav-link {
-    color: white;
-    opacity: 0.9;
+    color: $white;
+    opacity: $opacity-09;
 }
 
 .tab-content > .tab-pane {
-  border-right: solid 1px #dee2e6;
-  border-bottom: solid 1px #dee2e6;
-  border-left: solid 1px #dee2e6;
-  border-radius: 0 0 5px 5px;
-  padding: 10px 15px 0 15px;
+  border-right: solid $px1bw $lighter-grey-decoration;
+  border-bottom: solid $px1bw $lighter-grey-decoration;
+  border-left: solid $px1bw $lighter-grey-decoration;
+  border-radius: 0 0 $px5 $px5;
+  padding: $px10 $px15 0 $px15;
 }
 
 .tag_cloud_page > .tab-pane {
@@ -262,7 +260,7 @@ div.navbar {
 }
 
 .dropdown-divider {
-  margin-right: 10px;
+  margin-right: $px10;
 }
 
 .communities_menu {
@@ -271,11 +269,11 @@ div.navbar {
   }
 
   h4 {
-    font-size: 1.2rem;
+    font-size: $h4;
   }
 
   h6 {
-    font-size: 1rem;
+    font-size: $h6;
   }
 
   .dropdown-item {
@@ -287,7 +285,7 @@ div.navbar {
     padding-left: 0;
     break-after: avoid-column;
     text-align: right;
-    font-size: 120%;
+    font-size: $fs120pc;
     @include breakpoint(tablet) {
       text-align: left;
     }
@@ -319,18 +317,18 @@ div.navbar {
 
   .jump_links {
     float: left;
-    padding-left: 12px;
-    padding-top: 3px;
+    padding-left: $px12;
+    padding-top: $px3;
 
     a {
-      margin-right: 5px;
+      margin-right: $px5;
     }
   }
 
   .community_filter {
     position: relative;
-    margin-left: 10px;
-    padding-right: 20px;
+    margin-left: $px10;
+    padding-right: $px20;
 
     .fe-search {
       position: absolute;
@@ -347,7 +345,7 @@ div.navbar {
       }
 
       .fe-search {
-        right: 7px;
+        right: $px7;
       }
     }
   }
@@ -364,7 +362,7 @@ div.navbar {
     padding-left: 0;
 
     .dropdown-header {
-      padding-left: 6px;
+      padding-left: $px6;
     }
     li {
 
@@ -373,26 +371,26 @@ div.navbar {
 }
 
 #outer_container {
-  margin-top: -1px;
+  margin-top: -($px1);
   @include breakpoint(tablet) {
-    margin-top: 1rem;
-    padding-top: 0.25rem;
+    margin-top: $rem1;
+    padding-top: $rem025;
   }
 }
 
 form {
   .mb-3 {
-    margin-bottom: 1.1rem;
+    margin-bottom: $rem1x1;
 
     &.required {
       > label {
         &:after {
           content: '*';
           color: red;
-          margin-left: 2px;
-          font-size: 80%;
+          margin-left: $px2;
+          font-size: $fs80pc;
           position: relative;
-          top: -1px;
+          top: -$px1;
         }
       }
     }
@@ -400,17 +398,17 @@ form {
 }
 
 .form-group {
-  margin-bottom: 1.1rem;
+  margin-bottom: $rem1x1;
 
   &.required {
     > label {
       &:after {
         content: '*';
         color: red;
-        margin-left: 2px;
-        font-size: 80%;
+        margin-left: $px2;
+        font-size: $fs80pc;
         position: relative;
-        top: -1px;
+        top: -$px1;
       }
     }
   }
@@ -418,7 +416,7 @@ form {
 
 .form-label {
   font-weight: 500;
-  margin-bottom: 0.25rem;
+  margin-bottom: $rem025;
 }
 
 .dropdown-menu.show {
@@ -441,13 +439,13 @@ form {
 }
 
 #breadcrumb_nav {
-  font-size: 87%;
+  font-size: $fs87pc;
 }
 
 @include breakpoint(tablet) {
   #breadcrumb_nav {
       display: block;
-      font-size: 87%;
+      font-size: $fs87pc;
 
       .breadcrumb {
           padding: 0;
@@ -471,26 +469,26 @@ form {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 1031;
   text-wrap: nowrap;
-  border-top-width: 2px!important;
+  border-top-width: $px2!important;
 
   a {
     flex-grow: 1;
     text-align: center;
-    height: 70px;
-    padding-top: 17px !important;
+    height: $px70;
+    padding-top: $px17 !important;
     @media (orientation: landscape) {
       height: 60px;
-      padding-top: 12px !important;
+      padding-top: $px12 !important;
     }
   }
 
   .fe {
-    font-size: 150%;
+    font-size: $fs150pc;
   }
 
   @media (max-width: 350px) {
     a {
-      font-size: 80%;
+      font-size: $fs80pc;
       padding-left: 0;
       padding-right: 0;
     }
@@ -501,7 +499,7 @@ form {
 
   @media (max-width: 420px) {
     a {
-      font-size: 80%;
+      font-size: $fs80pc;
       padding-left: 0;
       padding-right: 0;
     }
@@ -510,7 +508,7 @@ form {
 
 @media (max-width: 991.98px) {
   .footer {
-    padding-bottom: 70px !important;
+    padding-bottom: $px70 !important;
   }
 }
 
@@ -518,8 +516,8 @@ form {
   tbody tr th {
     padding: 0;
     a {
-      padding-top: 10px;
-      padding-bottom: 10px;
+      padding-top: $px10;
+      padding-bottom: $px10;
       width: 100%;
       display: inline-block;
     }
@@ -530,7 +528,7 @@ form {
     }
 
     tr td {
-      padding: 6px;
+      padding: $px6;
     }
   }
 }
@@ -541,7 +539,7 @@ form {
   grid-template-columns: repeat(auto-fit,minmax(152px, 1fr));
 
   > li {
-    padding-bottom: 20px;
+    padding-bottom: $px20;
   }
 }
 
@@ -549,11 +547,11 @@ form {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
-  border-radius: 5px 5px 0 0;   /* top-left | top-right | bottom-right | bottom-left */
+  border-radius: $px5 $px5 0 0;   /* top-left | top-right | bottom-right | bottom-left */
   height: 176px;
-  margin-left: -12px;
-  margin-right: -12px;
-  margin-top: -9px;
+  margin-left: -($px12);
+  margin-right: -($px12);
+  margin-top: -($px9);
 
   @include breakpoint(tablet) {
     height: 240px;
@@ -561,29 +559,29 @@ form {
 
   #breadcrumb_nav {
     @include breakpoint(tablet) {
-      padding-left: 13px;
-      padding-top: 13px;
+      padding-left: $px13;
+      padding-top: $px13;
     }
     .breadcrumb {
-      background-color: rgba(0,0,0,0.6);
+      background-color: $black-tint-03;
       display: inline-block;
-      padding: 5px 10px;
+      padding: $px5 $px10;
       @include breakpoint(tablet) {
-        border-radius: 6px;
+        border-radius: $px6;
       }
       margin-bottom: 0;
 
       .breadcrumb-item {
-        color: white;
+        color: $white;
         display: inline-block;
         a {
-          color: white;
+          color: $white;
         }
       }
 
       .breadcrumb-item + .breadcrumb-item::before {
           content: ">";
-         color: white;
+         color: $white;
       }
     }
   }
@@ -625,7 +623,7 @@ form {
 
 .form-check .form-check-input {
   position: relative;
-  top: 4px;
+  top: $px4;
 }
 
 .post_teaser_title_a {
@@ -633,7 +631,7 @@ form {
   overflow-wrap: break-word;
 
   &:visited {
-    color: color-mix(in srgb, var(--bs-link-color) 65%, white);
+    color: color-mix(in srgb, var(--bs-link-color) 65%, $white);
   }
 }
 
@@ -651,7 +649,7 @@ form {
 
 #post_reply_more_options {
   &.expanded {
-    margin-bottom: 15px;
+    margin-bottom: $px15;
   }
 }
 
@@ -664,7 +662,7 @@ ul.form-multicheck-columns {
   overflow-y: auto;
 
   li {
-    margin-right: 5px;
+    margin-right: $px5;
   }
 }
 
@@ -679,8 +677,8 @@ ul.form-multicheck-columns {
   text-wrap: none;
   text-wrap-mode: nowrap;
   .btn {
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: $px10;
+    padding-right: $px10;
   }
 }
 
@@ -694,7 +692,7 @@ ul.form-multicheck-columns {
   clear: both;
 
   .instance_sticky {
-    border-bottom: solid 2px var(--bs-success-border-subtle);
+    border-bottom: solid $px2 var(--bs-success-border-subtle);
 
     > .post_teaser {
       border-bottom: none !important;
@@ -704,19 +702,19 @@ ul.form-multicheck-columns {
       font-family: 'Feather' !important;
       content: "\e9d5 ";
       color: var(--bs-success);
-      margin-right: 0.25em;
+      margin-right: $em025;
     }
   }
 
   .post_teaser {
 
-    border-bottom: solid 2px $light-grey;
-    padding-top: 8px;
-    padding-bottom: 8px;
+    border-bottom: solid $px2 $light-grey;
+    padding-top: $px8;
+    padding-bottom: $px8;
 
     h3 {
-      font-size: 110%;
-      margin-top: 4px;
+      font-size: $h3post;
+      margin-top: $px4;
       margin-bottom: 0;
       overflow: hidden;
     }
@@ -731,7 +729,7 @@ ul.form-multicheck-columns {
       position: relative;
 
       .author {
-        margin-bottom: 30px;
+        margin-bottom: $px30;
         display: inline-block;
         max-width: 78%;
       }
@@ -739,7 +737,7 @@ ul.form-multicheck-columns {
 
     .col_thumbnail {
       float: right;
-      width: 70px;
+      width: $px70;
       position: relative;
       @include breakpoint(tablet) {
         width: 170px;
@@ -775,22 +773,22 @@ ul.form-multicheck-columns {
         display: block;
         position: absolute;
         right: 0;
-        background-color: rgba(256,256,256, 0.7);
-        padding-bottom: 1px;
-        padding-left: 1px;
-        border-radius: 2px;
+        background-color: $white-rgba;
+        padding-bottom: $px1;
+        padding-left: $px1;
+        border-radius: $px2;
         top: 0;
       }
 
       .fe-discussion, .fe-poll, .fe-link {
-        font-size: 52px;
-        opacity: 0.3;
+        font-size: $fs52px;
+        opacity: $opacity-03;
       }
 
       img {
         height: 60px;
         width: 60px;
-        border-radius: 5px;
+        border-radius: $px5;
         object-fit: cover;
         @include breakpoint(tablet) {
           height: 90px;
@@ -798,7 +796,7 @@ ul.form-multicheck-columns {
           max-width: 100%;
         }
         &.blur {
-          filter: blur(9px);
+          filter: blur($px9);
         }
       }
 
@@ -807,27 +805,27 @@ ul.form-multicheck-columns {
           background: none;
         }
         .fe::before {
-          font-size: 28px;
-          padding-right: 7px;
+          font-size: $fs28px;
+          padding-right: $px7;
         }
       }
 
       &.missing_thumbnail {
         .fe::before {
           font-size: x-large;
-          opacity: 0.8;
+          opacity: $opacity-08;
         }
       }
     }
     &.blocked {
-      opacity: 0.2;
-      font-size: 80%;
+      opacity: $opacity-02;
+      font-size: $fs80pc;
 
       .voting_buttons {
         width: 46px;
-        line-height: 24px;
+        line-height: $px24;
         .upvote_button, .downvote_button {
-          font-size: 80%;
+          font-size: $fs80pc;
         }
       }
     }
@@ -838,7 +836,7 @@ ul.form-multicheck-columns {
 
     .post_teaser_image_preview {
       img.blur {
-        filter: blur(24px);
+        filter: blur($px24);
       }
     }
   }
@@ -852,8 +850,8 @@ ul.form-multicheck-columns {
   position: relative;
   max-height: 100px;
   overflow: hidden;
-  padding-left: 3px;
-  padding-right: 3px;
+  padding-left: $px3;
+  padding-right: $px3;
 
   p {
     margin: 0;
@@ -870,7 +868,7 @@ ul.form-multicheck-columns {
     overflow: hidden;
 
     p {
-      filter: blur(6px);
+      filter: blur($px6);
       user-select: none;
     }
   }
@@ -878,25 +876,25 @@ ul.form-multicheck-columns {
 
 .post_teaser_image_preview {
   text-align: center;
-  margin-top: 10px;
+  margin-top: $px10;
   a {
     display: inline-block;
     max-width: 512px;
     max-height: 575px;
     overflow: hidden;
-    border-radius: 5px;
+    border-radius: $px5;
   }
   img {
     max-width: 100%;
     min-width: 150px;
-    margin-right: 4px;
+    margin-right: $px4;
     height: auto;
   }
 }
 
 .post_teaser_video_preview {
   text-align: center;
-  margin-top: 10px;
+  margin-top: $px10;
   position: relative;
 
   .fe-video {
@@ -904,14 +902,14 @@ ul.form-multicheck-columns {
     left: 43%;
     top: 40%;
     width: 13%;
-    font-size: 64px;
-    background-color: white;
-    opacity: 0.5;
+    font-size: $fs64px;
+    background-color: $white;
+    opacity: $opacity-05;
   }
 
   .video-wrapper {
     position: relative;
-    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    padding-bottom: $pc16x9; /* 16:9 aspect ratio */
     height: 0;
     overflow: hidden;
   }
@@ -924,7 +922,7 @@ ul.form-multicheck-columns {
     height: 100%;
     object-fit: cover;
     cursor: pointer;
-    border-radius: 5px;
+    border-radius: $px5;
   }
 
   .video-wrapper iframe {
@@ -937,7 +935,7 @@ ul.form-multicheck-columns {
   }
 
   .blur {
-    filter: blur(24px);
+    filter: blur($px24);
   }
 }
 
@@ -946,7 +944,7 @@ time {
 }
 
 .author {
-  padding-left: 3px;
+  padding-left: $px3;
 
   a {
     border-left: 0;
@@ -954,7 +952,7 @@ time {
 }
 
 .community_instance {
-  margin-left: -2px;
+  margin-left: -($px2);
   display: none;
 }
 
@@ -963,7 +961,7 @@ time {
   display: inline-block;
   width: 100%;
   overflow: hidden;
-  border-radius: 5px;
+  border-radius: $px5;
 }
 
 .post_utilities_bar {
@@ -986,10 +984,10 @@ time {
 
     .dropdown-item {
       white-space: unset;
-      line-height: 30px;
+      line-height: $px30;
 
       &:active {
-        line-height: 26px;
+        line-height: $px26;
       }
     }
   }
@@ -999,12 +997,12 @@ time {
   container-type: inline-size;
 
   .voting_buttons_new {
-    margin-left: -15px;
+    margin-left: -($px15);
   }
 
   .post_reply_count {
     justify-content: left;
-    margin-right: 8px;
+    margin-right: $px8;
   }
 
   @container (width < 400px) {
@@ -1034,7 +1032,7 @@ time {
   .column {
     flex: 1;
     padding: 0;
-    padding-right: 5px;
+    padding-right: $px5;
     &:last-child {
       padding-right: 0;
     }
@@ -1042,7 +1040,7 @@ time {
 
   .item {
     position: relative;
-    margin-bottom: 5px;
+    margin-bottom: $px5;
     overflow: hidden;
     img {
       width: 100%;
@@ -1054,15 +1052,15 @@ time {
       border: none;
 
       img.blur {
-        filter: blur(20px);
+        filter: blur($px20);
       }
     }
 
     .masonry_info {
       position: absolute;
       bottom: 0;
-      background-color: rgba(0, 0, 0, 0.7);
-      color: white;
+      background-color: $black-tint-04;
+      color: $white;
       width: 100%;
       text-align: center;
 
@@ -1074,11 +1072,11 @@ time {
         margin-bottom: 0;
 
         a {
-          color: white;
+          color: $white;
           text-decoration: none;
-          line-height: 40px;
+          line-height: $px40;
           @include breakpoint(laptop) {
-            line-height: 30px;
+            line-height: $px30;
           }
         }
       }
@@ -1092,8 +1090,8 @@ time {
           display: inline-flex;
 
           a {
-            color: white;
-            padding-top: 6px;
+            color: $white;
+            padding-top: $px6;
             @include breakpoint(laptop) {
               padding-top: 0;
             }
@@ -1102,18 +1100,18 @@ time {
           .upvote_button, .downvote_button {
             display: inline;
             color: white;
-            padding-top: 10px;
+            padding-top: $px10;
             @include breakpoint(laptop) {
-              padding-top: 5px;
+              padding-top: $px5;
             }
             width: 50%;
             position: relative;
 
             .htmx-indicator {
               position: absolute;
-              width: 20px;
-              height: 20px;
-              left: 7px;
+              width: $px20;
+              height: $px20;
+              left: $px7;
             }
           }
         }
@@ -1131,14 +1129,14 @@ time {
 
         .reply_col {
           justify-content: right;
-          padding-right: 5px;
+          padding-right: $px5;
           flex-grow: 1;
         }
       }
     }
 
     .masonry_info_no_image {
-      background-color: rgba(0, 0, 0, 0.2);
+      background-color: $black-tint-01;
       width: 100%;
       text-align: center;
       display:flex;
@@ -1167,7 +1165,7 @@ time {
 
 .url_thumbnail {
   float: right;
-  margin-top: -6px;
+  margin-top: -($px6);
 }
 
 .post_image {
@@ -1177,14 +1175,14 @@ time {
 }
 
 details {
-  margin-bottom: 1rem;
+  margin-bottom: $rem1;
 }
 
 .spoiler_block {
-  margin: 3px 0 0 1em;
-  padding: 0.5em 0.5em 0.5em 0.2em;
+  margin: $px3 0 0 $em1;
+  padding: $em05 $em05 $em05 $em02;
   border-left-style: solid;
-  border-left-width: 2px;
+  border-left-width: $px2;
   background-color: var(--bs-secondary-bg-subtle);
   border-left-color: var(--bs-secondary-border-subtle);
 
@@ -1193,7 +1191,7 @@ details {
   }
 
   table, img {
-    padding: 0.5em;
+    padding: $em05;
   }
 
   > details {
@@ -1204,42 +1202,42 @@ details {
 .render_username {
   display: inline;
   a img {
-    width: 20px;
-    height: 20px;
+    width: $px20;
+    height: $px20;
     border-radius: 50%;
     vertical-align: bottom;
     object-fit: cover;
   }
 
   .text-muted {
-    font-size: 13px;
+    font-size: $fs13px;
   }
 }
 
 .comments > .comment {
   margin-left: 0;
-  border-top: solid 1px $light-grey;
-  margin-right: 8px;
+  border-top: solid $px1bw $light-grey;
+  margin-right: $px8;
 
   .comment_time {
-    font-size: 87%;
-    --bs-text-opacity: 1;
+    font-size: $fs87pc;
+    --bs-text-opacity: #{$opacity-10};
     color: var(--bs-secondary-color) !important;
 
     a {
-      --bs-text-opacity: 1;
+      --bs-text-opacity: #{$opacity-10};
       color: var(--bs-secondary-color) !important;
     }
   }
 
   .comment_body {
     hr {
-      margin-left: 15px;
-      margin-right: 15px;
-      opacity: 0.1;
+      margin-left: $px15;
+      margin-right: $px15;
+      opacity: $opacity-01;
     }
     p {
-      padding-right: 9px;
+      padding-right: $px9;
     }
     p:last-child {
       margin-bottom: 0px;
@@ -1255,9 +1253,9 @@ details {
 
 [data-bs-theme=dark] {
   .post_list .post_teaser {
-    border-bottom: solid 1px $super-dark-grey;
+    border-bottom: solid $px1bw $super-dark-grey;
     .thumbnail .fe {
-      background-color: rgba(0,0,0,0.4);
+      background-color: $black-tint-02;
     }
   }
 
@@ -1268,7 +1266,7 @@ details {
   .downarea-textarea {
     .form-control {
       background-color: $super-dark-grey;
-      color: whitesmoke;
+      color: $whitesmoke;
     }
   }
 
@@ -1280,11 +1278,11 @@ details {
 
 
 #replies {
-  scroll-margin-top: 5em;
+  scroll-margin-top: $em5;
 }
 
 .post_replies > .col {
-  padding-right: 5px;
+  padding-right: $px5;
 }
 
 .post_type_image {
@@ -1332,7 +1330,7 @@ details {
     }
     &.voted_down {
       /* light red with a little transparnecy */
-      color: rgba(251, 74, 74, 0.846); 
+      color: $bright-red; 
       .fe {
         font-weight: bold;
         &:before {
@@ -1344,33 +1342,33 @@ details {
 
   .upvote_button {
     .htmx-indicator {
-      left: 13px;
-      top: 14px;
+      left: $px13;
+      top: $px14;
     }
   }
 
   .downvote_button {
     .htmx-indicator {
-      left: 12px;
-      top: 14px;
+      left: $px12;
+      top: $px14;
     }
   }
 
   .htmx-indicator{
     position: absolute;
-    left: 3px;
-    width: 20px;
-    height: 20px;
+    left: $px3;
+    width: $px20;
+    height: $px20;
     top: 0;
   }
   .htmx-request .htmx-indicator{
     display:inline;
     position: absolute;
-    width: 20px;
-    height: 20px;
-    right: 14px;
-    top: 5px;
-    opacity: 1!important;
+    width: $px20;
+    height: $px20;
+    right: $px14;
+    top: $px5;
+    opacity: $opacity-10!important;
   }
   .htmx-request.htmx-indicator{
     display:inline;
@@ -1381,24 +1379,24 @@ details {
   float: right;
   display: block;
   min-width: $min-touch-target + 10;
-  padding: 0 0 5px 5px;
-  line-height: 30px;
-  font-size: 14px;
+  padding: 0 0 $px5 $px5;
+  line-height: $px30;
+  font-size: $fs14px;
 
   @include breakpoint(laptop) {
     line-height: 25px;
   }
 
   div {
-    border: solid 1px $primary-colour;
+    border: solid $px1bw $primary-colour;
   }
 
   .upvote_button, .downvote_button {
     position: relative;
-    padding: 0 3px;
+    padding: 0 $px3;
     min-height: $min-touch-target;
     min-width: $min-touch-target;
-    border-radius: 3px;
+    border-radius: $px3;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1427,22 +1425,22 @@ details {
   }
 
   .downvote_button {
-    margin-top: 5px;
+    margin-top: $px5;
   }
 
   .htmx-indicator{
     position: absolute;
-    width: 20px;
+    width: $px20;
     height: 20px;
   }
   .htmx-request .htmx-indicator{
     display:inline;
     position: absolute;
-    width: 20px;
-    height: 20px;
-    right: 14px;
-    top: 5px;
-    opacity: 1!important;
+    width: $px20;
+    height: $px20;
+    right: $px14;
+    top: $px5;
+    opacity: $opacity-10!important;
   }
   .htmx-request.htmx-indicator{
     display:inline;
@@ -1455,17 +1453,17 @@ details {
 
 .comment {
   clear: both;
-  margin-left: 8px;
+  margin-left: $px8;
   padding-left: 0;
-  padding-top: 8px;
-  padding-right: 8px;
+  padding-top: $px8;
+  padding-right: $px8;
 
   &.distinguished {
     > .row:first-child {
       background-color: var(--bs-secondary-bg-subtle);
       border: solid;
       border-color: var(--bs-success);
-      border-width: 2px;
+      border-width: $px2;
     }
   }
 
@@ -1486,12 +1484,12 @@ details {
     display: block;
     text-align: center;
     background-color: $dark-grey;
-    color: white;
-    margin-bottom: 15px;
-    height: 30px;
+    color: $white;
+    margin-bottom: $px15;
+    height: $px30;
 
     .fe-angles-down, .fe-angles-up {
-      margin-top: 7px;
+      margin-top: $px7;
       display: inline-block;
     }
 
@@ -1515,7 +1513,7 @@ details {
   .comment_community {
     display: inline-block;
     img {
-      height: 1rem;
+      height: $rem1;
       width: auto;
     }
   }
@@ -1549,20 +1547,20 @@ details {
           height: 44px;
           text-align: center;
           vertical-align: middle;
-          line-height: 40px;
+          line-height: $px40;
 
       }
     }
 
     .notify_toggle {
-      font-size: 87%;
+      font-size: $fs87pc;
 
       a {
         width: 44px;
         height: 44px;
         text-align: center;
         vertical-align: middle;
-        line-height: 40px;
+        line-height: $px40;
       }
     }
 
@@ -1574,10 +1572,10 @@ details {
 
     .dropdown-item {
       white-space: unset;
-      line-height: 30px;
+      line-height: $px30;
 
       &:active {
-        line-height: 26px;
+        line-height: $px26;
       }
     }
 
@@ -1596,91 +1594,91 @@ details {
     margin-top: 0;
 
     &.depth_0 {
-      border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+      border-left: $px2 solid $depth-00 !important;
     }
 
     &.depth_1 {
-      border-left: 2px solid rgba(172, 157, 83, 0.6) !important;
+      border-left: $px2 solid $depth-01 !important;
     }
 
     &.depth_2 {
-      border-left: 2px solid rgba(113, 172, 83, 0.6) !important;
+      border-left: $px2 solid $depth-02 !important;
     }
 
     &.depth_3 {
-      border-left: 2px solid rgba(83, 172, 128, 0.6) !important;
+      border-left: $px2 solid $depth-03 !important;
     }
 
     &.depth_4 {
-      border-left: 2px solid rgba(83, 142, 172, 0.6) !important;
+      border-left: $px2 solid $depth-04 !important;
     }
 
     &.depth_5 {
-      border-left: 2px solid rgba(98, 83, 172, 0.5) !important;
+      border-left: $px2 solid $depth-05 !important;
     }
 
     &.depth_6 {
-      border-left: 2px solid rgba(172, 83, 172, 0.5) !important;
+      border-left: $px2 solid $depth-06 !important;
     }
 
     &.depth_7 {
-      border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+      border-left: $px2 solid $depth-07 !important;
     }
 
     &.depth_8 {
-      border-left: 2px solid rgba(172, 83, 83, 0.65) !important;
+      border-left: $px2 solid $depth-08 !important;
     }
 
     &.depth_9 {
-      border-left: 2px solid rgba(172, 83, 83, 0.78) !important;
+      border-left: $px2 solid $depth-09 !important;
     }
 
     &.depth_10 {
-      border-left: 2px solid rgba(172, 83, 83, 0.85) !important;
+      border-left: $px2 solid $depth-10 !important;
     }
 
     &.depth_11 {
-      border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+      border-left: $px2 solid $depth-11 !important;
     }
 
     &.depth_12 {
-      border-left: 2px solid rgba(172, 157, 83, 0.6) !important;
+      border-left: $px2 solid $depth-12 !important;
     }
 
     &.depth_13 {
-      border-left: 2px solid rgba(113, 172, 83, 0.6) !important;
+      border-left: $px2 solid $depth-13 !important;
     }
 
     &.depth_14 {
-      border-left: 2px solid rgba(83, 172, 128, 0.6) !important;
+      border-left: $px2 solid $depth-14 !important;
     }
 
     &.depth_15 {
-      border-left: 2px solid rgba(83, 142, 172, 0.6) !important;
+      border-left: $px2 solid $depth-15 !important;
     }
 
     &.depth_16 {
-      border-left: 2px solid rgba(98, 83, 172, 0.5) !important;
+      border-left: $px2 solid $depth-16 !important;
     }
 
     &.depth_17 {
-      border-left: 2px solid rgba(172, 83, 172, 0.5) !important;
+      border-left: $px2 solid $depth-17 !important;
     }
 
     &.depth_18 {
-      border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+      border-left: $px2 solid $depth-18 !important;
     }
 
     &.depth_19 {
-      border-left: 2px solid rgba(172, 83, 83, 0.65) !important;
+      border-left: $px2 solid $depth-19 !important;
     }
 
     &.depth_20 {
-      border-left: 2px solid rgba(172, 83, 83, 0.78) !important;
+      border-left: $px2 solid $depth-20 !important;
     }
 
     &.depth_21 {
-      border-left: 2px solid rgba(172, 83, 83, 0.85) !important;
+      border-left: $px2 solid $depth-21 !important;
     }
   }
 }
@@ -1693,7 +1691,7 @@ details {
       height: 44px;
       text-align: center;
       vertical-align: middle;
-      line-height: 40px;
+      line-height: $px40;
       display: inline-block;
     }
   }
@@ -1711,7 +1709,7 @@ details {
   #url {
     width: 297px;
     display: inline-block;
-    padding-left: 3px;
+    padding-left: $px3;
   }
 }
 
@@ -1739,7 +1737,7 @@ details {
 
   li {
     display: inline-block;
-    padding-right: 5px;
+    padding-right: $px5;
   }
 }
 
@@ -1755,13 +1753,13 @@ a.unread, div.unread {
   &:before {
     content: '';
     display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 6px;
+    width: $px8;
+    height: $px8;
+    margin-right: $px6;
     background-color: red;
     border-radius: 50%;
     vertical-align: middle;
-    margin-top: -2px;
+    margin-top: -($px2);
   }
 }
 
@@ -1770,7 +1768,7 @@ a.unread, div.unread {
 
   div.child {
     flex: 1;
-    width: 1px;
+    width: $px1;
     overflow-x: hidden;
     text-overflow: ellipsis;
   }
@@ -1873,16 +1871,16 @@ a.unread, div.unread {
   }
 
   .post_image img {
-    margin-bottom: 15px;
+    margin-bottom: $px15;
   }
 
   blockquote {
-    padding: 0.2em 5px;
+    padding: $em02 $px5;
     font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
-    margin: 0 3% 6px 3%;
-    font-size: 95%;
+    margin: 0 $pc3 $px6 $pc3;
+    font-size: $fs95pc;
     border-left-style: solid;
-    border-left-width: 4px;
+    border-left-width: $px4;
     background-color: var(--bs-secondary-bg-subtle);
     border-left-color: var(--bs-secondary-border-subtle);
 
@@ -1894,22 +1892,22 @@ a.unread, div.unread {
   pre {
     background: var(--bs-secondary-bg);
     font-family: monospace;
-    padding-left: 0.5rem;
-    margin-left: 1.25rem;
+    padding-left: $rem05;
+    margin-left: $rem1x25;
     border-style: solid;
     border-color: var(--bs-secondary-border-subtle);
-    border-width: 2px;
-    border-radius: 5px;
+    border-width: $px2;
+    border-radius: $px5;
   }
 
   p > code {
     background: var(--bs-secondary-bg);
-    padding: 0.25rem 0.5rem;
-    border-radius: 5px;
+    padding: $rem025 $rem05;
+    border-radius: $px5;
     position: relative;
 
     .btn {
-      --bs-btn-padding-x: 0.25rem ! important;
+      --bs-btn-padding-x: #{$rem025} ! important;
       --bs-btn-padding-y: 0 ! important;
     }
   }
@@ -1919,8 +1917,8 @@ a.unread, div.unread {
   }
 
   code .btn:hover {
-      background-color: rgba(0, 0, 0, 0.3);
-      color: white;
+      background-color: $black-tint-015;
+      color: $white;
   }
 
   table.table {
@@ -1931,7 +1929,7 @@ a.unread, div.unread {
 
   ol, ul {
     li {
-      margin-bottom: 7px;
+      margin-bottom: $px7;
 
       > p {
         margin-bottom: 0;
@@ -1940,20 +1938,20 @@ a.unread, div.unread {
   }
 
   img[align="left"] {
-    margin-right: 10px;
-    margin-bottom: 10px;
+    margin-right: $px10;
+    margin-bottom: $px10;
     float: left;
   }
 
   img[align="right"] {
-    margin-left: 10px;
-    margin-bottom: 10px;
+    margin-left: $px10;
+    margin-bottom: $px10;
     float: right;
   }
 
   img[align="middle"] {
     display: block;
-    margin: 0 auto 10px auto;
+    margin: 0 auto $px10 auto;
     float: none;
   }
 }
@@ -1978,46 +1976,46 @@ a.unread, div.unread {
 }
 
 .warning_badge {
-  font-size: 12px;
-  border-radius: 2px;
-  margin-right: 2px;
+  font-size: $fs12px;
+  border-radius: $px2;
+  margin-right: $px2;
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: text-bottom;
-  line-height: 20px;
-  padding: 0 4px;
+  line-height: $px20;
+  padding: 0 $px4;
 
   &.nsfw {
-    border:1px solid #FF585B;
-    color:#FF585B;
+    border:$px1bw solid $danger;
+    color:$danger;
   }
 
   &.nsfl {
-    border:1px solid black;
-    color:black;
+    border:$px1bw solid $black;
+    color:$black;
   }
 
   &.ai_generated {
-    border:1px solid #FF585B;
-    color:#FF585B;
+    border:$px1bw solid $danger;
+    color:$danger;
   }
 }
 
 h1 .warning_badge {
   position: relative;
-  left: 15px;
-  top: -6px;
+  left: $px15;
+  top: -($px6);
 }
 
 [data-bs-theme=dark] .warning_badge.nsfl {
-  border:1px solid white;
-  color:white;
+  border:$px1bw solid $white;
+  color:$white;
 }
 
 .post_title {
   .warning_badge {
     line-height: 32px;
-    margin-left: 15px;
+    margin-left: $px15;
   }
 }
 
@@ -2029,7 +2027,7 @@ h1 .warning_badge {
       width: 70%;
     }
     max-width: 100%;
-    margin-bottom: 15px;
+    margin-bottom: $px15;
     clear: both;
 
     &.from_other_party {
@@ -2074,7 +2072,7 @@ h1 .warning_badge {
 #post_reply_markdown_editor_enabler {
   display: none;
   position: absolute;
-  bottom: 3px;
+  bottom: $px3;
   right: 0;
   @include breakpoint(phablet) {
     display: inline-block;
@@ -2083,7 +2081,7 @@ h1 .warning_badge {
 
 .create_post_markdown_editor_enabler {
   text-align: right;
-  margin-bottom: 10px;
+  margin-bottom: $px10;
   display: block;
 }
 
@@ -2103,7 +2101,7 @@ h1 .warning_badge {
   max-height: 90vh;
 
   &.blur {
-    filter: blur(24px);
+    filter: blur($px24);
   }
 }
 
@@ -2115,7 +2113,7 @@ h1 .warning_badge {
     select {
       max-width: 150px;
       float: right;
-      margin-top: -5px;
+      margin-top: -($px5);
     }
   }
 }
@@ -2128,7 +2126,7 @@ h1 .warning_badge {
 }
 
 #pollChoicesFieldset {
-  margin-bottom: 20px;
+  margin-bottom: $px20;
 }
 
 .post_poll {
@@ -2136,14 +2134,14 @@ h1 .warning_badge {
     list-style: none;
     padding-left: 0;
     li {
-      margin-bottom: 5px;
+      margin-bottom: $px5;
 
       .vote_bar {
         .vote_score {
           background-color: $grey;
-          color: white;
+          color: $white;
           text-align: right;
-          padding-right: 5px;
+          padding-right: $px5;
           font-weight: bold;
         }
       }
@@ -2162,34 +2160,34 @@ h1 .warning_badge {
 }
 
 .card-title {
-  font-size: 140%;
+  font-size: $fs140pc;
 }
 
 .card-header {
   h2 {
-    margin-bottom: 5px;
+    margin-bottom: $px5;
   }
 }
 
 .alert-info, .alert-message, .alert-error {
-  color: #0c5460;
-  background-color: #d1ecf1;
-  border-color: #bee5eb;
+  color: $teal;
+  background-color: $white-blue;
+  border-color: $whiter-blue;
 }
 
 .alert-error {
-    color: #722047;
-    background-color: #f8d7da;
+    color: $burgundy;
+    background-color: $light-pink;
 }
 
 .main_pane {
   /* Ensure a little space after pagination on mobile. */
-  padding-bottom: 12px;
+  padding-bottom: $px12;
 
   @include breakpoint(tablet) {
-    border: solid 1px $light-grey;
-    border-radius: 5px;
-    padding-top: 8px;
+    border: solid $px1bw $light-grey;
+    border-radius: $px5;
+    padding-top: $px8;
   }
 
   .url_thumbnail {
@@ -2231,32 +2229,32 @@ h1 .warning_badge {
 }
 
 [data-bs-theme="dark"] .full .ts-control {
-  background-color: #424549 !important;
-  color: #eee !important;
+  background-color: $super-dark-grey !important;
+  color: $lightest-grey !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown {
-  background-color: #424549 !important;
-  color: #eee !important;
+  background-color: $super-dark-grey !important;
+  color: $lightest-grey !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown .active {
-  background-color: #424549 !important;
-  color: #eee !important;
+  background-color: $super-dark-grey !important;
+  color: $lightest-grey !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown .optgroup-header {
-  background-color: #424549 !important;
-  color: #eee !important;
+  background-color: $super-dark-grey !important;
+  color: $lightest-grey !important;
 }
 
 .community_icon {
   width: 20vw;
   height: 20vw;
-  max-width: 30px!important;
-  max-height: 30px;
-  min-width: 20px;
-  min-height: 20px;
+  max-width: $px30!important;
+  max-height: $px30;
+  min-width: $px20;
+  min-height: $px20;
   vertical-align: text-top;
   object-fit: cover;
 }
@@ -2278,9 +2276,9 @@ h1 .warning_badge {
 }
 
 .community_icon_small {
-  width: 20px;
-  height: 20px;
-  margin-right: 3px;
+  width: $px20;
+  height: $px20;
+  margin-right: $px3;
   object-fit: cover;
   font-size: 0;
 }
@@ -2310,33 +2308,33 @@ h1 .warning_badge {
 .external_link_icon {
   width: 12px;
   height: 12px;
-  margin-left: 4px;
-  margin-bottom: 3px;
+  margin-left: $px4;
+  margin-bottom: $px3;
 }
 
 form {
   h5 {
-    padding-top: 12px;
+    padding-top: $px12;
   }
 }
 
 .coolfieldset, .coolfieldset.expanded{
-  border:1px solid $light-grey;
-  border-radius: 5px;
-  padding: 0 20px;
+  border:$px1bw solid $light-grey;
+  border-radius: $px5;
+  padding: 0 $px20;
 }
 
 .coolfieldset.collapsed{
   border:0;
-  border-top:1px solid $grey;
+  border-top:$px1bw solid $grey;
   border-radius: 0;
 }
 
 .coolfieldset legend{
-  padding-left:13px;
+  padding-left:$px13;
   font-weight:bold;
   cursor:pointer;
-  background-color: white;
+  background-color: $white;
   display: block;
   position: relative;
   top: -11px;
@@ -2347,29 +2345,29 @@ form {
 }
 
 .coolfieldset legend, .coolfieldset.expanded legend {
-	background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left;
 }
 
 .coolfieldset.collapsed legend{
-	background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
 }
 
 .coolfieldset.expanded .coolfieldset.collapsed legend {
-	background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
 }
 
 .domain_link {
-  color: #777;
-  font-size: 73%;
+  color: $dark-grey;
+  font-size: $fs73pc;
   a {
-    color: #777;
+    color: $dark-grey;
   }
 }
 
 .post_flair {
-  font-size: 73%;
-  padding: 1px 3px;
-  border-radius: 3px;
+  font-size: $fs73pc;
+  padding: $px1 $px3;
+  border-radius: $px3;
   text-wrap: nowrap;
 }
 
@@ -2389,14 +2387,14 @@ form {
 #image_preview {
   max-width: 200px;
   display: none;
-  margin-top: -10px;
-  margin-bottom: 10px;
+  margin-top: -($px10);
+  margin-bottom: $px10;
 }
 
 #image_preview_edit {
   max-width: 200px;
-  margin-top: -10px;
-  margin-bottom: 10px;
+  margin-top: -($px10);
+  margin-bottom: $px10;
 }
 
 #search_community {
@@ -2406,27 +2404,27 @@ form {
 .post_flair_sidepane {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: $px8;
 
   .post_flair {
-    font-size: 90%;
-    padding: 2px 4px;
-    line-height: 20px;
+    font-size: $fs90pc;
+    padding: $px2 $px4;
+    line-height: $px20;
     display: inline-block;
-    border-radius: 4px;
+    border-radius: $px4;
     white-space: nowrap;
     text-align: center;
   }
-  margin-top: 12px;
+  margin-top: $px12;
 }
 
 .user_flair, .user_note {
-  font-size: 87%;
+  font-size: $fs87pc;
   background-color: $lightest-grey;
-  border-radius: 3px;
-  border: solid 1px $grey;
+  border-radius: $px3;
+  border: solid $px1bw $grey;
   color: $super-dark-grey;
-  padding: 0px 3px 0px 3px;
+  padding: 0px $px3 0px $px3;
   display: inline-block;
 }
 
@@ -2448,10 +2446,10 @@ form {
 
 .communities_table tr td {
   vertical-align: middle;
-  padding-top: 6px;
+  padding-top: $px6;
 
   &:first-child {
-    padding-top: 8px;
+    padding-top: $px8;
   }
 }
 
@@ -2482,19 +2480,19 @@ form {
   margin-bottom: 0;
 
   li {
-    margin-bottom: 15px;
+    margin-bottom: $px15;
 
     .fe {
       position: relative;
-      top: 1px;
+      top: $px1;
     }
   }
 }
 
 .field_hint {
-  margin-top: -15px;
+  margin-top: -($px15);
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: $px10;
 }
 
 @include breakpoint(tablet) {
@@ -2521,37 +2519,37 @@ form {
 
 .modlog_link {
   float: right;
-  margin-top:5px;
+  margin-top:$px5;
 }
 
 .post_teaser.reported, .comment.reported {
   border-style: solid !important;
   border-color: var(--bs-danger) !important;
-  border-width: 2px !important;
+  border-width: $px2 !important;
   background-color: var(--bs-secondary-bg);
 }
 
 .post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
   img {
-    filter: grayscale(100%) blur(6px)!important;
+    filter: grayscale(100%) blur($px6)!important;
   }
 }
 
 .comment.answer {
     border-style: solid !important;
   border-color: var(--bs-form-valid-border-color) !important;
-  border-width: 2px !important;
+  border-width: $px2 !important;
   background-color: var(--bs-info-bg-subtle);
 }
 
 .blocked_image {
   img {
-    filter: grayscale(100%) blur(3px)!important;
+    filter: grayscale(100%) blur($px3)!important;
   }
 }
 
 .dropdown-header {
-  color: black;
+  color: $black;
 }
 
 .current_post {
@@ -2567,36 +2565,36 @@ form {
 
 .h1, h1 {
   @include breakpoint(tablet) {
-    font-size: 2rem;
+    font-size: $h1;
   }
 }
 
 .h2, h2 {
   @include breakpoint(tablet) {
-    font-size: 1.8rem;
+    font-size: $h2;
   }
 }
 
 .h3, h3 {
   @include breakpoint(tablet) {
-    font-size: 1.6rem;
+    font-size: $h3;
   }
 }
 
 .h4, h4 {
   @include breakpoint(tablet) {
-    font-size: 1.25rem;
+    font-size: $h4;
   }
 }
 
 .sender_list {
-  border-right: solid 1px #ddd;
+  border-right: solid $px1bw $light-grey;
 }
 
 .message {
-  border: solid 1px #ddd;
-  border-radius: 5px;
-  padding: 8px 15px 0 15px;
+  border: solid $px1bw $light-grey;
+  border-radius: $px5;
+  padding: $px8 $px15 0 $px15;
 
   &.from_other_party {
       float: right;
@@ -2623,9 +2621,9 @@ form {
 
 #subtopic_nav {
   position: relative;
-  left: -15px;
+  left: -($px15);
   li a {
-    border: dotted 2px transparent;
+    border: dotted $px2 transparent;
   }
 }
 
@@ -2639,12 +2637,12 @@ form {
 }
 
 #home_announcement {
-  padding: 0.5rem 1rem;
+  padding: $rem05 $rem1;
   color: var(--bs-card-cap-color);
   background-color: rgba(var(--bs-body-color-rgb), 0.03);
   border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
-  margin-top: -8px;
-  margin-bottom: 8px;
+  margin-top: -($px8);
+  margin-bottom: $px8;
   margin-right: calc(var(--bs-gutter-x) * -.5);
   margin-left: calc(var(--bs-gutter-x) * -.5);
 
@@ -2659,8 +2657,8 @@ form {
 
 .post_translate_all_icon {
   float: right;
-  margin-top: 8px;
-  margin-right: 8px;
+  margin-top: $px8;
+  margin-right: $px8;
 }
 
 .render_username {
@@ -2671,16 +2669,16 @@ form {
 
     &.donor {
       img {
-        box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px;
+        box-shadow: $black-tint-015 0px $px2 $px6;
       }
     }
   }
 
   .author_link + .user_preview {
     position: absolute;
-    top: 17px;
+    top: $px17;
     left: 0;
-    background-color: white;
+    background-color: $white;
     z-index: 20;
     width: 320px;
 
@@ -2693,7 +2691,7 @@ form {
     width: 300px;
 
     p {
-      font-size: 13px;
+      font-size: $fs13px;
     }
 
     .preview_avatar_image {
@@ -2711,30 +2709,30 @@ form {
 }
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {
-  border: solid 1px #ddd;
-  border-radius: 5px;
-  padding: 5px 10px;
-  margin-bottom: 15px;
+  border: solid $px1bw $light-grey;
+  border-radius: $px5;
+  padding: $px5 $px10;
+  margin-bottom: $px15;
 }
 
 #typeTab {
   a:not(.btn):active {
-    border-width: 1px;
+    border-width: $px1bw;
   }
 }
 
 #communitySidebar {
   color: var(--bs-body-color);
   background-color: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color);
+  border: $px1bw solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
   max-width: 345px;
   max-height: 90vh;
-  padding: 1rem;
+  padding: $rem1;
   box-shadow: var(--bs-box-shadow);
 
   &::backdrop {
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: $black-tint-025;
   }
 
   img {
@@ -2753,9 +2751,9 @@ form {
 
 /* Voting dialog positioning */
 #voting_dialog {
-  border: 1px solid var(--bs-border-color);
+  border: $px1bw solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  box-shadow: 0 $rem05 $rem1 $black-tint-001;
   background-color: var(--bs-body-bg);
   color: var(--bs-body-color);
   padding: 0;
@@ -2763,21 +2761,21 @@ form {
   width: max-content;
 
   &::backdrop {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: $black-tint-015;
   }
 
   .btn {
     justify-content: flex-start;
 
     i {
-      margin-right: 0.5rem;
+      margin-right: $rem05;
     }
   }
 
 }
 
 #reaction_dialog {
-  padding: 10px;
+  padding: $px10;
 }
 
 .message_reactions {
@@ -2785,13 +2783,13 @@ form {
     flex-wrap: wrap;
     gap: var(--bs-spacer-1);
     max-width: 100%;
-    row-gap: 0.3rem;
+    row-gap: $rem03;
 
     overflow: hidden;
     user-select: none;
 
     &:has(.message_reaction) {
-        margin-top: 4px;
+        margin-top: $px4;
     }
 
     .message_reaction_container {
@@ -2805,7 +2803,7 @@ form {
 
     .message_reaction {
         display: flex;
-        padding: 1.5px 4px 1.5px 3px;
+        padding: $px1x5 $px4 $px1x5 $px3;
         box-sizing: border-box;
         min-width: 44px;
         cursor: pointer;
@@ -2813,10 +2811,10 @@ form {
         line-height: 1;
         color: var(--bs-body-color);
         background-color: var(--bs-secondary-bg);
-        border: 1px solid var(--bs-border-color);
+        border: $px1bw solid var(--bs-border-color);
         border-radius: 21px;
-        box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
-        height: 30px;
+        box-shadow: inset 0 0 $px5 0 $black-tint-00;
+        height: $px30;
 
         transition:
             transform 100ms linear,
@@ -2824,7 +2822,7 @@ form {
 
         div {
           position: relative;
-          top: 1px;
+          top: $px1;
         }
 
         &.reacted {
@@ -2832,8 +2830,8 @@ form {
             background-color: var(--bs-primary-bg-subtle);
             border-color: var(--bs-primary-border-subtle);
 
-            border-width: 1.5px;
-            padding: 1px 4px 1px 3px;
+            border-width: $px1x5;
+            padding: $px1 $px4 $px1 $px3;
 
             font-weight: var(--bs-font-weight-semibold);
             box-shadow: none;
@@ -2852,29 +2850,29 @@ form {
         }
 
         .emoji {
-          margin: 2px 3px;
-          padding: 2px 0px;
-          height: 20px;
-          width: 20px;
+          margin: $px2 $px3;
+          padding: $px2 0px;
+          height: $px20;
+          width: $px20;
           flex-shrink: 0;
           overflow: hidden;
-          font-size: 17px;
+          font-size: $fs17px;
 
           img {
-            margin-top: -2px;
+            margin-top: -(px2);
           }
         }
 
         .emoji_alt_code {
-            margin: 1px 3px;
-            font-size: 0.8em;
+            margin: $px1 $px3;
+            font-size: $fs0x8em;
         }
     }
 
     .message_reaction_count {
-        font-size: 90%;
-        margin: 0 3px;
-        line-height: 1.0317em;
+        font-size: $fs90pc;
+        margin: 0 $px3;
+        line-height: $fs1x0317em;
         align-self: center;
     }
 
@@ -2896,15 +2894,15 @@ form {
         visibility: hidden;
         pointer-events: none;
 
-        padding: 4px 6px;
+        padding: $px4 $px6;
         border-radius: 21px;
 
         color: var(--bs-secondary-color);
         background-color: var(--bs-body-bg);
-        border: 1px solid var(--bs-border-color);
+        border: $px1bw solid var(--bs-border-color);
 
         & i {
-            font-size: 1em;
+            font-size: $fs1em;
             color: var(--bs-secondary-color);
         }
 
@@ -2917,16 +2915,16 @@ form {
             background-color: var(--bs-secondary-bg);
             border-color: var(--bs-primary-border-subtle);
 
-            box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+            box-shadow: inset 0 0 $px5 0 $black-tint-00;
             cursor: pointer;
-            opacity: 1;
+            opacity: $opacity-10;
         }
 
         .message_reaction_count {
             font-weight: 700;
             color: var(--bs-secondary-color);
             margin-right: 0;
-            line-height: 14px;
+            line-height: $fs14px;
         }
 
         &:hover .message_reaction_count {
@@ -2947,7 +2945,7 @@ form {
 /* Visually hide radios but keep them accessible */
 .emoji-picker input[type="radio"] {
   position: absolute;
-  opacity: 0;
+  opacity: $opacity-00;
   pointer-events: none;
 }
 
@@ -2955,21 +2953,21 @@ form {
 .emoji-picker label {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: $rem075;
   cursor: pointer;
   width: 100%;
 }
 
 /* Emoji styling */
 .emoji-picker .emoji {
-  font-size: 1.45rem;
+  font-size: $fs1x45rem;
   line-height: 1;
 }
 
 /* Highlight selected item */
 .emoji-picker input[type="radio"]:checked + label {
   background-color: var(--bs-primary-bg-subtle);
-  border-radius: 0.375rem;
+  border-radius: $rem0375;
 }
 
 /* Optional hover */
@@ -2993,7 +2991,7 @@ form {
 
 #side_pane {
     .list-group-item .text-muted {
-      font-size: 87%;
+      font-size: $fs87pc;
     }
 }
 
@@ -3004,13 +3002,13 @@ form {
 
 .showPassword, .hidePassword {
 	position: absolute;
-	right: 6px;
-    top: 30px;
+	right: $px6;
+    top: $px30;
 
 	img {
-		opacity: 0.5;
-  	    width: 30px;
-  		height: 30px;
+		opacity: $opacity-05;
+  	    width: $px30;
+  		height: $px30;
 	}
 }
 
@@ -3028,10 +3026,10 @@ form {
 
 .user-suggestion-box {
   position: absolute;
-  background: var(--bs-body-bg, #fff);
-  border: 1px solid var(--bs-border-color, #dee2e6);
+  background: var(--bs-body-bg, $white);
+  border: $px1bw solid var(--bs-border-color, $lighter-grey-decoration);
   border-radius: 0.375rem;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  box-shadow: 0 $rem0125 $rem025 $black-tint-000;
   max-height: 300px;
   overflow: hidden;
   z-index: 9999;
@@ -3039,8 +3037,8 @@ form {
 }
 
 #typeTab .nav-link {
-  padding-left: 3px;
-  padding-right: 3px;
+  padding-left: $px3;
+  padding-right: $px3;
 }
 
 #registration_captcha {
@@ -3058,7 +3056,7 @@ form {
 
 
 .accordion-button {
-  padding: 7px 12px;
+  padding: $px7 $px12;
 }
 
 .blink {
@@ -3074,8 +3072,8 @@ form {
   }
 
   img {
-    width: 20px;
-    height: 20px;
+    width: $px20;
+    height: $px20;
   }
 }
 
@@ -3101,35 +3099,35 @@ form {
 }
 
 [data-bs-theme="dark"] .dropdown-header {
-  color: white;
+  color: $white;
 }
 
 
 .coolfieldset.expanded legend {
-	background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left;
 }
 
 [data-bs-theme="dark"] .coolfieldset legend {
-	background: #424549 url(/static/images/expanded.gif) no-repeat center left;
+	background: $super-dark-grey url(/static/images/expanded.gif) no-repeat center left;
 }
 
 [data-bs-theme="dark"] .coolfieldset.collapsed legend{
-	background: #424549 url(/static/images/collapsed.gif) no-repeat center left;
+	background: $super-dark-grey url(/static/images/collapsed.gif) no-repeat center left;
 }
 
 [data-bs-theme="dark"] .post_teaser_title_a {
 
     &:visited {
-      color: color-mix(in srgb, var(--bs-link-color) 65%, black);
+      color: color-mix(in srgb, var(--bs-link-color) 65%, $black);
     }
 }
 
 [data-bs-theme="dark"] .nav-link:focus-visible {
-  box-shadow: 0 0 0 .25rem rgba(253,253,253,.5);
+  box-shadow: 0 0 0 .25rem $white-rgba-02;
 }
 
 [data-bs-theme="dark"] .skip-link {
-  color: black;
+  color: $black;
 }
 
 [data-bs-theme="dark"] .share_desktop img {

@@ -1,38 +1,42 @@
+@import "colours";
+@import "layout";
+
 @media (prefers-color-scheme: dark) {
+
   body {
-    background-color: #f7f7f7;
+    background-color: $off-white;
   }
 
   body nav.navbar {
-    background-color: #f7f7f7 !important;
+    background-color: $off-white !important;
   }
 
   .card {
-    background-color: #f7f7f7;
+    background-color: $off-white;
   }
 
   .form-control, .dark-form-control {
-    border: 1px solid rgba(0, 40, 100, 0.12);
-    border-radius: 3px;
+    border: $px1 solid $blue-rgba-03;
+    border-radius: $px3;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.9375rem;
+    padding: $rem0375 $rem075;
+    font-size: $fs0x9375rem;
   }
 
   .form-control::placeholder {
-    color: #FCFDFD;
+    color: $light-white;
   }
 
   .dropdown-menu {
-    background-color: #D3D7CF;
+    background-color: $lighter-grey;
   }
 
   .dropdown-header {
-    color: white;
+    color: $white;
   }
 
   .table td {
-    border-top-color: #2D3848;
+    border-top-color: #grey-blue;
   }
 
 }

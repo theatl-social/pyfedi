@@ -1,12 +1,95 @@
-$primary-colour: #0071CE;
-$primary-colour-hover: #0A5CA0;
+$primary-colour: #0071CE; // blue
+$primary-colour-hover: #0A5CA0; // blue-shade, also used as dotted border
+
+$blue-bright: #007bff; // _controls, secondary button
+$blue-faded: #0069d9; // _controls, secondary button hover
+$blue-fade: #0062cc; // _controls, secondary button border (similar colour to $blue-faded)
+$blue-light: #d8e5ee; // _controls, table striped, zebra
+$blue-mid: #1991eb; // _controls, form-control focus (almost identical colour to $primary-colour)
+
+$blue-rgba: rgba(0, 40, 100, 0.12); // styles.scss and _controls for border colour
+$blue-rgba-02: rgba(70, 127, 207, 0.25); // _controls box-shadow
+$blue-rgba-03: rgba(0, 40, 100, 0.12); // _dark form-control border
+
 $green: #00b550;
 $green-hover: #83f188;
-$lightest-grey: #eee;
-$light-grey: #ddd;
+
+// colours only in _dark
+$off-white: #f7f7f7;
+$light-white: #FCFDFD;
+$lighter-grey: #D3D7CF;
+$grey-blue: #2D3848;
+
+// whites to blacks
+$white: #fff; // styles.scss
+$ghostwhite: ghostwhite; // _high_contrast domain_link
+$white-rgba: rgba(256,256,256, 0.7); // styles.scss fe-image and fe- others
+$white-rgba-02: rgba(253,253,253,.5); // styles.scss box-shadow nav link
+$whitesmoke: whitesmoke; // named colour, very close to white
+$white-fade: #f0f0f2; // _controls.scss, table-striped
+$lightest-grey: #eee; // styles.scss dropdown fg
+$lighter-grey-decoration: #dee2e6; // used in styles.scss, different from the lighter greys in _dark.scss
+$light-grey: #ddd; // styles.scss border
+$grey-blue: #495057; // controls.scss form-controls
 $grey: #bbb;
-$dark-grey: #777;
-$super-dark-grey: #424549;
+$darker-grey: #333; // _high_contrast colour
+$dark-grey: #777; // styles.scss domain_link
+$super-dark-grey: #424549; // styles.scss dropdown bg
+$black: black;
+
+$black-tint-000: rgba(0, 0, 0, 0.075); // styles.scss user-suggestion-box box-shadow
+$black-tint-00: rgba(0, 0, 0, 0.1); // styles.scss box-shadow
+$black-tint-001: rgba(0, 0, 0, 0.15); // styles.scss voting-dialog box-shadow
+$black-tint-01: rgba(0, 0, 0, 0.2); // styles
+$black-tint-015: rgba(0, 0, 0, 0.3); // styles.scss code btn.hover
+$black-tint-02: rgba(0,0,0,0.4); // styles.scss thumbnail fe dark
+$black-tint-025: rgba(0, 0, 0, 0.5); // styles.scss backdrop
+$black-tint-03: rgba(0,0,0,0.6); // styles.scss breadcrumb bg
+$black-tint-04: rgba(0, 0, 0, 0.7); // styles.scss masonry_info
+
+$opacity-00: 0; // emoji-picker
+$opacity-01: 0.1; // comment_body
+$opacity-02: 0.2; // blocked
+$opacity-03: 0.3; // fe-discussion
+$opacity-04: 0.4; // _typography fe-external-noing
+$opacity-05: 0.5; // fe-video, img
+$opacity-08: 0.8; // missing_thumbnail
+$opacity-09: 0.9; // navbar-light
+$opacity-10: 1; // comment_time
+
+
+$bright-red: rgba(251, 74, 74, 0.846); // styles.scss voted_down
+$danger: #FF585B; // coral red, styles.scss nsfw, ai-generated flags
+$teal: #0c5460; // styles.scss alert
+$white-blue: #d1ecf1; // styles.scss alert bg
+$whiter-blue: #bee5eb; // styles.scss alert border
+
+$burgundy: #722047; // styles.scss alert-error
+$light-pink: #f8d7da; // style.scss alert-error bg
+
+$depth-00: rgba(172, 83, 83, 0.5); // red
+$depth-01: rgba(172, 157, 83, 0.6); // yellow
+$depth-02: rgba(113, 172, 83, 0.6); // green
+$depth-03: rgba(83, 172, 128, 0.6); // blueish green
+$depth-04: rgba(83, 142, 172, 0.6); // blue
+$depth-05: rgba(98, 83, 172, 0.5); // purple
+$depth-06: rgba(172, 83, 172, 0.5); // pink
+$depth-07: rgba(172, 83, 83, 0.5); // orange
+$depth-08: rgba(172, 83, 83, 0.65); // orange (more opaque, basically the same as 07 though)
+$depth-09: rgba(172, 83, 83, 0.78); // orange (again, more opaque)
+$depth-10: rgba(172, 83, 83, 0.85); // orange (more opaque)
+$depth-11: rgba(172, 83, 83, 0.5); // orange (the same as depth-07)
+$depth-12: rgba(172, 157, 83, 0.6); // yellow, same as depth-01
+$depth-13: rgba(113, 172, 83, 0.6); // green, same as depth-02
+$depth-14: rgba(83, 172, 128, 0.6); // blueish green, same as depth-03
+$depth-15: rgba(83, 142, 172, 0.6); // blue, same as depth-04
+$depth-16: rgba(98, 83, 172, 0.5); // purple, same as depth-05
+$depth-17: rgba(172, 83, 172, 0.5); // pink, same as depth-06
+$depth-18: rgba(172, 83, 83, 0.5); // orange, same as depth-07
+$depth-19: rgba(172, 83, 83, 0.65); // orange (more opaque, same as depth-08)
+$depth-20: rgba(172, 83, 83, 0.78); // oranger same as depth-09
+$depth-21: rgba(172, 83, 83, 0.85); // oranger same as depth-10
+
 
 .red {
   color: red;
