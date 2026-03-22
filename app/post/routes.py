@@ -2325,7 +2325,8 @@ def post_check_ai(post_id):
                 return f'<div class="w-100 alert {result_type}">Detection blocked</div>'
             output = f'<div class="w-100 alert {result_type}">'
             output += 'Post: ' + is_ai_result['detection_result'].upper()
-            output += f' <a href="#" hx-post="/post/{post.id}/set_ai">' + _('Set AI flag on this post') + '</a>'
+            if result_type == 'alert-warning':
+                output += f' <a href="#" hx-post="/post/{post.id}/set_ai">' + _('Set AI flag on this post') + '</a>'
             output += '<br>'
             output += f"{int(is_ai_result['confidence'] * 100)}% confident"
             output += '</div>'
