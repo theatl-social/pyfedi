@@ -5,8 +5,8 @@ import cProfile
 import pstats
 import io
 
-import arrow
 import flask
+import pendulum
 from flask import session, g, json, request, current_app
 from flask_babel import get_locale
 from flask_login import current_user
@@ -27,7 +27,7 @@ app = create_app()
 @app.context_processor
 def app_context_processor():
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
-                arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None,
+                pendulum=pendulum, locale=g.locale if hasattr(g, 'locale') else None,
                 notif_server=current_app.config['NOTIF_SERVER'],
                 site=g.site if hasattr(g, 'site') else None, nonce=g.nonce if hasattr(g, 'nonce') else None,
                 admin_ids=g.admin_ids if hasattr(g, 'admin_ids') else [],

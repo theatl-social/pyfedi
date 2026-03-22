@@ -21,7 +21,7 @@ from typing import List, Tuple, Optional
 from urllib.parse import urlparse, parse_qs, urlencode
 from zoneinfo import available_timezones
 
-import arrow
+import pendulum
 import flask
 import httpx
 import jwt
@@ -4296,9 +4296,9 @@ def get_site_as_dict() -> dict:
 
 def localize_datetime(inp, locale='en'):
     try:
-        return arrow.get(inp).humanize(locale=locale)
+        return pendulum.instance(inp).diff_for_humans(locale=locale)
     except ValueError:
-        return arrow.get(inp).humanize(locale='en')
+        return pendulum.instance(inp).diff_for_humans(locale='en')
 
 
 def show_reason_why_no_federation(instance_id):

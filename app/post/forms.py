@@ -104,13 +104,13 @@ class NewReminderForm(FlaskForm):
 
     def validate_remind_at(self, remind_at):
         import dateparser
-        import arrow
+        import pendulum
         try:
             x = dateparser.parse(remind_at.data, settings={'RELATIVE_BASE': datetime.now(),
                                                            "RETURN_AS_TIMEZONE_AWARE": True,
                                                            }, languages=[get_locale()])
 
-            if x is None or arrow.get(x).to('UTC').datetime < utcnow(naive=False):
+            if x is None or pendulum.instance(x).in_tz('UTC') < utcnow(naive=False):
                 raise ValidationError(_l('Invalid.'))
         except Exception:
             raise ValidationError(_l('Invalid.'))
