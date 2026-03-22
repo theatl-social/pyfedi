@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,300;1,400;1,600;1,700;1,800&display=swap');
-
 .downarea, .downarea * {
     margin: 0;
     padding: 0;
@@ -7,7 +5,6 @@
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
-    font-family: 'Open Sans', -apple-system, 'Segoe UI', sans-serif;
 }
 
 .downarea::-webkit-scrollbar , .downarea *::-webkit-scrollbar {
@@ -26,8 +23,8 @@
 }
 
 .downarea {
-    background: #dbdbdb;
-    border: 1px solid #ccc;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
     border-radius: 3px;
     width: auto;
     height: 150px;
@@ -37,17 +34,16 @@
     min-width: max-content !important;
     min-height: 120px !important;
     position: relative;
-    overflow: hidden;
 }
 
 .downarea.focused {
-    border-color: #bababa;
+    border-color: var(--bs-secondary-text-emphasis);
 }
 
 .downarea .resizer {
     width: 10px;
     height: 10px;
-    border: 5px solid #909090;
+    border: 5px solid var(--bs-secondary-color);
     border-top-color: transparent;
     border-left-color: transparent;
     border-bottom-right-radius: 3px;
@@ -75,18 +71,18 @@
 }
 
 .downarea .downarea-toolbar {
-    background: #e8e8e8;
+    background: var(--bs-secondary-bg);
     width: 100%;
     display: flex;
     justify-content: flex-start;
     align-items: center;
     padding: 5px;
-    border-bottom: 1px solid #cccccc;
+    border-bottom: 1px solid var(--bs-border-color);
     min-width: max-content !important;
 }
 
 .downarea.focused .downarea-toolbar {
-    border-bottom-color: #bababa;
+    border-bottom-color: var(--bs-secondary-text-emphasis);
 }
 
 .downarea-toolbar .downarea-toolbar-tool {
@@ -94,21 +90,22 @@
     justify-content: center;
     align-items: center;
     padding: 7px;
-    background: #fafafa;
+    background: var(--bs-light-bg-subtle);
     border-radius: 3px;
-    border: 1px solid #c2c2c2;
+    border: 1px solid var(--bs-secondary-border-subtle);
     cursor: pointer;
     margin-right: 5px;
     user-select: none;
     position: relative;
     font-size: 15px;
     font-weight: 500;
-    color: #2f2f2f;
+    color: var(--bs-emphasis-color);
 }
 
 .downarea-toolbar .downarea-toolbar-tool svg {
     width: 13px;
     opacity: 0.8;
+    fill: var(--bs-emphasis-color);
 }
 
 .downarea-toolbar .downarea-toolbar-tool:last-child {
@@ -122,7 +119,7 @@
     top: calc(100% + 2px);
     left: 0;
     z-index: 2;
-    border: 1px solid #cccccc;
+    border: 1px solid var(--bs-border-color);
     border-radius: 3px;
     overflow: auto;
     visibility: hidden;
@@ -135,7 +132,7 @@
 .downarea-toolbar .downarea-toolbar-tool .downarea-tool-dropdown ul {
     list-style-type: none;
     display: block;
-    background: #fafafa;
+    background: var(--bs-light-bg-subtle);
     cursor: default;
     padding: 3px 0;
 }
@@ -179,10 +176,29 @@
     font-size: 12px;
 }
 
+@media (max-width: 440px) {
+    .downarea-toolbar .downarea-toolbar-tool[data-action="sl-code"],
+    .downarea-toolbar .downarea-toolbar-tool[data-action="code-block"] {
+        display: none;
+    }
+}
+
+@media (max-width: 375px) {
+    .downarea-toolbar .downarea-toolbar-tool[data-action="italic"] {
+        display: none;
+    }
+}
+
+@media (max-width: 355px) {
+    .downarea-toolbar .downarea-toolbar-tool[data-action="spoiler"] {
+        display: none;
+    }
+}
+
 .downarea .downarea-textarea {
     width: 100%;
     height: max-content;
-    background: #fff;
+    background: inherit;
     position: relative;
     margin-bottom: 20px;
 }
@@ -195,21 +211,101 @@
     padding: 8px;
     margin-bottom: 20px;
     resize: none;
-    font-size: 14px;
-    font-weight: 500;
+    font-family: inherit;
 }
 
 .downarea .downarea-bottom {
     width: 100%;
     height: 19px;
-    background: #e8e8e8;
+    background: var(--bs-secondary-bg);
     position: absolute;
     bottom: 0;
     left: 0;
-    border-top: 1px solid #cccccc;
-    border-bottom: 1px solid #cccccc;
+    border-top: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
 }
 
 .downarea.focused .downarea-bottom {
-    border-top-color: #bababa;
+    border-top-color: var(--bs-secondary-text-emphasis);
+}
+
+/* Emoji Picker Styles */
+.downarea-toolbar .downarea-toolbar-tool .emoji-picker {
+    width: 320px;
+    max-height: 350px;
+    right: -54px;
+    left: auto;
+}
+
+@media (max-width: 576px) {
+    .downarea-toolbar .downarea-toolbar-tool .emoji-picker {
+        width: 90vw;
+        max-width: 320px;
+        right: -54px;
+        left: auto;
+    }
+}
+
+.emoji-categories {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-light-bg-subtle);
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.emoji-category {
+    background: transparent;
+    border: none;
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 18px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    flex: 0 0 auto;
+    font-family: "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji", sans-serif;
+}
+
+.emoji-category:hover {
+    background: var(--bs-secondary-bg);
+}
+
+.emoji-category.active {
+    background: var(--bs-secondary-bg);
+    box-shadow: 0 0 0 2px var(--bs-primary);
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    padding: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    background: var(--bs-light-bg-subtle);
+}
+
+.emoji-item {
+    background: transparent;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    font-size: 20px;
+    border-radius: 4px;
+    transition: background-color 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji", sans-serif;
+}
+
+.emoji-item:hover {
+    background: var(--bs-secondary-bg);
+    transform: scale(1.2);
+}
+
+.emoji-item:active {
+    transform: scale(1.1);
 }
