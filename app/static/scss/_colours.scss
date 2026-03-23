@@ -1,3 +1,51 @@
+/* Bootstrap Variables */
+:root {
+--bs-body-bg: var(--bs-body-bg); // #212529, styles.scss background-color for div.navbar, .mobilenav, .dropdown-menu.show, .replies, #communitySidebar, #voting_dialog, .reaction_button, .user-suggestion-box with $white as backup variable
+--bs-body-color: var(--bs-body-color); // #DEE2E6 DUPLICATE styles.scss spoiler hover color, a color, #communitySidebar, #voting_dialog, .message_reaction
+--bs-body-color-rgb: var(--bs-body-color-rgb); // #DEE2E6 #home_announcement mixed with very low opacity value (0.03), 
+--bs-link-color: var(--bs-link-color); // #6ea8fe, styles.scss post_teaser_title a and visited (mixin), data-bs-theme dark post_teaser_title_a with mixin
+--bs-link-color-rgb: var(--bs-link-color-rgb); // #6ea8fe .emoji_button (mixin with --bs-link-opacity)
+--bs-link-opacity: var(--bs-link-opacity); // .emoji_button color mixin with --bs-link-color-rgb
+
+
+--bs-border-color: var(--bs-border_color); // #495057 DUPLICATE .message_reaction, .reaction_button, .user-suggestion-box with  $lighter-grey-decoration as backup colour
+--bs-border-color-translucent: var(--bs-border-color-translucent); // rgba(255, 255, 255, 0.15); #home_announcement border-bottom
+
+--bs-primary-bg-subtle: var(--bs-primary-bg-subtle); // #031633 .reacted bg, .emoji-picker input[type="radio"]:checked + label
+--bs-primary-border-subtle: var(--bs-primary-border-subtle); // #084298 .reacted border, .reaction_button:hover border
+
+--bs-primary-text-emphasis: var(--bs-primary-text-emphasis); // #6ea8fe (same as bs-link-color) .reacted, .message_reaction:hover .message_reaction_count, .reaction_button:hover, .reaction_button:hover i, .message_reaction_count:hover
+
+--bs-secondary-color: var(--bs-secondary-color); // rgba(222, 226, 230, 0.75) lighter version of body-color, comment_time color and comment_time a color,  .reaction_button, .reaction_button i, .message_reaction_count
+--bs-secondary-color-rgb: var(--bs-secondary-color-rgb); // _typography .form-control::placeholder with an opacity mix in 
+--bs-secondary-bg: var(--bs-secondary-bg); // #343a40 accordian-preview after gradient, pre, p > code, .post_teaser.reported, .comment.reported, .message_reaction, .reaction_button:hover bg, .emoji-picker label:hover
+
+--bs-tertiary-bg: var(--bs-tertiary-bg); // #2b3035 :hover
+
+--bs-secondary-bg-subtle: var(--bs-secondary-bg-subtle); // #161719 spoiler_block bg color, .distinguished bg, blockquote bg
+--bs-secondary-border-subtle: var(--bs-secondary-border-subtle); // #41464b spoiler_block border color, blockquote left border color, pre border
+
+--bs-info-bg-subtle: var(--bs-info-bg-subtle); // #032830 .comment.answer bg
+--bs-card-cap-color: var(--bs-card-cap-color); // .message .from-me color, #home_announcement
+--bs-card-cap-bg: var(--bs-card-cap-bg); // .message .from-me bg
+
+
+--bs-accordian-active-bg: var(--bs-accordion-active-bg); // bg color accordion not active (community list page)
+--bs-box-shadow: var(--bs-box-shadow); // #communitySidebar
+
+--bs-form-valid-border-color: var(--bs-form-valid-border-color); // #75b798 .comment.answer, _typography.scss .fe-answer::before color
+--bs-success: var(--bs-success); // #198754 post_teaser_title_a, .distinguished border color
+--bs-success-border-subtle: var(--bs-success-border-subtle); // #0f5132 styles.scss post_list instance_sticky
+--bs-warning: var(--bs-warning); // #ffda6a used in styles.scss border-color
+--bs-danger: var(--bs-danger); // #dc3545 .post_teaser.reported, .comment.reported, _typography .fe-unanswer::before
+
+--bs-link-color-rgb): var(--bs-link-color-rgb); // .upvote_button, downvote_button, color with opacity argument var(--bs-link-opacity,1)
+
+// --bs-text-opacity: locally redefined to $opacity_10 (comment_time and a)
+}
+
+/* Custom Variables */
+
 $primary-colour: #0071CE; // blue
 $primary-colour-hover: #0A5CA0; // blue-shade, also used as dotted border
 
@@ -9,7 +57,6 @@ $blue-mid: #1991eb; // _controls, form-control focus (almost identical colour to
 
 $blue-rgba: rgba(0, 40, 100, 0.12); // styles.scss and _controls for border colour, RGB is #002864
 $blue-rgba-02: rgba(70, 127, 207, 0.25); // _controls box-shadow, RGB is #467FCF
-$blue-rgba-03: rgba(0, 40, 100, 0.12); // _dark form-control border, RGB is #002864, same as rgba
 
 $green: #00b550;
 $green-hover: #83f188;
@@ -28,7 +75,7 @@ $white-rgba-02: rgba(253,253,253,.5); // styles.scss box-shadow nav link
 $whitesmoke: whitesmoke; // named colour, very close to white
 $white-fade: #f0f0f2; // _controls.scss, table-striped
 $lightest-grey: #eee; // styles.scss dropdown fg
-$lighter-grey-decoration: #dee2e6; // used in styles.scss, different from the lighter greys in _dark.scss
+$lighter-grey-decoration: #dee2e6; // used in styles.scss, different from the lighter greys in _dark.scss, also the value of --bs-body-color used in body element to define text colour
 $light-grey: #ddd; // styles.scss border
 $grey-blue: #495057; // controls.scss form-controls
 $grey: #bbb;
@@ -48,11 +95,12 @@ $black-tint-03: rgba(0,0,0,0.6); // styles.scss breadcrumb bg
 $black-tint-04: rgba(0, 0, 0, 0.7); // styles.scss masonry_info
 
 $opacity-00: 0; // emoji-picker
+$opacity-003: 0.03; // #home_announcement
 $opacity-01: 0.1; // comment_body
 $opacity-02: 0.2; // blocked
 $opacity-03: 0.3; // fe-discussion
 $opacity-04: 0.4; // _typography fe-external-noing
-$opacity-05: 0.5; // fe-video, img
+$opacity-05: 0.5; // fe-video, img, .form-control::placeholder mixin
 $opacity-08: 0.8; // missing_thumbnail
 $opacity-09: 0.9; // navbar-light
 $opacity-10: 1; // comment_time
