@@ -56,8 +56,6 @@ $blue-mid: #1991eb; // 4.6:1, _controls, form-control focus
 $blue-rgba: rgba(0, 40, 100, 0.12); // styles.scss and _controls for border colour, RGB is #002864
 $blue-rgba-02: rgba(70, 127, 207, 0.25); // _controls box-shadow, RGB is #467FCF overwrites
 
-$green: #00b550;
-$green-hover: #83f188;
 $green-html: green; // #008000 contrasts 3:1 against dark BG, and better against light BG, upvote button
 $darkred: darkred; // #8B0000 downvote button (one of two instances of voted_down)
 
