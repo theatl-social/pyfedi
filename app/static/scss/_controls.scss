@@ -26,7 +26,7 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
   padding: $rem0375 $rem075;
   font-size: $fs0x9375rem;
   line-height: $factor1x6;
-  color: $grey-blue;
+  color: var(--bs-border-color);
   background-color: $white;
   background-clip: padding-box;
   border: $px1 solid $blue-rgba;
@@ -35,7 +35,7 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
 }
 
 .form-control:focus {
-    color: $grey-blue;
+    color: var(--bs-border-color);
     background-color: $white;
     border-color: $blue-mid;
     outline: 0;

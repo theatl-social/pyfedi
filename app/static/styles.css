@@ -3,7 +3,7 @@
 /*
 :root {
 --bs-body-bg: var(--bs-body-bg); // #212529, styles.scss background-color for div.navbar, .mobilenav, .dropdown-menu.show, .replies, #communitySidebar, #voting_dialog, .reaction_button, .user-suggestion-box with $white as backup variable
---bs-body-color: var(--bs-body-color); // #DEE2E6 DUPLICATE styles.scss spoiler hover color, a color, #communitySidebar, #voting_dialog, .message_reaction
+--bs-body-color: var(--bs-body-color); // #DEE2E6 styles.scss spoiler hover color, a color, #communitySidebar, #voting_dialog, .message_reaction
 --bs-body-color-rgb: var(--bs-body-color-rgb); // #DEE2E6 #home_announcement mixed with very low opacity value (0.03), 
 --bs-link-color: var(--bs-link-color); // #6ea8fe, styles.scss post_teaser_title a and visited (mixin), data-bs-theme dark post_teaser_title_a with mixin
 --bs-link-color-rgb: var(--bs-link-color-rgb); // #6ea8fe .emoji_button (mixin with --bs-link-opacity)
@@ -641,7 +641,7 @@ fieldset legend {
   padding: 0.375rem 0.75rem;
   font-size: 0.9375rem;
   line-height: 1.6;
-  color: #495057;
+  color: var(--bs-border-color);
   background-color: #fff;
   background-clip: padding-box;
   border: 1px solid rgba(0, 40, 100, 0.12);
@@ -650,7 +650,7 @@ fieldset legend {
 }
 
 .form-control:focus {
-  color: #495057;
+  color: var(--bs-border-color);
   background-color: #fff;
   border-color: #1991eb;
   outline: 0;
@@ -3787,7 +3787,7 @@ form h5 {
 /*
 :root {
 --bs-body-bg: var(--bs-body-bg); // #212529, styles.scss background-color for div.navbar, .mobilenav, .dropdown-menu.show, .replies, #communitySidebar, #voting_dialog, .reaction_button, .user-suggestion-box with $white as backup variable
---bs-body-color: var(--bs-body-color); // #DEE2E6 DUPLICATE styles.scss spoiler hover color, a color, #communitySidebar, #voting_dialog, .message_reaction
+--bs-body-color: var(--bs-body-color); // #DEE2E6 styles.scss spoiler hover color, a color, #communitySidebar, #voting_dialog, .message_reaction
 --bs-body-color-rgb: var(--bs-body-color-rgb); // #DEE2E6 #home_announcement mixed with very low opacity value (0.03), 
 --bs-link-color: var(--bs-link-color); // #6ea8fe, styles.scss post_teaser_title a and visited (mixin), data-bs-theme dark post_teaser_title_a with mixin
 --bs-link-color-rgb: var(--bs-link-color-rgb); // #6ea8fe .emoji_button (mixin with --bs-link-opacity)
