@@ -2639,7 +2639,7 @@ form {
 #home_announcement {
   padding: $rem05 $rem1;
   color: var(--bs-card-cap-color);
-  background-color: rgba(var(--bs-body-color-rgb), 0.03);
+  background-color: rgba(var(--bs-body-color-rgb), #{$opacity-003};
   border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
   margin-top: -($px8);
   margin-bottom: $px8;
