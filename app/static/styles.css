@@ -863,7 +863,7 @@ tg-spoiler:hover {
 }
 
 #outer_container a:not(.btn):active, footer a:not(.btn):active {
-  border: dotted 2px #0A5CA0;
+  border: dotted 2px #1991eb;
 }
 
 div.navbar {
@@ -2950,32 +2950,32 @@ h1 .warning_badge {
 
 [data-bs-theme=dark] .form-control {
   background-color: #424549;
-  color: #eee;
+  color: #f0f0f2;
 }
 
 [data-bs-theme=dark] .form-control:focus {
   background-color: #424549;
-  color: #eee;
+  color: #f0f0f2;
 }
 
 [data-bs-theme="dark"] .full .ts-control {
   background-color: #424549 !important;
-  color: #eee !important;
+  color: #f0f0f2 !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown {
   background-color: #424549 !important;
-  color: #eee !important;
+  color: #f0f0f2 !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown .active {
   background-color: #424549 !important;
-  color: #eee !important;
+  color: #f0f0f2 !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown .optgroup-header {
   background-color: #424549 !important;
-  color: #eee !important;
+  color: #f0f0f2 !important;
 }
 
 .community_icon {
@@ -3152,7 +3152,7 @@ form h5 {
 
 .user_flair, .user_note {
   font-size: 87%;
-  background-color: #eee;
+  background-color: #f0f0f2;
   border-radius: 3px;
   border: solid 1px #bbb;
   color: #424549;
@@ -3906,7 +3906,7 @@ form h5 {
     --bs-body-bg: black;
     --bs-link-color: #fff;
     --bs-link-color-rgb: #fff;
-    --bs-link-hover-color-rgb: #eee;
+    --bs-link-hover-color-rgb: #f0f0f2;
     --bs-heading-color: #fff;
     --bs-body-color: #fff;
     --bs-body-color-rgb: #fff;
@@ -3941,13 +3941,13 @@ form h5 {
     color: black;
   }
   [data-bs-theme="dark"] .domain_link, [data-bs-theme="dark"] .domain_link a {
-    color: ghostwhite;
+    color: whitesmoke;
   }
   .main_pane, .voting_buttons div {
     border: solid 1px #333;
   }
   [data-bs-theme="dark"] .main_pane, [data-bs-theme="dark"] .voting_buttons div {
-    border: solid 1px #eee;
+    border: solid 1px #f0f0f2;
   }
   div.navbar {
     border-bottom: solid 1px #333;
