@@ -1,4 +1,37 @@
 @charset "UTF-8";
+/* Bootstrap Variables */
+:root {
+  --bs-body-bg: var(--bs-body-bg);
+  --bs-body-color: var(--bs-body-color);
+  --bs-body-color-rgb: var(--bs-body-color-rgb);
+  --bs-link-color: var(--bs-link-color);
+  --bs-link-color-rgb: var(--bs-link-color-rgb);
+  --bs-link-opacity: var(--bs-link-opacity);
+  --bs-border-color: var(--bs-border_color);
+  --bs-border-color-translucent: var(--bs-border-color-translucent);
+  --bs-primary-bg-subtle: var(--bs-primary-bg-subtle);
+  --bs-primary-border-subtle: var(--bs-primary-border-subtle);
+  --bs-primary-text-emphasis: var(--bs-primary-text-emphasis);
+  --bs-secondary-color: var(--bs-secondary-color);
+  --bs-secondary-color-rgb: var(--bs-secondary-color-rgb);
+  --bs-secondary-bg: var(--bs-secondary-bg);
+  --bs-tertiary-bg: var(--bs-tertiary-bg);
+  --bs-secondary-bg-subtle: var(--bs-secondary-bg-subtle);
+  --bs-secondary-border-subtle: var(--bs-secondary-border-subtle);
+  --bs-info-bg-subtle: var(--bs-info-bg-subtle);
+  --bs-card-cap-color: var(--bs-card-cap-color);
+  --bs-card-cap-bg: var(--bs-card-cap-bg);
+  --bs-accordian-active-bg: var(--bs-accordion-active-bg);
+  --bs-box-shadow: var(--bs-box-shadow);
+  --bs-form-valid-border-color: var(--bs-form-valid-border-color);
+  --bs-success: var(--bs-success);
+  --bs-success-border-subtle: var(--bs-success-border-subtle);
+  --bs-warning: var(--bs-warning);
+  --bs-danger: var(--bs-danger);
+  --bs-link-color-rgb: var(--bs-link-color-rgb);
+}
+
+/* Custom Variables */
 .red {
   color: red;
 }
@@ -3735,6 +3768,39 @@ form h5 {
 }
 
 /* high contrast */
+/* Bootstrap Variables */
+:root {
+  --bs-body-bg: var(--bs-body-bg);
+  --bs-body-color: var(--bs-body-color);
+  --bs-body-color-rgb: var(--bs-body-color-rgb);
+  --bs-link-color: var(--bs-link-color);
+  --bs-link-color-rgb: var(--bs-link-color-rgb);
+  --bs-link-opacity: var(--bs-link-opacity);
+  --bs-border-color: var(--bs-border_color);
+  --bs-border-color-translucent: var(--bs-border-color-translucent);
+  --bs-primary-bg-subtle: var(--bs-primary-bg-subtle);
+  --bs-primary-border-subtle: var(--bs-primary-border-subtle);
+  --bs-primary-text-emphasis: var(--bs-primary-text-emphasis);
+  --bs-secondary-color: var(--bs-secondary-color);
+  --bs-secondary-color-rgb: var(--bs-secondary-color-rgb);
+  --bs-secondary-bg: var(--bs-secondary-bg);
+  --bs-tertiary-bg: var(--bs-tertiary-bg);
+  --bs-secondary-bg-subtle: var(--bs-secondary-bg-subtle);
+  --bs-secondary-border-subtle: var(--bs-secondary-border-subtle);
+  --bs-info-bg-subtle: var(--bs-info-bg-subtle);
+  --bs-card-cap-color: var(--bs-card-cap-color);
+  --bs-card-cap-bg: var(--bs-card-cap-bg);
+  --bs-accordian-active-bg: var(--bs-accordion-active-bg);
+  --bs-box-shadow: var(--bs-box-shadow);
+  --bs-form-valid-border-color: var(--bs-form-valid-border-color);
+  --bs-success: var(--bs-success);
+  --bs-success-border-subtle: var(--bs-success-border-subtle);
+  --bs-warning: var(--bs-warning);
+  --bs-danger: var(--bs-danger);
+  --bs-link-color-rgb: var(--bs-link-color-rgb);
+}
+
+/* Custom Variables */
 .red {
   color: red;
 }
