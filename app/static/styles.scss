@@ -1320,7 +1320,7 @@ details {
     }
 
     &.voted_up {
-      color: green;
+      color: $green-html;
       .fe {
         font-weight: bold;
         &:before {
@@ -1415,11 +1415,11 @@ details {
     }
 
     &.voted_up {
-      color: green;
+      color: $green-html;
       font-weight: bold;
     }
     &.voted_down {
-      color: darkred;
+      color: $darkred;
       font-weight: bold;
     }
   }
