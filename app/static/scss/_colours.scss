@@ -39,7 +39,7 @@
 --bs-warning: var(--bs-warning); // #ffda6a used in styles.scss border-color
 --bs-danger: var(--bs-danger); // #dc3545 .post_teaser.reported, .comment.reported, _typography .fe-unanswer::before
 
---bs-link-color-rgb): var(--bs-link-color-rgb); // .upvote_button, downvote_button, color with opacity argument var(--bs-link-opacity,1)
+--bs-link-color-rgb: var(--bs-link-color-rgb); // .upvote_button, downvote_button, color with opacity argument var(--bs-link-opacity,1)
 
 // --bs-text-opacity: locally redefined to $opacity_10 (comment_time and a)
 }
