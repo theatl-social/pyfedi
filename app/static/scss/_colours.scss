@@ -8,8 +8,7 @@
 --bs-link-color-rgb: var(--bs-link-color-rgb); // #6ea8fe .emoji_button (mixin with --bs-link-opacity)
 --bs-link-opacity: var(--bs-link-opacity); // .emoji_button color mixin with --bs-link-color-rgb
 
-
---bs-border-color: var(--bs-border_color); // #495057 DUPLICATE .message_reaction, .reaction_button, .user-suggestion-box with  $lighter-grey-decoration as backup colour
+--bs-border-color: var(--bs-border_color); // #495057 .message_reaction, .reaction_button, .user-suggestion-box with  $lighter-grey-decoration as backup colour
 --bs-border-color-translucent: var(--bs-border-color-translucent); // rgba(255, 255, 255, 0.15); #home_announcement border-bottom
 
 --bs-primary-bg-subtle: var(--bs-primary-bg-subtle); // #031633 .reacted bg, .emoji-picker input[type="radio"]:checked + label
