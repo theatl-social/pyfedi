@@ -51,7 +51,7 @@ $primary-colour: #0071CE; // blue
 
 $blue-bright: #007bff; // 3.9:1, _controls, secondary button
 $blue-light: #d8e5ee; // _controls, table striped, zebra
-$blue-mid: #1991eb; // 4.6:1, _controls, form-control focus (almost identical colour to $primary-colour)
+$blue-mid: #1991eb; // 4.6:1, _controls, form-control focus
 
 $blue-rgba: rgba(0, 40, 100, 0.12); // styles.scss and _controls for border colour, RGB is #002864
 $blue-rgba-02: rgba(70, 127, 207, 0.25); // _controls box-shadow, RGB is #467FCF overwrites
@@ -67,17 +67,16 @@ $grey-blue: #2D3848;
 
 // whites to blacks
 $white: #fff; // styles.scss
-$ghostwhite: ghostwhite; // _high_contrast domain_link
+$ghostwhite: ghostwhite; // #F8F8FF _high_contrast domain_link
 $white-rgba: rgba(256,256,256, 0.7); // styles.scss fe-image and fe- others
 $white-rgba-02: rgba(253,253,253,.5); // styles.scss box-shadow nav link
-$whitesmoke: whitesmoke; // named colour, very close to white
+$whitesmoke: whitesmoke; // #f5f5f5 named colour, very close to white
 $white-fade: #f0f0f2; // _controls.scss, table-striped
-$lightest-grey: #eee; // styles.scss dropdown fg
 $light-grey: #ddd; // styles.scss border
 $grey: #bbb;
-$darker-grey: #333; // _high_contrast colour
 $dark-grey: #777; // styles.scss domain_link
 $super-dark-grey: #424549; // styles.scss dropdown bg
+$darker-grey: #333; // _high_contrast colour
 $black: black;
 
 $black-tint-000: rgba(0, 0, 0, 0.075); // styles.scss user-suggestion-box box-shadow

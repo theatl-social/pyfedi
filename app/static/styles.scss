@@ -2221,31 +2221,31 @@ h1 .warning_badge {
 
 [data-bs-theme=dark] .form-control {
   background-color: $super-dark-grey;
-  color: $lightest-grey;
+  color: $white-fade;
   &:focus {
     background-color: $super-dark-grey;
-    color: $lightest-grey;
+    color: $white-fade;
   }
 }
 
 [data-bs-theme="dark"] .full .ts-control {
   background-color: $super-dark-grey !important;
-  color: $lightest-grey !important;
+  color: $white-fade !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown {
   background-color: $super-dark-grey !important;
-  color: $lightest-grey !important;
+  color: $white-fade !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown .active {
   background-color: $super-dark-grey !important;
-  color: $lightest-grey !important;
+  color: $white-fade !important;
 }
 
 [data-bs-theme="dark"] .ts-dropdown .optgroup-header {
   background-color: $super-dark-grey !important;
-  color: $lightest-grey !important;
+  color: $white-fade !important;
 }
 
 .community_icon {
@@ -2420,7 +2420,7 @@ form {
 
 .user_flair, .user_note {
   font-size: $fs87pc;
-  background-color: $lightest-grey;
+  background-color: $white-fade;
   border-radius: $px3;
   border: solid $px1bw $grey;
   color: $super-dark-grey;
