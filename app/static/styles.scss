@@ -242,9 +242,9 @@ div.navbar {
 }
 
 .tab-content > .tab-pane {
-  border-right: solid $px1bw $lighter-grey-decoration;
-  border-bottom: solid $px1bw $lighter-grey-decoration;
-  border-left: solid $px1bw $lighter-grey-decoration;
+  border-right: solid $px1bw var(--bs-body-color);
+  border-bottom: solid $px1bw var(--bs-body-color);
+  border-left: solid $px1bw var(--bs-body-color);
   border-radius: 0 0 $px5 $px5;
   padding: $px10 $px15 0 $px15;
 }
@@ -3027,7 +3027,7 @@ form {
 .user-suggestion-box {
   position: absolute;
   background: var(--bs-body-bg, $white);
-  border: $px1bw solid var(--bs-border-color, $lighter-grey-decoration);
+  border: $px1bw solid var(--bs-border-color, var(--bs-body-color));
   border-radius: 0.375rem;
   box-shadow: 0 $rem0125 $rem025 $black-tint-000;
   max-height: 300px;

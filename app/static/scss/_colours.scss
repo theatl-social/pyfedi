@@ -1,4 +1,5 @@
-/* Bootstrap Variables */
+/* Bootstrap Variables - should be commented out or will evaluate to nothing and break the style sheet */
+/*
 :root {
 --bs-body-bg: var(--bs-body-bg); // #212529, styles.scss background-color for div.navbar, .mobilenav, .dropdown-menu.show, .replies, #communitySidebar, #voting_dialog, .reaction_button, .user-suggestion-box with $white as backup variable
 --bs-body-color: var(--bs-body-color); // #DEE2E6 DUPLICATE styles.scss spoiler hover color, a color, #communitySidebar, #voting_dialog, .message_reaction
@@ -43,6 +44,7 @@
 
 // --bs-text-opacity: locally redefined to $opacity_10 (comment_time and a)
 }
+*/
 
 /* Custom Variables */
 
@@ -75,7 +77,6 @@ $white-rgba-02: rgba(253,253,253,.5); // styles.scss box-shadow nav link
 $whitesmoke: whitesmoke; // named colour, very close to white
 $white-fade: #f0f0f2; // _controls.scss, table-striped
 $lightest-grey: #eee; // styles.scss dropdown fg
-$lighter-grey-decoration: #dee2e6; // used in styles.scss, different from the lighter greys in _dark.scss, also the value of --bs-body-color used in body element to define text colour
 $light-grey: #ddd; // styles.scss border
 $grey-blue: #495057; // controls.scss form-controls
 $grey: #bbb;

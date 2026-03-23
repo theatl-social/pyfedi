@@ -1,36 +1,51 @@
 @charset "UTF-8";
-/* Bootstrap Variables */
+/* Bootstrap Variables - should be commented out or will evaluate to nothing and break the style sheet */
+/*
 :root {
-  --bs-body-bg: var(--bs-body-bg);
-  --bs-body-color: var(--bs-body-color);
-  --bs-body-color-rgb: var(--bs-body-color-rgb);
-  --bs-link-color: var(--bs-link-color);
-  --bs-link-color-rgb: var(--bs-link-color-rgb);
-  --bs-link-opacity: var(--bs-link-opacity);
-  --bs-border-color: var(--bs-border_color);
-  --bs-border-color-translucent: var(--bs-border-color-translucent);
-  --bs-primary-bg-subtle: var(--bs-primary-bg-subtle);
-  --bs-primary-border-subtle: var(--bs-primary-border-subtle);
-  --bs-primary-text-emphasis: var(--bs-primary-text-emphasis);
-  --bs-secondary-color: var(--bs-secondary-color);
-  --bs-secondary-color-rgb: var(--bs-secondary-color-rgb);
-  --bs-secondary-bg: var(--bs-secondary-bg);
-  --bs-tertiary-bg: var(--bs-tertiary-bg);
-  --bs-secondary-bg-subtle: var(--bs-secondary-bg-subtle);
-  --bs-secondary-border-subtle: var(--bs-secondary-border-subtle);
-  --bs-info-bg-subtle: var(--bs-info-bg-subtle);
-  --bs-card-cap-color: var(--bs-card-cap-color);
-  --bs-card-cap-bg: var(--bs-card-cap-bg);
-  --bs-accordian-active-bg: var(--bs-accordion-active-bg);
-  --bs-box-shadow: var(--bs-box-shadow);
-  --bs-form-valid-border-color: var(--bs-form-valid-border-color);
-  --bs-success: var(--bs-success);
-  --bs-success-border-subtle: var(--bs-success-border-subtle);
-  --bs-warning: var(--bs-warning);
-  --bs-danger: var(--bs-danger);
-  --bs-link-color-rgb: var(--bs-link-color-rgb);
-}
+--bs-body-bg: var(--bs-body-bg); // #212529, styles.scss background-color for div.navbar, .mobilenav, .dropdown-menu.show, .replies, #communitySidebar, #voting_dialog, .reaction_button, .user-suggestion-box with $white as backup variable
+--bs-body-color: var(--bs-body-color); // #DEE2E6 DUPLICATE styles.scss spoiler hover color, a color, #communitySidebar, #voting_dialog, .message_reaction
+--bs-body-color-rgb: var(--bs-body-color-rgb); // #DEE2E6 #home_announcement mixed with very low opacity value (0.03), 
+--bs-link-color: var(--bs-link-color); // #6ea8fe, styles.scss post_teaser_title a and visited (mixin), data-bs-theme dark post_teaser_title_a with mixin
+--bs-link-color-rgb: var(--bs-link-color-rgb); // #6ea8fe .emoji_button (mixin with --bs-link-opacity)
+--bs-link-opacity: var(--bs-link-opacity); // .emoji_button color mixin with --bs-link-color-rgb
 
+
+--bs-border-color: var(--bs-border_color); // #495057 DUPLICATE .message_reaction, .reaction_button, .user-suggestion-box with  $lighter-grey-decoration as backup colour
+--bs-border-color-translucent: var(--bs-border-color-translucent); // rgba(255, 255, 255, 0.15); #home_announcement border-bottom
+
+--bs-primary-bg-subtle: var(--bs-primary-bg-subtle); // #031633 .reacted bg, .emoji-picker input[type="radio"]:checked + label
+--bs-primary-border-subtle: var(--bs-primary-border-subtle); // #084298 .reacted border, .reaction_button:hover border
+
+--bs-primary-text-emphasis: var(--bs-primary-text-emphasis); // #6ea8fe (same as bs-link-color) .reacted, .message_reaction:hover .message_reaction_count, .reaction_button:hover, .reaction_button:hover i, .message_reaction_count:hover
+
+--bs-secondary-color: var(--bs-secondary-color); // rgba(222, 226, 230, 0.75) lighter version of body-color, comment_time color and comment_time a color,  .reaction_button, .reaction_button i, .message_reaction_count
+--bs-secondary-color-rgb: var(--bs-secondary-color-rgb); // _typography .form-control::placeholder with an opacity mix in 
+--bs-secondary-bg: var(--bs-secondary-bg); // #343a40 accordian-preview after gradient, pre, p > code, .post_teaser.reported, .comment.reported, .message_reaction, .reaction_button:hover bg, .emoji-picker label:hover
+
+--bs-tertiary-bg: var(--bs-tertiary-bg); // #2b3035 :hover
+
+--bs-secondary-bg-subtle: var(--bs-secondary-bg-subtle); // #161719 spoiler_block bg color, .distinguished bg, blockquote bg
+--bs-secondary-border-subtle: var(--bs-secondary-border-subtle); // #41464b spoiler_block border color, blockquote left border color, pre border
+
+--bs-info-bg-subtle: var(--bs-info-bg-subtle); // #032830 .comment.answer bg
+--bs-card-cap-color: var(--bs-card-cap-color); // .message .from-me color, #home_announcement
+--bs-card-cap-bg: var(--bs-card-cap-bg); // .message .from-me bg
+
+
+--bs-accordian-active-bg: var(--bs-accordion-active-bg); // bg color accordion not active (community list page)
+--bs-box-shadow: var(--bs-box-shadow); // #communitySidebar
+
+--bs-form-valid-border-color: var(--bs-form-valid-border-color); // #75b798 .comment.answer, _typography.scss .fe-answer::before color
+--bs-success: var(--bs-success); // #198754 post_teaser_title_a, .distinguished border color
+--bs-success-border-subtle: var(--bs-success-border-subtle); // #0f5132 styles.scss post_list instance_sticky
+--bs-warning: var(--bs-warning); // #ffda6a used in styles.scss border-color
+--bs-danger: var(--bs-danger); // #dc3545 .post_teaser.reported, .comment.reported, _typography .fe-unanswer::before
+
+--bs-link-color-rgb: var(--bs-link-color-rgb); // .upvote_button, downvote_button, color with opacity argument var(--bs-link-opacity,1)
+
+// --bs-text-opacity: locally redefined to $opacity_10 (comment_time and a)
+}
+*/
 /* Custom Variables */
 .red {
   color: red;
@@ -955,9 +970,9 @@ div.navbar {
 }
 
 .tab-content > .tab-pane {
-  border-right: solid 1px #dee2e6;
-  border-bottom: solid 1px #dee2e6;
-  border-left: solid 1px #dee2e6;
+  border-right: solid 1px var(--bs-body-color);
+  border-bottom: solid 1px var(--bs-body-color);
+  border-left: solid 1px var(--bs-body-color);
   border-radius: 0 0 5px 5px;
   padding: 10px 15px 0 15px;
 }
@@ -3708,7 +3723,7 @@ form h5 {
 .user-suggestion-box {
   position: absolute;
   background: var(--bs-body-bg, #fff);
-  border: 1px solid var(--bs-border-color, #dee2e6);
+  border: 1px solid var(--bs-border-color, var(--bs-body-color));
   border-radius: 0.375rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
   max-height: 300px;
@@ -3768,38 +3783,53 @@ form h5 {
 }
 
 /* high contrast */
-/* Bootstrap Variables */
+/* Bootstrap Variables - should be commented out or will evaluate to nothing and break the style sheet */
+/*
 :root {
-  --bs-body-bg: var(--bs-body-bg);
-  --bs-body-color: var(--bs-body-color);
-  --bs-body-color-rgb: var(--bs-body-color-rgb);
-  --bs-link-color: var(--bs-link-color);
-  --bs-link-color-rgb: var(--bs-link-color-rgb);
-  --bs-link-opacity: var(--bs-link-opacity);
-  --bs-border-color: var(--bs-border_color);
-  --bs-border-color-translucent: var(--bs-border-color-translucent);
-  --bs-primary-bg-subtle: var(--bs-primary-bg-subtle);
-  --bs-primary-border-subtle: var(--bs-primary-border-subtle);
-  --bs-primary-text-emphasis: var(--bs-primary-text-emphasis);
-  --bs-secondary-color: var(--bs-secondary-color);
-  --bs-secondary-color-rgb: var(--bs-secondary-color-rgb);
-  --bs-secondary-bg: var(--bs-secondary-bg);
-  --bs-tertiary-bg: var(--bs-tertiary-bg);
-  --bs-secondary-bg-subtle: var(--bs-secondary-bg-subtle);
-  --bs-secondary-border-subtle: var(--bs-secondary-border-subtle);
-  --bs-info-bg-subtle: var(--bs-info-bg-subtle);
-  --bs-card-cap-color: var(--bs-card-cap-color);
-  --bs-card-cap-bg: var(--bs-card-cap-bg);
-  --bs-accordian-active-bg: var(--bs-accordion-active-bg);
-  --bs-box-shadow: var(--bs-box-shadow);
-  --bs-form-valid-border-color: var(--bs-form-valid-border-color);
-  --bs-success: var(--bs-success);
-  --bs-success-border-subtle: var(--bs-success-border-subtle);
-  --bs-warning: var(--bs-warning);
-  --bs-danger: var(--bs-danger);
-  --bs-link-color-rgb: var(--bs-link-color-rgb);
-}
+--bs-body-bg: var(--bs-body-bg); // #212529, styles.scss background-color for div.navbar, .mobilenav, .dropdown-menu.show, .replies, #communitySidebar, #voting_dialog, .reaction_button, .user-suggestion-box with $white as backup variable
+--bs-body-color: var(--bs-body-color); // #DEE2E6 DUPLICATE styles.scss spoiler hover color, a color, #communitySidebar, #voting_dialog, .message_reaction
+--bs-body-color-rgb: var(--bs-body-color-rgb); // #DEE2E6 #home_announcement mixed with very low opacity value (0.03), 
+--bs-link-color: var(--bs-link-color); // #6ea8fe, styles.scss post_teaser_title a and visited (mixin), data-bs-theme dark post_teaser_title_a with mixin
+--bs-link-color-rgb: var(--bs-link-color-rgb); // #6ea8fe .emoji_button (mixin with --bs-link-opacity)
+--bs-link-opacity: var(--bs-link-opacity); // .emoji_button color mixin with --bs-link-color-rgb
 
+
+--bs-border-color: var(--bs-border_color); // #495057 DUPLICATE .message_reaction, .reaction_button, .user-suggestion-box with  $lighter-grey-decoration as backup colour
+--bs-border-color-translucent: var(--bs-border-color-translucent); // rgba(255, 255, 255, 0.15); #home_announcement border-bottom
+
+--bs-primary-bg-subtle: var(--bs-primary-bg-subtle); // #031633 .reacted bg, .emoji-picker input[type="radio"]:checked + label
+--bs-primary-border-subtle: var(--bs-primary-border-subtle); // #084298 .reacted border, .reaction_button:hover border
+
+--bs-primary-text-emphasis: var(--bs-primary-text-emphasis); // #6ea8fe (same as bs-link-color) .reacted, .message_reaction:hover .message_reaction_count, .reaction_button:hover, .reaction_button:hover i, .message_reaction_count:hover
+
+--bs-secondary-color: var(--bs-secondary-color); // rgba(222, 226, 230, 0.75) lighter version of body-color, comment_time color and comment_time a color,  .reaction_button, .reaction_button i, .message_reaction_count
+--bs-secondary-color-rgb: var(--bs-secondary-color-rgb); // _typography .form-control::placeholder with an opacity mix in 
+--bs-secondary-bg: var(--bs-secondary-bg); // #343a40 accordian-preview after gradient, pre, p > code, .post_teaser.reported, .comment.reported, .message_reaction, .reaction_button:hover bg, .emoji-picker label:hover
+
+--bs-tertiary-bg: var(--bs-tertiary-bg); // #2b3035 :hover
+
+--bs-secondary-bg-subtle: var(--bs-secondary-bg-subtle); // #161719 spoiler_block bg color, .distinguished bg, blockquote bg
+--bs-secondary-border-subtle: var(--bs-secondary-border-subtle); // #41464b spoiler_block border color, blockquote left border color, pre border
+
+--bs-info-bg-subtle: var(--bs-info-bg-subtle); // #032830 .comment.answer bg
+--bs-card-cap-color: var(--bs-card-cap-color); // .message .from-me color, #home_announcement
+--bs-card-cap-bg: var(--bs-card-cap-bg); // .message .from-me bg
+
+
+--bs-accordian-active-bg: var(--bs-accordion-active-bg); // bg color accordion not active (community list page)
+--bs-box-shadow: var(--bs-box-shadow); // #communitySidebar
+
+--bs-form-valid-border-color: var(--bs-form-valid-border-color); // #75b798 .comment.answer, _typography.scss .fe-answer::before color
+--bs-success: var(--bs-success); // #198754 post_teaser_title_a, .distinguished border color
+--bs-success-border-subtle: var(--bs-success-border-subtle); // #0f5132 styles.scss post_list instance_sticky
+--bs-warning: var(--bs-warning); // #ffda6a used in styles.scss border-color
+--bs-danger: var(--bs-danger); // #dc3545 .post_teaser.reported, .comment.reported, _typography .fe-unanswer::before
+
+--bs-link-color-rgb: var(--bs-link-color-rgb); // .upvote_button, downvote_button, color with opacity argument var(--bs-link-opacity,1)
+
+// --bs-text-opacity: locally redefined to $opacity_10 (comment_time and a)
+}
+*/
 /* Custom Variables */
 .red {
   color: red;
