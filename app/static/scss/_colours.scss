@@ -51,12 +51,11 @@ $primary-colour: #0071CE; // blue
 $primary-colour-hover: #0A5CA0; // blue-shade, also used as dotted border
 
 $blue-bright: #007bff; // _controls, secondary button
-$blue-faded: #0069d9; // _controls, secondary button hover
 $blue-light: #d8e5ee; // _controls, table striped, zebra
 $blue-mid: #1991eb; // _controls, form-control focus (almost identical colour to $primary-colour)
 
 $blue-rgba: rgba(0, 40, 100, 0.12); // styles.scss and _controls for border colour, RGB is #002864
-$blue-rgba-02: rgba(70, 127, 207, 0.25); // _controls box-shadow, RGB is #467FCF
+$blue-rgba-02: rgba(70, 127, 207, 0.25); // _controls box-shadow, RGB is #467FCF overwrites
 
 $green: #00b550;
 $green-hover: #83f188;
