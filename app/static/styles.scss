@@ -55,8 +55,8 @@ tg-spoiler {
 
 .container {
   width: 100%;
-  padding-right: $rem075;
-  padding-left: $rem075;
+  padding-right: var(--spacing-12);
+  padding-left: var(--spacing-12);
   margin-right: auto;
   margin-left: auto;
   max-width: inherit;
@@ -2953,7 +2953,7 @@ form {
 .emoji-picker label {
   display: flex;
   align-items: center;
-  gap: $rem075;
+  gap: var(--spacing-12);
   cursor: pointer;
   width: 100%;
 }
