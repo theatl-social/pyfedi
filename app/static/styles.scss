@@ -108,7 +108,7 @@ tg-spoiler {
 }
 
 .ml-3 {
-  margin-left: $rem1 !important;
+  margin-left: var(--spacing-16) !important;
 }
 
 .home .ml-3 {
@@ -373,7 +373,7 @@ div.navbar {
 #outer_container {
   margin-top: -($px1);
   @include breakpoint(tablet) {
-    margin-top: $rem1;
+    margin-top: var(--spacing-16);
     padding-top: var(--spacing-4);
   }
 }
@@ -1175,7 +1175,7 @@ time {
 }
 
 details {
-  margin-bottom: $rem1;
+  margin-bottom: var(--spacing-16);
 }
 
 .spoiler_block {
@@ -1513,7 +1513,7 @@ details {
   .comment_community {
     display: inline-block;
     img {
-      height: $rem1;
+      height: var(--spacing-16);
       width: auto;
     }
   }
@@ -1893,7 +1893,7 @@ a.unread, div.unread {
     background: var(--bs-secondary-bg);
     font-family: monospace;
     padding-left: var(--spacing-8);
-    margin-left: $rem1x25;
+    margin-left: --spacing-20;
     border-style: solid;
     border-color: var(--bs-secondary-border-subtle);
     border-width: $px2;
@@ -2637,7 +2637,7 @@ form {
 }
 
 #home_announcement {
-  padding: var(--spacing-8) $rem1;
+  padding: var(--spacing-8) var(--spacing-16);
   color: var(--bs-card-cap-color);
   background-color: rgba(var(--bs-body-color-rgb), 0.03);
   border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
@@ -2728,7 +2728,7 @@ form {
   border-radius: var(--bs-border-radius);
   max-width: 345px;
   max-height: 90vh;
-  padding: $rem1;
+  padding: var(--spacing-16);
   box-shadow: var(--bs-box-shadow);
 
   &::backdrop {
@@ -2753,7 +2753,7 @@ form {
 #voting_dialog {
   border: $px1bw solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
-  box-shadow: 0 var(--spacing-8) $rem1 $black-tint-001;
+  box-shadow: 0 var(--spacing-8) var(--spacing-16) $black-tint-001;
   background-color: var(--bs-body-bg);
   color: var(--bs-body-color);
   padding: 0;
