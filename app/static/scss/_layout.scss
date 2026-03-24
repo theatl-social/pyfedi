@@ -1,6 +1,27 @@
-$px1bw: 1px; // for border, border-width to replace those using px1
+/* REM units */
+// CSS variables will appear in the final output, making it easier to track them across the project
 
-$factor1x6: 1.6; // line-height in _controls
+:root {
+	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow)
+    --spacing-4: 0.25rem; // 4px 
+    --spacing-8: 0.5rem; // 8px 
+    --spacing-12: 0.75rem; // 12px
+    --spacing-16: 1rem; // 16px 
+    --spacing-20: 1.25rem; // 20px
+    --spacing-24: 1.5rem; // 24px
+    --spacing-28: 1.75rem; // 28px
+    --spacing-32: 2rem; // 32px
+    --spacing-40: 2.5rem; // 40px
+    --spacing-48: 3rem; // 48px
+    --spacing-56: 3.5rem; // 56px
+    --spacing-64: 4rem; // 64px
+    --spacing-72: 4.5rem; // 72px
+    --spacing-80: 5rem; // 80px
+    --spacing-96: 6rem; // 96px
+    --spacing-120: 7.5rem; // 120px
+    }
+
+// Pixel Units
 
 $px1: 1px; // lots of border, border-width values replaced in styles.scss, negative values -($px1) - border in _controls, _compact, _dark, _high_contrast, _typography (top)
 $px1x5: 1.5px; // message_reaction and border-width styles.scss
@@ -27,7 +48,10 @@ $px46: 46px; // styles.scss line height and width (not changed)
 
 $px70: 70px; // footer in styles.scss (normal plus breakpoint), element width
 
-$rem0125: 0.125rem; // styles.scss (box shadow)
+$px1bw: 1px; // for border, border-width to replace those using px1
+
+$factor1x6: 1.6; // line-height in _controls
+
 $rem025: 0.25rem; // styles.scss for control elements
 $rem0275: 0.275rem; // _compact padding
 $rem03: 0.3rem; // _compact padding, styles.scss row-gap
