@@ -24,11 +24,12 @@
 // Pixel Units
 
 $border-1: 1px; // for border, border-width to replace those using px1 in _controls, _compact, _high_contrast
+$border-2: 2px; // for border and border-radius, multiple stylesheets
 
 
 $px1: 1px; // negative values -($px1) _typography (top)
 $px1x5: 1.5px; // message_reaction and border-width styles.scss
-$px2: 2px; // many instances of border-radius and border-width were replaced in styles.scss along with margins (and negative -(px2)), and box shadow in _controls
+$px2: 2px; // styles.scss, margins (and negative -(px2)), and box shadow in _controls
 $px3: 3px; // border radius, blur, _dark (border-radius)
 $px4: 4px; // lots of instances in styles.scss, top, _compact
 $px5: 5px; // negative is -($px5), note there is a border-radius with this value in _controls

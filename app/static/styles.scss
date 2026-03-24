@@ -34,7 +34,7 @@ body {
 
 a {
   text-decoration: none;
-  border: solid $px2 transparent;
+  border: solid var(--border-2) transparent;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -125,7 +125,7 @@ tg-spoiler {
   }
 
   a:not(.btn):active {
-    border: dotted $px2 $primary-colour-hover;
+    border: dotted var(--border-2) $primary-colour-hover;
   }
 }
 
@@ -469,7 +469,7 @@ form {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 1031;
   text-wrap: nowrap;
-  border-top-width: $px2!important;
+  border-top-width: var(--border-2)!important;
 
   a {
     flex-grow: 1;
@@ -692,7 +692,7 @@ ul.form-multicheck-columns {
   clear: both;
 
   .instance_sticky {
-    border-bottom: solid $px2 var(--bs-success-border-subtle);
+    border-bottom: solid var(--border-2) var(--bs-success-border-subtle);
 
     > .post_teaser {
       border-bottom: none !important;
@@ -708,7 +708,7 @@ ul.form-multicheck-columns {
 
   .post_teaser {
 
-    border-bottom: solid $px2 $light-grey;
+    border-bottom: solid var(--border-2) $light-grey;
     padding-top: $px8;
     padding-bottom: $px8;
 
@@ -776,7 +776,7 @@ ul.form-multicheck-columns {
         background-color: $white-rgba;
         padding-bottom: $px1;
         padding-left: $px1;
-        border-radius: $px2;
+        border-radius: var(--border-2);
         top: 0;
       }
 
@@ -1182,7 +1182,7 @@ details {
   margin: $px3 0 0 $em1;
   padding: $em05 $em05 $em05 $em02;
   border-left-style: solid;
-  border-left-width: $px2;
+  border-left-width: var(--border-2);
   background-color: var(--bs-secondary-bg-subtle);
   border-left-color: var(--bs-secondary-border-subtle);
 
@@ -1463,7 +1463,7 @@ details {
       background-color: var(--bs-secondary-bg-subtle);
       border: solid;
       border-color: var(--bs-success);
-      border-width: $px2;
+      border-width: var(--border-2);
     }
   }
 
@@ -1594,91 +1594,91 @@ details {
     margin-top: 0;
 
     &.depth_0 {
-      border-left: $px2 solid $depth-00 !important;
+      border-left: var(--border-2) solid $depth-00 !important;
     }
 
     &.depth_1 {
-      border-left: $px2 solid $depth-01 !important;
+      border-left: var(--border-2) solid $depth-01 !important;
     }
 
     &.depth_2 {
-      border-left: $px2 solid $depth-02 !important;
+      border-left: var(--border-2) solid $depth-02 !important;
     }
 
     &.depth_3 {
-      border-left: $px2 solid $depth-03 !important;
+      border-left: var(--border-2) solid $depth-03 !important;
     }
 
     &.depth_4 {
-      border-left: $px2 solid $depth-04 !important;
+      border-left: var(--border-2) solid $depth-04 !important;
     }
 
     &.depth_5 {
-      border-left: $px2 solid $depth-05 !important;
+      border-left: var(--border-2) solid $depth-05 !important;
     }
 
     &.depth_6 {
-      border-left: $px2 solid $depth-06 !important;
+      border-left: var(--border-2) solid $depth-06 !important;
     }
 
     &.depth_7 {
-      border-left: $px2 solid $depth-07 !important;
+      border-left: var(--border-2) solid $depth-07 !important;
     }
 
     &.depth_8 {
-      border-left: $px2 solid $depth-08 !important;
+      border-left: var(--border-2) solid $depth-08 !important;
     }
 
     &.depth_9 {
-      border-left: $px2 solid $depth-09 !important;
+      border-left: var(--border-2) solid $depth-09 !important;
     }
 
     &.depth_10 {
-      border-left: $px2 solid $depth-10 !important;
+      border-left: var(--border-2) solid $depth-10 !important;
     }
 
     &.depth_11 {
-      border-left: $px2 solid $depth-11 !important;
+      border-left: var(--border-2) solid $depth-11 !important;
     }
 
     &.depth_12 {
-      border-left: $px2 solid $depth-12 !important;
+      border-left: var(--border-2) solid $depth-12 !important;
     }
 
     &.depth_13 {
-      border-left: $px2 solid $depth-13 !important;
+      border-left: var(--border-2) solid $depth-13 !important;
     }
 
     &.depth_14 {
-      border-left: $px2 solid $depth-14 !important;
+      border-left: var(--border-2) solid $depth-14 !important;
     }
 
     &.depth_15 {
-      border-left: $px2 solid $depth-15 !important;
+      border-left: var(--border-2) solid $depth-15 !important;
     }
 
     &.depth_16 {
-      border-left: $px2 solid $depth-16 !important;
+      border-left: var(--border-2) solid $depth-16 !important;
     }
 
     &.depth_17 {
-      border-left: $px2 solid $depth-17 !important;
+      border-left: var(--border-2) solid $depth-17 !important;
     }
 
     &.depth_18 {
-      border-left: $px2 solid $depth-18 !important;
+      border-left: var(--border-2) solid $depth-18 !important;
     }
 
     &.depth_19 {
-      border-left: $px2 solid $depth-19 !important;
+      border-left: var(--border-2) solid $depth-19 !important;
     }
 
     &.depth_20 {
-      border-left: $px2 solid $depth-20 !important;
+      border-left: var(--border-2) solid $depth-20 !important;
     }
 
     &.depth_21 {
-      border-left: $px2 solid $depth-21 !important;
+      border-left: var(--border-2) solid $depth-21 !important;
     }
   }
 }
@@ -1896,7 +1896,7 @@ a.unread, div.unread {
     margin-left: var(--spacing-20);
     border-style: solid;
     border-color: var(--bs-secondary-border-subtle);
-    border-width: $px2;
+    border-width: var(--border-2);
     border-radius: $px5;
   }
 
@@ -1977,7 +1977,7 @@ a.unread, div.unread {
 
 .warning_badge {
   font-size: $fs12px;
-  border-radius: $px2;
+  border-radius: var(--border-2);
   margin-right: $px2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2525,7 +2525,7 @@ form {
 .post_teaser.reported, .comment.reported {
   border-style: solid !important;
   border-color: var(--bs-danger) !important;
-  border-width: $px2 !important;
+  border-width: var(--border-2) !important;
   background-color: var(--bs-secondary-bg);
 }
 
@@ -2538,7 +2538,7 @@ form {
 .comment.answer {
     border-style: solid !important;
   border-color: var(--bs-form-valid-border-color) !important;
-  border-width: $px2 !important;
+  border-width: var(--border-2) !important;
   background-color: var(--bs-info-bg-subtle);
 }
 
@@ -2623,7 +2623,7 @@ form {
   position: relative;
   left: -($px15);
   li a {
-    border: dotted $px2 transparent;
+    border: dotted var(--border-2) transparent;
   }
 }
 
