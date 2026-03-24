@@ -10,7 +10,7 @@
     --spacing-20: 1.25rem; // 20px, styles.scss margin-left (also a font-size in _typography)
     --spacing-24: 1.5rem; // 24px
     --spacing-28: 1.75rem; // 28px
-    --spacing-32: 2rem; // 32px
+    --spacing-32: 2rem; // 32px, _compact padding
     --spacing-40: 2.5rem; // 40px
     --spacing-48: 3rem; // 48px
     --spacing-56: 3.5rem; // 56px
@@ -60,7 +60,6 @@ $rem06: 0.6rem; // _compact.scss
 $rem1x1: 1.1rem; // styles.scss for bootstrap classes
 $rem1x2: 1.2rem; // styles.scss font-size
 $rem1x3: 1.3rem; // _compact margin
-$rem2: 2rem; // _compact padding
 
 $em02: 0.2em; // spoiler_block styles.scss, blockquote
 $em025: 0.25em; // styles.scss post_teaser_title
