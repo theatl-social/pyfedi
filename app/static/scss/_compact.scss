@@ -46,7 +46,7 @@ body.compact-min {
   }
 
   #outer_container {
-    margin-top: $rem06;
+    margin-top: var(--spacing-12);
   }
 
   .table > :not(caption) > * > * {
