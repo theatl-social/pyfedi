@@ -1135,7 +1135,7 @@ time {
     }
 
     .masonry_info_no_image {
-      background-color: $black-tint-020;
+      background-color: $black-tint-02;
       width: 100%;
       text-align: center;
       display:flex;
@@ -1916,7 +1916,7 @@ a.unread, div.unread {
   }
 
   code .btn:hover {
-      background-color: $black-tint-020;
+      background-color: $black-tint-02;
       color: $white;
   }
 
@@ -2760,7 +2760,7 @@ form {
   width: max-content;
 
   &::backdrop {
-    background-color: $black-tint-020;
+    background-color: $black-tint-02;
   }
 
   .btn {
