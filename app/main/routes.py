@@ -393,6 +393,8 @@ def list_communities():
                 communities = communities.filter(Community.nsfw == True)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
+        if blocked_community_ids := blocked_communities(current_user.id):
+            communities = communities.filter(Community.id.not_in(blocked_community_ids))
         instance_ids = blocked_or_banned_instances(current_user.id)
         if instance_ids:
             communities = communities.filter(or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))
