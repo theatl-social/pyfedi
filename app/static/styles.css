@@ -2717,8 +2717,8 @@ a.unread:before, div.unread:before {
 }
 
 .warning_badge.nsfw {
-  border: 1px solid #FF585B;
-  color: #FF585B;
+  border: 1px solid #722047;
+  color: #722047;
 }
 
 .warning_badge.nsfl {
@@ -2727,6 +2727,16 @@ a.unread:before, div.unread:before {
 }
 
 .warning_badge.ai_generated {
+  border: 1px solid #722047;
+  color: #722047;
+}
+
+[data-bs-theme=dark] .warning_badge.ai_generated {
+  border: 1px solid #FF585B;
+  color: #FF585B;
+}
+
+[data-bs-theme=dark] .warning_badge.nsfw {
   border: 1px solid #FF585B;
   color: #FF585B;
 }

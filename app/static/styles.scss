@@ -1985,8 +1985,8 @@ a.unread, div.unread {
   padding: 0 $px4;
 
   &.nsfw {
-    border:$px1bw solid $danger;
-    color:$danger;
+    border:$px1bw solid $burgundy;
+    color:$burgundy;
   }
 
   &.nsfl {
@@ -1995,9 +1995,19 @@ a.unread, div.unread {
   }
 
   &.ai_generated {
-    border:$px1bw solid $danger;
-    color:$danger;
+    border:$px1bw solid $burgundy;
+    color:$burgundy;
   }
+}
+
+[data-bs-theme=dark] .warning_badge.ai_generated {
+  border:$px1bw solid $danger;
+  color:$danger;
+}
+
+[data-bs-theme=dark] .warning_badge.nsfw {
+  border:$px1bw solid $danger;
+  color:$danger;
 }
 
 h1 .warning_badge {

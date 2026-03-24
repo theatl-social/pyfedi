@@ -88,12 +88,12 @@ $opacity-10: 1; // comment_time
 
 
 $bright-red: rgba(251, 74, 74, 0.846); // styles.scss voted_down
-$danger: #FF585B; // coral red, styles.scss nsfw, ai-generated flags
+$danger: #FF585B; // coral red, styles.scss nsfw, ai-generated flags (dark mode)
 $teal: #0c5460; // styles.scss alert
 $white-blue: #d1ecf1; // styles.scss alert bg
 $whiter-blue: #bee5eb; // styles.scss alert border
 
-$burgundy: #722047; // styles.scss alert-error
+$burgundy: #722047; // styles.scss alert-error, nsfw and ai_generated warning_badge (light mode)
 $light-pink: #f8d7da; // style.scss alert-error bg
 
 // comment thread border colours
