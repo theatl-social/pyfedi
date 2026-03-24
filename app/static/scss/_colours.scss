@@ -76,7 +76,7 @@ $white-rgba-02: rgba(253,253,253,.5); // styles.scss box-shadow nav link
 $black-tint-01: rgba(0, 0, 0, 0.2); // styles.scss render_username &.donor box-shadow, box-shadow, user-suggestion-box box-shadow
 $black-tint-02: rgba(0, 0, 0, 0.4); // styles.scss code btn.hover (at 0.3 opacity was failing 3:1 contrast on light mode, but 0.4 is just okay), masonry_info_no_image, voting_dialog::backdrop
 $black-tint-03: rgba(0,0,0,0.6); // styles.scss breadcrumb bg, communitySidebar::backdrop
-$black-tint-08: rgba(0, 0, 0, 0.8); // styles.scss fe-image and fe- others post_list, masonry_info (masonry_info is photo community tile feed, text beneath image)
+$black-tint-04: rgba(0, 0, 0, 0.8); // styles.scss fe-image and fe- others post_list, masonry_info (masonry_info is photo community tile feed, text beneath image)
 
 $opacity-00: 0; // emoji-picker
 $opacity-01: 0.1; // comment_body, #home_announcement
