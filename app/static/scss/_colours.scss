@@ -49,9 +49,9 @@
 
 $primary-colour: #0071CE; // blue
 
-$blue-bright: #007bff; // 3.9:1, _controls, secondary button
+$blue-bright: #007bff; // 3.9:1 against dark BG, _controls, secondary button
 $blue-light: #d8e5ee; // _controls, table striped, zebra
-$blue-mid: #1991eb; // 4.6:1, _controls, form-control focus
+$blue-mid: #1991eb; // 4.6:1 against dark BG, _controls, form-control focus
 
 $blue-rgba: rgba(0, 40, 100, 0.12); // styles.scss and _controls for border colour, RGB is #002864
 $blue-rgba-02: rgba(70, 127, 207, 0.25); // _controls box-shadow, RGB is #467FCF overwrites
