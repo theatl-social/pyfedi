@@ -103,6 +103,7 @@ $whiter-blue: #bee5eb; // styles.scss alert border
 $burgundy: #722047; // styles.scss alert-error
 $light-pink: #f8d7da; // style.scss alert-error bg
 
+// comment thread border colours
 $depth-00: rgba(172, 83, 83, 0.5); // red
 $depth-01: rgba(172, 157, 83, 0.6); // yellow
 $depth-02: rgba(113, 172, 83, 0.6); // green
@@ -114,17 +115,17 @@ $depth-07: rgba(172, 83, 83, 0.5); // orange
 $depth-08: rgba(172, 83, 83, 0.65); // orange (more opaque, basically the same as 07 though)
 $depth-09: rgba(172, 83, 83, 0.78); // orange (again, more opaque)
 $depth-10: rgba(172, 83, 83, 0.85); // orange (more opaque)
-$depth-11: rgba(172, 83, 83, 0.5); // orange (the same as depth-07)
-$depth-12: rgba(172, 157, 83, 0.6); // yellow, same as depth-01
-$depth-13: rgba(113, 172, 83, 0.6); // green, same as depth-02
-$depth-14: rgba(83, 172, 128, 0.6); // blueish green, same as depth-03
-$depth-15: rgba(83, 142, 172, 0.6); // blue, same as depth-04
-$depth-16: rgba(98, 83, 172, 0.5); // purple, same as depth-05
-$depth-17: rgba(172, 83, 172, 0.5); // pink, same as depth-06
-$depth-18: rgba(172, 83, 83, 0.5); // orange, same as depth-07
-$depth-19: rgba(172, 83, 83, 0.65); // orange (more opaque, same as depth-08)
-$depth-20: rgba(172, 83, 83, 0.78); // oranger same as depth-09
-$depth-21: rgba(172, 83, 83, 0.85); // oranger same as depth-10
+$depth-11: #{$depth-07};
+$depth-12: #{$depth-01};
+$depth-13: #{$depth-02};
+$depth-14: #{$depth-03};
+$depth-15: #{$depth-04};
+$depth-16: #{$depth-05};
+$depth-17: #{$depth-06};
+$depth-18: #{$depth-07};
+$depth-19: #{$depth-08};
+$depth-20: #{$depth-09};
+$depth-21: #{$depth-10};
 
 
 .red {
