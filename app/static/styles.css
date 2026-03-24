@@ -1881,7 +1881,7 @@ time {
 }
 
 #masonry .item .masonry_info_no_image {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.4);
   width: 100%;
   text-align: center;
   display: flex;
@@ -2651,7 +2651,7 @@ a.unread:before, div.unread:before {
 }
 
 .post_body code .btn:hover, .comment_body code .btn:hover, #preview code .btn:hover, .reply_preview code .btn:hover, .accordion-body code .btn:hover, .post_col code .btn:hover {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.4);
   color: #fff;
 }
 
