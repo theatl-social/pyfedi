@@ -63,11 +63,11 @@ body.compact-min {
   }
 
   .form-control {
-    padding: var(--spacing-4) $rem055;
+    padding: var(--spacing-4) var(--spacing-8);
   }
 
   .form-select {
-    padding: var(--spacing-4) var(--spacing-32) var(--spacing-4) $rem055;
+    padding: var(--spacing-4) var(--spacing-32) var(--spacing-4) var(--spacing-8);
   }
 
   .ts-wrapper {
