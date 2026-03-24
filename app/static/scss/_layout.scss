@@ -3,7 +3,7 @@
 
 :root {
 	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow)
-    --spacing-4: 0.25rem; // 4px 
+    --spacing-4: 0.25rem; // 4px, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing
     --spacing-8: 0.5rem; // 8px 
     --spacing-12: 0.75rem; // 12px
     --spacing-16: 1rem; // 16px 
@@ -52,7 +52,6 @@ $px1bw: 1px; // for border, border-width to replace those using px1
 
 $factor1x6: 1.6; // line-height in _controls
 
-$rem025: 0.25rem; // styles.scss for control elements
 $rem0275: 0.275rem; // _compact padding
 $rem03: 0.3rem; // _compact padding, styles.scss row-gap
 $rem0375: 0.375rem; // _dark padding, _controls padding
