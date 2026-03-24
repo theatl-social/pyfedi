@@ -4,7 +4,7 @@
 :root {
 	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow)
     --spacing-4: 0.25rem; // 4px, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing
-    --spacing-8: 0.5rem; // 8px 
+    --spacing-8: 0.5rem; // 8px, styles.scss
     --spacing-12: 0.75rem; // 12px
     --spacing-16: 1rem; // 16px 
     --spacing-20: 1.25rem; // 20px
@@ -55,7 +55,6 @@ $factor1x6: 1.6; // line-height in _controls
 $rem0275: 0.275rem; // _compact padding
 $rem03: 0.3rem; // _compact padding, styles.scss row-gap
 $rem0375: 0.375rem; // _dark padding, _controls padding
-$rem05: 0.5rem; // styles.scss
 $rem055: 0.55rem; // _compact padding
 $rem06: 0.6rem; // _compact.scss
 $rem075: 0.75rem; // styles.scss, plus for a flex gap value, _controls (form control), _dark (form control)

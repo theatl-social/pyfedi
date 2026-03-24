@@ -1892,7 +1892,7 @@ a.unread, div.unread {
   pre {
     background: var(--bs-secondary-bg);
     font-family: monospace;
-    padding-left: $rem05;
+    padding-left: var(--spacing-8);
     margin-left: $rem1x25;
     border-style: solid;
     border-color: var(--bs-secondary-border-subtle);
@@ -1902,7 +1902,7 @@ a.unread, div.unread {
 
   p > code {
     background: var(--bs-secondary-bg);
-    padding: var(--spacing-4) $rem05;
+    padding: var(--spacing-4) var(--spacing-8);
     border-radius: $px5;
     position: relative;
 
@@ -2637,7 +2637,7 @@ form {
 }
 
 #home_announcement {
-  padding: $rem05 $rem1;
+  padding: var(--spacing-8) $rem1;
   color: var(--bs-card-cap-color);
   background-color: rgba(var(--bs-body-color-rgb), 0.03);
   border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
@@ -2753,7 +2753,7 @@ form {
 #voting_dialog {
   border: $px1bw solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
-  box-shadow: 0 $rem05 $rem1 $black-tint-001;
+  box-shadow: 0 var(--spacing-8) $rem1 $black-tint-001;
   background-color: var(--bs-body-bg);
   color: var(--bs-body-color);
   padding: 0;
@@ -2768,7 +2768,7 @@ form {
     justify-content: flex-start;
 
     i {
-      margin-right: $rem05;
+      margin-right: var(--spacing-8);
     }
   }
 
