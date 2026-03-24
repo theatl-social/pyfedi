@@ -1259,7 +1259,7 @@ def notification_unread(notification_id):
 def notifications_all_read():
     notif_type = request.args.get('type', '')
     original_notif_type = notif_type
-    if notif_type == '':
+    if notif_type == '' or notif_type == 'Unread':
         db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'),
                            {'user_id': current_user.id})
     else:

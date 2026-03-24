@@ -57,7 +57,7 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
     approval_required, permission_required, aged_account_required, communities_banned_from_all_users, \
     moderating_communities_ids_all_users, block_honey_pot, user_pronouns, community_membership_private, \
-    show_reason_why_no_federation
+    show_reason_why_no_federation, can_upload_video
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.shared.community import leave_community
@@ -1056,7 +1056,12 @@ def add_post(actor, type=None):
             }
             plugins.fire_hook('before_post_create', post_data)
 
-            uploaded_file = request.files['image_file'] if type == 'image' or type == 'event' or type == 'video' else None
+            if type == 'image' or type == 'event':
+                uploaded_file = request.files['image_file']
+            elif type == 'video' and can_upload_video():
+                uploaded_file = request.files['image_file']
+            else:
+                uploaded_file = None
             post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
         except Exception as ex:
             flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
