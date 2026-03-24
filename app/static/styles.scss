@@ -44,7 +44,7 @@ h1, h2, h3, h4, h5, h6 {
 tg-spoiler {
   border-style: solid;
   border-color: var(--bs-warning);
-  border-width: $px1bw;
+  border-width: var(--border-1);
   border-radius: $px3;
   padding: 0px $px10;
   color: transparent;
@@ -134,7 +134,7 @@ div.navbar {
   background-color: var(--bs-body-bg);
 
   @include breakpoint(tablet) {
-    border-bottom: $px1bw solid $blue-rgba;
+    border-bottom: var(--border-1) solid $blue-rgba;
   }
 
   @media (min-width: 1400px) {
@@ -242,9 +242,9 @@ div.navbar {
 }
 
 .tab-content > .tab-pane {
-  border-right: solid $px1bw $lighter-grey-decoration;
-  border-bottom: solid $px1bw $lighter-grey-decoration;
-  border-left: solid $px1bw $lighter-grey-decoration;
+  border-right: solid var(--border-1) $lighter-grey-decoration;
+  border-bottom: solid var(--border-1) $lighter-grey-decoration;
+  border-left: solid var(--border-1) $lighter-grey-decoration;
   border-radius: 0 0 $px5 $px5;
   padding: $px10 $px15 0 $px15;
 }
@@ -390,7 +390,7 @@ form {
           margin-left: $px2;
           font-size: $fs80pc;
           position: relative;
-          top: -$px1;
+          top: -($px1);
         }
       }
     }
@@ -408,7 +408,7 @@ form {
         margin-left: $px2;
         font-size: $fs80pc;
         position: relative;
-        top: -$px1;
+        top: -($px1);
       }
     }
   }
@@ -1216,7 +1216,7 @@ details {
 
 .comments > .comment {
   margin-left: 0;
-  border-top: solid $px1bw $light-grey;
+  border-top: solid var(--border-1) $light-grey;
   margin-right: $px8;
 
   .comment_time {
@@ -1253,7 +1253,7 @@ details {
 
 [data-bs-theme=dark] {
   .post_list .post_teaser {
-    border-bottom: solid $px1bw $super-dark-grey;
+    border-bottom: solid var(--border-1) $super-dark-grey;
     .thumbnail .fe {
       background-color: $black-tint-02;
     }
@@ -1388,7 +1388,7 @@ details {
   }
 
   div {
-    border: solid $px1bw $primary-colour;
+    border: solid var(--border-1) $primary-colour;
   }
 
   .upvote_button, .downvote_button {
@@ -1986,17 +1986,17 @@ a.unread, div.unread {
   padding: 0 $px4;
 
   &.nsfw {
-    border:$px1bw solid $danger;
+    border:var(--border-1) solid $danger;
     color:$danger;
   }
 
   &.nsfl {
-    border:$px1bw solid $black;
+    border:var(--border-1) solid $black;
     color:$black;
   }
 
   &.ai_generated {
-    border:$px1bw solid $danger;
+    border:var(--border-1) solid $danger;
     color:$danger;
   }
 }
@@ -2008,7 +2008,7 @@ h1 .warning_badge {
 }
 
 [data-bs-theme=dark] .warning_badge.nsfl {
-  border:$px1bw solid $white;
+  border:var(--border-1) solid $white;
   color:$white;
 }
 
@@ -2185,7 +2185,7 @@ h1 .warning_badge {
   padding-bottom: $px12;
 
   @include breakpoint(tablet) {
-    border: solid $px1bw $light-grey;
+    border: solid var(--border-1) $light-grey;
     border-radius: $px5;
     padding-top: $px8;
   }
@@ -2319,14 +2319,14 @@ form {
 }
 
 .coolfieldset, .coolfieldset.expanded{
-  border:$px1bw solid $light-grey;
+  border:var(--border-1) solid $light-grey;
   border-radius: $px5;
   padding: 0 $px20;
 }
 
 .coolfieldset.collapsed{
   border:0;
-  border-top:$px1bw solid $grey;
+  border-top:var(--border-1) solid $grey;
   border-radius: 0;
 }
 
@@ -2422,7 +2422,7 @@ form {
   font-size: $fs87pc;
   background-color: $lightest-grey;
   border-radius: $px3;
-  border: solid $px1bw $grey;
+  border: solid var(--border-1) $grey;
   color: $super-dark-grey;
   padding: 0px $px3 0px $px3;
   display: inline-block;
@@ -2588,11 +2588,11 @@ form {
 }
 
 .sender_list {
-  border-right: solid $px1bw $light-grey;
+  border-right: solid var(--border-1) $light-grey;
 }
 
 .message {
-  border: solid $px1bw $light-grey;
+  border: solid var(--border-1) $light-grey;
   border-radius: $px5;
   padding: $px8 $px15 0 $px15;
 
@@ -2709,7 +2709,7 @@ form {
 }
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {
-  border: solid $px1bw $light-grey;
+  border: solid var(--border-1) $light-grey;
   border-radius: $px5;
   padding: $px5 $px10;
   margin-bottom: $px15;
@@ -2717,14 +2717,14 @@ form {
 
 #typeTab {
   a:not(.btn):active {
-    border-width: $px1bw;
+    border-width: var(--border-1);
   }
 }
 
 #communitySidebar {
   color: var(--bs-body-color);
   background-color: var(--bs-body-bg);
-  border: $px1bw solid var(--bs-border-color);
+  border: var(--border-1) solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
   max-width: 345px;
   max-height: 90vh;
@@ -2751,7 +2751,7 @@ form {
 
 /* Voting dialog positioning */
 #voting_dialog {
-  border: $px1bw solid var(--bs-border-color);
+  border: var(--border-1) solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
   box-shadow: 0 var(--spacing-8) var(--spacing-16) $black-tint-001;
   background-color: var(--bs-body-bg);
@@ -2811,7 +2811,7 @@ form {
         line-height: 1;
         color: var(--bs-body-color);
         background-color: var(--bs-secondary-bg);
-        border: $px1bw solid var(--bs-border-color);
+        border: var(--border-1) solid var(--bs-border-color);
         border-radius: 21px;
         box-shadow: inset 0 0 $px5 0 $black-tint-00;
         height: $px30;
@@ -2899,7 +2899,7 @@ form {
 
         color: var(--bs-secondary-color);
         background-color: var(--bs-body-bg);
-        border: $px1bw solid var(--bs-border-color);
+        border: var(--border-1) solid var(--bs-border-color);
 
         & i {
             font-size: $fs1em;
@@ -3027,7 +3027,7 @@ form {
 .user-suggestion-box {
   position: absolute;
   background: var(--bs-body-bg, $white);
-  border: $px1bw solid var(--bs-border-color, $lighter-grey-decoration);
+  border: var(--border-1) solid var(--bs-border-color, $lighter-grey-decoration);
   border-radius: 0.375rem;
   box-shadow: 0 var(--spacing-2) var(--spacing-4) $black-tint-000;
   max-height: 300px;
