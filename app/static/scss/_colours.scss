@@ -70,7 +70,7 @@ $super-dark-grey: #424549; // styles.scss dropdown bg
 $darker-grey: #333; // _high_contrast colour, _dark
 $black: black;
 
-$white-rgba: rgba(256,256,256, 0.7); // styles.scss fe-image and fe- others
+$white-rgba: rgba(256,256,256, 0.9); // styles.scss fe-image and fe- others light mode post_list (at 0.8 will be below 3:1 contrast, above 0.9 is okay)
 $white-rgba-02: rgba(253,253,253,.5); // styles.scss box-shadow nav link
 
 $black-tint-00: rgba(0, 0, 0, 0.1); // styles.scss box-shadow, user-suggestion-box box-shadow
@@ -81,6 +81,7 @@ $black-tint-02: rgba(0,0,0,0.4); // styles.scss thumbnail fe dark
 $black-tint-025: rgba(0, 0, 0, 0.5); // styles.scss backdrop
 $black-tint-03: rgba(0,0,0,0.6); // styles.scss breadcrumb bg
 $black-tint-04: rgba(0, 0, 0, 0.7); // styles.scss masonry_info
+$black-tint-08: rgba(0, 0, 0, 0.8); // styles.scss fe-image and fe- others post_list
 
 $opacity-00: 0; // emoji-picker
 $opacity-01: 0.1; // comment_body, #home_announcement
