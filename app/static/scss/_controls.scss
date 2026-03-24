@@ -29,7 +29,7 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
   color: $grey-blue;
   background-color: $white;
   background-clip: padding-box;
-  border: $px1 solid $blue-rgba;
+  border: var(--border-1) solid $blue-rgba;
   border-radius: $px5;
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }

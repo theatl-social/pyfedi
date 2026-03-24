@@ -83,7 +83,7 @@ body.compact-max {
       display: none;
     }
 
-    border-bottom-width: $px1;
+    border-bottom-width: var(--border-1);
     padding-top: $px4;
 
     img, .thumbnail {
