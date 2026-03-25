@@ -54,7 +54,7 @@ body.compact-min {
   }
 
   .mt-4 {
-    margin-top: $rem1x3!important;
+    margin-top: var(--spacing-20) !important;
   }
 
   .communities_table tbody tr th a {
