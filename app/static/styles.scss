@@ -1129,7 +1129,7 @@ time {
 
         .reply_col {
           justify-content: right;
-          padding-right: $px5;
+          padding-right: var(--spacing-4);
           flex-grow: 1;
         }
       }
@@ -2278,7 +2278,7 @@ h1 .warning_badge {
 .community_icon_small {
   width: var(--spacing-20);
   height: var(--spacing-20);
-  margin-right: $px3;
+  margin-right: var(--spacing-4);
   object-fit: cover;
   font-size: 0;
 }
@@ -2366,7 +2366,7 @@ form {
 
 .post_flair {
   font-size: $fs73pc;
-  padding: $px1 $px3;
+  padding: var(--spacing-2) var(--spacing-4);
   border-radius: $px3;
   text-wrap: nowrap;
 }
