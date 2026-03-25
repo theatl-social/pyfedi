@@ -50,7 +50,7 @@ body.compact-min {
   }
 
   .table > :not(caption) > * > * {
-    padding: $rem03 $rem03;
+    padding: var(--spacing-4) var(--spacing-4);
   }
 
   .mt-4 {
