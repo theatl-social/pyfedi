@@ -623,7 +623,7 @@ form {
 
 .form-check .form-check-input {
   position: relative;
-  top: $px4;
+  top: var(--spacing-4);
 }
 
 .post_teaser_title_a {
@@ -714,7 +714,7 @@ ul.form-multicheck-columns {
 
     h3 {
       font-size: $h3post;
-      margin-top: $px4;
+      margin-top: var(--spacing-4);
       margin-bottom: 0;
       overflow: hidden;
     }
@@ -887,7 +887,7 @@ ul.form-multicheck-columns {
   img {
     max-width: 100%;
     min-width: 150px;
-    margin-right: $px4;
+    margin-right: var(--spacing-4);
     height: auto;
   }
 }
@@ -1880,7 +1880,7 @@ a.unread, div.unread {
     margin: 0 var(--spacing-20) $px6 var(--spacing-20);
     font-size: $fs95pc;
     border-left-style: solid;
-    border-left-width: $px4;
+    border-left-width: var(--spacing-4);
     background-color: var(--bs-secondary-bg-subtle);
     border-left-color: var(--bs-secondary-border-subtle);
 
@@ -1983,7 +1983,7 @@ a.unread, div.unread {
   text-overflow: ellipsis;
   vertical-align: text-bottom;
   line-height: $px20;
-  padding: 0 $px4;
+  padding: 0 var(--spacing-4);
 
   &.nsfw {
     border:var(--border-1) solid $danger;
@@ -2308,7 +2308,7 @@ h1 .warning_badge {
 .external_link_icon {
   width: 12px;
   height: 12px;
-  margin-left: $px4;
+  margin-left: var(--spacing-4);
   margin-bottom: $px3;
 }
 
@@ -2408,10 +2408,10 @@ form {
 
   .post_flair {
     font-size: $fs90pc;
-    padding: var(--spacing-2) $px4;
+    padding: var(--spacing-2) var(--spacing-4);
     line-height: $px20;
     display: inline-block;
-    border-radius: $px4;
+    border-radius: var(--spacing-4);
     white-space: nowrap;
     text-align: center;
   }
@@ -2789,7 +2789,7 @@ form {
     user-select: none;
 
     &:has(.message_reaction) {
-        margin-top: $px4;
+        margin-top: var(--spacing-4);
     }
 
     .message_reaction_container {
@@ -2803,7 +2803,7 @@ form {
 
     .message_reaction {
         display: flex;
-        padding: $px1x5 $px4 $px1x5 $px3;
+        padding: $px1x5 var(--spacing-4) $px1x5 $px3;
         box-sizing: border-box;
         min-width: 44px;
         cursor: pointer;
@@ -2831,7 +2831,7 @@ form {
             border-color: var(--bs-primary-border-subtle);
 
             border-width: $px1x5;
-            padding: $px1 $px4 $px1 $px3;
+            padding: $px1 var(--spacing-4) $px1 $px3;
 
             font-weight: var(--bs-font-weight-semibold);
             box-shadow: none;
@@ -2894,7 +2894,7 @@ form {
         visibility: hidden;
         pointer-events: none;
 
-        padding: $px4 $px6;
+        padding: var(--spacing-4) $px6;
         border-radius: 21px;
 
         color: var(--bs-secondary-color);

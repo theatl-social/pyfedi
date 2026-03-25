@@ -5,7 +5,7 @@
 body.compact-min {
 
   .btn {
-    padding: $px4 $px8;
+    padding: var(--spacing-4) $px8;
     font-size: $fs93pc;
   }
   .post_teaser {
@@ -58,8 +58,8 @@ body.compact-min {
   }
 
   .communities_table tbody tr th a {
-    padding-top: $px4;
-    padding-bottom: $px4;
+    padding-top: var(--spacing-4);
+    padding-bottom: var(--spacing-4);
   }
 
   .form-control {
@@ -84,7 +84,7 @@ body.compact-max {
     }
 
     border-bottom-width: var(--border-1);
-    padding-top: $px4;
+    padding-top: var(--spacing-4);
 
     img, .thumbnail {
       display: none;
