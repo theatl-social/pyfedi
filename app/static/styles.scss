@@ -823,7 +823,7 @@ ul.form-multicheck-columns {
 
       .voting_buttons {
         width: 46px;
-        line-height: $px24;
+        line-height: var(--spacing-24);
         .upvote_button, .downvote_button {
           font-size: $fs80pc;
         }
@@ -836,7 +836,7 @@ ul.form-multicheck-columns {
 
     .post_teaser_image_preview {
       img.blur {
-        filter: blur($px24);
+        filter: blur(var(--spacing-24));
       }
     }
   }
@@ -935,7 +935,7 @@ ul.form-multicheck-columns {
   }
 
   .blur {
-    filter: blur($px24);
+    filter: blur(var(--spacing-24));
   }
 }
 
@@ -2101,7 +2101,7 @@ h1 .warning_badge {
   max-height: 90vh;
 
   &.blur {
-    filter: blur($px24);
+    filter: blur(var(--spacing-24));
   }
 }
 

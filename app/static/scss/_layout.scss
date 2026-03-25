@@ -15,7 +15,7 @@
     --spacing-12: 0.75rem; // 12px, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 * var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss)
     --spacing-16: 1rem; // 16px, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3
     --spacing-20: 1.25rem; // 20px, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
-    --spacing-24: 1.5rem; // 24px
+    --spacing-24: 1.5rem; // 24px, line-height and many blur (styles.scss)
     --spacing-28: 1.75rem; // 28px
     --spacing-32: 2rem; // 32px, _compact padding
     --spacing-40: 2.5rem; // 40px
@@ -46,7 +46,6 @@ $px13: 13px; // some in styles.scss, (font-size in _typography)
 $px14: 14px; // line-height, other instances on styles.scss
 $px15: 15px; // negative is -($px15)
 $px17: 17px; // styles.scss, top,and padding/margins, _typography (font-size defined as fs17px)
-$px24: 24px; // line-height and many blur (styles.scss)
 $px26: 26px; // styles.scss line height x2
 $px30: 30px; // styles.scss line height, font-size, width, height, padding, margins, _compact line height, min-width, min-height
 $px40: 40px; // styles.scss line height
