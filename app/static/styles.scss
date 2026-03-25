@@ -2781,7 +2781,7 @@ form {
 .message_reactions {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: var(--bs-spacer-1);
+    gap: var(--spacing-2);
     max-width: 100%;
     row-gap: var(--spacing-4);
 
