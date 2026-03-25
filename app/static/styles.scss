@@ -317,7 +317,7 @@ div.navbar {
 
   .jump_links {
     float: left;
-    padding-left: $px12;
+    padding-left: var(--spacing-12);
     padding-top: $px3;
 
     a {
@@ -478,7 +478,7 @@ form {
     padding-top: $px17 !important;
     @media (orientation: landscape) {
       height: 60px;
-      padding-top: $px12 !important;
+      padding-top: var(--spacing-12) !important;
     }
   }
 
@@ -549,8 +549,8 @@ form {
   background-size: cover;
   border-radius: $px5 $px5 0 0;   /* top-left | top-right | bottom-right | bottom-left */
   height: 176px;
-  margin-left: -($px12);
-  margin-right: -($px12);
+  margin-left: calc(-1 * var(--spacing-12));
+  margin-right: calc(-1 * var(--spacing-12));
   margin-top: -($px9);
 
   @include breakpoint(tablet) {
@@ -709,8 +709,8 @@ ul.form-multicheck-columns {
   .post_teaser {
 
     border-bottom: solid var(--border-2) $light-grey;
-    padding-top: $px8;
-    padding-bottom: $px8;
+    padding-top: var(--spacing-8);
+    padding-bottom: var(--spacing-8);
 
     h3 {
       font-size: $h3post;
@@ -1002,7 +1002,7 @@ time {
 
   .post_reply_count {
     justify-content: left;
-    margin-right: $px8;
+    margin-right: var(--spacing-8);
   }
 
   @container (width < 400px) {
@@ -1217,7 +1217,7 @@ details {
 .comments > .comment {
   margin-left: 0;
   border-top: solid var(--border-1) $light-grey;
-  margin-right: $px8;
+  margin-right: var(--spacing-8);
 
   .comment_time {
     font-size: $fs87pc;
@@ -1349,7 +1349,7 @@ details {
 
   .downvote_button {
     .htmx-indicator {
-      left: $px12;
+      left: var(--spacing-12);
       top: $px14;
     }
   }
@@ -1453,10 +1453,10 @@ details {
 
 .comment {
   clear: both;
-  margin-left: $px8;
+  margin-left: var(--spacing-8);
   padding-left: 0;
-  padding-top: $px8;
-  padding-right: $px8;
+  padding-top: var(--spacing-8);
+  padding-right: var(--spacing-8);
 
   &.distinguished {
     > .row:first-child {
@@ -1753,8 +1753,8 @@ a.unread, div.unread {
   &:before {
     content: '';
     display: inline-block;
-    width: $px8;
-    height: $px8;
+    width: var(--spacing-8);
+    height: var(--spacing-8);
     margin-right: $px6;
     background-color: red;
     border-radius: 50%;
@@ -2182,12 +2182,12 @@ h1 .warning_badge {
 
 .main_pane {
   /* Ensure a little space after pagination on mobile. */
-  padding-bottom: $px12;
+  padding-bottom: var(--spacing-12);
 
   @include breakpoint(tablet) {
     border: solid var(--border-1) $light-grey;
     border-radius: $px5;
-    padding-top: $px8;
+    padding-top: var(--spacing-8);
   }
 
   .url_thumbnail {
@@ -2314,7 +2314,7 @@ h1 .warning_badge {
 
 form {
   h5 {
-    padding-top: $px12;
+    padding-top: var(--spacing-12);
   }
 }
 
@@ -2404,7 +2404,7 @@ form {
 .post_flair_sidepane {
   display: flex;
   flex-wrap: wrap;
-  gap: $px8;
+  gap: var(--spacing-8);
 
   .post_flair {
     font-size: $fs90pc;
@@ -2415,7 +2415,7 @@ form {
     white-space: nowrap;
     text-align: center;
   }
-  margin-top: $px12;
+  margin-top: var(--spacing-12);
 }
 
 .user_flair, .user_note {
@@ -2449,7 +2449,7 @@ form {
   padding-top: $px6;
 
   &:first-child {
-    padding-top: $px8;
+    padding-top: var(--spacing-8);
   }
 }
 
@@ -2594,7 +2594,7 @@ form {
 .message {
   border: solid var(--border-1) $light-grey;
   border-radius: $px5;
-  padding: $px8 $px15 0 $px15;
+  padding: var(--spacing-8) $px15 0 $px15;
 
   &.from_other_party {
       float: right;
@@ -2641,8 +2641,8 @@ form {
   color: var(--bs-card-cap-color);
   background-color: rgba(var(--bs-body-color-rgb), 0.03);
   border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
-  margin-top: -($px8);
-  margin-bottom: $px8;
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
   margin-right: calc(var(--bs-gutter-x) * -.5);
   margin-left: calc(var(--bs-gutter-x) * -.5);
 
@@ -2657,8 +2657,8 @@ form {
 
 .post_translate_all_icon {
   float: right;
-  margin-top: $px8;
-  margin-right: $px8;
+  margin-top: var(--spacing-8);
+  margin-right: var(--spacing-8);
 }
 
 .render_username {
@@ -3056,7 +3056,7 @@ form {
 
 
 .accordion-button {
-  padding: $px7 $px12;
+  padding: $px7 var(--spacing-12);
 }
 
 .blink {
