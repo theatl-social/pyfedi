@@ -6,7 +6,7 @@
     --spacing-4: 0.25rem; // 4px, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss)
     --spacing-8: 0.5rem; // 8px, styles.scss, _compact padding
     --spacing-12: 0.75rem; // 12px, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem)
-    --spacing-16: 1rem; // 16px, styles.scss height, box-shadow, other  (h4 style moved to _typography)
+    --spacing-16: 1rem; // 16px, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3
     --spacing-20: 1.25rem; // 20px, styles.scss margin-left (also a font-size in _typography), margin for blockquote
     --spacing-24: 1.5rem; // 24px
     --spacing-28: 1.75rem; // 28px
@@ -54,7 +54,6 @@ $px70: 70px; // footer in styles.scss (normal plus breakpoint), element width
 
 $factor1x6: 1.6; // line-height in _controls
 
-$rem1x1: 1.1rem; // styles.scss for bootstrap classes
 $rem1x2: 1.2rem; // styles.scss font-size
 $rem1x3: 1.3rem; // _compact margin
 

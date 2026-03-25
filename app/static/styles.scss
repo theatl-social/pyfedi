@@ -380,7 +380,7 @@ div.navbar {
 
 form {
   .mb-3 {
-    margin-bottom: $rem1x1;
+    margin-bottom: var(--spacing-16);
 
     &.required {
       > label {
