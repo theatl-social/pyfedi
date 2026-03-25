@@ -204,11 +204,11 @@ div.navbar {
 
     .content-center {
       a {
-        margin-left: $px5;
-        margin-right: $px5;
+        margin-left: var(--spacing-4);
+        margin-right: var(--spacing-4);
         span {
-          margin-left: $px5;
-          margin-right: $px5;
+          margin-left: var(--spacing-4);
+          margin-right: var(--spacing-4);
         }
       }
 
