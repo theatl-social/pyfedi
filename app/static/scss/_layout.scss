@@ -9,7 +9,7 @@
 */
 
 :root {
-	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow), message_reactions gap (styles.scss), styles.scss, margins - and negative calc(-1 * var(--spacing-2)), and box shadow in _controls
+	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow), message_reactions gap (styles.scss), styles.scss, margins - and negative calc(-1 * var(--spacing-2)), and box shadow in _controls, .author and post_teaser_link_preview padding
     --spacing-4: 0.25rem; // 4px, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss), lots of instances in styles.scss, top, _compact
     --spacing-8: 0.5rem; // 8px, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 * var(--spacing-8)), and button style in _compact
     --spacing-12: 0.75rem; // 12px, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 * var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss)
