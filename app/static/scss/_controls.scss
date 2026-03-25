@@ -16,14 +16,14 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
 
 .form-control-label {
     display: block;
-    margin-bottom: $rem0375;
+    margin-bottom: var(--spacing-4);
     font-weight: 600;
 }
 
 .form-control {
   display: block;
   width: 100%;
-  padding: $rem0375 var(--spacing-12);
+  padding: var(--spacing-4) var(--spacing-12);
   font-size: $fs0x9375rem;
   line-height: $factor1x6;
   color: $grey-blue;
