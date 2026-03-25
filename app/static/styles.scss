@@ -2871,7 +2871,7 @@ form {
 
     .message_reaction_count {
         font-size: $fs90pc;
-        margin: 0 $px3;
+        margin: 0 var(--spacing-2);
         line-height: $fs1x0317em;
         align-self: center;
     }
