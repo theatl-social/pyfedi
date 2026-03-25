@@ -74,6 +74,10 @@ inoculation = [
                 'title': 'Confirmation bias',
                 'href': 'https://rationalwiki.org/wiki/Confirmation_bias'
             },
+            {
+                'title': 'It\'s rude to show AI output to people',
+                'href': 'https://distantprovince.by/posts/its-rude-to-show-ai-output-to-people/'
+            },
         ]
     },
     {
