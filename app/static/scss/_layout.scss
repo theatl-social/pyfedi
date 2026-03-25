@@ -14,7 +14,7 @@
     --spacing-8: 0.5rem; // 8px, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 * var(--spacing-8)), and button style in _compact
     --spacing-12: 0.75rem; // 12px, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 * var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss)
     --spacing-16: 1rem; // 16px, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3
-    --spacing-20: 1.25rem; // 20px, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4
+    --spacing-20: 1.25rem; // 20px, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
     --spacing-24: 1.5rem; // 24px
     --spacing-28: 1.75rem; // 28px
     --spacing-32: 2rem; // 32px, _compact padding
@@ -46,7 +46,6 @@ $px13: 13px; // some in styles.scss, (font-size in _typography)
 $px14: 14px; // line-height, other instances on styles.scss
 $px15: 15px; // negative is -($px15)
 $px17: 17px; // styles.scss, top,and padding/margins, _typography (font-size defined as fs17px)
-$px20: 20px; // in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
 $px24: 24px; // line-height and many blur (styles.scss)
 $px26: 26px; // styles.scss line height x2
 $px30: 30px; // styles.scss line height, font-size, width, height, padding, margins, _compact line height, min-width, min-height
@@ -71,19 +70,19 @@ $pc16x9: 56.25%; /* 16:9 aspect ratio on video wrapper in styles.scss */
 }
 
 .pl-1 {
-  padding-left: $px5!important;
+  padding-left: 5px !important;
 }
 
 .pl-2 {
-  padding-left: $px10!important;
+  padding-left: 10px !important;
 }
 
 .pl-3 {
-  padding-left: $px15!important;
+  padding-left: 15px !important;
 }
 
 .pl-4 {
-  padding-left: $px20!important;
+  padding-left: 20px !important;
 }
 
 .pl-0 {

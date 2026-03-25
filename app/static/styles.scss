@@ -139,7 +139,7 @@ div.navbar {
 
   @media (min-width: 1400px) {
     .container-lg {
-      padding-right: $px20;
+      padding-right: var(--spacing-20);
     }
   }
 }
@@ -147,7 +147,7 @@ div.navbar {
 .navbar-brand {
   line-height: $px46;
   img {
-    margin-right: $px20;
+    margin-right: var(--spacing-20);
     margin-top: -($px1);
   }
 }
@@ -328,7 +328,7 @@ div.navbar {
   .community_filter {
     position: relative;
     margin-left: $px10;
-    padding-right: $px20;
+    padding-right: var(--spacing-20);
 
     .fe-search {
       position: absolute;
@@ -539,7 +539,7 @@ form {
   grid-template-columns: repeat(auto-fit,minmax(152px, 1fr));
 
   > li {
-    padding-bottom: $px20;
+    padding-bottom: var(--spacing-20);
   }
 }
 
@@ -1052,7 +1052,7 @@ time {
       border: none;
 
       img.blur {
-        filter: blur($px20);
+        filter: blur(var(--spacing-20));
       }
     }
 
@@ -1109,8 +1109,8 @@ time {
 
             .htmx-indicator {
               position: absolute;
-              width: $px20;
-              height: $px20;
+              width: var(--spacing-20);
+              height: var(--spacing-20);
               left: $px7;
             }
           }
@@ -1202,8 +1202,8 @@ details {
 .render_username {
   display: inline;
   a img {
-    width: $px20;
-    height: $px20;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
     border-radius: 50%;
     vertical-align: bottom;
     object-fit: cover;
@@ -1357,15 +1357,15 @@ details {
   .htmx-indicator{
     position: absolute;
     left: $px3;
-    width: $px20;
-    height: $px20;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
     top: 0;
   }
   .htmx-request .htmx-indicator{
     display:inline;
     position: absolute;
-    width: $px20;
-    height: $px20;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
     right: $px14;
     top: $px5;
     opacity: $opacity-10!important;
@@ -1430,14 +1430,14 @@ details {
 
   .htmx-indicator{
     position: absolute;
-    width: $px20;
+    width: var(--spacing-20);
     height: 20px;
   }
   .htmx-request .htmx-indicator{
     display:inline;
     position: absolute;
-    width: $px20;
-    height: $px20;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
     right: $px14;
     top: $px5;
     opacity: $opacity-10!important;
@@ -1982,7 +1982,7 @@ a.unread, div.unread {
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: text-bottom;
-  line-height: $px20;
+  line-height: var(--spacing-20);
   padding: 0 var(--spacing-4);
 
   &.nsfw {
@@ -2126,7 +2126,7 @@ h1 .warning_badge {
 }
 
 #pollChoicesFieldset {
-  margin-bottom: $px20;
+  margin-bottom: var(--spacing-20);
 }
 
 .post_poll {
@@ -2253,8 +2253,8 @@ h1 .warning_badge {
   height: 20vw;
   max-width: $px30!important;
   max-height: $px30;
-  min-width: $px20;
-  min-height: $px20;
+  min-width: var(--spacing-20);
+  min-height: var(--spacing-20);
   vertical-align: text-top;
   object-fit: cover;
 }
@@ -2276,8 +2276,8 @@ h1 .warning_badge {
 }
 
 .community_icon_small {
-  width: $px20;
-  height: $px20;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
   margin-right: $px3;
   object-fit: cover;
   font-size: 0;
@@ -2321,7 +2321,7 @@ form {
 .coolfieldset, .coolfieldset.expanded{
   border:var(--border-1) solid $light-grey;
   border-radius: $px5;
-  padding: 0 $px20;
+  padding: 0 var(--spacing-20);
 }
 
 .coolfieldset.collapsed{
@@ -2409,7 +2409,7 @@ form {
   .post_flair {
     font-size: $fs90pc;
     padding: var(--spacing-2) var(--spacing-4);
-    line-height: $px20;
+    line-height: var(--spacing-20);
     display: inline-block;
     border-radius: var(--spacing-4);
     white-space: nowrap;
@@ -2852,8 +2852,8 @@ form {
         .emoji {
           margin: var(--spacing-2) $px3;
           padding: var(--spacing-2) 0px;
-          height: $px20;
-          width: $px20;
+          height: var(--spacing-20);
+          width: var(--spacing-20);
           flex-shrink: 0;
           overflow: hidden;
           font-size: $fs17px;
@@ -3072,8 +3072,8 @@ form {
   }
 
   img {
-    width: $px20;
-    height: $px20;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
   }
 }
 
