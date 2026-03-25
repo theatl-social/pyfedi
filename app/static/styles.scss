@@ -2367,7 +2367,7 @@ form {
 .post_flair {
   font-size: $fs73pc;
   padding: var(--spacing-2) var(--spacing-4);
-  border-radius: $px3;
+  border-radius: var(--spacing-4);
   text-wrap: nowrap;
 }
 
@@ -2421,10 +2421,10 @@ form {
 .user_flair, .user_note {
   font-size: $fs87pc;
   background-color: $lightest-grey;
-  border-radius: $px3;
+  border-radius: var(--spacing-4);
   border: solid var(--border-1) $grey;
   color: $super-dark-grey;
-  padding: 0px $px3 0px $px3;
+  padding: 0px var(--spacing-2) 0px var(--spacing-4);
   display: inline-block;
 }
 
