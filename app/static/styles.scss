@@ -3028,7 +3028,7 @@ form {
   position: absolute;
   background: var(--bs-body-bg, $white);
   border: var(--border-1) solid var(--bs-border-color, $lighter-grey-decoration);
-  border-radius: 0.375rem;
+  border-radius: var(--spacing-4);
   box-shadow: 0 var(--spacing-2) var(--spacing-4) $black-tint-000;
   max-height: 300px;
   overflow: hidden;

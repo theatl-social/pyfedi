@@ -3,7 +3,7 @@
 
 :root {
 	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow)
-    --spacing-4: 0.25rem; // 4px, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding
+    --spacing-4: 0.25rem; // 4px, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss)
     --spacing-8: 0.5rem; // 8px, styles.scss, _compact padding
     --spacing-12: 0.75rem; // 12px, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem)
     --spacing-16: 1rem; // 16px, styles.scss height, box-shadow, other  (h4 style moved to _typography)
@@ -25,6 +25,7 @@
 
 $border-1: 1px; // for border, border-width to replace those using px1 in _controls, _compact, _high_contrast
 $border-2: 2px; // for border and border-radius, multiple stylesheets
+// --spacing-4 (0.25rem) used for some border-radius
 
 $px1: 1px; // negative values -($px1) _typography (top)
 $px1x5: 1.5px; // message_reaction and border-width styles.scss
