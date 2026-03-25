@@ -788,7 +788,7 @@ ul.form-multicheck-columns {
       img {
         height: 60px;
         width: 60px;
-        border-radius: $px5;
+        border-radius: var(--spacing-4);
         object-fit: cover;
         @include breakpoint(tablet) {
           height: 90px;
@@ -882,7 +882,7 @@ ul.form-multicheck-columns {
     max-width: 512px;
     max-height: 575px;
     overflow: hidden;
-    border-radius: $px5;
+    border-radius: var(--spacing-4);
   }
   img {
     max-width: 100%;
@@ -922,7 +922,7 @@ ul.form-multicheck-columns {
     height: 100%;
     object-fit: cover;
     cursor: pointer;
-    border-radius: $px5;
+    border-radius: var(--spacing-4);
   }
 
   .video-wrapper iframe {
@@ -961,7 +961,7 @@ time {
   display: inline-block;
   width: 100%;
   overflow: hidden;
-  border-radius: $px5;
+  border-radius: var(--spacing-4);
 }
 
 .post_utilities_bar {
@@ -1032,7 +1032,7 @@ time {
   .column {
     flex: 1;
     padding: 0;
-    padding-right: $px5;
+    padding-right: var(--spacing-4);
     &:last-child {
       padding-right: 0;
     }
@@ -1040,7 +1040,7 @@ time {
 
   .item {
     position: relative;
-    margin-bottom: $px5;
+    margin-bottom: var(--spacing-4);
     overflow: hidden;
     img {
       width: 100%;
@@ -1100,9 +1100,9 @@ time {
           .upvote_button, .downvote_button {
             display: inline;
             color: white;
-            padding-top: $px10;
+            padding-top: var(--spacing-8);
             @include breakpoint(laptop) {
-              padding-top: $px5;
+              padding-top: var(--spacing-4);
             }
             width: 50%;
             position: relative;
