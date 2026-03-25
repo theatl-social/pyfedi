@@ -850,8 +850,8 @@ ul.form-multicheck-columns {
   position: relative;
   max-height: 100px;
   overflow: hidden;
-  padding-left: $px3;
-  padding-right: $px3;
+  padding-left: var(--spacing-2);
+  padding-right: var(--spacing-2);
 
   p {
     margin: 0;
@@ -944,7 +944,7 @@ time {
 }
 
 .author {
-  padding-left: $px3;
+  padding-left: var(--spacing-2);
 
   a {
     border-left: 0;
@@ -1393,10 +1393,10 @@ details {
 
   .upvote_button, .downvote_button {
     position: relative;
-    padding: 0 $px3;
+    padding: 0 var(--spacing-2);
     min-height: $min-touch-target;
     min-width: $min-touch-target;
-    border-radius: $px3;
+    border-radius: var(--spacing-2);
     cursor: pointer;
     display: flex;
     align-items: center;
