@@ -33,11 +33,11 @@
 $border-1: 1px; // for border, border-width to replace those using px1 in _controls, _compact, _high_contrast
 $border-2: 2px; // for border and border-radius, multiple stylesheets
 // --spacing-2 (0.125rem) used for some border-radius to replace 3px radius in some cases
-// --spacing-4 (0.25rem) used for some border-radius
+// --spacing-4 (0.25rem) used for some border-radius (styles.scss and _dark)
 
 $px1: 1px; // negative values -($px1) _typography (top)
 $px1x5: 1.5px; // message_reaction and border-width styles.scss
-$px3: 3px; // border radius, blur, _dark (border-radius)
+$px3: 3px; // spoiler-block styles.scss, htmx-indicator
 $px5: 5px; // negative is -($px5), note there is a border-radius with this value in _controls
 $px6: 6px; // locations, blur, border-radius instances (styles.scss)
 $px7: 7px; // styles.scss, positioning, margins, paddings
