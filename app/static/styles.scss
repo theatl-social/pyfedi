@@ -2544,7 +2544,7 @@ form {
 
 .blocked_image {
   img {
-    filter: grayscale(100%) blur($px3)!important;
+    filter: grayscale(100%) blur(var(--spacing-4))!important;
   }
 }
 
@@ -2803,7 +2803,7 @@ form {
 
     .message_reaction {
         display: flex;
-        padding: $px1x5 var(--spacing-4) $px1x5 $px3;
+        padding: var(--spacing-2) var(--spacing-4);
         box-sizing: border-box;
         min-width: 44px;
         cursor: pointer;
@@ -2812,7 +2812,7 @@ form {
         color: var(--bs-body-color);
         background-color: var(--bs-secondary-bg);
         border: var(--border-1) solid var(--bs-border-color);
-        border-radius: 21px;
+        border-radius: var(--spacing-24);
         box-shadow: inset 0 0 $px5 0 $black-tint-00;
         height: $px30;
 
