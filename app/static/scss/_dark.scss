@@ -19,7 +19,7 @@
     border: $px1 solid $blue-rgba-03;
     border-radius: $px3;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    padding: $rem0375 var(--spacing-12);
+    padding: var(--spacing-4) var(--spacing-12);
     font-size: $fs0x9375rem;
   }
 
