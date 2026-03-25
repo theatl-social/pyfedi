@@ -39,7 +39,7 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
     background-color: $white;
     border-color: $blue-mid;
     outline: 0;
-    box-shadow: 0 0 0 $px2 $blue-rgba-02;
+    box-shadow: 0 0 0 var(--spacing-2) $blue-rgba-02;
 }
 
 .btn-secondary {

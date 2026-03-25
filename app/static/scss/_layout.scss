@@ -9,7 +9,7 @@
 */
 
 :root {
-	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow)
+	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow), message_reactions gap (styles.scss), styles.scss, margins - and negative calc(-1 * var(--spacing-2)), and box shadow in _controls
     --spacing-4: 0.25rem; // 4px, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss)
     --spacing-8: 0.5rem; // 8px, styles.scss, _compact padding
     --spacing-12: 0.75rem; // 12px, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem)
@@ -36,7 +36,6 @@ $border-2: 2px; // for border and border-radius, multiple stylesheets
 
 $px1: 1px; // negative values -($px1) _typography (top)
 $px1x5: 1.5px; // message_reaction and border-width styles.scss
-$px2: 2px; // styles.scss, margins (and negative -(px2)), and box shadow in _controls
 $px3: 3px; // border radius, blur, _dark (border-radius)
 $px4: 4px; // lots of instances in styles.scss, top, _compact
 $px5: 5px; // negative is -($px5), note there is a border-radius with this value in _controls

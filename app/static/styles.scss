@@ -21,7 +21,7 @@ body {
   &.embed {
     .post_teaser_body h3 {
       font-size: $fs1x2rem!important;
-      margin-bottom: $px2;
+      margin-bottom: var(--spacing-2);
     }
 
     .embed_logo {
@@ -387,7 +387,7 @@ form {
         &:after {
           content: '*';
           color: red;
-          margin-left: $px2;
+          margin-left: var(--spacing-2);
           font-size: $fs80pc;
           position: relative;
           top: -($px1);
@@ -405,7 +405,7 @@ form {
       &:after {
         content: '*';
         color: red;
-        margin-left: $px2;
+        margin-left: var(--spacing-2);
         font-size: $fs80pc;
         position: relative;
         top: -($px1);
@@ -952,7 +952,7 @@ time {
 }
 
 .community_instance {
-  margin-left: -($px2);
+  margin-left: calc(-1 * var(--spacing-2));
   display: none;
 }
 
@@ -1759,7 +1759,7 @@ a.unread, div.unread {
     background-color: red;
     border-radius: 50%;
     vertical-align: middle;
-    margin-top: -($px2);
+    margin-top: calc(-1 * var(--spacing-2));
   }
 }
 
@@ -1978,7 +1978,7 @@ a.unread, div.unread {
 .warning_badge {
   font-size: $fs12px;
   border-radius: var(--border-2);
-  margin-right: $px2;
+  margin-right: var(--spacing-2);
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: text-bottom;
@@ -2408,7 +2408,7 @@ form {
 
   .post_flair {
     font-size: $fs90pc;
-    padding: $px2 $px4;
+    padding: var(--spacing-2) $px4;
     line-height: $px20;
     display: inline-block;
     border-radius: $px4;
@@ -2669,7 +2669,7 @@ form {
 
     &.donor {
       img {
-        box-shadow: $black-tint-015 0px $px2 $px6;
+        box-shadow: $black-tint-015 0px var(--spacing-2) $px6;
       }
     }
   }
@@ -2850,8 +2850,8 @@ form {
         }
 
         .emoji {
-          margin: $px2 $px3;
-          padding: $px2 0px;
+          margin: var(--spacing-2) $px3;
+          padding: var(--spacing-2) 0px;
           height: $px20;
           width: $px20;
           flex-shrink: 0;
