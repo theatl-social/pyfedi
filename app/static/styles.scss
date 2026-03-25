@@ -245,7 +245,7 @@ div.navbar {
   border-right: solid var(--border-1) $lighter-grey-decoration;
   border-bottom: solid var(--border-1) $lighter-grey-decoration;
   border-left: solid var(--border-1) $lighter-grey-decoration;
-  border-radius: 0 0 $px5 $px5;
+  border-radius: 0 0 var(--spacing-4) var(--spacing-4);
   padding: $px10 $px15 0 $px15;
 }
 
@@ -547,7 +547,7 @@ form {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
-  border-radius: $px5 $px5 0 0;   /* top-left | top-right | bottom-right | bottom-left */
+  border-radius: var(--spacing-4) var(--spacing-4) 0 0;   /* top-left | top-right | bottom-right | bottom-left */
   height: 176px;
   margin-left: calc(-1 * var(--spacing-12));
   margin-right: calc(-1 * var(--spacing-12));
@@ -565,7 +565,7 @@ form {
     .breadcrumb {
       background-color: $black-tint-03;
       display: inline-block;
-      padding: $px5 $px10;
+      padding: var(--spacing-8) var(--spacing-12);
       @include breakpoint(tablet) {
         border-radius: $px6;
       }
@@ -662,7 +662,7 @@ ul.form-multicheck-columns {
   overflow-y: auto;
 
   li {
-    margin-right: $px5;
+    margin-right: var(--spacing-8);
   }
 }
 
