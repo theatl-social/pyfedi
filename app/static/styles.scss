@@ -2783,7 +2783,7 @@ form {
     flex-wrap: wrap;
     gap: var(--bs-spacer-1);
     max-width: 100%;
-    row-gap: $rem03;
+    row-gap: var(--spacing-4);
 
     overflow: hidden;
     user-select: none;
