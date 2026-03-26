@@ -568,7 +568,7 @@ form {
       display: inline-block;
       padding: var(--spacing-8) var(--spacing-12);
       @include breakpoint(tablet) {
-        border-radius: $px6;
+        border-radius: var(--spacing-4);
       }
       margin-bottom: 0;
 

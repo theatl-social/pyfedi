@@ -14,6 +14,12 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
   }
 }
 
+.btn-group {
+	display: flex;
+	position: relative;
+	align-items: center;
+}
+
 .form-control-label {
     display: block;
     margin-bottom: var(--spacing-4);

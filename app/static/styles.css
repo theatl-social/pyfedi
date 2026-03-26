@@ -645,6 +645,12 @@ fieldset legend {
   vertical-align: inherit;
 }
 
+.btn-group {
+  display: flex;
+  position: relative;
+  align-items: center;
+}
+
 .form-control-label {
   display: block;
   margin-bottom: var(--spacing-4);
@@ -1390,7 +1396,7 @@ form .mb-3.required > label:after {
 
 @media (min-width: 992px) {
   .community_header #breadcrumb_nav .breadcrumb, .event_banner #breadcrumb_nav .breadcrumb {
-    border-radius: 6px;
+    border-radius: var(--spacing-4);
   }
 }
 
