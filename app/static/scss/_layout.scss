@@ -9,15 +9,15 @@
 */
 
 :root {
-	--spacing-2: 0.125rem; // 2px, styles.scss (box shadow), message_reactions gap (styles.scss), styles.scss, margins - and negative calc(-1 * var(--spacing-2)), and box shadow in _controls, .author and post_teaser_link_preview padding, post_flair user_flair padding, spoiler-block styles.scss, jump_links styles.scss
-    --spacing-4: 0.25rem; // 4px, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss), lots of instances in styles.scss, top, _compact, form_control border-radius with this value in _controls and _dark, content-center a span on the nav-bar (styles.scss), #masonry upvote_button padding-top, post_flair user_flair padding, blocked-image blur, jump_links styles.scss, reaction_button:hover (styles.scss), blockquote and pre padding
-    --spacing-8: 0.5rem; // 8px, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 * var(--spacing-8)), and button style in _compact, padding breadcrumb-item styles.scss, ul.form-multicheck-columns li margin-right, #masonry upvote_button padding-top, nav-link, .accordion-button padding, blockquote padding
-    --spacing-12: 0.75rem; // 12px, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 * var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom
-    --spacing-16: 1rem; // 16px, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3
-    --spacing-20: 1.25rem; // 20px, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
-    --spacing-24: 1.5rem; // 24px, line-height and many blur (styles.scss), message_reaction border-radius
+	--spacing-2: 0.125rem; // 2px
+    --spacing-4: 0.25rem; // 4px
+    --spacing-8: 0.5rem; // 8px
+    --spacing-12: 0.75rem; // 12px
+    --spacing-16: 1rem; // 16px
+    --spacing-20: 1.25rem; // 20px
+    --spacing-24: 1.5rem; // 24px
     --spacing-28: 1.75rem; // 28px
-    --spacing-32: 2rem; // 32px, _compact padding
+    --spacing-32: 2rem; // 32px
     --spacing-40: 2.5rem; // 40px
     --spacing-48: 3rem; // 48px
     --spacing-56: 3.5rem; // 56px
@@ -27,6 +27,42 @@
     --spacing-96: 6rem; // 96px
     --spacing-120: 7.5rem; // 120px
     }
+    
+    /* Rem unit notes
+     --spacing-2, styles.scss (box shadow), message_reactions gap (styles.scss), styles.scss, margins - and negative calc(-1 * var(--spacing-2)), and box shadow in _controls, .author and post_teaser_link_preview padding, post_flair user_flair padding, spoiler-block styles.scss, jump_links styles.scss
+     
+     --spacing-4, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss), lots of instances in styles.scss, top, _compact, form_control border-radius with this value in _controls and _dark, content-center a span on the nav-bar (styles.scss), #masonry upvote_button padding-top, post_flair user_flair padding, blocked-image blur, jump_links styles.scss, reaction_button:hover (styles.scss), blockquote and pre padding
+     
+     --spacing-8, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 var(--spacing-8)), and button style in _compact, padding breadcrumb-item styles.scss, ul.form-multicheck-columns li margin-right, #masonry upvote_button padding-top, nav-link, .accordion-button padding, blockquote padding
+     
+     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom
+     
+     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3
+     
+     --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
+     
+     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius
+     
+     --spacing-28
+     
+     --spacing-32, _compact padding
+     
+     --spacing-40: 2.5rem; // 40px
+     
+    --spacing-48: 3rem; // 48px
+    
+    --spacing-56: 3.5rem; // 56px
+    
+    --spacing-64: 4rem; // 64px
+    
+    --spacing-72: 4.5rem; // 72px
+    
+    --spacing-80: 5rem; // 80px
+    
+    --spacing-96: 6rem; // 96px
+    
+    --spacing-120: 7.5rem; // 120px
+     * /
 
 // Pixel Units
 
