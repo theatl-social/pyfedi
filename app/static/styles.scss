@@ -2915,7 +2915,7 @@ form {
             background-color: var(--bs-secondary-bg);
             border-color: var(--bs-primary-border-subtle);
 
-            box-shadow: inset 0 0 $px5 0 $black-tint-00;
+            box-shadow: inset 0 0 var(--spacing-4) 0 $black-tint-00;
             cursor: pointer;
             opacity: $opacity-10;
         }
