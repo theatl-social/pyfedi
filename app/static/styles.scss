@@ -46,7 +46,7 @@ tg-spoiler {
   border-color: var(--bs-warning);
   border-width: var(--border-1);
   border-radius: var(--spacing-4);
-  padding: 0px $px10;
+  padding: 0px var(--spacing-8);
   color: transparent;
   &:hover {
     color: var(--bs-body-color);
