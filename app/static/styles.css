@@ -645,7 +645,7 @@ fieldset legend {
   vertical-align: inherit;
 }
 
-.btn-group {
+.btn-group.btn-group.me-lg-1 {
   display: flex;
   position: relative;
   align-items: center;
