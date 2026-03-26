@@ -654,7 +654,7 @@ fieldset legend {
 .form-control {
   display: block;
   width: 100%;
-  padding: var(--spacing-4) var(--spacing-12);
+  padding: var(--spacing-8) var(--spacing-12);
   font-size: 0.9375rem;
   line-height: 1.6;
   color: #495057;
@@ -663,6 +663,14 @@ fieldset legend {
   border: var(--border-1) solid rgba(0, 40, 100, 0.12);
   border-radius: var(--spacing-4);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-select {
+  padding: var(--spacing-8) var(--spacing-12);
+}
+
+.ts-control {
+  padding: 0;
 }
 
 .form-control:focus {

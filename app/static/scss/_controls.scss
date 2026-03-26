@@ -23,7 +23,7 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
 .form-control {
   display: block;
   width: 100%;
-  padding: var(--spacing-4) var(--spacing-12);
+  padding: var(--spacing-8) var(--spacing-12);
   font-size: $fs0x9375rem;
   line-height: $factor1x6;
   color: $grey-blue;
@@ -32,6 +32,14 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
   border: var(--border-1) solid $blue-rgba;
   border-radius: var(--spacing-4);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-select {
+  padding: var(--spacing-8) var(--spacing-12);
+}
+
+.ts-control {
+    padding: 0;
 }
 
 .form-control:focus {
