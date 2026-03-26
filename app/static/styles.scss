@@ -2004,8 +2004,7 @@ a.unread, div.unread {
 
 h1 .warning_badge {
   position: relative;
-  left: $px15;
-  top: -($px6);
+  top: calc(-1 * var(--spacing-4));
 }
 
 [data-bs-theme=dark] .warning_badge.nsfl {
@@ -2016,7 +2015,7 @@ h1 .warning_badge {
 .post_title {
   .warning_badge {
     line-height: 32px;
-    margin-left: $px15;
+    margin-left: var(--spacing-8);
   }
 }
 
