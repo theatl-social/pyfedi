@@ -70,7 +70,7 @@ $fs150pc: 150%; // .fe
 }
 
 .dropdown-item .fe {
-  padding-right: $px5;
+  padding-right: var(--spacing-4);
 }
 
 .fe-subscription::before {
@@ -385,7 +385,7 @@ $fs150pc: 150%; // .fe
 h1 {
   .fe-bell, .fe-no-bell {
     font-size: $fs18px;
-    top: -($px5);
+    top: calc(-1 * var(--spacing-4));
     left: $px17;
   }
 }
@@ -519,7 +519,7 @@ h1 {
   color: var(--bs-form-valid-border-color);
   font-size: $fs150pc;
   position: relative;
-  top: $px5;
+  display: flex;
 }
 
 .fe-unanswer::before {
@@ -527,7 +527,7 @@ h1 {
   color: var(--bs-danger);
   font-size: $fs150pc;
   position: relative;
-  top: $px5;
+  display: flex;
 }
 
 

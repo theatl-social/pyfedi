@@ -2324,7 +2324,7 @@ form {
 
 .coolfieldset, .coolfieldset.expanded{
   border:var(--border-1) solid $light-grey;
-  border-radius: $px5;
+  border-radius: var(--spacing-4);
   padding: 0 var(--spacing-20);
 }
 
@@ -2523,7 +2523,7 @@ form {
 
 .modlog_link {
   float: right;
-  margin-top:$px5;
+  margin-top: var(--spacing-4);
 }
 
 .post_teaser.reported, .comment.reported {
@@ -2597,8 +2597,8 @@ form {
 
 .message {
   border: solid var(--border-1) $light-grey;
-  border-radius: $px5;
-  padding: var(--spacing-8) $px15 0 $px15;
+  border-radius: var(--spacing-4);
+  padding: var(--spacing-8) var(--spacing-16) 0 var(--spacing-16);
 
   &.from_other_party {
       float: right;
