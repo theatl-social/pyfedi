@@ -2450,7 +2450,7 @@ form {
 
 .communities_table tr td {
   vertical-align: middle;
-  padding-top: $px6;
+  padding-top: var(--spacing-8) var(--spacing-4);
 
   &:first-child {
     padding-top: var(--spacing-8);
@@ -2535,7 +2535,7 @@ form {
 
 .post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
   img {
-    filter: grayscale(100%) blur($px6)!important;
+    filter: grayscale(100%) blur(var(--spacing-8))!important;
   }
 }
 
@@ -2673,7 +2673,7 @@ form {
 
     &.donor {
       img {
-        box-shadow: $black-tint-015 0px var(--spacing-2) $px6;
+        box-shadow: $black-tint-015 0px var(--spacing-2) var(--spacing-4);
       }
     }
   }
@@ -2898,8 +2898,8 @@ form {
         visibility: hidden;
         pointer-events: none;
 
-        padding: var(--spacing-4) $px6;
-        border-radius: 21px;
+        padding: var(--spacing-4) var(--spacing-8);
+        border-radius: var(--spacing-24);
 
         color: var(--bs-secondary-color);
         background-color: var(--bs-body-bg);
@@ -3006,13 +3006,13 @@ form {
 
 .showPassword, .hidePassword {
 	position: absolute;
-	right: $px6;
-    top: $px30;
+	right: var(--spacing-8);
+    top: var(--spacing-32);
 
 	img {
 		opacity: $opacity-05;
-  	    width: $px30;
-  		height: $px30;
+  	    width: var(--spacing-32);
+  		height: var(--spacing-32);
 	}
 }
 
