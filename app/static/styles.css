@@ -677,8 +677,10 @@ fieldset legend {
   margin-inline-end: var(--spacing-12);
 }
 
-.form-select {
-  padding: var(--spacing-8) var(--spacing-12);
+.form-select, .ts-wrapper.form-select + .ts-control {
+  padding: var(--spacing-8) var(--spacing-12) !important;
+  background-color: #424549 !important;
+  color: #eee !important;
 }
 
 .ts-control {
@@ -1693,7 +1695,7 @@ ul.form-multicheck-columns li {
 }
 
 .post_teaser_article_preview.blur p, .post_teaser_link_preview.blur p {
-  filter: blur(6px);
+  filter: blur(var(--spacing-4));
   user-select: none;
 }
 
@@ -1934,7 +1936,7 @@ time {
 
 #masonry .item .masonry_info .row .col a {
   color: #fff;
-  padding-top: 6px;
+  padding-top: var(--spacing-8);
 }
 
 @media (min-width: 1280px) {
@@ -2592,7 +2594,7 @@ a.unread:before, div.unread:before {
   display: inline-block;
   width: var(--spacing-8);
   height: var(--spacing-8);
-  margin-right: 6px;
+  margin-right: var(--spacing-8);
   background-color: red;
   border-radius: 50%;
   vertical-align: middle;

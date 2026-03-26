@@ -46,8 +46,10 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
   margin-inline-end: var(--spacing-12);
 }
 
-.form-select {
-  padding: var(--spacing-8) var(--spacing-12);
+.form-select, .ts-wrapper.form-select + .ts-control {
+  padding: var(--spacing-8) var(--spacing-12) !important;
+  background-color: #424549 !important;
+  color: #eee !important;
 }
 
 .ts-control {

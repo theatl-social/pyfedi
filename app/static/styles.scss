@@ -869,7 +869,7 @@ ul.form-multicheck-columns {
     overflow: hidden;
 
     p {
-      filter: blur($px6);
+      filter: blur(var(--spacing-4));
       user-select: none;
     }
   }
@@ -1092,7 +1092,7 @@ time {
 
           a {
             color: $white;
-            padding-top: $px6;
+            padding-top: var(--spacing-8);
             @include breakpoint(laptop) {
               padding-top: 0;
             }
@@ -1756,7 +1756,7 @@ a.unread, div.unread {
     display: inline-block;
     width: var(--spacing-8);
     height: var(--spacing-8);
-    margin-right: $px6;
+    margin-right: var(--spacing-8);
     background-color: red;
     border-radius: 50%;
     vertical-align: middle;
