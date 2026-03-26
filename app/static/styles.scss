@@ -1282,7 +1282,7 @@ details {
 }
 
 .post_replies > .col {
-  padding-right: $px5;
+  padding-right: var(--spacing-4);
 }
 
 .post_type_image {
@@ -1367,7 +1367,7 @@ details {
     width: var(--spacing-20);
     height: var(--spacing-20);
     right: $px14;
-    top: $px5;
+    top: var(--spacing-4);
     opacity: $opacity-10!important;
   }
   .htmx-request.htmx-indicator{
@@ -1379,7 +1379,7 @@ details {
   float: right;
   display: block;
   min-width: $min-touch-target + 10;
-  padding: 0 0 $px5 $px5;
+  padding: 0 0 var(--spacing-4) var(--spacing-4);
   line-height: $px30;
   font-size: $fs14px;
 
@@ -1425,7 +1425,7 @@ details {
   }
 
   .downvote_button {
-    margin-top: $px5;
+    margin-top: var(--spacing-4);
   }
 
   .htmx-indicator{
@@ -1439,7 +1439,7 @@ details {
     width: var(--spacing-20);
     height: var(--spacing-20);
     right: $px14;
-    top: $px5;
+    top: var(--spacing-4);
     opacity: $opacity-10!important;
   }
   .htmx-request.htmx-indicator{
@@ -1737,7 +1737,7 @@ details {
 
   li {
     display: inline-block;
-    padding-right: $px5;
+    padding-right: var(--spacing-4);
   }
 }
 
@@ -2113,7 +2113,7 @@ h1 .warning_badge {
     select {
       max-width: 150px;
       float: right;
-      margin-top: -($px5);
+      margin-top: calc(-1 * var(--spacing-4));
     }
   }
 }
@@ -2714,8 +2714,8 @@ form {
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {
   border: solid var(--border-1) $light-grey;
-  border-radius: $px5;
-  padding: $px5 $px10;
+  border-radius: var(--spacing-4);
+  padding: var(--spacing-8);
   margin-bottom: $px15;
 }
 
@@ -2817,7 +2817,7 @@ form {
         background-color: var(--bs-secondary-bg);
         border: var(--border-1) solid var(--bs-border-color);
         border-radius: var(--spacing-24);
-        box-shadow: inset 0 0 $px5 0 $black-tint-00;
+        box-shadow: inset 0 0 var(--spacing-4) 0 $black-tint-00;
         height: $px30;
 
         transition:
