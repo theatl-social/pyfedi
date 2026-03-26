@@ -204,7 +204,7 @@ div.navbar {
 
     .content-center {
       a {
-        margin-left: var(--spacing-4);
+        margin-left: var(--spacing-8);
         margin-right: var(--spacing-4);
         span {
           margin-left: var(--spacing-4);
@@ -2971,7 +2971,7 @@ form {
 /* Highlight selected item */
 .emoji-picker input[type="radio"]:checked + label {
   background-color: var(--bs-primary-bg-subtle);
-  border-radius: $rem0375;
+  border-radius: var(--spacing-4);
 }
 
 /* Optional hover */

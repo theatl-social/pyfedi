@@ -11,6 +11,11 @@
   color: purple;
 }
 
+/*
+--bs-gutter-x: var(--bs-gutter-x); // calc(var(--bs-gutter-x) * -.5)
+--bs-border-radius: var(--bs-border-radius); // 0.375rem, voting_dialog, communitySidebar
+
+*/
 /* REM units */
 :root {
   --spacing-2: 0.125rem;
@@ -30,8 +35,46 @@
   --spacing-80: 5rem;
   --spacing-96: 6rem;
   --spacing-120: 7.5rem;
+  --border-1: 1px;
+  --border-2: 2px;
 }
 
+/* Rem unit notes
+     --spacing-2, styles.scss (box shadow), message_reactions gap (styles.scss), styles.scss, margins - and negative calc(-1 * var(--spacing-2)), and box shadow in _controls, .author and post_teaser_link_preview padding, post_flair user_flair padding, spoiler-block styles.scss, jump_links styles.scss
+     
+     --spacing-4, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss), lots of instances in styles.scss, top, _compact, form_control border-radius with this value in _controls and _dark, content-center a span on the nav-bar (styles.scss), #masonry upvote_button padding-top, post_flair user_flair padding, blocked-image blur, jump_links styles.scss, reaction_button:hover (styles.scss), blockquote and pre padding, post_language_chooser uses a negative value calc(-1 * var(--spacing-4)), .dropdown-item .fe padding-right (_typography - icons in chat options)
+     
+     --spacing-8, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 var(--spacing-8)), and button style in _compact, padding breadcrumb-item styles.scss, ul.form-multicheck-columns li margin-right, #masonry upvote_button padding-top, nav-link, .accordion-button padding, blockquote padding, #preview (post preview) padding
+     
+     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom
+     
+     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
+     
+     --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
+     
+     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius
+     
+     --spacing-28
+     
+     --spacing-32, _compact padding
+     
+     --spacing-40: 2.5rem; // 40px
+     
+    --spacing-48: 3rem; // 48px
+    
+    --spacing-56: 3.5rem; // 56px
+    
+    --spacing-64: 4rem; // 64px
+    
+    --spacing-72: 4.5rem; // 72px
+    
+    --spacing-80: 5rem; // 80px
+    
+    --spacing-96: 6rem; // 96px
+    
+    --spacing-120: 7.5rem; // 120px
+     
+     */
 /* 16:9 aspect ratio on video wrapper in styles.scss */
 .pl-0 {
   padding-left: 0 !important;
@@ -109,7 +152,7 @@
 }
 
 .dropdown-item .fe {
-  padding-right: 5px;
+  padding-right: var(--spacing-4);
 }
 
 .fe-subscription::before {
@@ -424,7 +467,7 @@
 
 h1 .fe-bell, h1 .fe-no-bell {
   font-size: 18px;
-  top: -5px;
+  top: calc(-1 * var(--spacing-4));
   left: 17px;
 }
 
@@ -558,7 +601,7 @@ h1 .fe-bell, h1 .fe-no-bell {
   color: var(--bs-form-valid-border-color);
   font-size: 150%;
   position: relative;
-  top: 5px;
+  display: flex;
 }
 
 .fe-unanswer::before {
@@ -566,7 +609,7 @@ h1 .fe-bell, h1 .fe-no-bell {
   color: var(--bs-danger);
   font-size: 150%;
   position: relative;
-  top: 5px;
+  display: flex;
 }
 
 a.no-underline {
@@ -604,21 +647,21 @@ fieldset legend {
 
 .form-control-label {
   display: block;
-  margin-bottom: 0.375rem;
+  margin-bottom: var(--spacing-4);
   font-weight: 600;
 }
 
 .form-control {
   display: block;
   width: 100%;
-  padding: 0.375rem var(--spacing-12);
+  padding: var(--spacing-4) var(--spacing-12);
   font-size: 0.9375rem;
   line-height: 1.6;
   color: #495057;
   background-color: #fff;
   background-clip: padding-box;
-  border: 1px solid rgba(0, 40, 100, 0.12);
-  border-radius: 5px;
+  border: var(--border-1) solid rgba(0, 40, 100, 0.12);
+  border-radius: var(--spacing-4);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
@@ -627,7 +670,7 @@ fieldset legend {
   background-color: #fff;
   border-color: #1991eb;
   outline: 0;
-  box-shadow: 0 0 0 2px rgba(70, 127, 207, 0.25);
+  box-shadow: 0 0 0 var(--spacing-2) rgba(70, 127, 207, 0.25);
 }
 
 .btn-secondary {
@@ -651,6 +694,11 @@ fieldset legend {
   background-color: #d8e5ee;
 }
 
+/*
+--bs-gutter-x: var(--bs-gutter-x); // calc(var(--bs-gutter-x) * -.5)
+--bs-border-radius: var(--bs-border-radius); // 0.375rem, voting_dialog, communitySidebar
+
+*/
 /* REM units */
 :root {
   --spacing-2: 0.125rem;
@@ -670,8 +718,46 @@ fieldset legend {
   --spacing-80: 5rem;
   --spacing-96: 6rem;
   --spacing-120: 7.5rem;
+  --border-1: 1px;
+  --border-2: 2px;
 }
 
+/* Rem unit notes
+     --spacing-2, styles.scss (box shadow), message_reactions gap (styles.scss), styles.scss, margins - and negative calc(-1 * var(--spacing-2)), and box shadow in _controls, .author and post_teaser_link_preview padding, post_flair user_flair padding, spoiler-block styles.scss, jump_links styles.scss
+     
+     --spacing-4, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss), lots of instances in styles.scss, top, _compact, form_control border-radius with this value in _controls and _dark, content-center a span on the nav-bar (styles.scss), #masonry upvote_button padding-top, post_flair user_flair padding, blocked-image blur, jump_links styles.scss, reaction_button:hover (styles.scss), blockquote and pre padding, post_language_chooser uses a negative value calc(-1 * var(--spacing-4)), .dropdown-item .fe padding-right (_typography - icons in chat options)
+     
+     --spacing-8, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 var(--spacing-8)), and button style in _compact, padding breadcrumb-item styles.scss, ul.form-multicheck-columns li margin-right, #masonry upvote_button padding-top, nav-link, .accordion-button padding, blockquote padding, #preview (post preview) padding
+     
+     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom
+     
+     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
+     
+     --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
+     
+     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius
+     
+     --spacing-28
+     
+     --spacing-32, _compact padding
+     
+     --spacing-40: 2.5rem; // 40px
+     
+    --spacing-48: 3rem; // 48px
+    
+    --spacing-56: 3.5rem; // 56px
+    
+    --spacing-64: 4rem; // 64px
+    
+    --spacing-72: 4.5rem; // 72px
+    
+    --spacing-80: 5rem; // 80px
+    
+    --spacing-96: 6rem; // 96px
+    
+    --spacing-120: 7.5rem; // 120px
+     
+     */
 /* 16:9 aspect ratio on video wrapper in styles.scss */
 .pl-0 {
   padding-left: 0 !important;
@@ -744,7 +830,7 @@ body {
 
 body.embed .post_teaser_body h3 {
   font-size: 1.2rem !important;
-  margin-bottom: 2px;
+  margin-bottom: var(--spacing-2);
 }
 
 body.embed .embed_logo {
@@ -755,7 +841,7 @@ body.embed .embed_logo {
 
 a {
   text-decoration: none;
-  border: solid 2px transparent;
+  border: solid var(--border-2) transparent;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -765,8 +851,8 @@ h1, h2, h3, h4, h5, h6 {
 tg-spoiler {
   border-style: solid;
   border-color: var(--bs-warning);
-  border-width: 1px;
-  border-radius: 3px;
+  border-width: var(--border-1);
+  border-radius: var(--spacing-4);
   padding: 0px 10px;
   color: transparent;
 }
@@ -858,7 +944,7 @@ tg-spoiler:hover {
 }
 
 #outer_container a:not(.btn):active, footer a:not(.btn):active {
-  border: dotted 2px #0A5CA0;
+  border: dotted var(--border-2) #0A5CA0;
 }
 
 div.navbar {
@@ -868,13 +954,13 @@ div.navbar {
 
 @media (min-width: 992px) {
   div.navbar {
-    border-bottom: 1px solid rgba(0, 40, 100, 0.12);
+    border-bottom: var(--border-1) solid rgba(0, 40, 100, 0.12);
   }
 }
 
 @media (min-width: 1400px) {
   div.navbar .container-lg {
-    padding-right: 20px;
+    padding-right: var(--spacing-20);
   }
 }
 
@@ -883,7 +969,7 @@ div.navbar {
 }
 
 .navbar-brand img {
-  margin-right: 20px;
+  margin-right: var(--spacing-20);
   margin-top: -1px;
 }
 
@@ -930,12 +1016,12 @@ div.navbar {
     margin-left: 0;
   }
   ul.navbar-nav .content-center a {
-    margin-left: 5px;
-    margin-right: 5px;
+    margin-left: var(--spacing-8);
+    margin-right: var(--spacing-4);
   }
   ul.navbar-nav .content-center a span {
-    margin-left: 5px;
-    margin-right: 5px;
+    margin-left: var(--spacing-4);
+    margin-right: var(--spacing-4);
   }
   ul.navbar-nav .unreadNotificationDisplay:not(:empty) {
     margin-left: 0;
@@ -964,10 +1050,10 @@ div.navbar {
 }
 
 .tab-content > .tab-pane {
-  border-right: solid 1px #dee2e6;
-  border-bottom: solid 1px #dee2e6;
-  border-left: solid 1px #dee2e6;
-  border-radius: 0 0 5px 5px;
+  border-right: solid var(--border-1) #dee2e6;
+  border-bottom: solid var(--border-1) #dee2e6;
+  border-left: solid var(--border-1) #dee2e6;
+  border-radius: 0 0 var(--spacing-4) var(--spacing-4);
   padding: 10px 15px 0 15px;
 }
 
@@ -1043,18 +1129,18 @@ div.navbar {
 
 .communities_menu .jump_links {
   float: left;
-  padding-left: 12px;
-  padding-top: 3px;
+  padding-left: var(--spacing-12);
+  padding-top: var(--spacing-2);
 }
 
 .communities_menu .jump_links a {
-  margin-right: 5px;
+  margin-right: var(--spacing-4);
 }
 
 .communities_menu .community_filter {
   position: relative;
   margin-left: 10px;
-  padding-right: 20px;
+  padding-right: var(--spacing-20);
 }
 
 .communities_menu .community_filter .fe-search {
@@ -1102,26 +1188,26 @@ div.navbar {
 }
 
 form .mb-3 {
-  margin-bottom: 1.1rem;
+  margin-bottom: var(--spacing-16);
 }
 
 form .mb-3.required > label:after {
   content: '*';
   color: red;
-  margin-left: 2px;
+  margin-left: var(--spacing-2);
   font-size: 80%;
   position: relative;
   top: -1px;
 }
 
 .form-group {
-  margin-bottom: 1.1rem;
+  margin-bottom: var(--spacing-16);
 }
 
 .form-group.required > label:after {
   content: '*';
   color: red;
-  margin-left: 2px;
+  margin-left: var(--spacing-2);
   font-size: 80%;
   position: relative;
   top: -1px;
@@ -1180,7 +1266,7 @@ form .mb-3.required > label:after {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 1031;
   text-wrap: nowrap;
-  border-top-width: 2px !important;
+  border-top-width: var(--border-2) !important;
 }
 
 .mobilenav a {
@@ -1193,7 +1279,7 @@ form .mb-3.required > label:after {
 @media (orientation: landscape) {
   .mobilenav a {
     height: 60px;
-    padding-top: 12px !important;
+    padding-top: var(--spacing-12) !important;
   }
 }
 
@@ -1252,18 +1338,18 @@ form .mb-3.required > label:after {
 }
 
 .topics_list > li {
-  padding-bottom: 20px;
+  padding-bottom: var(--spacing-20);
 }
 
 .community_header, .event_banner {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
-  border-radius: 5px 5px 0 0;
+  border-radius: var(--spacing-4) var(--spacing-4) 0 0;
   /* top-left | top-right | bottom-right | bottom-left */
   height: 176px;
-  margin-left: -12px;
-  margin-right: -12px;
+  margin-left: calc(-1 * var(--spacing-12));
+  margin-right: calc(-1 * var(--spacing-12));
   margin-top: -9px;
 }
 
@@ -1283,7 +1369,7 @@ form .mb-3.required > label:after {
 .community_header #breadcrumb_nav .breadcrumb, .event_banner #breadcrumb_nav .breadcrumb {
   background-color: rgba(0, 0, 0, 0.6);
   display: inline-block;
-  padding: 5px 10px;
+  padding: var(--spacing-8) var(--spacing-12);
   margin-bottom: 0;
 }
 
@@ -1343,7 +1429,7 @@ form .mb-3.required > label:after {
 
 .form-check .form-check-input {
   position: relative;
-  top: 4px;
+  top: var(--spacing-4);
 }
 
 .post_teaser_title_a {
@@ -1377,7 +1463,7 @@ ul.form-multicheck-columns {
 }
 
 ul.form-multicheck-columns li {
-  margin-right: 5px;
+  margin-right: var(--spacing-8);
 }
 
 .add_reply .form-label {
@@ -1405,7 +1491,7 @@ ul.form-multicheck-columns li {
 }
 
 .post_list .instance_sticky {
-  border-bottom: solid 2px var(--bs-success-border-subtle);
+  border-bottom: solid var(--border-2) var(--bs-success-border-subtle);
 }
 
 .post_list .instance_sticky > .post_teaser {
@@ -1420,14 +1506,14 @@ ul.form-multicheck-columns li {
 }
 
 .post_list .post_teaser {
-  border-bottom: solid 2px #ddd;
-  padding-top: 8px;
-  padding-bottom: 8px;
+  border-bottom: solid var(--border-2) #ddd;
+  padding-top: var(--spacing-8);
+  padding-bottom: var(--spacing-8);
 }
 
 .post_list .post_teaser h3 {
   font-size: 110%;
-  margin-top: 4px;
+  margin-top: var(--spacing-4);
   margin-bottom: 0;
   overflow: hidden;
 }
@@ -1493,7 +1579,7 @@ ul.form-multicheck-columns li {
   background-color: rgba(255, 255, 255, 0.7);
   padding-bottom: 1px;
   padding-left: 1px;
-  border-radius: 2px;
+  border-radius: var(--border-2);
   top: 0;
 }
 
@@ -1505,7 +1591,7 @@ ul.form-multicheck-columns li {
 .post_list .post_teaser .thumbnail img {
   height: 60px;
   width: 60px;
-  border-radius: 5px;
+  border-radius: var(--spacing-4);
   object-fit: cover;
 }
 
@@ -1542,7 +1628,7 @@ ul.form-multicheck-columns li {
 
 .post_list .post_teaser.blocked .voting_buttons {
   width: 46px;
-  line-height: 24px;
+  line-height: var(--spacing-24);
 }
 
 .post_list .post_teaser.blocked .voting_buttons .upvote_button, .post_list .post_teaser.blocked .voting_buttons .downvote_button {
@@ -1554,7 +1640,7 @@ ul.form-multicheck-columns li {
 }
 
 .post_list .post_teaser .post_teaser_image_preview img.blur {
-  filter: blur(24px);
+  filter: blur(var(--spacing-24));
 }
 
 .post_teaser_body {
@@ -1565,8 +1651,8 @@ ul.form-multicheck-columns li {
   position: relative;
   max-height: 100px;
   overflow: hidden;
-  padding-left: 3px;
-  padding-right: 3px;
+  padding-left: var(--spacing-2);
+  padding-right: var(--spacing-2);
 }
 
 .post_teaser_article_preview p, .post_teaser_link_preview p {
@@ -1600,13 +1686,13 @@ ul.form-multicheck-columns li {
   max-width: 512px;
   max-height: 575px;
   overflow: hidden;
-  border-radius: 5px;
+  border-radius: var(--spacing-4);
 }
 
 .post_teaser_image_preview img {
   max-width: 100%;
   min-width: 150px;
-  margin-right: 4px;
+  margin-right: var(--spacing-4);
   height: auto;
 }
 
@@ -1642,7 +1728,7 @@ ul.form-multicheck-columns li {
   height: 100%;
   object-fit: cover;
   cursor: pointer;
-  border-radius: 5px;
+  border-radius: var(--spacing-4);
 }
 
 .post_teaser_video_preview .video-wrapper iframe {
@@ -1655,7 +1741,7 @@ ul.form-multicheck-columns li {
 }
 
 .post_teaser_video_preview .blur {
-  filter: blur(24px);
+  filter: blur(var(--spacing-24));
 }
 
 time {
@@ -1663,7 +1749,7 @@ time {
 }
 
 .author {
-  padding-left: 3px;
+  padding-left: var(--spacing-2);
 }
 
 .author a {
@@ -1671,7 +1757,7 @@ time {
 }
 
 .community_instance {
-  margin-left: -2px;
+  margin-left: calc(-1 * var(--spacing-2));
   display: none;
 }
 
@@ -1680,7 +1766,7 @@ time {
   display: inline-block;
   width: 100%;
   overflow: hidden;
-  border-radius: 5px;
+  border-radius: var(--spacing-4);
 }
 
 .post_utilities_bar {
@@ -1725,7 +1811,7 @@ time {
 
 .post_full .post_utilities_bar .post_reply_count {
   justify-content: left;
-  margin-right: 8px;
+  margin-right: var(--spacing-8);
 }
 
 @container (width < 400px) {
@@ -1756,7 +1842,7 @@ time {
 #masonry .column {
   flex: 1;
   padding: 0;
-  padding-right: 5px;
+  padding-right: var(--spacing-4);
 }
 
 #masonry .column:last-child {
@@ -1765,7 +1851,7 @@ time {
 
 #masonry .item {
   position: relative;
-  margin-bottom: 5px;
+  margin-bottom: var(--spacing-4);
   overflow: hidden;
 }
 
@@ -1781,7 +1867,7 @@ time {
 }
 
 #masonry .item .masonry_thumb a img.blur, #masonry .item .masonry_thumb a:active img.blur {
-  filter: blur(20px);
+  filter: blur(var(--spacing-20));
 }
 
 #masonry .item .masonry_info {
@@ -1839,21 +1925,21 @@ time {
 #masonry .item .masonry_info .row .col .upvote_button, #masonry .item .masonry_info .row .col .downvote_button {
   display: inline;
   color: white;
-  padding-top: 10px;
+  padding-top: var(--spacing-8);
   width: 50%;
   position: relative;
 }
 
 @media (min-width: 1280px) {
   #masonry .item .masonry_info .row .col .upvote_button, #masonry .item .masonry_info .row .col .downvote_button {
-    padding-top: 5px;
+    padding-top: var(--spacing-4);
   }
 }
 
 #masonry .item .masonry_info .row .col .upvote_button .htmx-indicator, #masonry .item .masonry_info .row .col .downvote_button .htmx-indicator {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
   left: 7px;
 }
 
@@ -1873,7 +1959,7 @@ time {
 
 #masonry .item .masonry_info .row .reply_col {
   justify-content: right;
-  padding-right: 5px;
+  padding-right: var(--spacing-4);
   flex-grow: 1;
 }
 
@@ -1917,10 +2003,10 @@ details {
 }
 
 .spoiler_block {
-  margin: 3px 0 0 1em;
+  margin: var(--spacing-2) 0 0 1em;
   padding: 0.5em 0.5em 0.5em 0.2em;
   border-left-style: solid;
-  border-left-width: 2px;
+  border-left-width: var(--border-2);
   background-color: var(--bs-secondary-bg-subtle);
   border-left-color: var(--bs-secondary-border-subtle);
 }
@@ -1942,8 +2028,8 @@ details {
 }
 
 .render_username a img {
-  width: 20px;
-  height: 20px;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
   border-radius: 50%;
   vertical-align: bottom;
   object-fit: cover;
@@ -1955,8 +2041,8 @@ details {
 
 .comments > .comment {
   margin-left: 0;
-  border-top: solid 1px #ddd;
-  margin-right: 8px;
+  border-top: solid var(--border-1) #ddd;
+  margin-right: var(--spacing-8);
 }
 
 .comments > .comment .comment_time {
@@ -1990,7 +2076,7 @@ details {
 }
 
 [data-bs-theme=dark] .post_list .post_teaser {
-  border-bottom: solid 1px #424549;
+  border-bottom: solid var(--border-1) #424549;
 }
 
 [data-bs-theme=dark] .post_list .post_teaser .thumbnail .fe {
@@ -2016,7 +2102,7 @@ details {
 }
 
 .post_replies > .col {
-  padding-right: 5px;
+  padding-right: var(--spacing-4);
 }
 
 .post_type_image .post_image img {
@@ -2082,25 +2168,25 @@ details {
 }
 
 .voting_buttons_new .downvote_button .htmx-indicator {
-  left: 12px;
+  left: var(--spacing-12);
   top: 14px;
 }
 
 .voting_buttons_new .htmx-indicator {
   position: absolute;
-  left: 3px;
-  width: 20px;
-  height: 20px;
+  left: var(--spacing-4);
+  width: var(--spacing-20);
+  height: var(--spacing-20);
   top: 0;
 }
 
 .voting_buttons_new .htmx-request .htmx-indicator {
   display: inline;
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
   right: 14px;
-  top: 5px;
+  top: var(--spacing-4);
   opacity: 1 !important;
 }
 
@@ -2112,7 +2198,7 @@ details {
   float: right;
   display: block;
   min-width: 54px;
-  padding: 0 0 5px 5px;
+  padding: 0 0 var(--spacing-4) var(--spacing-4);
   line-height: 30px;
   font-size: 14px;
 }
@@ -2124,15 +2210,15 @@ details {
 }
 
 .voting_buttons div {
-  border: solid 1px #0071CE;
+  border: solid var(--border-1) #0071CE;
 }
 
 .voting_buttons .upvote_button, .voting_buttons .downvote_button {
   position: relative;
-  padding: 0 3px;
+  padding: 0 var(--spacing-2);
   min-height: 44px;
   min-width: 44px;
-  border-radius: 3px;
+  border-radius: var(--spacing-2);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2162,22 +2248,22 @@ details {
 }
 
 .voting_buttons .downvote_button {
-  margin-top: 5px;
+  margin-top: var(--spacing-4);
 }
 
 .voting_buttons .htmx-indicator {
   position: absolute;
-  width: 20px;
+  width: var(--spacing-20);
   height: 20px;
 }
 
 .voting_buttons .htmx-request .htmx-indicator {
   display: inline;
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
   right: 14px;
-  top: 5px;
+  top: var(--spacing-4);
   opacity: 1 !important;
 }
 
@@ -2191,17 +2277,17 @@ details {
 
 .comment {
   clear: both;
-  margin-left: 8px;
+  margin-left: var(--spacing-8);
   padding-left: 0;
-  padding-top: 8px;
-  padding-right: 8px;
+  padding-top: var(--spacing-8);
+  padding-right: var(--spacing-8);
 }
 
 .comment.distinguished > .row:first-child {
   background-color: var(--bs-secondary-bg-subtle);
   border: solid;
   border-color: var(--bs-success);
-  border-width: 2px;
+  border-width: var(--border-2);
 }
 
 .comment .limit_height {
@@ -2332,91 +2418,91 @@ details {
 }
 
 .comment .replies.depth_0 {
-  border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.5) !important;
 }
 
 .comment .replies.depth_1 {
-  border-left: 2px solid rgba(172, 157, 83, 0.6) !important;
+  border-left: var(--border-2) solid rgba(172, 157, 83, 0.6) !important;
 }
 
 .comment .replies.depth_2 {
-  border-left: 2px solid rgba(113, 172, 83, 0.6) !important;
+  border-left: var(--border-2) solid rgba(113, 172, 83, 0.6) !important;
 }
 
 .comment .replies.depth_3 {
-  border-left: 2px solid rgba(83, 172, 128, 0.6) !important;
+  border-left: var(--border-2) solid rgba(83, 172, 128, 0.6) !important;
 }
 
 .comment .replies.depth_4 {
-  border-left: 2px solid rgba(83, 142, 172, 0.6) !important;
+  border-left: var(--border-2) solid rgba(83, 142, 172, 0.6) !important;
 }
 
 .comment .replies.depth_5 {
-  border-left: 2px solid rgba(98, 83, 172, 0.5) !important;
+  border-left: var(--border-2) solid rgba(98, 83, 172, 0.5) !important;
 }
 
 .comment .replies.depth_6 {
-  border-left: 2px solid rgba(172, 83, 172, 0.5) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 172, 0.5) !important;
 }
 
 .comment .replies.depth_7 {
-  border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.5) !important;
 }
 
 .comment .replies.depth_8 {
-  border-left: 2px solid rgba(172, 83, 83, 0.65) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.65) !important;
 }
 
 .comment .replies.depth_9 {
-  border-left: 2px solid rgba(172, 83, 83, 0.78) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.78) !important;
 }
 
 .comment .replies.depth_10 {
-  border-left: 2px solid rgba(172, 83, 83, 0.85) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.85) !important;
 }
 
 .comment .replies.depth_11 {
-  border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.5) !important;
 }
 
 .comment .replies.depth_12 {
-  border-left: 2px solid rgba(172, 157, 83, 0.6) !important;
+  border-left: var(--border-2) solid rgba(172, 157, 83, 0.6) !important;
 }
 
 .comment .replies.depth_13 {
-  border-left: 2px solid rgba(113, 172, 83, 0.6) !important;
+  border-left: var(--border-2) solid rgba(113, 172, 83, 0.6) !important;
 }
 
 .comment .replies.depth_14 {
-  border-left: 2px solid rgba(83, 172, 128, 0.6) !important;
+  border-left: var(--border-2) solid rgba(83, 172, 128, 0.6) !important;
 }
 
 .comment .replies.depth_15 {
-  border-left: 2px solid rgba(83, 142, 172, 0.6) !important;
+  border-left: var(--border-2) solid rgba(83, 142, 172, 0.6) !important;
 }
 
 .comment .replies.depth_16 {
-  border-left: 2px solid rgba(98, 83, 172, 0.5) !important;
+  border-left: var(--border-2) solid rgba(98, 83, 172, 0.5) !important;
 }
 
 .comment .replies.depth_17 {
-  border-left: 2px solid rgba(172, 83, 172, 0.5) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 172, 0.5) !important;
 }
 
 .comment .replies.depth_18 {
-  border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.5) !important;
 }
 
 .comment .replies.depth_19 {
-  border-left: 2px solid rgba(172, 83, 83, 0.65) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.65) !important;
 }
 
 .comment .replies.depth_20 {
-  border-left: 2px solid rgba(172, 83, 83, 0.78) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.78) !important;
 }
 
 .comment .replies.depth_21 {
-  border-left: 2px solid rgba(172, 83, 83, 0.85) !important;
+  border-left: var(--border-2) solid rgba(172, 83, 83, 0.85) !important;
 }
 
 #more_replies .community_actions_link {
@@ -2443,7 +2529,7 @@ details {
 #add_local_community_form #url, #new_feed_form #url {
   width: 297px;
   display: inline-block;
-  padding-left: 3px;
+  padding-left: var(--spacing-4);
 }
 
 #reasons {
@@ -2469,7 +2555,7 @@ details {
 
 .moderator_list li {
   display: inline-block;
-  padding-right: 5px;
+  padding-right: var(--spacing-4);
 }
 
 fieldset legend {
@@ -2483,13 +2569,13 @@ a.unread, div.unread {
 a.unread:before, div.unread:before {
   content: '';
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: var(--spacing-8);
+  height: var(--spacing-8);
   margin-right: 6px;
   background-color: red;
   border-radius: 50%;
   vertical-align: middle;
-  margin-top: -2px;
+  margin-top: calc(-1 * var(--spacing-2));
 }
 
 .overflow-ellipses-parent {
@@ -2606,12 +2692,12 @@ a.unread:before, div.unread:before {
 }
 
 .post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote, .post_col blockquote {
-  padding: 0.2em 5px;
+  padding: var(--spacing-4) var(--spacing-8);
   font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
-  margin: 0 3% 6px 3%;
+  margin: 0 var(--spacing-20) 6px var(--spacing-20);
   font-size: 95%;
   border-left-style: solid;
-  border-left-width: 4px;
+  border-left-width: var(--spacing-4);
   background-color: var(--bs-secondary-bg-subtle);
   border-left-color: var(--bs-secondary-border-subtle);
 }
@@ -2623,18 +2709,18 @@ a.unread:before, div.unread:before {
 .post_body pre, .comment_body pre, #preview pre, .reply_preview pre, .accordion-body pre, .post_col pre {
   background: var(--bs-secondary-bg);
   font-family: monospace;
-  padding-left: var(--spacing-8);
+  padding: var(--spacing-4) var(--spacing-8);
   margin-left: var(--spacing-20);
   border-style: solid;
   border-color: var(--bs-secondary-border-subtle);
-  border-width: 2px;
-  border-radius: 5px;
+  border-width: var(--border-2);
+  border-radius: var(--spacing-4);
 }
 
 .post_body p > code, .comment_body p > code, #preview p > code, .reply_preview p > code, .accordion-body p > code, .post_col p > code {
   background: var(--bs-secondary-bg);
   padding: var(--spacing-4) var(--spacing-8);
-  border-radius: 5px;
+  border-radius: var(--spacing-4);
   position: relative;
 }
 
@@ -2704,27 +2790,27 @@ a.unread:before, div.unread:before {
 
 .warning_badge {
   font-size: 12px;
-  border-radius: 2px;
-  margin-right: 2px;
+  border-radius: var(--border-2);
+  margin-right: var(--spacing-2);
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: text-bottom;
-  line-height: 20px;
-  padding: 0 4px;
+  line-height: var(--spacing-20);
+  padding: 0 var(--spacing-4);
 }
 
 .warning_badge.nsfw {
-  border: 1px solid #FF585B;
+  border: var(--border-1) solid #FF585B;
   color: #FF585B;
 }
 
 .warning_badge.nsfl {
-  border: 1px solid black;
+  border: var(--border-1) solid black;
   color: black;
 }
 
 .warning_badge.ai_generated {
-  border: 1px solid #FF585B;
+  border: var(--border-1) solid #FF585B;
   color: #FF585B;
 }
 
@@ -2735,7 +2821,7 @@ h1 .warning_badge {
 }
 
 [data-bs-theme=dark] .warning_badge.nsfl {
-  border: 1px solid #fff;
+  border: var(--border-1) solid #fff;
   color: #fff;
 }
 
@@ -2801,7 +2887,7 @@ h1 .warning_badge {
 #post_reply_markdown_editor_enabler {
   display: none;
   position: absolute;
-  bottom: 3px;
+  bottom: var(--spacing-4);
   right: 0;
 }
 
@@ -2835,7 +2921,7 @@ h1 .warning_badge {
 }
 
 .responsive-video.blur {
-  filter: blur(24px);
+  filter: blur(var(--spacing-24));
 }
 
 @media (min-width: 768px) {
@@ -2845,7 +2931,7 @@ h1 .warning_badge {
   .post_language_chooser select {
     max-width: 150px;
     float: right;
-    margin-top: -5px;
+    margin-top: calc(-1 * var(--spacing-4));
   }
 }
 
@@ -2857,7 +2943,7 @@ h1 .warning_badge {
 }
 
 #pollChoicesFieldset {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-20);
 }
 
 .post_poll ul {
@@ -2866,14 +2952,14 @@ h1 .warning_badge {
 }
 
 .post_poll ul li {
-  margin-bottom: 5px;
+  margin-bottom: var(--spacing-8);
 }
 
 .post_poll ul li .vote_bar .vote_score {
   background-color: #bbb;
   color: #fff;
   text-align: right;
-  padding-right: 5px;
+  padding-right: var(--spacing-4);
   font-weight: bold;
 }
 
@@ -2890,7 +2976,7 @@ h1 .warning_badge {
 }
 
 .card-header h2 {
-  margin-bottom: 5px;
+  margin-bottom: var(--spacing-2);
 }
 
 .alert-info, .alert-message, .alert-error {
@@ -2904,16 +2990,20 @@ h1 .warning_badge {
   background-color: #f8d7da;
 }
 
+.card {
+  border-radius: var(--spacing-8);
+}
+
 .main_pane {
   /* Ensure a little space after pagination on mobile. */
-  padding-bottom: 12px;
+  padding-bottom: var(--spacing-12);
 }
 
 @media (min-width: 992px) {
   .main_pane {
-    border: solid 1px #ddd;
-    border-radius: 5px;
-    padding-top: 8px;
+    border: solid var(--border-1) #ddd;
+    border-radius: var(--spacing-8);
+    padding-top: var(--spacing-8);
   }
 }
 
@@ -2978,8 +3068,8 @@ h1 .warning_badge {
   height: 20vw;
   max-width: 30px !important;
   max-height: 30px;
-  min-width: 20px;
-  min-height: 20px;
+  min-width: var(--spacing-20);
+  min-height: var(--spacing-20);
   vertical-align: text-top;
   object-fit: cover;
 }
@@ -3000,9 +3090,9 @@ h1 .warning_badge {
 }
 
 .community_icon_small {
-  width: 20px;
-  height: 20px;
-  margin-right: 3px;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
+  margin-right: var(--spacing-4);
   object-fit: cover;
   font-size: 0;
 }
@@ -3041,23 +3131,23 @@ h1 .warning_badge {
 .external_link_icon {
   width: 12px;
   height: 12px;
-  margin-left: 4px;
-  margin-bottom: 3px;
+  margin-left: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
 }
 
 form h5 {
-  padding-top: 12px;
+  padding-top: var(--spacing-12);
 }
 
 .coolfieldset, .coolfieldset.expanded {
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  padding: 0 20px;
+  border: var(--border-1) solid #ddd;
+  border-radius: var(--spacing-4);
+  padding: 0 var(--spacing-20);
 }
 
 .coolfieldset.collapsed {
   border: 0;
-  border-top: 1px solid #bbb;
+  border-top: var(--border-1) solid #bbb;
   border-radius: 0;
 }
 
@@ -3098,8 +3188,8 @@ form h5 {
 
 .post_flair {
   font-size: 73%;
-  padding: 1px 3px;
-  border-radius: 3px;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--spacing-4);
   text-wrap: nowrap;
 }
 
@@ -3131,16 +3221,16 @@ form h5 {
 .post_flair_sidepane {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--spacing-8);
+  margin-top: var(--spacing-12);
 }
 
 .post_flair_sidepane .post_flair {
   font-size: 90%;
-  padding: 2px 4px;
-  line-height: 20px;
+  padding: var(--spacing-2) var(--spacing-4);
+  line-height: var(--spacing-20);
   display: inline-block;
-  border-radius: 4px;
+  border-radius: var(--spacing-4);
   white-space: nowrap;
   text-align: center;
 }
@@ -3148,10 +3238,10 @@ form h5 {
 .user_flair, .user_note {
   font-size: 87%;
   background-color: #eee;
-  border-radius: 3px;
-  border: solid 1px #bbb;
+  border-radius: var(--spacing-4);
+  border: solid var(--border-1) #bbb;
   color: #424549;
-  padding: 0px 3px 0px 3px;
+  padding: 0px var(--spacing-2) 0px var(--spacing-4);
   display: inline-block;
 }
 
@@ -3166,7 +3256,7 @@ form h5 {
 }
 
 .communities_table tr td:first-child {
-  padding-top: 8px;
+  padding-top: var(--spacing-8);
 }
 
 .table tbody tr th a {
@@ -3231,13 +3321,13 @@ form h5 {
 
 .modlog_link {
   float: right;
-  margin-top: 5px;
+  margin-top: var(--spacing-4);
 }
 
 .post_teaser.reported, .comment.reported {
   border-style: solid !important;
   border-color: var(--bs-danger) !important;
-  border-width: 2px !important;
+  border-width: var(--border-2) !important;
   background-color: var(--bs-secondary-bg);
 }
 
@@ -3248,12 +3338,12 @@ form h5 {
 .comment.answer {
   border-style: solid !important;
   border-color: var(--bs-form-valid-border-color) !important;
-  border-width: 2px !important;
+  border-width: var(--border-2) !important;
   background-color: var(--bs-info-bg-subtle);
 }
 
 .blocked_image img {
-  filter: grayscale(100%) blur(3px) !important;
+  filter: grayscale(100%) blur(var(--spacing-4)) !important;
 }
 
 .dropdown-header {
@@ -3297,13 +3387,13 @@ form h5 {
 }
 
 .sender_list {
-  border-right: solid 1px #ddd;
+  border-right: solid var(--border-1) #ddd;
 }
 
 .message {
-  border: solid 1px #ddd;
-  border-radius: 5px;
-  padding: 8px 15px 0 15px;
+  border: solid var(--border-1) #ddd;
+  border-radius: var(--spacing-4);
+  padding: var(--spacing-8) var(--spacing-16) 0 var(--spacing-16);
 }
 
 .message.from_other_party {
@@ -3333,7 +3423,7 @@ form h5 {
 }
 
 #subtopic_nav li a {
-  border: dotted 2px transparent;
+  border: dotted var(--border-2) transparent;
 }
 
 .post_tags {
@@ -3350,8 +3440,8 @@ form h5 {
   color: var(--bs-card-cap-color);
   background-color: rgba(var(--bs-body-color-rgb), 0.03);
   border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
-  margin-top: -8px;
-  margin-bottom: 8px;
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
   margin-right: calc(var(--bs-gutter-x) * -.5);
   margin-left: calc(var(--bs-gutter-x) * -.5);
 }
@@ -3366,8 +3456,8 @@ form h5 {
 
 .post_translate_all_icon {
   float: right;
-  margin-top: 8px;
-  margin-right: 8px;
+  margin-top: var(--spacing-8);
+  margin-right: var(--spacing-8);
 }
 
 .render_username {
@@ -3379,7 +3469,7 @@ form h5 {
 }
 
 .render_username .author_link.donor img {
-  box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px;
+  box-shadow: rgba(0, 0, 0, 0.3) 0px var(--spacing-2) 6px;
 }
 
 .render_username .author_link + .user_preview {
@@ -3416,20 +3506,20 @@ form h5 {
 }
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {
-  border: solid 1px #ddd;
-  border-radius: 5px;
-  padding: 5px 10px;
+  border: solid var(--border-1) #ddd;
+  border-radius: var(--spacing-4);
+  padding: var(--spacing-8);
   margin-bottom: 15px;
 }
 
 #typeTab a:not(.btn):active {
-  border-width: 1px;
+  border-width: var(--border-1);
 }
 
 #communitySidebar {
   color: var(--bs-body-color);
   background-color: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color);
+  border: var(--border-1) solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
   max-width: 345px;
   max-height: 90vh;
@@ -3456,7 +3546,7 @@ form h5 {
 
 /* Voting dialog positioning */
 #voting_dialog {
-  border: 1px solid var(--bs-border-color);
+  border: var(--border-1) solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
   box-shadow: 0 var(--spacing-8) var(--spacing-16) rgba(0, 0, 0, 0.15);
   background-color: var(--bs-body-bg);
@@ -3485,15 +3575,15 @@ form h5 {
 .message_reactions {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: var(--bs-spacer-1);
+  gap: var(--spacing-2);
   max-width: 100%;
-  row-gap: 0.3rem;
+  row-gap: var(--spacing-4);
   overflow: hidden;
   user-select: none;
 }
 
 .message_reactions:has(.message_reaction) {
-  margin-top: 4px;
+  margin-top: var(--spacing-4);
 }
 
 .message_reactions .message_reaction_container {
@@ -3508,7 +3598,7 @@ form h5 {
 
 .message_reactions .message_reaction {
   display: flex;
-  padding: 1.5px 4px 1.5px 3px;
+  padding: var(--spacing-2) var(--spacing-4);
   box-sizing: border-box;
   min-width: 44px;
   cursor: pointer;
@@ -3516,9 +3606,9 @@ form h5 {
   line-height: 1;
   color: var(--bs-body-color);
   background-color: var(--bs-secondary-bg);
-  border: 1px solid var(--bs-border-color);
-  border-radius: 21px;
-  box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+  border: var(--border-1) solid var(--bs-border-color);
+  border-radius: var(--spacing-24);
+  box-shadow: inset 0 0 var(--spacing-4) 0 rgba(0, 0, 0, 0.1);
   height: 30px;
   transition: transform 100ms linear, font-weight 100ms linear;
 }
@@ -3532,8 +3622,8 @@ form h5 {
   color: var(--bs-primary-text-emphasis);
   background-color: var(--bs-primary-bg-subtle);
   border-color: var(--bs-primary-border-subtle);
-  border-width: 1.5px;
-  padding: 1px 4px 1px 3px;
+  border-width: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
   font-weight: var(--bs-font-weight-semibold);
   box-shadow: none;
 }
@@ -3551,10 +3641,10 @@ form h5 {
 }
 
 .message_reactions .message_reaction .emoji {
-  margin: 2px 3px;
-  padding: 2px 0px;
-  height: 20px;
-  width: 20px;
+  margin: var(--spacing-2) var(--spacing-4);
+  padding: var(--spacing-2) 0px;
+  height: var(--spacing-20);
+  width: var(--spacing-20);
   flex-shrink: 0;
   overflow: hidden;
   font-size: 17px;
@@ -3565,13 +3655,13 @@ form h5 {
 }
 
 .message_reactions .message_reaction .emoji_alt_code {
-  margin: 1px 3px;
+  margin: var(--spacing-2) var(--spacing-4);
   font-size: 0.8em;
 }
 
 .message_reactions .message_reaction_count {
   font-size: 90%;
-  margin: 0 3px;
+  margin: 0 var(--spacing-2);
   line-height: 1.0317em;
   align-self: center;
 }
@@ -3593,11 +3683,11 @@ form h5 {
 .message_reactions .reaction_button {
   visibility: hidden;
   pointer-events: none;
-  padding: 4px 6px;
+  padding: var(--spacing-4) 6px;
   border-radius: 21px;
   color: var(--bs-secondary-color);
   background-color: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color);
+  border: var(--border-1) solid var(--bs-border-color);
 }
 
 .message_reactions .reaction_button i {
@@ -3613,7 +3703,7 @@ form h5 {
   color: var(--bs-primary-text-emphasis);
   background-color: var(--bs-secondary-bg);
   border-color: var(--bs-primary-border-subtle);
-  box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 0 var(--spacing-4) 0 rgba(0, 0, 0, 0.1);
   cursor: pointer;
   opacity: 1;
 }
@@ -3663,7 +3753,7 @@ form h5 {
 /* Highlight selected item */
 .emoji-picker input[type="radio"]:checked + label {
   background-color: var(--bs-primary-bg-subtle);
-  border-radius: 0.375rem;
+  border-radius: var(--spacing-4);
 }
 
 /* Optional hover */
@@ -3717,8 +3807,8 @@ form h5 {
 .user-suggestion-box {
   position: absolute;
   background: var(--bs-body-bg, #fff);
-  border: 1px solid var(--bs-border-color, #dee2e6);
-  border-radius: 0.375rem;
+  border: var(--border-1) solid var(--bs-border-color, #dee2e6);
+  border-radius: var(--spacing-4);
   box-shadow: 0 var(--spacing-2) var(--spacing-4) rgba(0, 0, 0, 0.075);
   max-height: 300px;
   overflow: hidden;
@@ -3743,7 +3833,7 @@ form h5 {
 }
 
 .accordion-button {
-  padding: 7px 12px;
+  padding: var(--spacing-8) var(--spacing-12);
 }
 
 .blink {
@@ -3760,8 +3850,8 @@ form h5 {
 }
 
 #outer_container .share_desktop a img {
-  width: 20px;
-  height: 20px;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
 }
 
 @keyframes blink-animation {
@@ -3789,6 +3879,11 @@ form h5 {
   color: purple;
 }
 
+/*
+--bs-gutter-x: var(--bs-gutter-x); // calc(var(--bs-gutter-x) * -.5)
+--bs-border-radius: var(--bs-border-radius); // 0.375rem, voting_dialog, communitySidebar
+
+*/
 /* REM units */
 :root {
   --spacing-2: 0.125rem;
@@ -3808,8 +3903,46 @@ form h5 {
   --spacing-80: 5rem;
   --spacing-96: 6rem;
   --spacing-120: 7.5rem;
+  --border-1: 1px;
+  --border-2: 2px;
 }
 
+/* Rem unit notes
+     --spacing-2, styles.scss (box shadow), message_reactions gap (styles.scss), styles.scss, margins - and negative calc(-1 * var(--spacing-2)), and box shadow in _controls, .author and post_teaser_link_preview padding, post_flair user_flair padding, spoiler-block styles.scss, jump_links styles.scss
+     
+     --spacing-4, styles.scss for control elements, user-suggestion-box padding, #outer_container, .form-label, .btn spacing, _compact padding, _compact .table padding, styles.scss message_reactions row-gap, _controls margin-bottom (form-control-label class on New Post page), form-control padding _compact, _dark form-control padding, border-radius for user-suggestion-box (styles.scss), lots of instances in styles.scss, top, _compact, form_control border-radius with this value in _controls and _dark, content-center a span on the nav-bar (styles.scss), #masonry upvote_button padding-top, post_flair user_flair padding, blocked-image blur, jump_links styles.scss, reaction_button:hover (styles.scss), blockquote and pre padding, post_language_chooser uses a negative value calc(-1 * var(--spacing-4)), .dropdown-item .fe padding-right (_typography - icons in chat options)
+     
+     --spacing-8, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 var(--spacing-8)), and button style in _compact, padding breadcrumb-item styles.scss, ul.form-multicheck-columns li margin-right, #masonry upvote_button padding-top, nav-link, .accordion-button padding, blockquote padding, #preview (post preview) padding
+     
+     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom
+     
+     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
+     
+     --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
+     
+     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius
+     
+     --spacing-28
+     
+     --spacing-32, _compact padding
+     
+     --spacing-40: 2.5rem; // 40px
+     
+    --spacing-48: 3rem; // 48px
+    
+    --spacing-56: 3.5rem; // 56px
+    
+    --spacing-64: 4rem; // 64px
+    
+    --spacing-72: 4.5rem; // 72px
+    
+    --spacing-80: 5rem; // 80px
+    
+    --spacing-96: 6rem; // 96px
+    
+    --spacing-120: 7.5rem; // 120px
+     
+     */
 /* 16:9 aspect ratio on video wrapper in styles.scss */
 .pl-0 {
   padding-left: 0 !important;
@@ -3901,10 +4034,10 @@ form h5 {
     --bs-btn-color: #fff;
   }
   .post_list .post_teaser {
-    border-bottom: solid 1px black;
+    border-bottom: solid var(--border-1) black;
   }
   [data-bs-theme="dark"] .post_list .post_teaser {
-    border-bottom: solid 1px #fff;
+    border-bottom: solid var(--border-1) #fff;
   }
   .domain_link, .domain_link a {
     color: black;
@@ -3913,16 +4046,16 @@ form h5 {
     color: ghostwhite;
   }
   .main_pane, .voting_buttons div {
-    border: solid 1px #333;
+    border: solid var(--border-1) #333;
   }
   [data-bs-theme="dark"] .main_pane, [data-bs-theme="dark"] .voting_buttons div {
-    border: solid 1px #eee;
+    border: solid var(--border-1) #eee;
   }
   div.navbar {
-    border-bottom: solid 1px #333;
+    border-bottom: solid var(--border-1) #333;
   }
   [data-bs-theme="dark"] div.navbar {
-    border-bottom: solid 1px #fff;
+    border-bottom: solid var(--border-1) #fff;
   }
   .nav-link {
     color: black;
@@ -3987,7 +4120,7 @@ form h5 {
 }
 
 body.compact-min .btn {
-  padding: 4px 8px;
+  padding: var(--spacing-4) var(--spacing-8);
   font-size: 93%;
 }
 
@@ -4023,28 +4156,28 @@ body.compact-min div.navbar {
 }
 
 body.compact-min #outer_container {
-  margin-top: 0.6rem;
+  margin-top: var(--spacing-12);
 }
 
 body.compact-min .table > :not(caption) > * > * {
-  padding: 0.3rem 0.3rem;
+  padding: var(--spacing-4) var(--spacing-4);
 }
 
 body.compact-min .mt-4 {
-  margin-top: 1.3rem !important;
+  margin-top: var(--spacing-20) !important;
 }
 
 body.compact-min .communities_table tbody tr th a {
-  padding-top: 4px;
-  padding-bottom: 4px;
+  padding-top: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
 }
 
 body.compact-min .form-control {
-  padding: 0.275rem 0.55rem;
+  padding: var(--spacing-4) var(--spacing-8);
 }
 
 body.compact-min .form-select {
-  padding: 0.275rem var(--spacing-32) 0.275rem 0.55rem;
+  padding: var(--spacing-4) var(--spacing-32) var(--spacing-4) var(--spacing-8);
 }
 
 body.compact-min .ts-wrapper {
@@ -4052,8 +4185,8 @@ body.compact-min .ts-wrapper {
 }
 
 body.compact-max .post_teaser {
-  border-bottom-width: 1px;
-  padding-top: 4px;
+  border-bottom-width: var(--border-1);
+  padding-top: var(--spacing-4);
 }
 
 body.compact-max .post_teaser .post_teaser_image_preview {
