@@ -345,7 +345,7 @@ div.navbar {
       }
 
       .fe-search {
-        right: $px7;
+        right: var(--spacing-8);
       }
     }
   }
@@ -552,7 +552,7 @@ form {
   height: 176px;
   margin-left: calc(-1 * var(--spacing-12));
   margin-right: calc(-1 * var(--spacing-12));
-  margin-top: -($px9);
+  margin-top: calc(-1 * var(--spacing-8));
 
   @include breakpoint(tablet) {
     height: 240px;
@@ -797,7 +797,7 @@ ul.form-multicheck-columns {
           max-width: 100%;
         }
         &.blur {
-          filter: blur($px9);
+          filter: blur(var(--spacing-8));
         }
       }
 
@@ -807,7 +807,7 @@ ul.form-multicheck-columns {
         }
         .fe::before {
           font-size: $fs28px;
-          padding-right: $px7;
+          padding-right: var(--spacing-8);
         }
       }
 
@@ -1112,7 +1112,7 @@ time {
               position: absolute;
               width: var(--spacing-20);
               height: var(--spacing-20);
-              left: $px7;
+              left: var(--spacing-8);
             }
           }
         }
@@ -1238,7 +1238,7 @@ details {
       opacity: $opacity-01;
     }
     p {
-      padding-right: $px9;
+      padding-right: var(--spacing-8);
     }
     p:last-child {
       margin-bottom: 0px;
@@ -1930,7 +1930,7 @@ a.unread, div.unread {
 
   ol, ul {
     li {
-      margin-bottom: $px7;
+      margin-bottom: var(--spacing-8);
 
       > p {
         margin-bottom: 0;
