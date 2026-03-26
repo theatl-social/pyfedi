@@ -1897,13 +1897,13 @@ a.unread, div.unread {
     border-style: solid;
     border-color: var(--bs-secondary-border-subtle);
     border-width: var(--border-2);
-    border-radius: $px5;
+    border-radius: var(--spacing-4);
   }
 
   p > code {
     background: var(--bs-secondary-bg);
     padding: var(--spacing-4) var(--spacing-8);
-    border-radius: $px5;
+    border-radius: var(--spacing-4);
     position: relative;
 
     .btn {
@@ -2134,7 +2134,7 @@ h1 .warning_badge {
     list-style: none;
     padding-left: 0;
     li {
-      margin-bottom: $px5;
+      margin-bottom: var(--spacing-8);
 
       .vote_bar {
         .vote_score {
