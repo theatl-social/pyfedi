@@ -665,6 +665,12 @@ fieldset legend {
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
+.form-control::file-selector-button {
+  padding: var(--spacing-8) var(--spacing-12);
+  margin: calc(-1 * var(--spacing-8)) calc(-1 * var(--spacing-12));
+  margin-inline-end: var(--spacing-12);
+}
+
 .form-select {
   padding: var(--spacing-8) var(--spacing-12);
 }
