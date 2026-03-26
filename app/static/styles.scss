@@ -2165,7 +2165,7 @@ h1 .warning_badge {
 
 .card-header {
   h2 {
-    margin-bottom: $px5;
+    margin-bottom: var(--spacing-2);
   }
 }
 
