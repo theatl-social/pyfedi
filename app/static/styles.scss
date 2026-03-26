@@ -528,7 +528,8 @@ form {
     }
 
     tr td {
-      padding: $px6;
+      padding: var(--spacing-8) var(--spacing-4);
+      font-size: $fs12px;
     }
   }
 }
