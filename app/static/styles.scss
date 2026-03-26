@@ -2830,7 +2830,7 @@ form {
             background-color: var(--bs-primary-bg-subtle);
             border-color: var(--bs-primary-border-subtle);
 
-            border-width: $px1x5;
+            border-width: var(--spacing-2);
             padding: var(--spacing-2) var(--spacing-4);
 
             font-weight: var(--bs-font-weight-semibold);

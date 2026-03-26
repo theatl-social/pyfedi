@@ -32,12 +32,11 @@
 
 $border-1: 1px; // for border, border-width to replace those using px1 in _controls, _compact, _high_contrast
 $border-2: 2px; // for border and border-radius, multiple stylesheets
-// --spacing-2 (0.125rem) used for some border-radius to replace 3px radius in some cases
+// --spacing-2 (0.125rem) used for some border-radius to replace 3px radius in some cases, message_reaction border-width styles.scss
 // --spacing-4 (0.25rem) used for some border-radius (styles.scss, _controls, and _dark), .tab-content > .tab-pane (styles.scss), community_header, .event_banner, img container styles, .post_flair and others, tg-spoiler
 // --spacing-24 (1.5rem) border-radius message_reaction (pillbox style)
 
 $px1: 1px; // negative values -($px1) _typography (top)
-$px1x5: 1.5px; // message_reaction and border-width styles.scss
 $px3: 3px; // htmx-indicator, #typeTab .nav-link
 $px5: 5px; // negative is -($px5), 
 $px6: 6px; // locations, blur, border-radius instances (styles.scss)
