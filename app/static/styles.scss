@@ -3041,8 +3041,8 @@ form {
 }
 
 #typeTab .nav-link {
-  padding-left: $px3;
-  padding-right: $px3;
+  padding-left: var(--spacing-4);
+  padding-right: var(--spacing-4);
 }
 
 #registration_captcha {
