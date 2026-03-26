@@ -1875,7 +1875,7 @@ a.unread, div.unread {
   }
 
   blockquote {
-    padding: $em02 $px5;
+    padding: var(--spacing-4) var(--spacing-8);
     font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
     margin: 0 var(--spacing-20) $px6 var(--spacing-20);
     font-size: $fs95pc;
