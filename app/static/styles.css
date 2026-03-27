@@ -1557,7 +1557,7 @@ ul.form-multicheck-columns li {
 }
 
 .post_list .post_teaser .main_row .author {
-  margin-bottom: 30px;
+  margin-bottom: var(--spacing-32);
   display: inline-block;
   max-width: 78%;
 }
@@ -1926,7 +1926,7 @@ time {
 
 @media (min-width: 1280px) {
   #masonry .item .masonry_info p a {
-    line-height: 30px;
+    line-height: var(--spacing-28);
   }
 }
 

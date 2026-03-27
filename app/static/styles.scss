@@ -736,7 +736,7 @@ ul.form-multicheck-columns {
       position: relative;
 
       .author {
-        margin-bottom: $px30;
+        margin-bottom: var(--spacing-32);
         display: inline-block;
         max-width: 78%;
       }
@@ -1083,7 +1083,7 @@ time {
           text-decoration: none;
           line-height: $px40;
           @include breakpoint(laptop) {
-            line-height: $px30;
+            line-height: var(--spacing-28);
           }
         }
       }
