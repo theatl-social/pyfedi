@@ -2082,7 +2082,7 @@ h1 .warning_badge {
 
 .create_post_markdown_editor_enabler {
   text-align: right;
-  margin-bottom: $px10;
+  margin-bottom: var(--spacing-12);
   display: block;
 }
 
