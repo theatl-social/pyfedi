@@ -44,7 +44,7 @@
      
      --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing, .sort_methods padding left and right, post_teaser_image_preview margin-top
      
-     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
+     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group, .htmx-indicator htmx-request, coolfieldset legend
      
      --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
      
@@ -78,7 +78,6 @@
 
 $px1: 1px; // negative values -($px1) _typography (top)
 $px7: 7px; // .show-more .fe-angles-down
-$px14: 14px; // line-height, other instances on styles.scss
 $px15: 15px; // negative is -($px15)
 $px17: 17px; // styles.scss, top,and padding/margins, _typography (font-size defined as fs17px)
 $px26: 26px; // styles.scss line height x2
