@@ -896,7 +896,7 @@ ul.form-multicheck-columns {
 
 .post_teaser_video_preview {
   text-align: center;
-  margin-top: $px10;
+  margin-top: var(--spacing-12);
   position: relative;
 
   .fe-video {
@@ -1940,20 +1940,20 @@ a.unread, div.unread {
   }
 
   img[align="left"] {
-    margin-right: $px10;
-    margin-bottom: $px10;
+    margin-right: var(--spacing-12);
+    margin-bottom: var(--spacing-12);
     float: left;
   }
 
   img[align="right"] {
-    margin-left: $px10;
-    margin-bottom: $px10;
+    margin-left: var(--spacing-12);
+    margin-bottom: var(--spacing-12);
     float: right;
   }
 
   img[align="middle"] {
     display: block;
-    margin: 0 auto $px10 auto;
+    margin: 0 auto var(--spacing-12) auto;
     float: none;
   }
 }
