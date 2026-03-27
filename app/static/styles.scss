@@ -481,7 +481,7 @@ form {
     flex-grow: 1;
     text-align: center;
     height: $px70;
-    padding-top: $px17 !important;
+    padding-top: var(--spacing-16) !important;
     @media (orientation: landscape) {
       height: 60px;
       padding-top: var(--spacing-12) !important;
@@ -2692,7 +2692,7 @@ form {
 
   .author_link + .user_preview {
     position: absolute;
-    top: $px17;
+    top: var(--spacing-20);
     left: 0;
     background-color: $white;
     z-index: 20;

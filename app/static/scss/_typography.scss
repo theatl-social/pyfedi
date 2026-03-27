@@ -386,7 +386,7 @@ h1 {
   .fe-bell, .fe-no-bell {
     font-size: $fs18px;
     top: calc(-1 * var(--spacing-4));
-    left: $px17;
+    left: var(--spacing-12);
   }
 }
 

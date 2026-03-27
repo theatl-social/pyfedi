@@ -468,7 +468,7 @@
 h1 .fe-bell, h1 .fe-no-bell {
   font-size: 18px;
   top: calc(-1 * var(--spacing-4));
-  left: 17px;
+  left: var(--spacing-12);
 }
 
 .fe-magnify {
@@ -1302,7 +1302,7 @@ form .mb-3.required > label:after {
   flex-grow: 1;
   text-align: center;
   height: 70px;
-  padding-top: 17px !important;
+  padding-top: var(--spacing-16) !important;
 }
 
 @media (orientation: landscape) {
@@ -3511,7 +3511,7 @@ form h5 {
 
 .render_username .author_link + .user_preview {
   position: absolute;
-  top: 17px;
+  top: var(--spacing-20);
   left: 0;
   background-color: #fff;
   z-index: 20;
