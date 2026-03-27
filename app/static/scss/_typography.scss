@@ -107,7 +107,6 @@ $fs150pc: 150%; // .fe
 
 .fe-external-noimg::before {
   font-size: $fs40px;
-  opacity: $opacity-04;
   float: right;
   position: relative;
   top: $px10;
@@ -547,6 +546,6 @@ fieldset legend {
 }
 
 .form-control::placeholder {
-  color: rgba(var(--bs-secondary-color-rgb), 0.5);
+  color: rgba(var(--bs-secondary-color-rgb), $opacity-05);
   font-style: italic;
 }
