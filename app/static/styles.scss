@@ -1908,6 +1908,11 @@ a.unread, div.unread {
     border-radius: $px5;
   }
 
+  .post_source pre{
+    padding-top: $rem1;
+    padding-bottom: $rem1;
+  }
+
   p > code {
     background: var(--bs-secondary-bg);
     padding: $rem025 $rem05;

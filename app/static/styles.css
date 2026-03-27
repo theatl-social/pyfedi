@@ -826,14 +826,14 @@ div.navbar {
   outline-style: none;
 }
 
-.navbar .dropdown-menu .dropdown-item {
-  white-space: break-spaces;
-  break-inside: avoid;
-}
 @media (min-width: 992px) {
   .navbar .dropdown-menu .dropdown-item {
     width: 200px;
   }
+}
+.navbar .dropdown-menu .dropdown-item {
+  white-space: break-spaces;
+  break-inside: avoid;
 }
 
 @media (min-width: 992px) {
@@ -1179,12 +1179,14 @@ form .mb-3.required > label:after {
   background-color: rgba(0, 0, 0, 0.6);
   display: inline-block;
   padding: 5px 10px;
-  margin-bottom: 0;
 }
 @media (min-width: 992px) {
   .community_header #breadcrumb_nav .breadcrumb, .event_banner #breadcrumb_nav .breadcrumb {
     border-radius: 6px;
   }
+}
+.community_header #breadcrumb_nav .breadcrumb, .event_banner #breadcrumb_nav .breadcrumb {
+  margin-bottom: 0;
 }
 .community_header #breadcrumb_nav .breadcrumb .breadcrumb-item, .event_banner #breadcrumb_nav .breadcrumb .breadcrumb-item {
   color: #fff;
@@ -1657,13 +1659,15 @@ time {
   display: inline;
   color: white;
   padding-top: 10px;
-  width: 50%;
-  position: relative;
 }
 @media (min-width: 1280px) {
   #masonry .item .masonry_info .row .col .upvote_button, #masonry .item .masonry_info .row .col .downvote_button {
     padding-top: 5px;
   }
+}
+#masonry .item .masonry_info .row .col .upvote_button, #masonry .item .masonry_info .row .col .downvote_button {
+  width: 50%;
+  position: relative;
 }
 #masonry .item .masonry_info .row .col .upvote_button .htmx-indicator, #masonry .item .masonry_info .row .col .downvote_button .htmx-indicator {
   position: absolute;
@@ -2331,6 +2335,10 @@ a.unread:before, div.unread:before {
   border-width: 2px;
   border-radius: 5px;
 }
+.post_body .post_source pre, .comment_body .post_source pre, #preview .post_source pre, .reply_preview .post_source pre, .accordion-body .post_source pre, .post_col .post_source pre {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
 .post_body p > code, .comment_body p > code, #preview p > code, .reply_preview p > code, .accordion-body p > code, .post_col p > code {
   background: var(--bs-secondary-bg);
   padding: 0.25rem 0.5rem;
@@ -2436,14 +2444,16 @@ h1 .warning_badge {
 }
 .conversation .message {
   width: 90%;
-  max-width: 100%;
-  margin-bottom: 15px;
-  clear: both;
 }
 @media (min-width: 992px) {
   .conversation .message {
     width: 70%;
   }
+}
+.conversation .message {
+  max-width: 100%;
+  margin-bottom: 15px;
+  clear: both;
 }
 .conversation .message.from_other_party {
   float: right;
@@ -2794,7 +2804,6 @@ form h5 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
 }
 .post_flair_sidepane .post_flair {
   font-size: 90%;
@@ -2804,6 +2813,9 @@ form h5 {
   border-radius: 4px;
   white-space: nowrap;
   text-align: center;
+}
+.post_flair_sidepane {
+  margin-top: 12px;
 }
 
 .user_flair, .user_note {
@@ -3624,12 +3636,12 @@ body.compact-min .ts-wrapper {
   padding: 0;
 }
 
+body.compact-max .post_teaser .post_teaser_image_preview {
+  display: none;
+}
 body.compact-max .post_teaser {
   border-bottom-width: 1px;
   padding-top: 4px;
-}
-body.compact-max .post_teaser .post_teaser_image_preview {
-  display: none;
 }
 body.compact-max .post_teaser img, body.compact-max .post_teaser .thumbnail {
   display: none;
