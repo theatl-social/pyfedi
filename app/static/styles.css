@@ -46,7 +46,7 @@
      
      --spacing-8, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 var(--spacing-8)), and button style in _compact, padding breadcrumb-item styles.scss, ul.form-multicheck-columns li margin-right, #masonry upvote_button padding-top, nav-link, .accordion-button padding, blockquote padding, #preview (post preview) padding, 8 and 12 padding used on .form-control and .form-select
      
-     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing
+     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing, .sort_methods padding left and right, post_teaser_image_preview margin-top
      
      --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
      
@@ -751,7 +751,7 @@ fieldset legend {
      
      --spacing-8, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 var(--spacing-8)), and button style in _compact, padding breadcrumb-item styles.scss, ul.form-multicheck-columns li margin-right, #masonry upvote_button padding-top, nav-link, .accordion-button padding, blockquote padding, #preview (post preview) padding, 8 and 12 padding used on .form-control and .form-select
      
-     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing
+     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing, .sort_methods padding left and right, post_teaser_image_preview margin-top
      
      --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
      
@@ -1029,7 +1029,7 @@ div.navbar {
     margin-left: auto;
   }
   ul.navbar-nav * > * :not(.community_filter) {
-    margin-left: var(--spacing-12);
+    margin-left: var(--spacing-8);
   }
   ul.navbar-nav .dropdown-menu li {
     margin-left: 0;
@@ -1162,8 +1162,8 @@ div.navbar {
 
 .communities_menu .community_filter {
   position: relative;
-  margin-left: 10px;
-  padding-right: var(--spacing-20);
+  margin-left: 0 !important;
+  padding-right: var(--spacing-12);
 }
 
 .communities_menu .community_filter .fe-search {
@@ -1340,8 +1340,8 @@ form .mb-3.required > label:after {
 }
 
 .communities_table tbody tr th a {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: var(--spacing-8);
+  padding-bottom: var(--spacing-8);
   width: 100%;
   display: inline-block;
 }
@@ -1500,8 +1500,8 @@ ul.form-multicheck-columns li {
 }
 
 .sort_methods .btn, .view_filter .btn {
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: var(--spacing-12);
+  padding-right: var(--spacing-12);
 }
 
 @media (min-width: 768px) {
@@ -1702,7 +1702,7 @@ ul.form-multicheck-columns li {
 
 .post_teaser_image_preview {
   text-align: center;
-  margin-top: 10px;
+  margin-top: var(--spacing-12);
 }
 
 .post_teaser_image_preview a {
@@ -3937,7 +3937,7 @@ form h5 {
      
      --spacing-8, styles.scss, _compact padding, positioning, margins, paddings, width, height, gap styles.scss and a negative value calc(-1 var(--spacing-8)), and button style in _compact, padding breadcrumb-item styles.scss, ul.form-multicheck-columns li margin-right, #masonry upvote_button padding-top, nav-link, .accordion-button padding, blockquote padding, #preview (post preview) padding, 8 and 12 padding used on .form-control and .form-select
      
-     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing
+     --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing, .sort_methods padding left and right, post_teaser_image_preview margin-top
      
      --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
      

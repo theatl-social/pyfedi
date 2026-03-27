@@ -679,8 +679,8 @@ ul.form-multicheck-columns {
   text-wrap: none;
   text-wrap-mode: nowrap;
   .btn {
-    padding-left: $px10;
-    padding-right: $px10;
+    padding-left: var(--spacing-12);
+    padding-right: var(--spacing-12);
   }
 }
 
@@ -878,7 +878,7 @@ ul.form-multicheck-columns {
 
 .post_teaser_image_preview {
   text-align: center;
-  margin-top: $px10;
+  margin-top: var(--spacing-12);
   a {
     display: inline-block;
     max-width: 512px;
