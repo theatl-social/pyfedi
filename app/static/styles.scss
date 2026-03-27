@@ -191,7 +191,7 @@ div.navbar {
     }
 
     *> * {
-      margin-left: $px10;
+      margin-left: var(--spacing-12);
     }
 
     .dropdown-menu li {
