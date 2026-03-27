@@ -48,7 +48,7 @@
      
      --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing, .sort_methods padding left and right, post_teaser_image_preview margin-top
      
-     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
+     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group, .htmx-indicator htmx-request, coolfieldset legend
      
      --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
      
@@ -753,7 +753,7 @@ fieldset legend {
      
      --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing, .sort_methods padding left and right, post_teaser_image_preview margin-top
      
-     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
+     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group, .htmx-indicator htmx-request, coolfieldset legend
      
      --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
      
@@ -2209,7 +2209,7 @@ details {
   position: absolute;
   width: var(--spacing-20);
   height: var(--spacing-20);
-  right: 14px;
+  right: var(--spacing-16);
   top: var(--spacing-4);
   opacity: 1 !important;
 }
@@ -2286,7 +2286,7 @@ details {
   position: absolute;
   width: var(--spacing-20);
   height: var(--spacing-20);
-  right: 14px;
+  right: var(--spacing-16);
   top: var(--spacing-4);
   opacity: 1 !important;
 }
@@ -2332,7 +2332,7 @@ details {
   text-align: center;
   background-color: #777;
   color: #fff;
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-16);
   height: 30px;
 }
 
@@ -2712,7 +2712,7 @@ a.unread:before, div.unread:before {
 }
 
 .post_body .post_image img, .comment_body .post_image img, #preview .post_image img, .reply_preview .post_image img, .accordion-body .post_image img, .post_col .post_image img {
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-16);
 }
 
 .post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote, .post_col blockquote {
@@ -2860,7 +2860,7 @@ h1 .warning_badge {
 .conversation .message {
   width: 90%;
   max-width: 100%;
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-8);
   clear: both;
 }
 
@@ -2876,6 +2876,14 @@ h1 .warning_badge {
 
 .conversation .message.from_me {
   float: left;
+}
+
+.conversation .message.from_me + .from_other_party {
+  margin-top: var(--spacing-8);
+}
+
+.conversation .message.from_other_party + .from_me {
+  margin-top: var(--spacing-8);
 }
 
 .conversation .message_created_at {
@@ -3939,7 +3947,7 @@ form h5 {
      
      --spacing-12, styles.scss, plus for a flex gap value, _controls (form control), _dark (form control), #outer_container _compact top-margin (less than default 1rem), negative is calc(-1 var(--spacing-12)) in styles.scss, width, height instances not changed (styles.scss), padding breadcrumb-item styles.scss, .accordion-button padding, post_poll ul li margin-bottom, .dropdown-divider spacing, .sort_methods padding left and right, post_teaser_image_preview margin-top
      
-     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group
+     --spacing-16, styles.scss height, box-shadow, other  (h4 style moved to _typography), form .mb-3, message padding, .form-group, .htmx-indicator htmx-request, coolfieldset legend
      
      --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
      

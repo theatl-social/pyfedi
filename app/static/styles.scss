@@ -1487,7 +1487,7 @@ details {
     text-align: center;
     background-color: $dark-grey;
     color: $white;
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-16);
     height: $px30;
 
     .fe-angles-down, .fe-angles-up {
@@ -1873,7 +1873,7 @@ a.unread, div.unread {
   }
 
   .post_image img {
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-16);
   }
 
   blockquote {
@@ -2028,7 +2028,7 @@ h1 .warning_badge {
       width: 70%;
     }
     max-width: 100%;
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-8);
     clear: both;
 
     &.from_other_party {
@@ -2036,6 +2036,12 @@ h1 .warning_badge {
     }
     &.from_me {
       float: left;
+    }
+    &.from_me + .from_other_party {
+      margin-top: var(--spacing-8);
+    }
+    &.from_other_party + .from_me {
+      margin-top: var(--spacing-8);
     }
   }
   .message_created_at {
