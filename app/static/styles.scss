@@ -246,7 +246,7 @@ div.navbar {
   border-bottom: solid var(--border-1) $lighter-grey-decoration;
   border-left: solid var(--border-1) $lighter-grey-decoration;
   border-radius: 0 0 var(--spacing-4) var(--spacing-4);
-  padding: $px10 $px15 0 $px15;
+  padding: var(--spacing-8) 0px 0px 0px;
 }
 
 .tag_cloud_page > .tab-pane {
