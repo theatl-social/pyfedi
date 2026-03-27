@@ -561,8 +561,8 @@ form {
 
   #breadcrumb_nav {
     @include breakpoint(tablet) {
-      padding-left: $px13;
-      padding-top: $px13;
+      padding-left: var(--spacing-12);
+      padding-top: var(--spacing-12);
     }
     .breadcrumb {
       background-color: $black-tint-03;
