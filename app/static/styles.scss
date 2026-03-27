@@ -656,7 +656,7 @@ form {
 
 #post_reply_more_options {
   &.expanded {
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-16);
   }
 }
 
@@ -1004,7 +1004,7 @@ time {
   container-type: inline-size;
 
   .voting_buttons_new {
-    margin-left: -($px15);
+    margin-left: calc(-1 * var(--spacing-16));
   }
 
   .post_reply_count {
@@ -1239,8 +1239,8 @@ details {
 
   .comment_body {
     hr {
-      margin-left: $px15;
-      margin-right: $px15;
+      margin-left: var(--spacing-16);
+      margin-right: var(--spacing-16);
       opacity: $opacity-01;
     }
     p {
@@ -2637,7 +2637,7 @@ form {
 
 #subtopic_nav {
   position: relative;
-  left: -($px15);
+  left: calc(-1 * var(--spacing-16));
   li a {
     border: dotted var(--border-2) transparent;
   }
@@ -2728,7 +2728,7 @@ form {
   border: solid var(--border-1) $light-grey;
   border-radius: var(--spacing-4);
   padding: var(--spacing-8);
-  margin-bottom: $px15;
+  margin-bottom: var(--spacing-16);
 }
 
 #typeTab {

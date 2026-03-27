@@ -1480,7 +1480,7 @@ form .mb-3.required > label:after {
 }
 
 #post_reply_more_options.expanded {
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-16);
 }
 
 ul.form-multicheck-columns {
@@ -1836,7 +1836,7 @@ time {
 }
 
 .post_full .post_utilities_bar .voting_buttons_new {
-  margin-left: -15px;
+  margin-left: calc(-1 * var(--spacing-16));
 }
 
 .post_full .post_utilities_bar .post_reply_count {
@@ -2087,8 +2087,8 @@ details {
 }
 
 .comments > .comment .comment_body hr {
-  margin-left: 15px;
-  margin-right: 15px;
+  margin-left: var(--spacing-16);
+  margin-right: var(--spacing-16);
   opacity: 0.1;
 }
 
@@ -3456,7 +3456,7 @@ form h5 {
 
 #subtopic_nav {
   position: relative;
-  left: -15px;
+  left: calc(-1 * var(--spacing-16));
 }
 
 #subtopic_nav li a {
@@ -3546,7 +3546,7 @@ form h5 {
   border: solid var(--border-1) #ddd;
   border-radius: var(--spacing-4);
   padding: var(--spacing-8);
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-16);
 }
 
 #typeTab a:not(.btn):active {
