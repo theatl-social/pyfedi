@@ -2766,19 +2766,32 @@ class PostReply(db.Model):
 
         # LLM Detection
         if reply.body and '—' in reply.body and user.created_very_recently() and get_setting('enable_report_em_dash_replies', True):
-            # usage of em-dash is highly suspect.
-            from app.utils import notify_admin
-            # notify admin
-            targets_data = {'gen': '0',
-                            'suspect_user_id': user.id,
-                            'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
-                            'source_instance_id': 1,
-                            'source_instance_domain': '',
-                            'reporter_id': 1,
-                            'reporter_user_name': 'automated'
-                            }
-            notify_admin('Used em-dash in comment - likely AI', f'/u/{user.link()}', 1,
-                         NOTIF_REPORT, 'user_reported', targets_data)
+            # Check if this user has already been reported
+            if get_setting('limit_one_em_report_per_user', False):
+                cache_report = True
+                previous_report = cache.get(f'em-dash_used_by_{repr(reply.author)}')
+            else:
+                cache_report = False
+                previous_report = None
+            
+            if not previous_report:
+                # usage of em-dash is highly suspect.
+                from app.utils import notify_admin
+                # notify admin
+                targets_data = {'gen': '0',
+                                'suspect_user_id': user.id,
+                                'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
+                                'source_instance_id': 1,
+                                'source_instance_domain': '',
+                                'reporter_id': 1,
+                                'reporter_user_name': 'automated'
+                                }
+                notify_admin('Used em-dash in comment - likely AI', f'/u/{user.link()}', 1,
+                            NOTIF_REPORT, 'user_reported', targets_data)
+                
+                # Store this in redis for a day so that duplicate reports aren't created if that setting is enabled
+                if cache_report:
+                    cache.set(f'em-dash_used_by_{repr(reply.author)}', True, timeout=86400)
         elif current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(reply.body) >= 250:
             # Use API to check new accounts to see if their comments are AI generated
             from app.utils import get_request, notify_admin
