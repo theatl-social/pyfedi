@@ -600,6 +600,8 @@ def put_user_save_user_settings(auth, data):
     # save the change to the db
     db.session.commit()
 
+    cache.delete_memoized(user_view)
+
     user_json = {"my_user": user_view(user=user, variant=6)}
     return user_json
 
@@ -925,6 +927,8 @@ def post_user_set_note(auth, data):
             db.session.delete(existing_note)
     
     db.session.commit()
+
+    cache.delete_memoized(user_view)
     
     return user_view(user=target_user_id, variant=5, user_id=user.id)
 
