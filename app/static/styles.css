@@ -2922,7 +2922,7 @@ h1 .warning_badge {
 
 .create_post_markdown_editor_enabler {
   text-align: right;
-  margin-bottom: 10px;
+  margin-bottom: var(--spacing-12);
   display: block;
 }
 
@@ -3227,14 +3227,14 @@ form h5 {
 #image_preview {
   max-width: 200px;
   display: none;
-  margin-top: -10px;
-  margin-bottom: 10px;
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
 }
 
 #image_preview_edit {
   max-width: 200px;
-  margin-top: -10px;
-  margin-bottom: 10px;
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
 }
 
 #search_community {
@@ -3317,9 +3317,9 @@ form h5 {
 }
 
 .field_hint {
-  margin-top: -15px;
+  margin-top: calc(-1 * var(--spacing-12));
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: var(--spacing-12);
 }
 
 @media (min-width: 992px) {

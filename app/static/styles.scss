@@ -2495,9 +2495,9 @@ form {
 }
 
 .field_hint {
-  margin-top: -($px15);
+  margin-top: calc(-1 * var(--spacing-12));
   display: block;
-  margin-bottom: $px10;
+  margin-bottom: var(--spacing-12);
 }
 
 @include breakpoint(tablet) {
