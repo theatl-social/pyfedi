@@ -1162,8 +1162,14 @@ div.navbar {
 
 .communities_menu .community_filter {
   position: relative;
-  margin-left: 0 !important;
+  margin-left: var(--spacing-12);
   padding-right: var(--spacing-12);
+}
+
+@media (min-width: 992px) {
+  .communities_menu .community_filter {
+    margin-left: 0;
+  }
 }
 
 .communities_menu .community_filter .fe-search {
@@ -1174,7 +1180,7 @@ div.navbar {
 
 @media (min-width: 1280px) {
   .communities_menu .community_filter {
-    margin-left: 0;
+    margin-left: var(--spacing-8);
     padding-right: 0;
   }
   .communities_menu .community_filter #community-filter {
@@ -3316,7 +3322,7 @@ form h5 {
 }
 
 .option_list li {
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-8);
 }
 
 .option_list li .fe {

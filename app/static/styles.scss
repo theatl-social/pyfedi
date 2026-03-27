@@ -328,7 +328,12 @@ div.navbar {
 
   .community_filter {
     position: relative;
-    margin-left: 0 !important;
+    margin-left: var(--spacing-12);
+    
+    @include breakpoint(tablet) {
+    margin-left: 0;
+    }
+    
     padding-right: var(--spacing-12);
 
     .fe-search {
@@ -338,7 +343,7 @@ div.navbar {
     }
 
     @include breakpoint(laptop) {
-      margin-left: 0;
+      margin-left: var(--spacing-8);
       padding-right: 0;
 
       #community-filter {
@@ -2491,7 +2496,7 @@ form {
   margin-bottom: 0;
 
   li {
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-8);
 
     .fe {
       position: relative;
