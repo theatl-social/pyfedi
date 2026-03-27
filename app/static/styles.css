@@ -192,7 +192,7 @@
   opacity: 0.4;
   float: right;
   position: relative;
-  top: 10px;
+  top: var(--spacing-12);
 }
 
 .fe-circle::before {
@@ -858,7 +858,7 @@ body.embed .post_teaser_body h3 {
 body.embed .embed_logo {
   float: right;
   width: 40px;
-  margin-right: 10px;
+  margin-right: var(--spacing-8);
 }
 
 a {
@@ -1385,8 +1385,8 @@ form .mb-3.required > label:after {
 
 @media (min-width: 992px) {
   .community_header #breadcrumb_nav, .event_banner #breadcrumb_nav {
-    padding-left: 13px;
-    padding-top: 13px;
+    padding-left: var(--spacing-12);
+    padding-top: var(--spacing-12);
   }
 }
 
@@ -2187,13 +2187,13 @@ details {
 }
 
 .voting_buttons_new .upvote_button .htmx-indicator {
-  left: 13px;
-  top: 14px;
+  left: var(--spacing-12);
+  top: var(--spacing-12);
 }
 
 .voting_buttons_new .downvote_button .htmx-indicator {
   left: var(--spacing-12);
-  top: 14px;
+  top: var(--spacing-12);
 }
 
 .voting_buttons_new .htmx-indicator {
@@ -3175,13 +3175,13 @@ form h5 {
 }
 
 .coolfieldset legend {
-  padding-left: 13px;
+  padding-left: var(--spacing-16);
   font-weight: bold;
   cursor: pointer;
   background-color: #fff;
   display: block;
   position: relative;
-  top: -11px;
+  top: calc(-1 * var(--spacing-12));
 }
 
 .coolfieldset legend.tweak-top {
@@ -3189,15 +3189,15 @@ form h5 {
 }
 
 .coolfieldset legend, .coolfieldset.expanded legend {
-  background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+  background: whitesmoke url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 .coolfieldset.collapsed legend {
-  background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+  background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 .coolfieldset.expanded .coolfieldset.collapsed legend {
-  background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+  background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 .domain_link {
@@ -3592,7 +3592,7 @@ form h5 {
 }
 
 #reaction_dialog {
-  padding: 10px;
+  padding: var(--spacing-12);
 }
 
 .message_reactions {
@@ -4111,15 +4111,15 @@ form h5 {
 }
 
 .coolfieldset.expanded legend {
-  background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+  background: whitesmoke url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .coolfieldset legend {
-  background: #424549 url(/static/images/expanded.gif) no-repeat center left;
+  background: #424549 url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .coolfieldset.collapsed legend {
-  background: #424549 url(/static/images/collapsed.gif) no-repeat center left;
+  background: #424549 url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .post_teaser_title_a:visited {

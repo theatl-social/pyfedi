@@ -1344,15 +1344,15 @@ details {
 
   .upvote_button {
     .htmx-indicator {
-      left: $px13;
-      top: $px14;
+      left: var(--spacing-12);
+      top: var(--spacing-12);
     }
   }
 
   .downvote_button {
     .htmx-indicator {
       left: var(--spacing-12);
-      top: $px14;
+      top: var(--spacing-12);
     }
   }
 
@@ -2336,13 +2336,13 @@ form {
 }
 
 .coolfieldset legend{
-  padding-left:$px13;
+  padding-left: var(--spacing-16);
   font-weight:bold;
   cursor:pointer;
   background-color: $white;
   display: block;
   position: relative;
-  top: -11px;
+  top: calc(-1 * var(--spacing-12));
 
   &.tweak-top {
     top: -18px;
@@ -2350,15 +2350,15 @@ form {
 }
 
 .coolfieldset legend, .coolfieldset.expanded legend {
-	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 .coolfieldset.collapsed legend{
-	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 .coolfieldset.expanded .coolfieldset.collapsed legend {
-	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 .domain_link {
@@ -3109,15 +3109,15 @@ form {
 
 
 .coolfieldset.expanded legend {
-	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .coolfieldset legend {
-	background: $super-dark-grey url(/static/images/expanded.gif) no-repeat center left;
+	background: $super-dark-grey url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .coolfieldset.collapsed legend{
-	background: $super-dark-grey url(/static/images/collapsed.gif) no-repeat center left;
+	background: $super-dark-grey url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .post_teaser_title_a {
