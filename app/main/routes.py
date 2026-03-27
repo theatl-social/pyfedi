@@ -181,8 +181,7 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
     instances = db.session.query(Instance).\
         outerjoin(BannedInstances, BannedInstances.domain == Instance.domain).\
         filter(Instance.gone_forever == False, Instance.dormant == False,
-               BannedInstances.id == None,
-               or_(Instance.software == 'piefed', Instance.software == 'lemmy', Instance.software == 'mbin', Instance.software == 'nodebb')).\
+               BannedInstances.id == None, Instance.software == 'piefed').\
         order_by(desc(Instance.created_at)).limit(5).all()
 
     # Upcoming events
