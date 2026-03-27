@@ -48,9 +48,9 @@
      
      --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
      
-     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius
+     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius, .dropdown-item line-height (:active)
      
-     --spacing-28
+     --spacing-28, .dropdown-item line-height (default)
      
      --spacing-32, _compact padding, showPassword / hidePassword img and top position.
      
@@ -78,7 +78,6 @@
 
 $px1: 1px; // negative values -($px1) _typography (top)
 $px7: 7px; // .show-more .fe-angles-down
-$px26: 26px; // styles.scss line height x2
 $px30: 30px; // styles.scss line height, font-size, width, height, padding, margins, _compact line height, min-width, min-height
 $px40: 40px; // styles.scss line height
 $px46: 46px; // styles.scss line height and width (not changed)

@@ -52,9 +52,9 @@
      
      --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
      
-     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius
+     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius, .dropdown-item line-height (:active)
      
-     --spacing-28
+     --spacing-28, .dropdown-item line-height (default)
      
      --spacing-32, _compact padding, showPassword / hidePassword img and top position.
      
@@ -757,9 +757,9 @@ fieldset legend {
      
      --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
      
-     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius
+     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius, .dropdown-item line-height (:active)
      
-     --spacing-28
+     --spacing-28, .dropdown-item line-height (default)
      
      --spacing-32, _compact padding, showPassword / hidePassword img and top position.
      
@@ -1824,11 +1824,11 @@ time {
 
 .post_utilities_bar div .dropdown-item {
   white-space: unset;
-  line-height: 30px;
+  line-height: var(--spacing-28);
 }
 
 .post_utilities_bar div .dropdown-item:active {
-  line-height: 26px;
+  line-height: var(--spacing-24);
 }
 
 .post_full .post_utilities_bar {
@@ -2427,11 +2427,11 @@ details {
 
 .comment .comment_actions .dropdown-item {
   white-space: unset;
-  line-height: 30px;
+  line-height: var(--spacing-28);
 }
 
 .comment .comment_actions .dropdown-item:active {
-  line-height: 26px;
+  line-height: var(--spacing-24);
 }
 
 @container (max-width: 270px) {
@@ -3957,9 +3957,9 @@ form h5 {
      
      --spacing-20, styles.scss margin-left (also a font-size in _typography), margin for blockquote, _compact body-compact-min mt-4, in styles.scss lots of elements have a width, height, min-width, min-height, and line-height set to 20px
      
-     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius
+     --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius, .dropdown-item line-height (:active)
      
-     --spacing-28
+     --spacing-28, .dropdown-item line-height (default)
      
      --spacing-32, _compact padding, showPassword / hidePassword img and top position.
      

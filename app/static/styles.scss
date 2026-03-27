@@ -991,10 +991,10 @@ time {
 
     .dropdown-item {
       white-space: unset;
-      line-height: $px30;
+      line-height: var(--spacing-28);
 
       &:active {
-        line-height: $px26;
+        line-height: var(--spacing-24);
       }
     }
   }
@@ -1579,10 +1579,10 @@ details {
 
     .dropdown-item {
       white-space: unset;
-      line-height: $px30;
+      line-height: var(--spacing-28);
 
       &:active {
-        line-height: $px26;
+        line-height: var(--spacing-24);
       }
     }
 
