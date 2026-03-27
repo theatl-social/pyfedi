@@ -260,7 +260,8 @@ div.navbar {
 }
 
 .dropdown-divider {
-  margin-right: $px10;
+  margin-right: var(--spacing-12);
+  margin-left: var(--spacing-12);
 }
 
 .communities_menu {
