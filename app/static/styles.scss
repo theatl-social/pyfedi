@@ -2392,14 +2392,14 @@ form {
 #image_preview {
   max-width: 200px;
   display: none;
-  margin-top: -($px10);
-  margin-bottom: $px10;
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
 }
 
 #image_preview_edit {
   max-width: 200px;
-  margin-top: -($px10);
-  margin-bottom: $px10;
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
 }
 
 #search_community {
