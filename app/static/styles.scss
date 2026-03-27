@@ -190,8 +190,8 @@ div.navbar {
       margin-left: auto;
     }
 
-    *> * {
-      margin-left: var(--spacing-12);
+    * > * :not(.community_filter) {
+      margin-left: var(--spacing-8);
     }
 
     .dropdown-menu li {
@@ -328,8 +328,8 @@ div.navbar {
 
   .community_filter {
     position: relative;
-    margin-left: $px10;
-    padding-right: var(--spacing-20);
+    margin-left: 0 !important;
+    padding-right: var(--spacing-12);
 
     .fe-search {
       position: absolute;
