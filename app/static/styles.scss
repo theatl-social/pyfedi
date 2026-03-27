@@ -27,7 +27,7 @@ body {
     .embed_logo {
       float: right;
       width: $px40;
-      margin-right: $px10;
+      margin-right: var(--spacing-8);
     }
   }
 }
@@ -2780,7 +2780,7 @@ form {
 }
 
 #reaction_dialog {
-  padding: $px10;
+  padding: var(--spacing-12);
 }
 
 .message_reactions {

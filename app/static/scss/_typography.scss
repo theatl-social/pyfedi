@@ -110,7 +110,7 @@ $fs150pc: 150%; // .fe
   opacity: $opacity-04;
   float: right;
   position: relative;
-  top: $px10;
+  top: var(--spacing-12);
 }
 
 .fe-circle::before {
