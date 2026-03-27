@@ -676,6 +676,14 @@ fieldset legend {
 @view-transition {
   navigation: auto;
 }
+::view-transition-old(root) {
+  animation: fade-out 0.12s ease-out forwards;
+}
+
+::view-transition-new(root) {
+  animation: none;
+}
+
 @media (min-width: 768px) {
   html {
     scroll-padding-top: 80px;

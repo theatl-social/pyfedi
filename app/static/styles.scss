@@ -8,6 +8,14 @@
   navigation: auto;
 }
 
+::view-transition-old(root) {
+  animation: fade-out 0.12s ease-out forwards;
+}
+
+::view-transition-new(root) {
+  animation: none;
+}
+
 html {
   @include breakpoint(phablet) {
     scroll-padding-top: 80px;
