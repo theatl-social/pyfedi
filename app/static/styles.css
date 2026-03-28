@@ -628,7 +628,7 @@ fieldset legend {
   padding: 0.375rem 0.75rem;
   font-size: 0.9375rem;
   line-height: 1.6;
-  color: var(--bs-border-color);
+  color: var(--bs-body-color);
   background-color: #fff;
   background-clip: padding-box;
   border: 1px solid rgba(0, 40, 100, 0.12);
@@ -637,7 +637,7 @@ fieldset legend {
 }
 
 .form-control:focus {
-  color: var(--bs-border-color);
+  color: var(--bs-body-color);
   background-color: #fff;
   border-color: #1991eb;
   outline: 0;
