@@ -1191,8 +1191,7 @@ def community_edit(community_id: int):
     if community.is_owner() or current_user.is_admin() or community.is_moderator():
         form = EditCommunityForm()
         form.topic.choices = topics_for_form(0)
-        print(community_theme_list())
-        form.community_theme.choices = community_theme_list()
+        form.theme.choices = community_theme_list()
         form.languages.choices = languages_for_form(all_languages=True)
         if g.site.enable_nsfw is False:
             form.nsfw.render_kw = {'disabled': True}
@@ -1208,6 +1207,7 @@ def community_edit(community_id: int):
             community.title = form.title.data
             community.description = piefed_markdown_to_lemmy_markdown(form.description.data)
             community.description_html = markdown_to_html(form.description.data, anchors_new_tab=False)
+            community.theme = form.theme.data
             community.posting_warning = form.posting_warning.data
             community.nsfw = form.nsfw.data
             community.ai_generated = form.ai_generated.data
@@ -1268,6 +1268,7 @@ def community_edit(community_id: int):
         else:
             form.title.data = community.title
             form.description.data = community.description
+            form.theme.data = community.theme
             form.posting_warning.data = community.posting_warning
             form.nsfw.data = community.nsfw
             form.ai_generated.data = community.ai_generated
