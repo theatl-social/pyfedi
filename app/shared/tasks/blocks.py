@@ -129,6 +129,8 @@ def ban_person(session, user_id, mod_id, community_id, expiry, reason: str, remo
     }
     if community_id:
         block['audience'] = community.public_url()
+    else:
+        block['audience'] = block['target']
 
     if is_undo:
         del block['@context']
