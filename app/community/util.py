@@ -11,6 +11,7 @@ from flask import request, abort, g, current_app, json
 from flask_login import current_user
 from pillow_heif import register_heif_opener
 from psycopg2 import IntegrityError
+from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, send_post_request
@@ -21,7 +22,7 @@ from app.constants import SRC_WEB, POST_TYPE_LINK
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
-    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting, scale_gif
+    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting, scale_gif, theme_list
 from sqlalchemy import func, desc, text
 import os
 
@@ -966,3 +967,8 @@ def is_bad_name(community_name: str) -> bool:
         'greentext', '4chan', 'fauxbait'
     ]
     return any(badword in name_lower for badword in seven_things_plus)
+
+def community_theme_list():
+    community_themes = theme_list()
+    community_themes.insert(0,('disabled', _l('Disabled')))
+    return community_themes
