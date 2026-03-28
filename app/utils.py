@@ -1795,6 +1795,9 @@ def can_create_post(user, content: Community) -> bool:
     if content.id in communities_banned_from(user.id):
         return False
 
+    if content.instance_id in banned_instances(user.id):
+        return False
+
     return True
 
 
