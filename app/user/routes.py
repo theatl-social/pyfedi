@@ -577,6 +577,7 @@ def user_settings():
         current_user.default_comment_sort = form.default_comment_sort.data
         current_user.default_filter = form.default_filter.data
         current_user.theme = form.theme.data
+        current_user.allow_community_themes = form.allow_community_themes.data
         current_user.email_unread = form.email_unread.data
         current_user.markdown_editor = form.markdown_editor.data
         current_user.interface_language = form.interface_language.data
@@ -663,6 +664,7 @@ def user_settings():
         form.default_comment_sort.data = current_user.default_comment_sort
         form.default_filter.data = current_user.default_filter
         form.theme.data = current_user.theme
+        form.allow_community_themes.data = current_user.allow_community_themes
         form.markdown_editor.data = current_user.markdown_editor
         form.low_bandwidth_mode.data = request.cookies.get('low_bandwidth', '0') == '1'
         form.interface_language.data = current_user.interface_language
