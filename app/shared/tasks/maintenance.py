@@ -654,9 +654,7 @@ def monitor_healthy_instances():
 
                         for item in instance_data['items']:
                             username = item['username'] if 'username' in item else None
-                            if 'isAdmin' in item and item['isAdmin'] == False:
-                                continue
-                            if username:
+                            if username and (item.get('isAdmin') or item.get('isGlobalModerator')):
                                 user = session.query(User).filter_by(user_name=username, instance_id=instance.id).first()
                                 if user:
                                     admin_user_ids.append(user.id)
