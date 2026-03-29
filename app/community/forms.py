@@ -28,6 +28,7 @@ class AddCommunityForm(FlaskForm):
     posting_warning = StringField(_l('Posting warning'), validators=[Length(max=512)])
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
+    theme = SelectField(_l('Community theme'), coerce=str, render_kw={'class': 'form-select'})
     nsfw = BooleanField(_l('NSFW'))
     ai_generated = BooleanField(_l('Only AI-generated content'))
     local_only = BooleanField(_l('Local only'))

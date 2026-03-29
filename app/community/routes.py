@@ -91,6 +91,7 @@ def add_local():
         form.nsfw.render_kw = {'disabled': True}
 
     form.languages.choices = languages_for_form(all_languages=True)
+    form.theme.choices = community_theme_list()
 
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/c/'):
@@ -113,6 +114,7 @@ def add_local():
             form.invitations.data = 0
         community = Community(title=form.community_name.data, name=form.url.data,
                               description=piefed_markdown_to_lemmy_markdown(form.description.data),
+                              theme=form.theme.data,
                               nsfw=form.nsfw.data, private_key=private_key,
                               public_key=public_key, description_html=markdown_to_html(form.description.data),
                               local_only=form.local_only.data, posting_warning=form.posting_warning.data,

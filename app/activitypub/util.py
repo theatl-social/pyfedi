@@ -794,7 +794,9 @@ def refresh_community_profile_task(community_id, activity_json):
                             community.description_html = markdown_to_html(community.description)          # prefer Markdown if provided, overwrite version obtained from HTML
                         else:
                             community.description = html_to_text(community.description_html)
-
+                   
+                    if 'theme' in activity_json and activity_json['theme']:
+                        community.theme = activity_json['theme']
                     icon_changed = cover_changed = False
                     if 'icon' in activity_json:
                         if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
@@ -1245,6 +1247,9 @@ def actor_json_to_model(activity_json, address, server):
                 community.description_html = markdown_to_html(community.description)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 community.description = html_to_text(community.description_html)
+
+        if 'theme' in activity_json and activity_json['theme']:
+            community.theme = activity_json['theme']
 
         if 'icon' in activity_json and activity_json['icon'] is not None:
             if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
