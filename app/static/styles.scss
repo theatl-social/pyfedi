@@ -659,7 +659,7 @@ form {
 ul.form-multicheck-columns {
   display: flex;
   list-style: none;
-  max-height: 12rem;
+  max-height: calc(var(--spacing-96) * 2);
   flex-direction: column;
   flex-wrap: wrap;
   overflow-y: auto;
@@ -1147,7 +1147,7 @@ time {
       width: 100%;
       text-align: center;
       display:flex;
-      min-height: 8rem;
+      min-height: calc(var(--spacing-64) * 2);
       p {
         margin-bottom: 0;
         flex-grow: 1;
@@ -1791,7 +1791,7 @@ a.unread, div.unread {
       }
 
       .accordion-body {
-        max-height: 4rem;
+        max-height: var(--spacing-64);
         position: relative;
         overflow-y: hidden;
         overflow-x: auto;
@@ -3138,7 +3138,7 @@ form {
 }
 
 [data-bs-theme="dark"] .nav-link:focus-visible {
-  box-shadow: 0 0 0 .25rem $white-rgba-02;
+  box-shadow: 0 0 0 var(--spacing-4) $white-rgba-02;
 }
 
 [data-bs-theme="dark"] .skip-link {

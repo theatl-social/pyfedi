@@ -1406,7 +1406,7 @@ form .mb-3.required > label:after {
 ul.form-multicheck-columns {
   display: flex;
   list-style: none;
-  max-height: 12rem;
+  max-height: calc(var(--spacing-96) * 2);
   flex-direction: column;
   flex-wrap: wrap;
   overflow-y: auto;
@@ -1922,7 +1922,7 @@ time {
   width: 100%;
   text-align: center;
   display: flex;
-  min-height: 8rem;
+  min-height: calc(var(--spacing-64) * 2);
 }
 
 #masonry .item .masonry_info_no_image p {
@@ -2552,7 +2552,7 @@ a.unread:before, div.unread:before {
 }
 
 .accordion-preview .collapse:not(.show) .accordion-body {
-  max-height: 4rem;
+  max-height: var(--spacing-64);
   position: relative;
   overflow-y: hidden;
   overflow-x: auto;
@@ -4028,7 +4028,7 @@ other bootstrap classes in use from Reboot Bootstrap class and other bootstrap f
 }
 
 [data-bs-theme="dark"] .nav-link:focus-visible {
-  box-shadow: 0 0 0 0.25rem rgba(253, 253, 253, 0.5);
+  box-shadow: 0 0 0 var(--spacing-4) rgba(253, 253, 253, 0.5);
 }
 
 [data-bs-theme="dark"] .skip-link {
