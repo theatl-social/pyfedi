@@ -50,9 +50,9 @@
      
      --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius, .dropdown-item line-height (:active)
      
-     --spacing-28, .dropdown-item line-height (default)
+     --spacing-28, .dropdown-item line-height (default), .voting_buttons line-height, .community_icon, _compact spacing variables
      
-     --spacing-32, _compact padding, showPassword / hidePassword img and top position.
+     --spacing-32, _compact padding, showPassword / hidePassword img and top position, _compact spacing variables
      
      --spacing-40: 2.5rem; // 40px
      
@@ -78,7 +78,6 @@
 
 $px1: 1px; // negative values -($px1) _typography (top)
 $px7: 7px; // .show-more .fe-angles-down
-$px30: 30px; // styles.scss line height, font-size, width, height, padding, margins, _compact line height, min-width, min-height
 $px40: 40px; // styles.scss line height
 $px46: 46px; // styles.scss line height and width (not changed)
 

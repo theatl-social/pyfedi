@@ -25,12 +25,12 @@ body.compact-min {
   }
 
   .community_icon {
-    width: 15vw;
-    height: 15vw;
-    max-width: 20px !important;
-    max-height: 20px;
-    min-width: 10px;
-    min-height: 10px;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
+    max-width: var(--spacing-20) !important;
+    max-height: var(--spacing-20);
+    min-width: var(--spacing-12);
+    min-height: var(--spacing-12);
   }
 
   .side_pane {
@@ -91,21 +91,21 @@ body.compact-max {
     }
 
     .post_utilities_bar {
-      min-height: $px30;
+      min-height: var(--spacing-28);
       font-size: $fs93pc;
 
       div {
-        height: $px30;
+        height: var(--spacing-28);
         line-height: $fs30px;
-        min-width: $px30;
+        min-width: var(--spacing-32);
       }
 
       .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
-        min-width: $px30;
-        min-height: $px30;
+        min-width: var(--spacing-32);
+        min-height: var(--spacing-32);
 
         span {
-          line-height: $px30;
+          line-height: var(--spacing-32);
         }
       }
     }
