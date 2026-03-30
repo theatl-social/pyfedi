@@ -705,7 +705,7 @@ ul.form-multicheck-columns {
       font-family: 'Feather' !important;
       content: "\e9d5 ";
       color: var(--bs-success);
-      margin-right: $em025;
+      margin-right: var(--spacing-4);
     }
   }
 
@@ -1186,8 +1186,8 @@ details {
 }
 
 .spoiler_block {
-  margin: var(--spacing-2) 0 0 $em1;
-  padding: $em05 $em05 $em05 $em02;
+  margin: var(--spacing-2) 0 0 var(--spacing-8);
+  padding: var(--spacing-8);
   border-left-style: solid;
   border-left-width: var(--border-2);
   background-color: var(--bs-secondary-bg-subtle);
@@ -1198,7 +1198,7 @@ details {
   }
 
   table, img {
-    padding: $em05;
+    padding: var(--spacing-8);
   }
 
   > details {
@@ -1285,7 +1285,7 @@ details {
 
 
 #replies {
-  scroll-margin-top: $em5;
+  scroll-margin-top: var(--spacing-72);
 }
 
 .post_replies > .col {

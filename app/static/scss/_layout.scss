@@ -35,16 +35,7 @@
 // --spacing-24 (1.5rem) border-radius message_reaction (pillbox style)
     }
 
-// Pixel Units
-
-// 1px some elements still using 1px
-$factor1x6: 1.6; // line-height in _controls
-
-$em02: 0.2em; // spoiler_block styles.scss, blockquote
-$em025: 0.25em; // styles.scss post_teaser_title
-$em05: 0.5em; // spoiler_block styles.scss, table, img
-$em1: 1em; // styles.scss font-size i, margin for spoiler_block
-$em5: 5em; // scroll-margin-top for replies
+// 1px some fe icon elements still using 1px
 
 $pc16x9: 56.25%; /* 16:9 aspect ratio on video wrapper in styles.scss */
 
