@@ -368,7 +368,7 @@
 }
 
 .fe-reply {
-  margin-top: -1px;
+  margin-top: 1px;
 }
 
 .fe-reply::before {
@@ -389,7 +389,6 @@
 
 .fe-layers {
   position: relative;
-  top: 1px;
 }
 
 .fe-layers::before {
@@ -992,7 +991,6 @@ div.navbar {
 
 .navbar-brand img {
   margin-right: var(--spacing-20);
-  margin-top: -1px;
 }
 
 .navbar-light .navbar-nav .nav-link {
@@ -1205,10 +1203,6 @@ div.navbar {
   padding-left: var(--spacing-4);
 }
 
-#outer_container {
-  margin-top: -1px;
-}
-
 @media (min-width: 992px) {
   #outer_container {
     margin-top: var(--spacing-16);
@@ -1226,7 +1220,6 @@ form .mb-3.required > label:after {
   margin-left: var(--spacing-2);
   font-size: 80%;
   position: relative;
-  top: -1px;
 }
 
 .form-group {
@@ -1239,7 +1232,6 @@ form .mb-3.required > label:after {
   margin-left: var(--spacing-2);
   font-size: 80%;
   position: relative;
-  top: -1px;
 }
 
 .form-label {
@@ -1607,8 +1599,7 @@ ul.form-multicheck-columns li {
   position: absolute;
   right: 0;
   background-color: rgba(255, 255, 255, 0.7);
-  padding-bottom: 1px;
-  padding-left: 1px;
+  padding: var(--spacing-2);
   border-radius: var(--border-2);
   top: 0;
 }
@@ -2619,7 +2610,7 @@ a.unread:before, div.unread:before {
 
 .overflow-ellipses-parent div.child {
   flex: 1;
-  width: 1px;
+  width: var(--spacing-2);
   overflow-x: hidden;
   text-overflow: ellipsis;
 }

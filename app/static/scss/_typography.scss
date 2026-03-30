@@ -286,7 +286,7 @@ $fs150pc: 150%; // .fe
 }
 
 .fe-reply {
-  margin-top: -($px1);
+  margin-top: 1px;
 }
 
 .fe-reply::before {
@@ -307,7 +307,6 @@ $fs150pc: 150%; // .fe
 
 .fe-layers {
   position: relative;
-  top: $px1;
 }
 
 .fe-layers::before {
@@ -352,7 +351,7 @@ $fs150pc: 150%; // .fe
 
 .fe-bell, .fe-no-bell {
   position: relative;
-  top: $px1;
+  top: 1px;
 }
 .fe-bell::before {
   content: "\e91e";
@@ -392,7 +391,7 @@ h1 {
 
 .fe-magnify {
   position: relative;
-  top: $px1;
+  top: 1px;
 }
 
 .fe-magnify::before {
@@ -440,7 +439,7 @@ h1 {
 
 .fe-new-account {
   position: relative;
-  top: $px1;
+  top: 1px;
   &:before {
     content: "\e986";
   }
@@ -448,7 +447,7 @@ h1 {
 
 .fe-bot-account {
   position: relative;
-  top: $px1;
+  top: 1px;
   &:before {
     content: "\e94d";
   }
@@ -476,7 +475,7 @@ h1 {
 
 .fe-audio {
   position: relative;
-  top: $px1;
+  top: 1px;
   &:before {
     content: "\e9fc";
   }
@@ -492,7 +491,7 @@ h1 {
 
 .fe-event {
   position: relative;
-  top: $px1;
+  top: 1px;
   &:before {
     content: "\e927";
   }
