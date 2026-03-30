@@ -145,7 +145,7 @@ div.navbar {
 }
 
 .navbar-brand {
-  line-height: $px46;
+  line-height: var(--spacing-48);
   img {
     margin-right: var(--spacing-20);
     margin-top: -($px1);
