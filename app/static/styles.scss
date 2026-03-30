@@ -480,7 +480,7 @@ form {
   a {
     flex-grow: 1;
     text-align: center;
-    height: $px70;
+    height: var(--spacing-72);
     padding-top: var(--spacing-16) !important;
     @media (orientation: landscape) {
       height: 60px;
@@ -514,7 +514,7 @@ form {
 
 @media (max-width: 991.98px) {
   .footer {
-    padding-bottom: $px70 !important;
+    padding-bottom: var(--spacing-72) !important;
   }
 }
 
@@ -744,10 +744,10 @@ ul.form-multicheck-columns {
 
     .col_thumbnail {
       float: right;
-      width: $px70;
+      width: var(--spacing-72);
       position: relative;
       @include breakpoint(tablet) {
-        width: 170px;
+        width: var(--spacing-120);
       }
     }
 
