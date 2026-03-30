@@ -2514,7 +2514,7 @@ form {
 @include breakpoint(tablet) {
   .alert {
     /* To match .row */
-    margin-left: calc(var(--bs-gutter-x) * -.5);
+    margin-left: calc(-1 * var(--spacing-12));
   }
 }
 
@@ -2659,8 +2659,8 @@ form {
   border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
   margin-top: calc(-1 * var(--spacing-8));
   margin-bottom: var(--spacing-8);
-  margin-right: calc(var(--bs-gutter-x) * -.5);
-  margin-left: calc(var(--bs-gutter-x) * -.5);
+  margin-right: calc(-1 * var(--spacing-12));
+  margin-left: calc(-1 * var(--spacing-12));
 
   p {
     margin-bottom: 0;
