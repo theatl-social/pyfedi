@@ -4,19 +4,19 @@
 @media (prefers-color-scheme: dark) {
 
   body {
-    background-color: $off-white;
+    background-color: $whitesmoke;
   }
 
   body nav.navbar {
-    background-color: $off-white !important;
+    background-color: $whitesmoke !important;
   }
 
   .card {
-    background-color: $off-white;
+    background-color: $whitesmoke;
   }
 
   .form-control, .dark-form-control {
-    border: var(--border-1) solid $blue-rgba-03;
+    border: $px1 solid $blue-rgba;
     border-radius: var(--spacing-4);
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     padding: var(--spacing-8) var(--spacing-12);
@@ -24,11 +24,11 @@
   }
 
   .form-control::placeholder {
-    color: $light-white;
+    color: $white;
   }
 
   .dropdown-menu {
-    background-color: $lighter-grey;
+    background-color: $light-grey;
   }
 
   .dropdown-header {
@@ -36,7 +36,7 @@
   }
 
   .table td {
-    border-top-color: #grey-blue;
+    border-top-color: $darker-grey;
   }
 
 }

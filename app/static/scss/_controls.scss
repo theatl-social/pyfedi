@@ -32,7 +32,7 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
   padding: var(--spacing-8) var(--spacing-12);
   font-size: $fs0x9375rem;
   line-height: var(--spacing-24);
-  color: $grey-blue;
+  color: var(--bs-body-color);
   background-color: $white;
   background-clip: padding-box;
   border: var(--border-1) solid $blue-rgba;
@@ -57,7 +57,7 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
 }
 
 .form-control:focus {
-    color: $grey-blue;
+    color: var(--bs-body-color);
     background-color: $white;
     border-color: $blue-mid;
     outline: 0;
@@ -71,8 +71,8 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
 
   &:hover {
     color: $white;
-    background-color: $blue-faded;
-    border-color: $blue-fade;
+    background-color: $primary-colour;
+    border-color: $primary-colour;
   }
 }
 

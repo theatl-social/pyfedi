@@ -23,7 +23,7 @@
 
 ## Minimum server requirements
 
-Any OS that runs Python 3.9+
+Any OS that runs Python 3.10+
 2 CPU cores
 4 GB of RAM
 40 GB of storage (eventually)

@@ -343,7 +343,7 @@ class MiniCrossPosts(DefaultSchema):
 
 class PostEvent(DefaultSchema):
     start = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    end = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    end = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     timezone = fields.String(metadata={"example": "America/New_York"})
     max_attendees = fields.Integer(metadata={"default": 0})
     participant_count = fields.Integer(metadata={"default": 0})

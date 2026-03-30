@@ -1675,26 +1675,41 @@ def post_search_community_suggestions():
     q = request.form.get("which_community") or request.form.get("community") or ""
     q = q.lower()
 
+    if not q or len(q) < 2:
+        return ""
+
     joined = joined_communities(current_user.get_id())
     moderating = moderating_communities(current_user.get_id())
     comms = []
     already_added = set()
+    
     for c in moderating:
         if c.id not in already_added:
             if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
                 comms.append(c.lemmy_link().replace('!', ''))
             already_added.add(c.id)
+
     for c in joined:
         if c.id not in already_added:
             if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
                 comms.append(c.lemmy_link().replace('!', ''))
             already_added.add(c.id)
-    for c in db.session.query(Community).filter(
-            Community.banned == False).order_by(Community.title).all():
-        if c.id not in already_added:
-            if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
-                comms.append(c.lemmy_link().replace('!', ''))
-            already_added.add(c.id)
+
+    if len(comms) < 10:
+        from sqlalchemy import or_
+        search_pattern = f"%{q}%"
+        db_comms = db.session.query(Community).filter(
+            Community.banned == False,
+            Community.id.not_in(already_added),
+            or_(
+                Community.ap_id.ilike(search_pattern),
+                Community.name.ilike(search_pattern)
+            )
+        ).order_by(Community.title).limit(10 - len(comms)).all()
+
+        for c in db_comms:
+            comms.append(c.lemmy_link().replace('!', ''))
+
     html = "".join(f"<option value='{c}'>" for c in comms)
     return html
 

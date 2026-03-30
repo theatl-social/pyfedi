@@ -1,4 +1,5 @@
 from datetime import timedelta
+import time
 
 from flask import current_app, g
 from sqlalchemy import desc, text, and_, exists, asc, or_
@@ -385,6 +386,20 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
         communities_moderating = moderating_communities_ids_all_users()
         communities_joined = joined_or_modding_communities(user.id)
+
+        # collect all unique author IDs from posts, then only get user_notes relating to them
+        author_ids = set()
+        for post in posts.items:
+            author_ids.add(post.user_id)
+
+        if author_ids:
+            usernotes_query = db.session.execute(
+                text('SELECT target_id, body FROM "user_note" WHERE user_id = :user_id AND target_id IN :author_ids'),
+                {'user_id': user_id, 'author_ids': tuple(author_ids)}
+            ).all()
+            usernotes = {note[0]: note[1] for note in usernotes_query}
+        else:
+            usernotes = None
     else:
         bookmarked_posts = []
         banned_from = {}
@@ -392,6 +407,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         read_post_set = set()
         communities_moderating = []
         communities_joined = []
+        usernotes = {}
 
     postlist = []
     for post in posts:
@@ -399,7 +415,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
                                   post_subscriptions=post_subscriptions, read_posts=read_post_set,
-                                  communities_joined=communities_joined, content_filters=content_filters))
+                                  communities_joined=communities_joined, content_filters=content_filters,
+                                  usernotes=usernotes))
 
     list_json = {
         "posts": postlist,

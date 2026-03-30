@@ -1,6 +1,5 @@
 import json as python_json
 import os
-import re
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
@@ -342,6 +341,8 @@ def edit_profile(actor):
             current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
 
         cache.delete_memoized(user_pronouns)
+        from app.api.alpha.views import user_view
+        cache.delete_memoized(user_view)
         flash(_('Your changes have been saved.'), 'success')
 
         return redirect(url_for('user.edit_profile', actor=actor))
@@ -595,6 +596,8 @@ def user_settings():
                                 'indexable': current_user.indexable})
 
         db.session.commit()
+        from app.api.alpha.views import user_view
+        cache.delete_memoized(user_view)
 
         flash(_('Your changes have been saved.'), 'success')
 
@@ -1259,7 +1262,7 @@ def notification_unread(notification_id):
 def notifications_all_read():
     notif_type = request.args.get('type', '')
     original_notif_type = notif_type
-    if notif_type == '':
+    if notif_type == '' or notif_type == 'Unread':
         db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'),
                            {'user_id': current_user.id})
     else:
@@ -1398,6 +1401,8 @@ def import_settings_task(user_id, redis_key):
                 cache.delete_memoized(blocked_or_banned_instances, user.id)
                 cache.delete_memoized(blocked_users, user.id)
                 cache.delete_memoized(blocked_domains, user.id)
+                from app.api.alpha.views import user_view
+                cache.delete_memoized(user_view)
 
                 redis_client.delete(redis_key)
 
@@ -1992,6 +1997,8 @@ def edit_user_note(actor):
             usernote = UserNote(target_id=user.id, user_id=current_user.id, body=text)
             db.session.add(usernote)
         db.session.commit()
+        from app.api.alpha.views import user_view
+        cache.delete_memoized(user_view)
 
         flash(_('Your changes have been saved.'), 'success')
         if return_to:

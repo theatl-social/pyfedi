@@ -1795,6 +1795,9 @@ def can_create_post(user, content: Community) -> bool:
     if content.id in communities_banned_from(user.id):
         return False
 
+    if content.instance_id in banned_instances(user.id):
+        return False
+
     return True
 
 
@@ -4309,5 +4312,5 @@ def show_reason_why_no_federation(instance_id):
 
     if instance_id in banned_instances(current_user.get_id()):
         instance = Instance.query.get(instance_id)
-        flash(_('You have been banned from %(instance_name)s which hosts this community so none of your posts or comments will be accepted by them.',
+        flash(_('You have been banned from %(instance_name)s which hosts this community.',
                 instance_name=instance.domain), 'warning')

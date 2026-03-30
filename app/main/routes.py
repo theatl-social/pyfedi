@@ -181,8 +181,7 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
     instances = db.session.query(Instance).\
         outerjoin(BannedInstances, BannedInstances.domain == Instance.domain).\
         filter(Instance.gone_forever == False, Instance.dormant == False,
-               BannedInstances.id == None,
-               or_(Instance.software == 'piefed', Instance.software == 'lemmy', Instance.software == 'mbin', Instance.software == 'nodebb')).\
+               BannedInstances.id == None, Instance.software == 'piefed').\
         order_by(desc(Instance.created_at)).limit(5).all()
 
     # Upcoming events
@@ -393,6 +392,8 @@ def list_communities():
                 communities = communities.filter(Community.nsfw == True)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
+        if blocked_community_ids := blocked_communities(current_user.id):
+            communities = communities.filter(Community.id.not_in(blocked_community_ids))
         instance_ids = blocked_or_banned_instances(current_user.id)
         if instance_ids:
             communities = communities.filter(or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))

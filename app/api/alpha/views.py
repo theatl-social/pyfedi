@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 from flask import current_app, g
 from sqlalchemy import text, func, or_
@@ -25,7 +26,8 @@ from app.shared.post import get_post_flair_list
 
 
 def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, communities_moderating=None, banned_from=None,
-              bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None, content_filters=None) -> dict:
+              bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None, content_filters=None,
+              usernotes=None) -> dict:
     if isinstance(post, int):
         post = Post.query.get(post)
         if post is None:
@@ -107,6 +109,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                   'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
                   'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z',
                   'cross_posts': len(post.cross_posts) if post.cross_posts else 0}
+        
         if user_id:
             if bookmarked_posts is None:
                 bookmarked = db.session.execute(
@@ -187,7 +190,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         
         v2['flair_list'] = post_flair
 
-        creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id, user_id=user_id)
+        creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id, user_id=user_id, usernotes=usernotes)
         community = community_view(community=post.community, variant=1, stub=True)
         if user_id:
             if hasattr(g, 'user'):
@@ -309,7 +312,9 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
 
 
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
-def user_view(user: User | int, variant, stub=False, user_id=None, flair_community_id=None) -> dict:
+@cache.memoize(timeout=600)
+def user_view(user: User | int, variant, stub=False, user_id=None, flair_community_id=None, usernotes=None) -> dict:
+
     if isinstance(user, int):
         user = User.query.get(user)
 
@@ -349,9 +354,15 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 user_field['text'] = field.text
                 v1['extra_fields'].append(user_field)
         if user_id:
-            usernote = UserNote.query.filter(UserNote.target_id == user.id, UserNote.user_id == user_id).first()
-            if usernote:
-                v1['note'] = usernote.body
+            usernote_body = None
+            if usernotes is not None:
+                usernote_body = usernotes.get(user.id, None)
+            else:
+                usernote = UserNote.query.filter(UserNote.target_id == user.id, UserNote.user_id == user_id).first()
+                if usernote:
+                    usernote_body = usernote.body
+            if usernote_body:
+                v1['note'] = usernote_body
 
         return v1
 

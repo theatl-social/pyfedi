@@ -12,7 +12,7 @@
       --bs-body-bg: #{$black};
       --bs-link-color: #{$white};
       --bs-link-color-rgb: #{$white};
-      --bs-link-hover-color-rgb: #{$lightest-grey};
+      --bs-link-hover-color-rgb: #{$white-fade};
       --bs-heading-color: #{$white};
       --bs-body-color: #{$white};
       --bs-body-color-rgb: #{$white};
@@ -51,14 +51,14 @@
       color: $black;
   }
   [data-bs-theme="dark"] .domain_link, [data-bs-theme="dark"] .domain_link a {
-      color: $ghostwhite;
+      color: $whitesmoke;
   }
 
   .main_pane, .voting_buttons div {
       border: solid var(--border-1) $darker-grey;
   }
   [data-bs-theme="dark"] .main_pane, [data-bs-theme="dark"] .voting_buttons div {
-      border: solid var(--border-1) $lightest-grey;
+      border: solid var(--border-1) $white-fade;
   }
 
   div.navbar {
