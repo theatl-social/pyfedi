@@ -26,7 +26,7 @@ body {
 
     .embed_logo {
       float: right;
-      width: $px40;
+      width: var(--spacing-40);
       margin-right: var(--spacing-8);
     }
   }
@@ -97,7 +97,7 @@ tg-spoiler {
 
 .skip-link {
     position: absolute;
-    top: -($px40); /* Adjust as needed to hide the link off-screen */
+    top: calc(-1 * var(--spacing-40)); /* Adjust as needed to hide the link off-screen */
     left: 0;
     background-color: $white; /* Background color to cover the link for screen readers */
     z-index: 1060; /* Ensure it's above other content */
@@ -1034,6 +1034,11 @@ time {
   }
 }
 
+ .d-xl-none {
+      margin-top: var(--spacing-4); // add spacing to button bar above #masonry
+      margin-bottom: var(--spacing-4);
+ }
+
 #masonry {
   display: flex;
   .column {
@@ -1062,7 +1067,7 @@ time {
         filter: blur(var(--spacing-20));
       }
     }
-
+    
     .masonry_info {
       position: absolute;
       bottom: 0;
@@ -1081,7 +1086,7 @@ time {
         a {
           color: $white;
           text-decoration: none;
-          line-height: $px40;
+          line-height: var(--spacing-40);
           @include breakpoint(laptop) {
             line-height: var(--spacing-28);
           }

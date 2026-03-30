@@ -54,9 +54,9 @@
      
      --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius, .dropdown-item line-height (:active)
      
-     --spacing-28, .dropdown-item line-height (default)
+     --spacing-28, .dropdown-item line-height (default), .voting_buttons line-height, .community_icon, _compact spacing variables
      
-     --spacing-32, _compact padding, showPassword / hidePassword img and top position.
+     --spacing-32, _compact padding, showPassword / hidePassword img and top position, _compact spacing variables
      
      --spacing-40: 2.5rem; // 40px
      
@@ -759,9 +759,9 @@ fieldset legend {
      
      --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius, .dropdown-item line-height (:active)
      
-     --spacing-28, .dropdown-item line-height (default)
+     --spacing-28, .dropdown-item line-height (default), .voting_buttons line-height, .community_icon, _compact spacing variables
      
-     --spacing-32, _compact padding, showPassword / hidePassword img and top position.
+     --spacing-32, _compact padding, showPassword / hidePassword img and top position, _compact spacing variables
      
      --spacing-40: 2.5rem; // 40px
      
@@ -857,7 +857,7 @@ body.embed .post_teaser_body h3 {
 
 body.embed .embed_logo {
   float: right;
-  width: 40px;
+  width: var(--spacing-40);
   margin-right: var(--spacing-8);
 }
 
@@ -934,7 +934,7 @@ tg-spoiler:hover {
 
 .skip-link {
   position: absolute;
-  top: -40px;
+  top: calc(-1 * var(--spacing-40));
   /* Adjust as needed to hide the link off-screen */
   left: 0;
   background-color: #fff;
@@ -1865,6 +1865,11 @@ time {
   }
 }
 
+.d-xl-none {
+  margin-top: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
 #masonry {
   display: flex;
 }
@@ -1921,7 +1926,7 @@ time {
 #masonry .item .masonry_info p a {
   color: #fff;
   text-decoration: none;
-  line-height: 40px;
+  line-height: var(--spacing-40);
 }
 
 @media (min-width: 1280px) {
@@ -2229,7 +2234,7 @@ details {
   display: block;
   min-width: 54px;
   padding: 0 0 var(--spacing-4) var(--spacing-4);
-  line-height: 30px;
+  line-height: var(--spacing-28);
   font-size: 14px;
 }
 
@@ -2339,7 +2344,7 @@ details {
   background-color: #777;
   color: #fff;
   margin-bottom: var(--spacing-16);
-  height: 30px;
+  height: var(--spacing-28);
 }
 
 .comment .show-more .fe-angles-down, .comment .show-more .fe-angles-up {
@@ -3103,8 +3108,8 @@ h1 .warning_badge {
 .community_icon {
   width: 20vw;
   height: 20vw;
-  max-width: 30px !important;
-  max-height: 30px;
+  max-width: var(--spacing-28) !important;
+  max-height: var(--spacing-28);
   min-width: var(--spacing-20);
   min-height: var(--spacing-20);
   vertical-align: text-top;
@@ -3635,7 +3640,7 @@ form h5 {
 
 .message_reactions .message_reaction {
   display: flex;
-  padding: var(--spacing-2) var(--spacing-4);
+  padding: var(--spacing-2) var(--spacing-4) var(--spacing-4) var(--spacing-2);
   box-sizing: border-box;
   min-width: 44px;
   cursor: pointer;
@@ -3646,7 +3651,7 @@ form h5 {
   border: var(--border-1) solid var(--bs-border-color);
   border-radius: var(--spacing-24);
   box-shadow: inset 0 0 var(--spacing-4) 0 rgba(0, 0, 0, 0.1);
-  height: 30px;
+  height: var(--spacing-32);
   transition: transform 100ms linear, font-weight 100ms linear;
 }
 
@@ -3959,9 +3964,9 @@ form h5 {
      
      --spacing-24, line-height and many blur (styles.scss), message_reaction border-radius, .dropdown-item line-height (:active)
      
-     --spacing-28, .dropdown-item line-height (default)
+     --spacing-28, .dropdown-item line-height (default), .voting_buttons line-height, .community_icon, _compact spacing variables
      
-     --spacing-32, _compact padding, showPassword / hidePassword img and top position.
+     --spacing-32, _compact padding, showPassword / hidePassword img and top position, _compact spacing variables
      
      --spacing-40: 2.5rem; // 40px
      
@@ -4174,12 +4179,12 @@ body.compact-min .post_teaser .post_teaser_image_preview img {
 }
 
 body.compact-min .community_icon {
-  width: 15vw;
-  height: 15vw;
-  max-width: 20px !important;
-  max-height: 20px;
-  min-width: 10px;
-  min-height: 10px;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
+  max-width: var(--spacing-20) !important;
+  max-height: var(--spacing-20);
+  min-width: var(--spacing-12);
+  min-height: var(--spacing-12);
 }
 
 body.compact-min .side_pane h2 {
@@ -4235,23 +4240,23 @@ body.compact-max .post_teaser img, body.compact-max .post_teaser .thumbnail {
 }
 
 body.compact-max .post_teaser .post_utilities_bar {
-  min-height: 30px;
+  min-height: var(--spacing-28);
   font-size: 93%;
 }
 
 body.compact-max .post_teaser .post_utilities_bar div {
-  height: 30px;
+  height: var(--spacing-28);
   line-height: 30px;
-  min-width: 30px;
+  min-width: var(--spacing-32);
 }
 
 body.compact-max .post_teaser .post_utilities_bar .voting_buttons_new .upvote_button, body.compact-max .post_teaser .post_utilities_bar .voting_buttons_new .downvote_button {
-  min-width: 30px;
-  min-height: 30px;
+  min-width: var(--spacing-32);
+  min-height: var(--spacing-32);
 }
 
 body.compact-max .post_teaser .post_utilities_bar .voting_buttons_new .upvote_button span, body.compact-max .post_teaser .post_utilities_bar .voting_buttons_new .downvote_button span {
-  line-height: 30px;
+  line-height: var(--spacing-32);
 }
 
 @media print {
