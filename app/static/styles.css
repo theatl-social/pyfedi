@@ -953,7 +953,7 @@ tg-spoiler:hover {
 }
 
 .home .ml-3 {
-  margin-left: 1px !important;
+  margin-left: 0 !important;
 }
 
 #outer_container a:not(.btn):hover, footer a:not(.btn):hover {
@@ -987,7 +987,7 @@ div.navbar {
 }
 
 .navbar-brand {
-  line-height: 46px;
+  line-height: var(--spacing-48);
 }
 
 .navbar-brand img {
@@ -1058,7 +1058,7 @@ div.navbar {
 .navbar-light .navbar-toggler-icon {
   background-image: url(/static/images/menu.svg);
   width: 35px;
-  height: 40px;
+  height: var(--spacing-40);
   background-position: top;
 }
 
@@ -1301,7 +1301,7 @@ form .mb-3.required > label:after {
 .mobilenav a {
   flex-grow: 1;
   text-align: center;
-  height: 70px;
+  height: var(--spacing-72);
   padding-top: var(--spacing-16) !important;
 }
 
@@ -1337,7 +1337,7 @@ form .mb-3.required > label:after {
 
 @media (max-width: 991.98px) {
   .footer {
-    padding-bottom: 70px !important;
+    padding-bottom: var(--spacing-72) !important;
   }
 }
 
@@ -1564,7 +1564,7 @@ ul.form-multicheck-columns li {
 
 .post_list .post_teaser .col_thumbnail {
   float: right;
-  width: 70px;
+  width: var(--spacing-72);
   position: relative;
 }
 
@@ -1579,7 +1579,7 @@ ul.form-multicheck-columns li {
   align-content: center;
   display: flex;
   height: 60px;
-  width: 60px;
+  width: var(--spacing-72);
   overflow: hidden;
 }
 
@@ -2348,7 +2348,7 @@ details {
 }
 
 .comment .show-more .fe-angles-down, .comment .show-more .fe-angles-up {
-  margin-top: 7px;
+  margin-top: var(--spacing-8);
   display: inline-block;
 }
 
@@ -2410,7 +2410,7 @@ details {
   height: 44px;
   text-align: center;
   vertical-align: middle;
-  line-height: 40px;
+  line-height: var(--spacing-40);
 }
 
 .comment .comment_actions .notify_toggle {
@@ -2422,7 +2422,7 @@ details {
   height: 44px;
   text-align: center;
   vertical-align: middle;
-  line-height: 40px;
+  line-height: var(--spacing-40);
 }
 
 .comment .comment_actions .dropdown-menu.show {
@@ -2549,7 +2549,7 @@ details {
   height: 44px;
   text-align: center;
   vertical-align: middle;
-  line-height: 40px;
+  line-height: var(--spacing-40);
   display: inline-block;
 }
 
@@ -3332,7 +3332,7 @@ form h5 {
 
 .option_list li .fe {
   position: relative;
-  top: 1px;
+  top: var(--spacing-2);
 }
 
 .field_hint {
@@ -3657,7 +3657,6 @@ form h5 {
 
 .message_reactions .message_reaction div {
   position: relative;
-  top: 1px;
 }
 
 .message_reactions .message_reaction.reacted {

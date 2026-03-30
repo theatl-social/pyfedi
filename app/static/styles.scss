@@ -112,7 +112,7 @@ tg-spoiler {
 }
 
 .home .ml-3 {
-  margin-left: $px1 !important;
+  margin-left: 0 !important;
 }
 
 #outer_container, footer {
@@ -747,7 +747,7 @@ ul.form-multicheck-columns {
       width: var(--spacing-72);
       position: relative;
       @include breakpoint(tablet) {
-        width: var(--spacing-120);
+        width: 170px;
       }
     }
 
@@ -757,7 +757,7 @@ ul.form-multicheck-columns {
       align-content: center;
       display: flex;
       height: 60px;
-      width: 60px;
+      width: var(--spacing-72);
       overflow: hidden;
       @include breakpoint(tablet) {
         align-items: center;
@@ -2505,7 +2505,7 @@ form {
 
     .fe {
       position: relative;
-      top: $px1;
+      top: var(--spacing-2);
     }
   }
 }
@@ -2843,7 +2843,6 @@ form {
 
         div {
           position: relative;
-          top: $px1;
         }
 
         &.reacted {
