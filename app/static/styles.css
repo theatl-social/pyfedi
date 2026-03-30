@@ -14,7 +14,7 @@
 /*
 --bs-gutter-x: var(--bs-gutter-x); // var(--spacing-24)
 --bs-border-radius: var(--bs-border-radius); // 0.375rem, voting_dialog, communitySidebar
-
+other bootstrap classes in use from Reboot Bootstrap class and other bootstrap files
 */
 /* REM units */
 :root {
@@ -625,7 +625,7 @@ fieldset legend {
   width: 100%;
   padding: var(--spacing-8) var(--spacing-12);
   font-size: 0.9375rem;
-  line-height: 1.6;
+  line-height: var(--spacing-24);
   color: #495057;
   background-color: #fff;
   background-clip: padding-box;
@@ -682,7 +682,7 @@ fieldset legend {
 /*
 --bs-gutter-x: var(--bs-gutter-x); // var(--spacing-24)
 --bs-border-radius: var(--bs-border-radius); // 0.375rem, voting_dialog, communitySidebar
-
+other bootstrap classes in use from Reboot Bootstrap class and other bootstrap files
 */
 /* REM units */
 :root {
@@ -768,7 +768,7 @@ fieldset legend {
 
 @media (min-width: 768px) {
   html {
-    scroll-padding-top: 80px;
+    scroll-padding-top: var(--spacing-80);
   }
 }
 
@@ -3412,7 +3412,7 @@ form h5 {
 }
 
 .pt-05 {
-  padding-top: .12rem !important;
+  padding-top: var(--spacing-2) !important;
 }
 
 .post_translate_all_icon {
@@ -3842,7 +3842,7 @@ form h5 {
 /*
 --bs-gutter-x: var(--bs-gutter-x); // var(--spacing-24)
 --bs-border-radius: var(--bs-border-radius); // 0.375rem, voting_dialog, communitySidebar
-
+other bootstrap classes in use from Reboot Bootstrap class and other bootstrap files
 */
 /* REM units */
 :root {
