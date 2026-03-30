@@ -10,7 +10,7 @@
 
 html {
   @include breakpoint(phablet) {
-    scroll-padding-top: 80px;
+    scroll-padding-top: var(--spacing-80);
   }
 }
 
@@ -2668,7 +2668,7 @@ form {
 }
 
 .pt-05 {
-  padding-top: .12rem !important;
+  padding-top: var(--spacing-2) !important;
 }
 
 .post_translate_all_icon {
