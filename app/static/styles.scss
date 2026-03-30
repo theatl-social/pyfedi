@@ -228,7 +228,7 @@ div.navbar {
 .navbar-light .navbar-toggler-icon {
   background-image: url(/static/images/menu.svg);
   width: 35px;
-  height: 40px;
+  height: var(--spacing-40);
   background-position: top;
 }
 
@@ -1559,7 +1559,7 @@ details {
           height: 44px;
           text-align: center;
           vertical-align: middle;
-          line-height: $px40;
+          line-height: var(--spacing-40);
 
       }
     }
@@ -1572,7 +1572,7 @@ details {
         height: 44px;
         text-align: center;
         vertical-align: middle;
-        line-height: $px40;
+        line-height: var(--spacing-40);
       }
     }
 
@@ -1703,7 +1703,7 @@ details {
       height: 44px;
       text-align: center;
       vertical-align: middle;
-      line-height: $px40;
+      line-height: var(--spacing-40);
       display: inline-block;
     }
   }
