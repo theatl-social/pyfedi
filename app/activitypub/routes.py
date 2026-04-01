@@ -2642,7 +2642,10 @@ def feed_moderators_route(actor):
         for moderator in moderators:
             moderators_data['orderedItems'].append(moderator.ap_profile_id)
 
-        return jsonify(moderators_data)
+        resp = jsonify(moderators_data)
+        resp.content_type = 'application/activity+json'
+        resp.headers.set('Cache-Control', 'public, max-age=10')
+        return resp
 
 
 @bp.route('/f/<actor>/followers', methods=['GET'])
