@@ -5,7 +5,7 @@
 body.compact-min {
 
   .btn {
-    padding: $px4 $px8;
+    padding: var(--spacing-4) var(--spacing-8);
     font-size: $fs93pc;
   }
   .post_teaser {
@@ -25,12 +25,12 @@ body.compact-min {
   }
 
   .community_icon {
-    width: 15vw;
-    height: 15vw;
-    max-width: 20px !important;
-    max-height: 20px;
-    min-width: 10px;
-    min-height: 10px;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
+    max-width: var(--spacing-20) !important;
+    max-height: var(--spacing-20);
+    min-width: var(--spacing-12);
+    min-height: var(--spacing-12);
   }
 
   .side_pane {
@@ -46,28 +46,28 @@ body.compact-min {
   }
 
   #outer_container {
-    margin-top: $rem06;
+    margin-top: var(--spacing-12);
   }
 
   .table > :not(caption) > * > * {
-    padding: $rem03 $rem03;
+    padding: var(--spacing-4) var(--spacing-4);
   }
 
   .mt-4 {
-    margin-top: $rem1x3!important;
+    margin-top: var(--spacing-20) !important;
   }
 
   .communities_table tbody tr th a {
-    padding-top: $px4;
-    padding-bottom: $px4;
+    padding-top: var(--spacing-4);
+    padding-bottom: var(--spacing-4);
   }
 
   .form-control {
-    padding: $rem0275 $rem055;
+    padding: var(--spacing-4) var(--spacing-8);
   }
 
   .form-select {
-    padding: $rem0275 $rem2 $rem0275 $rem055;
+    padding: var(--spacing-4) var(--spacing-32) var(--spacing-4) var(--spacing-8);
   }
 
   .ts-wrapper {
@@ -83,29 +83,29 @@ body.compact-max {
       display: none;
     }
 
-    border-bottom-width: $px1;
-    padding-top: $px4;
+    border-bottom-width: var(--border-1);
+    padding-top: var(--spacing-4);
 
     img, .thumbnail {
       display: none;
     }
 
     .post_utilities_bar {
-      min-height: $px30;
+      min-height: var(--spacing-28);
       font-size: $fs93pc;
 
       div {
-        height: $px30;
+        height: var(--spacing-28);
         line-height: $fs30px;
-        min-width: $px30;
+        min-width: var(--spacing-32);
       }
 
       .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
-        min-width: $px30;
-        min-height: $px30;
+        min-width: var(--spacing-32);
+        min-height: var(--spacing-32);
 
         span {
-          line-height: $px30;
+          line-height: var(--spacing-32);
         }
       }
     }

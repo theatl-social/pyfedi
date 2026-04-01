@@ -17,9 +17,9 @@
 
   .form-control, .dark-form-control {
     border: $px1 solid $blue-rgba;
-    border-radius: $px3;
+    border-radius: var(--spacing-4);
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    padding: $rem0375 $rem075;
+    padding: var(--spacing-8) var(--spacing-12);
     font-size: $fs0x9375rem;
   }
 

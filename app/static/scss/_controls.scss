@@ -14,24 +14,46 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
   }
 }
 
+.btn-group.btn-group.me-lg-1 {
+	display: flex;
+	position: relative;
+	align-items: center;
+}
+
 .form-control-label {
     display: block;
-    margin-bottom: $rem0375;
+    margin-bottom: var(--spacing-4);
     font-weight: 600;
 }
 
 .form-control {
   display: block;
   width: 100%;
-  padding: $rem0375 $rem075;
+  padding: var(--spacing-8) var(--spacing-12);
   font-size: $fs0x9375rem;
-  line-height: $factor1x6;
+  line-height: var(--spacing-24);
   color: var(--bs-body-color);
   background-color: $white;
   background-clip: padding-box;
-  border: $px1 solid $blue-rgba;
-  border-radius: $px5;
+  border: var(--border-1) solid $blue-rgba;
+  border-radius: var(--spacing-4);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control::file-selector-button {
+  padding: var(--spacing-8) var(--spacing-12);
+  margin: calc(-1 * var(--spacing-8)) calc(-1 * var(--spacing-12));
+  margin-inline-end: var(--spacing-12);
+}
+
+.form-select, .ts-wrapper.form-select + .ts-control {
+  padding: var(--spacing-8) var(--spacing-12) !important;
+  background-color: #424549 !important;
+  color: #eee !important;
+}
+
+.ts-control {
+    padding: 0;
 }
 
 .form-control:focus {
@@ -39,7 +61,7 @@ $min-touch-target: 44px; // many instances of this size referenced in styles.scs
     background-color: $white;
     border-color: $blue-mid;
     outline: 0;
-    box-shadow: 0 0 0 $px2 $blue-rgba-02;
+    box-shadow: 0 0 0 var(--spacing-2) $blue-rgba-02;
 }
 
 .btn-secondary {

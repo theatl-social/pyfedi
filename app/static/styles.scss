@@ -18,7 +18,7 @@
 
 html {
   @include breakpoint(phablet) {
-    scroll-padding-top: 80px;
+    scroll-padding-top: var(--spacing-80);
   }
 }
 
@@ -29,20 +29,20 @@ body {
   &.embed {
     .post_teaser_body h3 {
       font-size: $fs1x2rem!important;
-      margin-bottom: $px2;
+      margin-bottom: var(--spacing-2);
     }
 
     .embed_logo {
       float: right;
-      width: $px40;
-      margin-right: $px10;
+      width: var(--spacing-40);
+      margin-right: var(--spacing-8);
     }
   }
 }
 
 a {
   text-decoration: none;
-  border: solid $px2 transparent;
+  border: solid var(--border-2) transparent;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -52,9 +52,9 @@ h1, h2, h3, h4, h5, h6 {
 tg-spoiler {
   border-style: solid;
   border-color: var(--bs-warning);
-  border-width: $px1bw;
-  border-radius: $px3;
-  padding: 0px $px10;
+  border-width: var(--border-1);
+  border-radius: var(--spacing-4);
+  padding: 0px var(--spacing-8);
   color: transparent;
   &:hover {
     color: var(--bs-body-color);
@@ -63,8 +63,8 @@ tg-spoiler {
 
 .container {
   width: 100%;
-  padding-right: $rem075;
-  padding-left: $rem075;
+  padding-right: var(--spacing-12);
+  padding-left: var(--spacing-12);
   margin-right: auto;
   margin-left: auto;
   max-width: inherit;
@@ -105,7 +105,7 @@ tg-spoiler {
 
 .skip-link {
     position: absolute;
-    top: -($px40); /* Adjust as needed to hide the link off-screen */
+    top: calc(-1 * var(--spacing-40)); /* Adjust as needed to hide the link off-screen */
     left: 0;
     background-color: $white; /* Background color to cover the link for screen readers */
     z-index: 1060; /* Ensure it's above other content */
@@ -116,11 +116,11 @@ tg-spoiler {
 }
 
 .ml-3 {
-  margin-left: $rem1 !important;
+  margin-left: var(--spacing-16) !important;
 }
 
 .home .ml-3 {
-  margin-left: $px1 !important;
+  margin-left: 0 !important;
 }
 
 #outer_container, footer {
@@ -133,7 +133,7 @@ tg-spoiler {
   }
 
   a:not(.btn):active {
-    border: dotted $px2 $blue-mid;
+    border: dotted var(--border-2) $blue-mid;
   }
 }
 
@@ -142,21 +142,20 @@ div.navbar {
   background-color: var(--bs-body-bg);
 
   @include breakpoint(tablet) {
-    border-bottom: $px1bw solid $blue-rgba;
+    border-bottom: var(--border-1) solid $blue-rgba;
   }
 
   @media (min-width: 1400px) {
     .container-lg {
-      padding-right: $px20;
+      padding-right: var(--spacing-20);
     }
   }
 }
 
 .navbar-brand {
-  line-height: $px46;
+  line-height: var(--spacing-48);
   img {
-    margin-right: $px20;
-    margin-top: -($px1);
+    margin-right: var(--spacing-20);
   }
 }
 
@@ -198,8 +197,8 @@ div.navbar {
       margin-left: auto;
     }
 
-    *> * {
-      margin-left: $px10;
+    * > * :not(.community_filter) {
+      margin-left: var(--spacing-8);
     }
 
     .dropdown-menu li {
@@ -212,11 +211,11 @@ div.navbar {
 
     .content-center {
       a {
-        margin-left: $px5;
-        margin-right: $px5;
+        margin-left: var(--spacing-8);
+        margin-right: var(--spacing-4);
         span {
-          margin-left: $px5;
-          margin-right: $px5;
+          margin-left: var(--spacing-4);
+          margin-right: var(--spacing-4);
         }
       }
 
@@ -236,7 +235,7 @@ div.navbar {
 .navbar-light .navbar-toggler-icon {
   background-image: url(/static/images/menu.svg);
   width: 35px;
-  height: 40px;
+  height: var(--spacing-40);
   background-position: top;
 }
 
@@ -250,11 +249,11 @@ div.navbar {
 }
 
 .tab-content > .tab-pane {
-  border-right: solid $px1bw var(--bs-body-color);
-  border-bottom: solid $px1bw var(--bs-body-color);
-  border-left: solid $px1bw var(--bs-body-color);
-  border-radius: 0 0 $px5 $px5;
-  padding: $px10 $px15 0 $px15;
+  border-right: solid var(--border-1) var(--bs-body-color);
+  border-bottom: solid var(--border-1) var(--bs-body-color);
+  border-left: solid var(--border-1) var(--bs-body-color);
+  border-radius: 0 0 var(--spacing-4) var(--spacing-4);
+  padding: var(--spacing-8) 0px 0px 0px;
 }
 
 .tag_cloud_page > .tab-pane {
@@ -268,7 +267,8 @@ div.navbar {
 }
 
 .dropdown-divider {
-  margin-right: $px10;
+  margin-right: var(--spacing-12);
+  margin-left: var(--spacing-12);
 }
 
 .communities_menu {
@@ -325,18 +325,23 @@ div.navbar {
 
   .jump_links {
     float: left;
-    padding-left: $px12;
-    padding-top: $px3;
+    padding-left: var(--spacing-12);
+    padding-top: var(--spacing-2);
 
     a {
-      margin-right: $px5;
+      margin-right: var(--spacing-4);
     }
   }
 
   .community_filter {
     position: relative;
-    margin-left: $px10;
-    padding-right: $px20;
+    margin-left: var(--spacing-12);
+    
+    @include breakpoint(tablet) {
+    margin-left: 0;
+    }
+    
+    padding-right: var(--spacing-12);
 
     .fe-search {
       position: absolute;
@@ -345,7 +350,7 @@ div.navbar {
     }
 
     @include breakpoint(laptop) {
-      margin-left: 0;
+      margin-left: var(--spacing-8);
       padding-right: 0;
 
       #community-filter {
@@ -353,7 +358,7 @@ div.navbar {
       }
 
       .fe-search {
-        right: $px7;
+        right: var(--spacing-8);
       }
     }
   }
@@ -370,7 +375,7 @@ div.navbar {
     padding-left: 0;
 
     .dropdown-header {
-      padding-left: $px6;
+      padding-left: var(--spacing-4);
     }
     li {
 
@@ -379,26 +384,24 @@ div.navbar {
 }
 
 #outer_container {
-  margin-top: -($px1);
   @include breakpoint(tablet) {
-    margin-top: $rem1;
-    padding-top: $rem025;
+    margin-top: var(--spacing-16);
+    padding-top: var(--spacing-4);
   }
 }
 
 form {
   .mb-3 {
-    margin-bottom: $rem1x1;
+    margin-bottom: var(--spacing-16);
 
     &.required {
       > label {
         &:after {
           content: '*';
           color: red;
-          margin-left: $px2;
+          margin-left: var(--spacing-2);
           font-size: $fs80pc;
           position: relative;
-          top: -$px1;
         }
       }
     }
@@ -406,17 +409,16 @@ form {
 }
 
 .form-group {
-  margin-bottom: $rem1x1;
+  margin-bottom: var(--spacing-16);
 
   &.required {
     > label {
       &:after {
         content: '*';
         color: red;
-        margin-left: $px2;
+        margin-left: var(--spacing-2);
         font-size: $fs80pc;
         position: relative;
-        top: -$px1;
       }
     }
   }
@@ -424,7 +426,7 @@ form {
 
 .form-label {
   font-weight: 500;
-  margin-bottom: $rem025;
+  margin-bottom: var(--spacing-4);
 }
 
 .dropdown-menu.show {
@@ -477,16 +479,16 @@ form {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 1031;
   text-wrap: nowrap;
-  border-top-width: $px2!important;
+  border-top-width: var(--border-2)!important;
 
   a {
     flex-grow: 1;
     text-align: center;
-    height: $px70;
-    padding-top: $px17 !important;
+    height: var(--spacing-72);
+    padding-top: var(--spacing-16) !important;
     @media (orientation: landscape) {
       height: 60px;
-      padding-top: $px12 !important;
+      padding-top: var(--spacing-12) !important;
     }
   }
 
@@ -516,7 +518,7 @@ form {
 
 @media (max-width: 991.98px) {
   .footer {
-    padding-bottom: $px70 !important;
+    padding-bottom: var(--spacing-72) !important;
   }
 }
 
@@ -524,8 +526,8 @@ form {
   tbody tr th {
     padding: 0;
     a {
-      padding-top: $px10;
-      padding-bottom: $px10;
+      padding-top: var(--spacing-8);
+      padding-bottom: var(--spacing-8);
       width: 100%;
       display: inline-block;
     }
@@ -536,7 +538,8 @@ form {
     }
 
     tr td {
-      padding: $px6;
+      padding: var(--spacing-8) var(--spacing-4);
+      font-size: $fs12px;
     }
   }
 }
@@ -547,7 +550,7 @@ form {
   grid-template-columns: repeat(auto-fit,minmax(152px, 1fr));
 
   > li {
-    padding-bottom: $px20;
+    padding-bottom: var(--spacing-20);
   }
 }
 
@@ -555,11 +558,11 @@ form {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
-  border-radius: $px5 $px5 0 0;   /* top-left | top-right | bottom-right | bottom-left */
+  border-radius: var(--spacing-4) var(--spacing-4) 0 0;   /* top-left | top-right | bottom-right | bottom-left */
   height: 176px;
-  margin-left: -($px12);
-  margin-right: -($px12);
-  margin-top: -($px9);
+  margin-left: calc(-1 * var(--spacing-12));
+  margin-right: calc(-1 * var(--spacing-12));
+  margin-top: calc(-1 * var(--spacing-8));
 
   @include breakpoint(tablet) {
     height: 240px;
@@ -567,15 +570,15 @@ form {
 
   #breadcrumb_nav {
     @include breakpoint(tablet) {
-      padding-left: $px13;
-      padding-top: $px13;
+      padding-left: var(--spacing-12);
+      padding-top: var(--spacing-12);
     }
     .breadcrumb {
       background-color: $black-tint-03;
       display: inline-block;
-      padding: $px5 $px10;
+      padding: var(--spacing-8) var(--spacing-12);
       @include breakpoint(tablet) {
-        border-radius: $px6;
+        border-radius: var(--spacing-4);
       }
       margin-bottom: 0;
 
@@ -631,7 +634,7 @@ form {
 
 .form-check .form-check-input {
   position: relative;
-  top: $px4;
+  top: var(--spacing-4);
 }
 
 .post_teaser_title_a {
@@ -657,20 +660,20 @@ form {
 
 #post_reply_more_options {
   &.expanded {
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-16);
   }
 }
 
 ul.form-multicheck-columns {
   display: flex;
   list-style: none;
-  max-height: 12rem;
+  max-height: calc(var(--spacing-96) * 2);
   flex-direction: column;
   flex-wrap: wrap;
   overflow-y: auto;
 
   li {
-    margin-right: $px5;
+    margin-right: var(--spacing-8);
   }
 }
 
@@ -685,8 +688,8 @@ ul.form-multicheck-columns {
   text-wrap: none;
   text-wrap-mode: nowrap;
   .btn {
-    padding-left: $px10;
-    padding-right: $px10;
+    padding-left: var(--spacing-12);
+    padding-right: var(--spacing-12);
   }
 }
 
@@ -700,7 +703,7 @@ ul.form-multicheck-columns {
   clear: both;
 
   .instance_sticky {
-    border-bottom: solid $px2 var(--bs-success-border-subtle);
+    border-bottom: solid var(--border-2) var(--bs-success-border-subtle);
 
     > .post_teaser {
       border-bottom: none !important;
@@ -710,19 +713,19 @@ ul.form-multicheck-columns {
       font-family: 'Feather' !important;
       content: "\e9d5 ";
       color: var(--bs-success);
-      margin-right: $em025;
+      margin-right: var(--spacing-4);
     }
   }
 
   .post_teaser {
 
-    border-bottom: solid $px2 $light-grey;
-    padding-top: $px8;
-    padding-bottom: $px8;
+    border-bottom: solid var(--border-2) $light-grey;
+    padding-top: var(--spacing-8);
+    padding-bottom: var(--spacing-8);
 
     h3 {
       font-size: $h3post;
-      margin-top: $px4;
+      margin-top: var(--spacing-4);
       margin-bottom: 0;
       overflow: hidden;
     }
@@ -737,7 +740,7 @@ ul.form-multicheck-columns {
       position: relative;
 
       .author {
-        margin-bottom: $px30;
+        margin-bottom: var(--spacing-32);
         display: inline-block;
         max-width: 78%;
       }
@@ -745,7 +748,7 @@ ul.form-multicheck-columns {
 
     .col_thumbnail {
       float: right;
-      width: $px70;
+      width: var(--spacing-72);
       position: relative;
       @include breakpoint(tablet) {
         width: 170px;
@@ -758,7 +761,7 @@ ul.form-multicheck-columns {
       align-content: center;
       display: flex;
       height: 60px;
-      width: 60px;
+      width: var(--spacing-72);
       overflow: hidden;
       @include breakpoint(tablet) {
         align-items: center;
@@ -782,9 +785,8 @@ ul.form-multicheck-columns {
         position: absolute;
         right: 0;
         background-color: $white-rgba;
-        padding-bottom: $px1;
-        padding-left: $px1;
-        border-radius: $px2;
+        padding: var(--spacing-2);
+        border-radius: var(--border-2);
         top: 0;
       }
 
@@ -795,7 +797,7 @@ ul.form-multicheck-columns {
       img {
         height: 60px;
         width: 60px;
-        border-radius: $px5;
+        border-radius: var(--spacing-4);
         object-fit: cover;
         @include breakpoint(tablet) {
           height: 90px;
@@ -803,7 +805,7 @@ ul.form-multicheck-columns {
           max-width: 100%;
         }
         &.blur {
-          filter: blur($px9);
+          filter: blur(var(--spacing-8));
         }
       }
 
@@ -813,7 +815,7 @@ ul.form-multicheck-columns {
         }
         .fe::before {
           font-size: $fs28px;
-          padding-right: $px7;
+          padding-right: var(--spacing-8);
         }
       }
 
@@ -830,7 +832,7 @@ ul.form-multicheck-columns {
 
       .voting_buttons {
         width: 46px;
-        line-height: $px24;
+        line-height: var(--spacing-24);
         .upvote_button, .downvote_button {
           font-size: $fs80pc;
         }
@@ -843,7 +845,7 @@ ul.form-multicheck-columns {
 
     .post_teaser_image_preview {
       img.blur {
-        filter: blur($px24);
+        filter: blur(var(--spacing-24));
       }
     }
   }
@@ -857,8 +859,8 @@ ul.form-multicheck-columns {
   position: relative;
   max-height: 100px;
   overflow: hidden;
-  padding-left: $px3;
-  padding-right: $px3;
+  padding-left: var(--spacing-2);
+  padding-right: var(--spacing-2);
 
   p {
     margin: 0;
@@ -875,7 +877,7 @@ ul.form-multicheck-columns {
     overflow: hidden;
 
     p {
-      filter: blur($px6);
+      filter: blur(var(--spacing-4));
       user-select: none;
     }
   }
@@ -883,25 +885,25 @@ ul.form-multicheck-columns {
 
 .post_teaser_image_preview {
   text-align: center;
-  margin-top: $px10;
+  margin-top: var(--spacing-12);
   a {
     display: inline-block;
     max-width: 512px;
     max-height: 575px;
     overflow: hidden;
-    border-radius: $px5;
+    border-radius: var(--spacing-4);
   }
   img {
     max-width: 100%;
     min-width: 150px;
-    margin-right: $px4;
+    margin-right: var(--spacing-4);
     height: auto;
   }
 }
 
 .post_teaser_video_preview {
   text-align: center;
-  margin-top: $px10;
+  margin-top: var(--spacing-12);
   position: relative;
 
   .fe-video {
@@ -929,7 +931,7 @@ ul.form-multicheck-columns {
     height: 100%;
     object-fit: cover;
     cursor: pointer;
-    border-radius: $px5;
+    border-radius: var(--spacing-4);
   }
 
   .video-wrapper iframe {
@@ -942,7 +944,7 @@ ul.form-multicheck-columns {
   }
 
   .blur {
-    filter: blur($px24);
+    filter: blur(var(--spacing-24));
   }
 }
 
@@ -951,7 +953,7 @@ time {
 }
 
 .author {
-  padding-left: $px3;
+  padding-left: var(--spacing-2);
 
   a {
     border-left: 0;
@@ -959,7 +961,7 @@ time {
 }
 
 .community_instance {
-  margin-left: -($px2);
+  margin-left: calc(-1 * var(--spacing-2));
   display: none;
 }
 
@@ -968,7 +970,7 @@ time {
   display: inline-block;
   width: 100%;
   overflow: hidden;
-  border-radius: $px5;
+  border-radius: var(--spacing-4);
 }
 
 .post_utilities_bar {
@@ -991,10 +993,10 @@ time {
 
     .dropdown-item {
       white-space: unset;
-      line-height: $px30;
+      line-height: var(--spacing-28);
 
       &:active {
-        line-height: $px26;
+        line-height: var(--spacing-24);
       }
     }
   }
@@ -1004,12 +1006,12 @@ time {
   container-type: inline-size;
 
   .voting_buttons_new {
-    margin-left: -($px15);
+    margin-left: calc(-1 * var(--spacing-16));
   }
 
   .post_reply_count {
     justify-content: left;
-    margin-right: $px8;
+    margin-right: var(--spacing-8);
   }
 
   @container (width < 400px) {
@@ -1034,12 +1036,17 @@ time {
   }
 }
 
+ .d-xl-none {
+      margin-top: var(--spacing-4); // add spacing to button bar above #masonry
+      margin-bottom: var(--spacing-4);
+ }
+
 #masonry {
   display: flex;
   .column {
     flex: 1;
     padding: 0;
-    padding-right: $px5;
+    padding-right: var(--spacing-4);
     &:last-child {
       padding-right: 0;
     }
@@ -1047,7 +1054,7 @@ time {
 
   .item {
     position: relative;
-    margin-bottom: $px5;
+    margin-bottom: var(--spacing-4);
     overflow: hidden;
     img {
       width: 100%;
@@ -1059,10 +1066,10 @@ time {
       border: none;
 
       img.blur {
-        filter: blur($px20);
+        filter: blur(var(--spacing-20));
       }
     }
-
+    
     .masonry_info {
       position: absolute;
       bottom: 0;
@@ -1081,9 +1088,9 @@ time {
         a {
           color: $white;
           text-decoration: none;
-          line-height: $px40;
+          line-height: var(--spacing-40);
           @include breakpoint(laptop) {
-            line-height: $px30;
+            line-height: var(--spacing-28);
           }
         }
       }
@@ -1098,7 +1105,7 @@ time {
 
           a {
             color: $white;
-            padding-top: $px6;
+            padding-top: var(--spacing-8);
             @include breakpoint(laptop) {
               padding-top: 0;
             }
@@ -1107,18 +1114,18 @@ time {
           .upvote_button, .downvote_button {
             display: inline;
             color: white;
-            padding-top: $px10;
+            padding-top: var(--spacing-8);
             @include breakpoint(laptop) {
-              padding-top: $px5;
+              padding-top: var(--spacing-4);
             }
             width: 50%;
             position: relative;
 
             .htmx-indicator {
               position: absolute;
-              width: $px20;
-              height: $px20;
-              left: $px7;
+              width: var(--spacing-20);
+              height: var(--spacing-20);
+              left: var(--spacing-8);
             }
           }
         }
@@ -1136,7 +1143,7 @@ time {
 
         .reply_col {
           justify-content: right;
-          padding-right: $px5;
+          padding-right: var(--spacing-4);
           flex-grow: 1;
         }
       }
@@ -1147,7 +1154,7 @@ time {
       width: 100%;
       text-align: center;
       display:flex;
-      min-height: 8rem;
+      min-height: calc(var(--spacing-64) * 2);
       p {
         margin-bottom: 0;
         flex-grow: 1;
@@ -1172,7 +1179,7 @@ time {
 
 .url_thumbnail {
   float: right;
-  margin-top: -($px6);
+  margin-top: calc(-1 * var(--spacing-8));
 }
 
 .post_image {
@@ -1182,14 +1189,14 @@ time {
 }
 
 details {
-  margin-bottom: $rem1;
+  margin-bottom: var(--spacing-16);
 }
 
 .spoiler_block {
-  margin: $px3 0 0 $em1;
-  padding: $em05 $em05 $em05 $em02;
+  margin: var(--spacing-2) 0 0 var(--spacing-8);
+  padding: var(--spacing-8);
   border-left-style: solid;
-  border-left-width: $px2;
+  border-left-width: var(--border-2);
   background-color: var(--bs-secondary-bg-subtle);
   border-left-color: var(--bs-secondary-border-subtle);
 
@@ -1198,7 +1205,7 @@ details {
   }
 
   table, img {
-    padding: $em05;
+    padding: var(--spacing-8);
   }
 
   > details {
@@ -1209,8 +1216,8 @@ details {
 .render_username {
   display: inline;
   a img {
-    width: $px20;
-    height: $px20;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
     border-radius: 50%;
     vertical-align: bottom;
     object-fit: cover;
@@ -1223,8 +1230,8 @@ details {
 
 .comments > .comment {
   margin-left: 0;
-  border-top: solid $px1bw $light-grey;
-  margin-right: $px8;
+  border-top: solid var(--border-1) $light-grey;
+  margin-right: var(--spacing-8);
 
   .comment_time {
     font-size: $fs87pc;
@@ -1239,12 +1246,12 @@ details {
 
   .comment_body {
     hr {
-      margin-left: $px15;
-      margin-right: $px15;
+      margin-left: var(--spacing-16);
+      margin-right: var(--spacing-16);
       opacity: $opacity-01;
     }
     p {
-      padding-right: $px9;
+      padding-right: var(--spacing-8);
     }
     p:last-child {
       margin-bottom: 0px;
@@ -1260,7 +1267,7 @@ details {
 
 [data-bs-theme=dark] {
   .post_list .post_teaser {
-    border-bottom: solid $px1bw $super-dark-grey;
+    border-bottom: solid var(--border-1) $super-dark-grey;
     .thumbnail .fe {
       background-color: $black-tint-04;
     }
@@ -1285,11 +1292,11 @@ details {
 
 
 #replies {
-  scroll-margin-top: $em5;
+  scroll-margin-top: var(--spacing-72);
 }
 
 .post_replies > .col {
-  padding-right: $px5;
+  padding-right: var(--spacing-4);
 }
 
 .post_type_image {
@@ -1349,32 +1356,32 @@ details {
 
   .upvote_button {
     .htmx-indicator {
-      left: $px13;
-      top: $px14;
+      left: var(--spacing-12);
+      top: var(--spacing-12);
     }
   }
 
   .downvote_button {
     .htmx-indicator {
-      left: $px12;
-      top: $px14;
+      left: var(--spacing-12);
+      top: var(--spacing-12);
     }
   }
 
   .htmx-indicator{
     position: absolute;
-    left: $px3;
-    width: $px20;
-    height: $px20;
+    left: var(--spacing-4);
+    width: var(--spacing-20);
+    height: var(--spacing-20);
     top: 0;
   }
   .htmx-request .htmx-indicator{
     display:inline;
     position: absolute;
-    width: $px20;
-    height: $px20;
-    right: $px14;
-    top: $px5;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
+    right: var(--spacing-16);
+    top: var(--spacing-4);
     opacity: $opacity-10!important;
   }
   .htmx-request.htmx-indicator{
@@ -1386,8 +1393,8 @@ details {
   float: right;
   display: block;
   min-width: $min-touch-target + 10;
-  padding: 0 0 $px5 $px5;
-  line-height: $px30;
+  padding: 0 0 var(--spacing-4) var(--spacing-4);
+  line-height: var(--spacing-28);
   font-size: $fs14px;
 
   @include breakpoint(laptop) {
@@ -1395,15 +1402,15 @@ details {
   }
 
   div {
-    border: solid $px1bw $primary-colour;
+    border: solid var(--border-1) $primary-colour;
   }
 
   .upvote_button, .downvote_button {
     position: relative;
-    padding: 0 $px3;
+    padding: 0 var(--spacing-2);
     min-height: $min-touch-target;
     min-width: $min-touch-target;
-    border-radius: $px3;
+    border-radius: var(--spacing-2);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1432,21 +1439,21 @@ details {
   }
 
   .downvote_button {
-    margin-top: $px5;
+    margin-top: var(--spacing-4);
   }
 
   .htmx-indicator{
     position: absolute;
-    width: $px20;
+    width: var(--spacing-20);
     height: 20px;
   }
   .htmx-request .htmx-indicator{
     display:inline;
     position: absolute;
-    width: $px20;
-    height: $px20;
-    right: $px14;
-    top: $px5;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
+    right: var(--spacing-16);
+    top: var(--spacing-4);
     opacity: $opacity-10!important;
   }
   .htmx-request.htmx-indicator{
@@ -1460,17 +1467,17 @@ details {
 
 .comment {
   clear: both;
-  margin-left: $px8;
+  margin-left: var(--spacing-8);
   padding-left: 0;
-  padding-top: $px8;
-  padding-right: $px8;
+  padding-top: var(--spacing-8);
+  padding-right: var(--spacing-8);
 
   &.distinguished {
     > .row:first-child {
       background-color: var(--bs-secondary-bg-subtle);
       border: solid;
       border-color: var(--bs-success);
-      border-width: $px2;
+      border-width: var(--border-2);
     }
   }
 
@@ -1492,11 +1499,11 @@ details {
     text-align: center;
     background-color: $dark-grey;
     color: $white;
-    margin-bottom: $px15;
-    height: $px30;
+    margin-bottom: var(--spacing-16);
+    height: var(--spacing-28);
 
     .fe-angles-down, .fe-angles-up {
-      margin-top: $px7;
+      margin-top: var(--spacing-8);
       display: inline-block;
     }
 
@@ -1520,7 +1527,7 @@ details {
   .comment_community {
     display: inline-block;
     img {
-      height: $rem1;
+      height: var(--spacing-16);
       width: auto;
     }
   }
@@ -1554,7 +1561,7 @@ details {
           height: 44px;
           text-align: center;
           vertical-align: middle;
-          line-height: $px40;
+          line-height: var(--spacing-40);
 
       }
     }
@@ -1567,7 +1574,7 @@ details {
         height: 44px;
         text-align: center;
         vertical-align: middle;
-        line-height: $px40;
+        line-height: var(--spacing-40);
       }
     }
 
@@ -1579,10 +1586,10 @@ details {
 
     .dropdown-item {
       white-space: unset;
-      line-height: $px30;
+      line-height: var(--spacing-28);
 
       &:active {
-        line-height: $px26;
+        line-height: var(--spacing-24);
       }
     }
 
@@ -1601,91 +1608,91 @@ details {
     margin-top: 0;
 
     &.depth_0 {
-      border-left: $px2 solid $depth-00 !important;
+      border-left: var(--border-2) solid $depth-00 !important;
     }
 
     &.depth_1 {
-      border-left: $px2 solid $depth-01 !important;
+      border-left: var(--border-2) solid $depth-01 !important;
     }
 
     &.depth_2 {
-      border-left: $px2 solid $depth-02 !important;
+      border-left: var(--border-2) solid $depth-02 !important;
     }
 
     &.depth_3 {
-      border-left: $px2 solid $depth-03 !important;
+      border-left: var(--border-2) solid $depth-03 !important;
     }
 
     &.depth_4 {
-      border-left: $px2 solid $depth-04 !important;
+      border-left: var(--border-2) solid $depth-04 !important;
     }
 
     &.depth_5 {
-      border-left: $px2 solid $depth-05 !important;
+      border-left: var(--border-2) solid $depth-05 !important;
     }
 
     &.depth_6 {
-      border-left: $px2 solid $depth-06 !important;
+      border-left: var(--border-2) solid $depth-06 !important;
     }
 
     &.depth_7 {
-      border-left: $px2 solid $depth-07 !important;
+      border-left: var(--border-2) solid $depth-07 !important;
     }
 
     &.depth_8 {
-      border-left: $px2 solid $depth-08 !important;
+      border-left: var(--border-2) solid $depth-08 !important;
     }
 
     &.depth_9 {
-      border-left: $px2 solid $depth-09 !important;
+      border-left: var(--border-2) solid $depth-09 !important;
     }
 
     &.depth_10 {
-      border-left: $px2 solid $depth-10 !important;
+      border-left: var(--border-2) solid $depth-10 !important;
     }
 
     &.depth_11 {
-      border-left: $px2 solid $depth-11 !important;
+      border-left: var(--border-2) solid $depth-11 !important;
     }
 
     &.depth_12 {
-      border-left: $px2 solid $depth-12 !important;
+      border-left: var(--border-2) solid $depth-12 !important;
     }
 
     &.depth_13 {
-      border-left: $px2 solid $depth-13 !important;
+      border-left: var(--border-2) solid $depth-13 !important;
     }
 
     &.depth_14 {
-      border-left: $px2 solid $depth-14 !important;
+      border-left: var(--border-2) solid $depth-14 !important;
     }
 
     &.depth_15 {
-      border-left: $px2 solid $depth-15 !important;
+      border-left: var(--border-2) solid $depth-15 !important;
     }
 
     &.depth_16 {
-      border-left: $px2 solid $depth-16 !important;
+      border-left: var(--border-2) solid $depth-16 !important;
     }
 
     &.depth_17 {
-      border-left: $px2 solid $depth-17 !important;
+      border-left: var(--border-2) solid $depth-17 !important;
     }
 
     &.depth_18 {
-      border-left: $px2 solid $depth-18 !important;
+      border-left: var(--border-2) solid $depth-18 !important;
     }
 
     &.depth_19 {
-      border-left: $px2 solid $depth-19 !important;
+      border-left: var(--border-2) solid $depth-19 !important;
     }
 
     &.depth_20 {
-      border-left: $px2 solid $depth-20 !important;
+      border-left: var(--border-2) solid $depth-20 !important;
     }
 
     &.depth_21 {
-      border-left: $px2 solid $depth-21 !important;
+      border-left: var(--border-2) solid $depth-21 !important;
     }
   }
 }
@@ -1698,7 +1705,7 @@ details {
       height: 44px;
       text-align: center;
       vertical-align: middle;
-      line-height: $px40;
+      line-height: var(--spacing-40);
       display: inline-block;
     }
   }
@@ -1716,7 +1723,7 @@ details {
   #url {
     width: 297px;
     display: inline-block;
-    padding-left: $px3;
+    padding-left: var(--spacing-4);
   }
 }
 
@@ -1744,7 +1751,7 @@ details {
 
   li {
     display: inline-block;
-    padding-right: $px5;
+    padding-right: var(--spacing-4);
   }
 }
 
@@ -1760,13 +1767,13 @@ a.unread, div.unread {
   &:before {
     content: '';
     display: inline-block;
-    width: $px8;
-    height: $px8;
-    margin-right: $px6;
+    width: var(--spacing-8);
+    height: var(--spacing-8);
+    margin-right: var(--spacing-8);
     background-color: red;
     border-radius: 50%;
     vertical-align: middle;
-    margin-top: -($px2);
+    margin-top: calc(-1 * var(--spacing-2));
   }
 }
 
@@ -1775,7 +1782,7 @@ a.unread, div.unread {
 
   div.child {
     flex: 1;
-    width: $px1;
+    width: var(--spacing-2);
     overflow-x: hidden;
     text-overflow: ellipsis;
   }
@@ -1791,7 +1798,7 @@ a.unread, div.unread {
       }
 
       .accordion-body {
-        max-height: 4rem;
+        max-height: var(--spacing-64);
         position: relative;
         overflow-y: hidden;
         overflow-x: auto;
@@ -1878,16 +1885,16 @@ a.unread, div.unread {
   }
 
   .post_image img {
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-16);
   }
 
   blockquote {
-    padding: $em02 $px5;
+    padding: var(--spacing-4) var(--spacing-8);
     font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
-    margin: 0 $pc3 $px6 $pc3;
+    margin: 0 var(--spacing-20) var(--spacing-12) var(--spacing-20);
     font-size: $fs95pc;
     border-left-style: solid;
-    border-left-width: $px4;
+    border-left-width: var(--spacing-4);
     background-color: var(--bs-secondary-bg-subtle);
     border-left-color: var(--bs-secondary-border-subtle);
 
@@ -1899,27 +1906,27 @@ a.unread, div.unread {
   pre {
     background: var(--bs-secondary-bg);
     font-family: monospace;
-    padding-left: $rem05;
-    margin-left: $rem1x25;
+    padding: var(--spacing-4) var(--spacing-8);
+    margin-left: var(--spacing-20);
     border-style: solid;
     border-color: var(--bs-secondary-border-subtle);
-    border-width: $px2;
-    border-radius: $px5;
+    border-width: var(--border-2);
+    border-radius: var(--spacing-4);
   }
 
-  .post_source pre{
-    padding-top: $rem1;
-    padding-bottom: $rem1;
+  .post_source pre {
+    padding-top: var(--spacing-16);
+    padding-bottom: var(--spacing-16);
   }
 
   p > code {
     background: var(--bs-secondary-bg);
-    padding: $rem025 $rem05;
-    border-radius: $px5;
+    padding: var(--spacing-4) var(--spacing-8);
+    border-radius: var(--spacing-4);
     position: relative;
 
     .btn {
-      --bs-btn-padding-x: #{$rem025} ! important;
+      --bs-btn-padding-x: var(--spacing-4) ! important;
       --bs-btn-padding-y: 0 ! important;
     }
   }
@@ -1941,7 +1948,7 @@ a.unread, div.unread {
 
   ol, ul {
     li {
-      margin-bottom: $px7;
+      margin-bottom: var(--spacing-8);
 
       > p {
         margin-bottom: 0;
@@ -1950,20 +1957,20 @@ a.unread, div.unread {
   }
 
   img[align="left"] {
-    margin-right: $px10;
-    margin-bottom: $px10;
+    margin-right: var(--spacing-12);
+    margin-bottom: var(--spacing-12);
     float: left;
   }
 
   img[align="right"] {
-    margin-left: $px10;
-    margin-bottom: $px10;
+    margin-left: var(--spacing-12);
+    margin-bottom: var(--spacing-12);
     float: right;
   }
 
   img[align="middle"] {
     display: block;
-    margin: 0 auto $px10 auto;
+    margin: 0 auto var(--spacing-12) auto;
     float: none;
   }
 }
@@ -1989,55 +1996,54 @@ a.unread, div.unread {
 
 .warning_badge {
   font-size: $fs12px;
-  border-radius: $px2;
-  margin-right: $px2;
+  border-radius: var(--border-2);
+  margin-right: var(--spacing-2);
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: text-bottom;
-  line-height: $px20;
-  padding: 0 $px4;
+  line-height: var(--spacing-20);
+  padding: 0 var(--spacing-4);
 
   &.nsfw {
-    border:$px1bw solid $burgundy;
+    border:var(--border-1) solid $burgundy;
     color:$burgundy;
   }
 
   &.nsfl {
-    border:$px1bw solid $black;
+    border:var(--border-1) solid $black;
     color:$black;
   }
 
   &.ai_generated {
-    border:$px1bw solid $burgundy;
+    border:var(--border-1) solid $burgundy;
     color:$burgundy;
   }
 }
 
 [data-bs-theme=dark] .warning_badge.ai_generated {
-  border:$px1bw solid $danger;
+  border:var(--border-1) solid $danger;
   color:$danger;
 }
 
 [data-bs-theme=dark] .warning_badge.nsfw {
-  border:$px1bw solid $danger;
+  border:var(--border-1) solid $danger;
   color:$danger;
 }
 
 h1 .warning_badge {
   position: relative;
-  left: $px15;
-  top: -($px6);
+  top: calc(-1 * var(--spacing-4));
 }
 
 [data-bs-theme=dark] .warning_badge.nsfl {
-  border:$px1bw solid $white;
+  border:var(--border-1) solid $white;
   color:$white;
 }
 
 .post_title {
   .warning_badge {
-    line-height: 32px;
-    margin-left: $px15;
+    line-height: var(--spacing-32);
+    margin-left: var(--spacing-8);
   }
 }
 
@@ -2049,7 +2055,7 @@ h1 .warning_badge {
       width: 70%;
     }
     max-width: 100%;
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-8);
     clear: both;
 
     &.from_other_party {
@@ -2057,6 +2063,12 @@ h1 .warning_badge {
     }
     &.from_me {
       float: left;
+    }
+    &.from_me + .from_other_party {
+      margin-top: var(--spacing-8);
+    }
+    &.from_other_party + .from_me {
+      margin-top: var(--spacing-8);
     }
   }
   .message_created_at {
@@ -2094,7 +2106,7 @@ h1 .warning_badge {
 #post_reply_markdown_editor_enabler {
   display: none;
   position: absolute;
-  bottom: $px3;
+  bottom: var(--spacing-4);
   right: 0;
   @include breakpoint(phablet) {
     display: inline-block;
@@ -2103,7 +2115,7 @@ h1 .warning_badge {
 
 .create_post_markdown_editor_enabler {
   text-align: right;
-  margin-bottom: $px10;
+  margin-bottom: var(--spacing-12);
   display: block;
 }
 
@@ -2123,7 +2135,7 @@ h1 .warning_badge {
   max-height: 90vh;
 
   &.blur {
-    filter: blur($px24);
+    filter: blur(var(--spacing-24));
   }
 }
 
@@ -2135,7 +2147,7 @@ h1 .warning_badge {
     select {
       max-width: 150px;
       float: right;
-      margin-top: -($px5);
+      margin-top: calc(-1 * var(--spacing-4));
     }
   }
 }
@@ -2148,7 +2160,7 @@ h1 .warning_badge {
 }
 
 #pollChoicesFieldset {
-  margin-bottom: $px20;
+  margin-bottom: var(--spacing-20);
 }
 
 .post_poll {
@@ -2156,14 +2168,14 @@ h1 .warning_badge {
     list-style: none;
     padding-left: 0;
     li {
-      margin-bottom: $px5;
+      margin-bottom: var(--spacing-8);
 
       .vote_bar {
         .vote_score {
           background-color: $grey;
           color: $white;
           text-align: right;
-          padding-right: $px5;
+          padding-right: var(--spacing-4);
           font-weight: bold;
         }
       }
@@ -2187,7 +2199,7 @@ h1 .warning_badge {
 
 .card-header {
   h2 {
-    margin-bottom: $px5;
+    margin-bottom: var(--spacing-2);
   }
 }
 
@@ -2202,14 +2214,18 @@ h1 .warning_badge {
     background-color: $light-pink;
 }
 
+.card {
+    border-radius: var(--spacing-8);
+}
+
 .main_pane {
   /* Ensure a little space after pagination on mobile. */
-  padding-bottom: $px12;
+  padding-bottom: var(--spacing-12);
 
   @include breakpoint(tablet) {
-    border: solid $px1bw $light-grey;
-    border-radius: $px5;
-    padding-top: $px8;
+    border: solid var(--border-1) $light-grey;
+    border-radius: var(--spacing-8);
+    padding-top: var(--spacing-8);
   }
 
   .url_thumbnail {
@@ -2273,10 +2289,10 @@ h1 .warning_badge {
 .community_icon {
   width: 20vw;
   height: 20vw;
-  max-width: $px30!important;
-  max-height: $px30;
-  min-width: $px20;
-  min-height: $px20;
+  max-width: var(--spacing-28) !important;
+  max-height: var(--spacing-28);
+  min-width: var(--spacing-20);
+  min-height: var(--spacing-20);
   vertical-align: text-top;
   object-fit: cover;
 }
@@ -2298,9 +2314,9 @@ h1 .warning_badge {
 }
 
 .community_icon_small {
-  width: $px20;
-  height: $px20;
-  margin-right: $px3;
+  width: var(--spacing-20);
+  height: var(--spacing-20);
+  margin-right: var(--spacing-4);
   object-fit: cover;
   font-size: 0;
 }
@@ -2330,36 +2346,36 @@ h1 .warning_badge {
 .external_link_icon {
   width: 12px;
   height: 12px;
-  margin-left: $px4;
-  margin-bottom: $px3;
+  margin-left: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
 }
 
 form {
   h5 {
-    padding-top: $px12;
+    padding-top: var(--spacing-12);
   }
 }
 
 .coolfieldset, .coolfieldset.expanded{
-  border:$px1bw solid $light-grey;
-  border-radius: $px5;
-  padding: 0 $px20;
+  border:var(--border-1) solid $light-grey;
+  border-radius: var(--spacing-4);
+  padding: 0 var(--spacing-20);
 }
 
 .coolfieldset.collapsed{
   border:0;
-  border-top:$px1bw solid $grey;
+  border-top:var(--border-1) solid $grey;
   border-radius: 0;
 }
 
 .coolfieldset legend{
-  padding-left:$px13;
+  padding-left: var(--spacing-16);
   font-weight:bold;
   cursor:pointer;
   background-color: $white;
   display: block;
   position: relative;
-  top: -11px;
+  top: calc(-1 * var(--spacing-12));
 
   &.tweak-top {
     top: -18px;
@@ -2367,15 +2383,15 @@ form {
 }
 
 .coolfieldset legend, .coolfieldset.expanded legend {
-	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 .coolfieldset.collapsed legend{
-	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 .coolfieldset.expanded .coolfieldset.collapsed legend {
-	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 .domain_link {
@@ -2388,8 +2404,8 @@ form {
 
 .post_flair {
   font-size: $fs73pc;
-  padding: $px1 $px3;
-  border-radius: $px3;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--spacing-4);
   text-wrap: nowrap;
 }
 
@@ -2409,14 +2425,14 @@ form {
 #image_preview {
   max-width: 200px;
   display: none;
-  margin-top: -($px10);
-  margin-bottom: $px10;
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
 }
 
 #image_preview_edit {
   max-width: 200px;
-  margin-top: -($px10);
-  margin-bottom: $px10;
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
 }
 
 #search_community {
@@ -2426,27 +2442,27 @@ form {
 .post_flair_sidepane {
   display: flex;
   flex-wrap: wrap;
-  gap: $px8;
+  gap: var(--spacing-8);
 
   .post_flair {
     font-size: $fs90pc;
-    padding: $px2 $px4;
-    line-height: $px20;
+    padding: var(--spacing-2) var(--spacing-4);
+    line-height: var(--spacing-20);
     display: inline-block;
-    border-radius: $px4;
+    border-radius: var(--spacing-4);
     white-space: nowrap;
     text-align: center;
   }
-  margin-top: $px12;
+  margin-top: var(--spacing-12);
 }
 
 .user_flair, .user_note {
   font-size: $fs87pc;
   background-color: $white-fade;
-  border-radius: $px3;
-  border: solid $px1bw $grey;
+  border-radius: var(--spacing-4);
+  border: solid var(--border-1) $grey;
   color: $super-dark-grey;
-  padding: 0px $px3 0px $px3;
+  padding: 0px var(--spacing-2) 0px var(--spacing-4);
   display: inline-block;
 }
 
@@ -2468,10 +2484,10 @@ form {
 
 .communities_table tr td {
   vertical-align: middle;
-  padding-top: $px6;
+  padding-top: var(--spacing-8) var(--spacing-4);
 
   &:first-child {
-    padding-top: $px8;
+    padding-top: var(--spacing-8);
   }
 }
 
@@ -2502,25 +2518,25 @@ form {
   margin-bottom: 0;
 
   li {
-    margin-bottom: $px15;
+    margin-bottom: var(--spacing-8);
 
     .fe {
       position: relative;
-      top: $px1;
+      top: var(--spacing-2);
     }
   }
 }
 
 .field_hint {
-  margin-top: -($px15);
+  margin-top: calc(-1 * var(--spacing-12));
   display: block;
-  margin-bottom: $px10;
+  margin-bottom: var(--spacing-12);
 }
 
 @include breakpoint(tablet) {
   .alert {
     /* To match .row */
-    margin-left: calc(var(--bs-gutter-x) * -.5);
+    margin-left: calc(-1 * var(--spacing-12));
   }
 }
 
@@ -2541,32 +2557,32 @@ form {
 
 .modlog_link {
   float: right;
-  margin-top:$px5;
+  margin-top: var(--spacing-4);
 }
 
 .post_teaser.reported, .comment.reported {
   border-style: solid !important;
   border-color: var(--bs-danger) !important;
-  border-width: $px2 !important;
+  border-width: var(--border-2) !important;
   background-color: var(--bs-secondary-bg);
 }
 
 .post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
   img {
-    filter: grayscale(100%) blur($px6)!important;
+    filter: grayscale(100%) blur(var(--spacing-8))!important;
   }
 }
 
 .comment.answer {
     border-style: solid !important;
   border-color: var(--bs-form-valid-border-color) !important;
-  border-width: $px2 !important;
+  border-width: var(--border-2) !important;
   background-color: var(--bs-info-bg-subtle);
 }
 
 .blocked_image {
   img {
-    filter: grayscale(100%) blur($px3)!important;
+    filter: grayscale(100%) blur(var(--spacing-4))!important;
   }
 }
 
@@ -2610,13 +2626,13 @@ form {
 }
 
 .sender_list {
-  border-right: solid $px1bw $light-grey;
+  border-right: solid var(--border-1) $light-grey;
 }
 
 .message {
-  border: solid $px1bw $light-grey;
-  border-radius: $px5;
-  padding: $px8 $px15 0 $px15;
+  border: solid var(--border-1) $light-grey;
+  border-radius: var(--spacing-4);
+  padding: var(--spacing-8) var(--spacing-16) 0 var(--spacing-16);
 
   &.from_other_party {
       float: right;
@@ -2643,9 +2659,9 @@ form {
 
 #subtopic_nav {
   position: relative;
-  left: -($px15);
+  left: calc(-1 * var(--spacing-16));
   li a {
-    border: dotted $px2 transparent;
+    border: dotted var(--border-2) transparent;
   }
 }
 
@@ -2659,14 +2675,14 @@ form {
 }
 
 #home_announcement {
-  padding: $rem05 $rem1;
+  padding: var(--spacing-8) var(--spacing-16);
   color: var(--bs-card-cap-color);
   background-color: rgba(var(--bs-body-color-rgb), #{$opacity-01});
   border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
-  margin-top: -($px8);
-  margin-bottom: $px8;
-  margin-right: calc(var(--bs-gutter-x) * -.5);
-  margin-left: calc(var(--bs-gutter-x) * -.5);
+  margin-top: calc(-1 * var(--spacing-8));
+  margin-bottom: var(--spacing-8);
+  margin-right: calc(-1 * var(--spacing-12));
+  margin-left: calc(-1 * var(--spacing-12));
 
   p {
     margin-bottom: 0;
@@ -2674,13 +2690,13 @@ form {
 }
 
 .pt-05 {
-  padding-top: .12rem !important;
+  padding-top: var(--spacing-2) !important;
 }
 
 .post_translate_all_icon {
   float: right;
-  margin-top: $px8;
-  margin-right: $px8;
+  margin-top: var(--spacing-8);
+  margin-right: var(--spacing-8);
 }
 
 .render_username {
@@ -2691,14 +2707,14 @@ form {
 
     &.donor {
       img {
-        box-shadow: $black-tint-01 0px $px2 $px6;
+        box-shadow: $black-tint-01 0px var(--spacing-2) var(--spacing-4);
       }
     }
   }
 
   .author_link + .user_preview {
     position: absolute;
-    top: $px17;
+    top: var(--spacing-20);
     left: 0;
     background-color: $white;
     z-index: 20;
@@ -2731,26 +2747,26 @@ form {
 }
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {
-  border: solid $px1bw $light-grey;
-  border-radius: $px5;
-  padding: $px5 $px10;
-  margin-bottom: $px15;
+  border: solid var(--border-1) $light-grey;
+  border-radius: var(--spacing-4);
+  padding: var(--spacing-8);
+  margin-bottom: var(--spacing-16);
 }
 
 #typeTab {
   a:not(.btn):active {
-    border-width: $px1bw;
+    border-width: var(--border-1);
   }
 }
 
 #communitySidebar {
   color: var(--bs-body-color);
   background-color: var(--bs-body-bg);
-  border: $px1bw solid var(--bs-border-color);
+  border: var(--border-1) solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
   max-width: 345px;
   max-height: 90vh;
-  padding: $rem1;
+  padding: var(--spacing-16);
   box-shadow: var(--bs-box-shadow);
 
   &::backdrop {
@@ -2773,9 +2789,9 @@ form {
 
 /* Voting dialog positioning */
 #voting_dialog {
-  border: $px1bw solid var(--bs-border-color);
+  border: var(--border-1) solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
-  box-shadow: 0 $rem05 $rem1 $black-tint-01;
+  box-shadow: 0 var(--spacing-8) var(--spacing-16) $black-tint-01;
   background-color: var(--bs-body-bg);
   color: var(--bs-body-color);
   padding: 0;
@@ -2790,28 +2806,28 @@ form {
     justify-content: flex-start;
 
     i {
-      margin-right: $rem05;
+      margin-right: var(--spacing-8);
     }
   }
 
 }
 
 #reaction_dialog {
-  padding: $px10;
+  padding: var(--spacing-12);
 }
 
 .message_reactions {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: var(--bs-spacer-1);
+    gap: var(--spacing-2);
     max-width: 100%;
-    row-gap: $rem03;
+    row-gap: var(--spacing-4);
 
     overflow: hidden;
     user-select: none;
 
     &:has(.message_reaction) {
-        margin-top: $px4;
+        margin-top: var(--spacing-4);
     }
 
     .message_reaction_container {
@@ -2825,7 +2841,7 @@ form {
 
     .message_reaction {
         display: flex;
-        padding: $px1x5 $px4 $px1x5 $px3;
+        padding: var(--spacing-2) var(--spacing-4) var(--spacing-4) var(--spacing-2);
         box-sizing: border-box;
         min-width: 44px;
         cursor: pointer;
@@ -2833,18 +2849,17 @@ form {
         line-height: 1;
         color: var(--bs-body-color);
         background-color: var(--bs-secondary-bg);
-        border: $px1bw solid var(--bs-border-color);
-        border-radius: 21px;
-        box-shadow: inset 0 0 $px5 0 $black-tint-01;
-        height: $px30;
-
+        border: var(--border-1) solid var(--bs-border-color);
+        border-radius: var(--spacing-24);
+        box-shadow: inset 0 0 var(--spacing-4) 0 $black-tint-01;
+        height: var(--spacing-32);
+        
         transition:
             transform 100ms linear,
             font-weight 100ms linear;
 
         div {
           position: relative;
-          top: $px1;
         }
 
         &.reacted {
@@ -2852,8 +2867,8 @@ form {
             background-color: var(--bs-primary-bg-subtle);
             border-color: var(--bs-primary-border-subtle);
 
-            border-width: $px1x5;
-            padding: $px1 $px4 $px1 $px3;
+            border-width: var(--spacing-2);
+            padding: var(--spacing-2) var(--spacing-4);
 
             font-weight: var(--bs-font-weight-semibold);
             box-shadow: none;
@@ -2872,10 +2887,10 @@ form {
         }
 
         .emoji {
-          margin: $px2 $px3;
-          padding: $px2 0px;
-          height: $px20;
-          width: $px20;
+          margin: var(--spacing-2) var(--spacing-4);
+          padding: var(--spacing-2) 0px;
+          height: var(--spacing-20);
+          width: var(--spacing-20);
           flex-shrink: 0;
           overflow: hidden;
           font-size: $fs17px;
@@ -2886,14 +2901,14 @@ form {
         }
 
         .emoji_alt_code {
-            margin: $px1 $px3;
+            margin: var(--spacing-2) var(--spacing-4);
             font-size: $fs0x8em;
         }
     }
 
     .message_reaction_count {
         font-size: $fs90pc;
-        margin: 0 $px3;
+        margin: 0 var(--spacing-2);
         line-height: $fs1x0317em;
         align-self: center;
     }
@@ -2916,12 +2931,12 @@ form {
         visibility: hidden;
         pointer-events: none;
 
-        padding: $px4 $px6;
-        border-radius: 21px;
+        padding: var(--spacing-4) var(--spacing-8);
+        border-radius: var(--spacing-24);
 
         color: var(--bs-secondary-color);
         background-color: var(--bs-body-bg);
-        border: $px1bw solid var(--bs-border-color);
+        border: var(--border-1) solid var(--bs-border-color);
 
         & i {
             font-size: $fs1em;
@@ -2937,7 +2952,7 @@ form {
             background-color: var(--bs-secondary-bg);
             border-color: var(--bs-primary-border-subtle);
 
-            box-shadow: inset 0 0 $px5 0 $black-tint-01;
+            box-shadow: inset 0 0 var(--spacing-4) 0 $black-tint-01;
             cursor: pointer;
             opacity: $opacity-10;
         }
@@ -2975,7 +2990,7 @@ form {
 .emoji-picker label {
   display: flex;
   align-items: center;
-  gap: $rem075;
+  gap: var(--spacing-12);
   cursor: pointer;
   width: 100%;
 }
@@ -2989,7 +3004,7 @@ form {
 /* Highlight selected item */
 .emoji-picker input[type="radio"]:checked + label {
   background-color: var(--bs-primary-bg-subtle);
-  border-radius: $rem0375;
+  border-radius: var(--spacing-4);
 }
 
 /* Optional hover */
@@ -3024,13 +3039,13 @@ form {
 
 .showPassword, .hidePassword {
 	position: absolute;
-	right: $px6;
-    top: $px30;
+	right: var(--spacing-8);
+    top: var(--spacing-32);
 
 	img {
 		opacity: $opacity-05;
-  	    width: $px30;
-  		height: $px30;
+  	    width: var(--spacing-32);
+  		height: var(--spacing-32);
 	}
 }
 
@@ -3049,9 +3064,9 @@ form {
 .user-suggestion-box {
   position: absolute;
   background: var(--bs-body-bg, $white);
-  border: $px1bw solid var(--bs-border-color, var(--bs-body-color));
-  border-radius: 0.375rem;
-  box-shadow: 0 $rem0125 $rem025 $black-tint-01;
+  border: var(--border-1) solid var(--bs-border-color, var(--bs-body-color));
+  border-radius: var(--spacing-4);
+  box-shadow: 0 var(--spacing-2) var(--spacing-4) $black-tint-01;
   max-height: 300px;
   overflow: hidden;
   z-index: 9999;
@@ -3059,8 +3074,8 @@ form {
 }
 
 #typeTab .nav-link {
-  padding-left: $px3;
-  padding-right: $px3;
+  padding-left: var(--spacing-4);
+  padding-right: var(--spacing-4);
 }
 
 #registration_captcha {
@@ -3078,7 +3093,7 @@ form {
 
 
 .accordion-button {
-  padding: $px7 $px12;
+  padding: var(--spacing-8) var(--spacing-12);
 }
 
 .blink {
@@ -3094,8 +3109,8 @@ form {
   }
 
   img {
-    width: $px20;
-    height: $px20;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
   }
 }
 
@@ -3126,15 +3141,15 @@ form {
 
 
 .coolfieldset.expanded legend {
-	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+	background: $whitesmoke url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .coolfieldset legend {
-	background: $super-dark-grey url(/static/images/expanded.gif) no-repeat center left;
+	background: $super-dark-grey url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .coolfieldset.collapsed legend{
-	background: $super-dark-grey url(/static/images/collapsed.gif) no-repeat center left;
+	background: $super-dark-grey url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
 }
 
 [data-bs-theme="dark"] .post_teaser_title_a {
@@ -3145,7 +3160,7 @@ form {
 }
 
 [data-bs-theme="dark"] .nav-link:focus-visible {
-  box-shadow: 0 0 0 .25rem $white-rgba-02;
+  box-shadow: 0 0 0 var(--spacing-4) $white-rgba-02;
 }
 
 [data-bs-theme="dark"] .skip-link {

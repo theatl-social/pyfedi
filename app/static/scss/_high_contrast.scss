@@ -41,10 +41,10 @@
   }
 
   .post_list .post_teaser {
-      border-bottom: solid $px1 #{$black};
+      border-bottom: solid var(--border-1) #{$black};
   }
   [data-bs-theme="dark"] .post_list .post_teaser {
-      border-bottom: solid $px1 $white;
+      border-bottom: solid var(--border-1) $white;
   }
 
   .domain_link, .domain_link a {
@@ -55,17 +55,17 @@
   }
 
   .main_pane, .voting_buttons div {
-      border: solid $px1 $darker-grey;
+      border: solid var(--border-1) $darker-grey;
   }
   [data-bs-theme="dark"] .main_pane, [data-bs-theme="dark"] .voting_buttons div {
-      border: solid $px1 $white-fade;
+      border: solid var(--border-1) $white-fade;
   }
 
   div.navbar {
-      border-bottom: solid $px1 $darker-grey;
+      border-bottom: solid var(--border-1) $darker-grey;
   }
   [data-bs-theme="dark"] div.navbar {
-      border-bottom: solid $px1 $white;
+      border-bottom: solid var(--border-1) $white;
   }
 
   .nav-link {

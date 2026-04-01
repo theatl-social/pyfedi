@@ -1,7 +1,7 @@
 @import "_layout.scss";
 
 $fs0x95rem: 0.95rem; // body styles.scss
-$fs12px: 12px; // one in styles.scss
+$fs12px: 12px; // one in styles.scss, communities_table
 $fs13px: 13px; // muted and p font style
 $fs14px: 14px; // line-height styles.scss, voting_buttons
 $fs17px: 17px; // emoji font size styles.scss
@@ -70,7 +70,7 @@ $fs150pc: 150%; // .fe
 }
 
 .dropdown-item .fe {
-  padding-right: $px5;
+  padding-right: var(--spacing-4);
 }
 
 .fe-subscription::before {
@@ -109,7 +109,7 @@ $fs150pc: 150%; // .fe
   font-size: $fs40px;
   float: right;
   position: relative;
-  top: $px10;
+  top: var(--spacing-12);
 }
 
 .fe-circle::before {
@@ -285,7 +285,7 @@ $fs150pc: 150%; // .fe
 }
 
 .fe-reply {
-  margin-top: -($px1);
+  margin-top: 1px;
 }
 
 .fe-reply::before {
@@ -306,7 +306,6 @@ $fs150pc: 150%; // .fe
 
 .fe-layers {
   position: relative;
-  top: $px1;
 }
 
 .fe-layers::before {
@@ -351,7 +350,7 @@ $fs150pc: 150%; // .fe
 
 .fe-bell, .fe-no-bell {
   position: relative;
-  top: $px1;
+  top: 1px;
 }
 .fe-bell::before {
   content: "\e91e";
@@ -384,14 +383,14 @@ $fs150pc: 150%; // .fe
 h1 {
   .fe-bell, .fe-no-bell {
     font-size: $fs18px;
-    top: -($px5);
-    left: $px17;
+    top: calc(-1 * var(--spacing-4));
+    left: var(--spacing-12);
   }
 }
 
 .fe-magnify {
   position: relative;
-  top: $px1;
+  top: 1px;
 }
 
 .fe-magnify::before {
@@ -439,7 +438,7 @@ h1 {
 
 .fe-new-account {
   position: relative;
-  top: $px1;
+  top: 1px;
   &:before {
     content: "\e986";
   }
@@ -447,7 +446,7 @@ h1 {
 
 .fe-bot-account {
   position: relative;
-  top: $px1;
+  top: 1px;
   &:before {
     content: "\e94d";
   }
@@ -475,7 +474,7 @@ h1 {
 
 .fe-audio {
   position: relative;
-  top: $px1;
+  top: 1px;
   &:before {
     content: "\e9fc";
   }
@@ -491,7 +490,7 @@ h1 {
 
 .fe-event {
   position: relative;
-  top: $px1;
+  top: 1px;
   &:before {
     content: "\e927";
   }
@@ -518,7 +517,7 @@ h1 {
   color: var(--bs-form-valid-border-color);
   font-size: $fs150pc;
   position: relative;
-  top: $px5;
+  display: flex;
 }
 
 .fe-unanswer::before {
@@ -526,7 +525,7 @@ h1 {
   color: var(--bs-danger);
   font-size: $fs150pc;
   position: relative;
-  top: $px5;
+  display: flex;
 }
 
 
