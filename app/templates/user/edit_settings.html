@@ -39,6 +39,8 @@
             {{ render_field(form.theme) }}
             {{ render_field(form.compaction) }}
             {{ render_field(form.font) }}
+            {{ render_field(form.allow_community_themes) }}
+             <small class="field_hint">{{ _('This can override your user theme in communities, that have enabled this feature') }}</small>
             <table style="width: 100%; max-width: 400px;" class="mb-3">
                 <tr>
                     <td><a href="#" id="increase_font_size">{{ _('Increase font size') }}</a></td>

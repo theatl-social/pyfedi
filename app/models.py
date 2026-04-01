@@ -532,6 +532,7 @@ class Community(db.Model):
     title = db.Column(db.String(256))
     description = db.Column(db.Text)  # markdown
     description_html = db.Column(db.Text)  # html equivalent of above markdown
+    theme = db.Column(db.String(20), default='')
     rules = db.Column(db.Text)  # this is unused but do not remove, it breaks everything
     content_warning = db.Column(db.Text)  # "Are you sure you want to view this community?"
     subscriptions_count = db.Column(db.Integer, default=0)  # Local subscribers
@@ -996,6 +997,7 @@ class User(UserMixin, db.Model):
     default_filter = db.Column(db.String(25), default='subscribed')
     theme = db.Column(db.String(20), default='')
     font = db.Column(db.String(25), default='')
+    allow_community_themes = db.Column(db.Boolean, default=True, server_default="1")
     community_keyword_filter = db.Column(db.String(150))
     referrer = db.Column(db.String(256))
     markdown_editor = db.Column(db.Boolean, default=True)
