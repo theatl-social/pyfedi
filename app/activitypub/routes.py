@@ -227,7 +227,15 @@ def nodeinfo21():
             "inbound": [],
             "outbound": []
         },
-        "metadata": {}
+        "metadata": {
+            "capabilities": [
+                "fep-1b12",
+                "fep-1a11",
+                "fep-7888",
+                "fep-c0e0",
+                "fep-5feb"
+            ]
+        }
     }
     return jsonify(nodeinfo_data)
 
