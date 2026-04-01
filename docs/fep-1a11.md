@@ -5,7 +5,7 @@ status: DRAFT
 dateReceived: 1970-01-01
 discussionsTo: https://forum.example/topics/xxxx
 ---
-# FEP-4248: Send Announces Containing Many Activities
+# FEP-1a11: Send Announces Containing Many Activities
 
 
 ## Summary
