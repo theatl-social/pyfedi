@@ -389,8 +389,10 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
         # collect all unique author IDs from posts, then only get user_notes relating to them
         author_ids = set()
+        post_ids = []
         for post in posts.items:
             author_ids.add(post.user_id)
+            post_ids.append(post.id)
 
         if author_ids:
             usernotes_query = db.session.execute(
@@ -400,6 +402,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             usernotes = {note[0]: note[1] for note in usernotes_query}
         else:
             usernotes = None
+        
+        user_votes = get_post_votes_for_posts(user_id, post_ids)
     else:
         bookmarked_posts = []
         banned_from = {}
@@ -408,15 +412,19 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         communities_moderating = []
         communities_joined = []
         usernotes = {}
+        user_votes = {}
 
     postlist = []
     for post in posts:
+        # Get the pre-fetched vote, default to 0 if not found
+        my_vote = user_votes.get(post.id, 0)
+        
         postlist.append(post_view(post=post, variant=2, stub=False, user_id=user_id,
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
                                   post_subscriptions=post_subscriptions, read_posts=read_post_set,
                                   communities_joined=communities_joined, content_filters=content_filters,
-                                  usernotes=usernotes))
+                                  usernotes=usernotes, my_vote=my_vote))
 
     list_json = {
         "posts": postlist,
@@ -424,6 +432,20 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     }
 
     return list_json
+
+
+def get_post_votes_for_posts(user_id, post_ids):
+    """Pre-fetch user votes for a list of posts to avoid N+1 queries in post_view()"""
+    if not user_id or not post_ids:
+        return {}
+    
+    votes = db.session.execute(
+        text('SELECT post_id, effect FROM "post_vote" WHERE user_id = :user_id AND post_id IN :post_ids'),
+        {'user_id': user_id, 'post_ids': tuple(post_ids)}
+    ).all()
+    
+    # Convert to a dictionary for O(1) lookup
+    return {vote[0]: vote[1] for vote in votes}
 
 
 def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -889,6 +911,12 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
 
         communities_moderating = moderating_communities_ids_all_users()
         communities_joined = joined_or_modding_communities(user.id)
+        
+        # Pre-fetch user votes to avoid N+1 queries in post_view()
+        # posts.items contains Post objects directly
+        post_objects = list(posts.items)
+        post_ids = [post.id for post in post_objects]
+        user_votes = get_post_votes_for_posts(user_id, post_ids)
     else:
         bookmarked_posts = []
         banned_from = {}
@@ -896,14 +924,19 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
         read_post_set = set()
         communities_moderating = []
         communities_joined = []
+        user_votes = {}
 
     postlist = []
     for post in posts.items:
+        # Get the pre-fetched vote, default to 0 if not found
+        my_vote = user_votes.get(post.id, 0)
+        
         postlist.append(post_view(post=post, variant=2, stub=False, user_id=user_id,
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
                                   post_subscriptions=post_subscriptions, read_posts=read_post_set,
-                                  communities_joined=communities_joined, content_filters=content_filters))
+                                  communities_joined=communities_joined, content_filters=content_filters,
+                                  my_vote=my_vote))
 
     list_json = {
         "posts": postlist,

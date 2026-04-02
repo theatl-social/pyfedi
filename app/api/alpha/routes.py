@@ -51,6 +51,9 @@ def is_trusted_request():
     return False
 
 
+get_site_response = GetSiteResponse()
+
+
 # Site
 @site_bp.route('/site', methods=['GET'])
 @site_bp.doc(summary="Gets the site, and your user data.")
@@ -62,7 +65,7 @@ def get_alpha_site():
     auth = request.headers.get('Authorization')
     with limiter.limit('20/minute'):
         resp = get_site(auth)
-    validated = GetSiteResponse().load(resp)
+    validated = get_site_response.load(resp)
     return orjson_response(validated)
 
 
@@ -480,6 +483,9 @@ def post_alpha_feed_delete(data):
     return FeedView().load(resp)
 
 
+list_posts_response = ListPostsResponse()
+
+
 # Post
 @post_bp.route('/post/list', methods=['GET'])
 @post_bp.doc(summary="List posts.")
@@ -491,8 +497,11 @@ def get_alpha_post_list(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = get_post_list(auth, data)
-    validated = ListPostsResponse().load(resp)
-    return orjson_response(validated)
+    if data.get('debug'):
+        validated = list_posts_response.load(resp)
+        return orjson_response(validated)
+    else:
+        return orjson_response(resp)
 
 
 @post_bp.route('/post/list2', methods=['GET'])
@@ -505,8 +514,11 @@ def get_alpha_post_list2(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = get_post_list2(auth, data)
-    validated = ListPostsResponse().load(resp)
-    return orjson_response(validated)
+    if data.get('debug'):
+        validated = ListPostsResponse().load(resp)
+        return orjson_response(validated)
+    else:
+        return orjson_response(resp)
 
 
 @post_bp.route('/post', methods=['GET'])
@@ -522,6 +534,9 @@ def get_alpha_post(data):
     return GetPostResponse().load(resp)
 
 
+get_post_replies_response = GetPostRepliesResponse()
+
+
 @post_bp.route('/post/replies', methods=['GET'])
 @post_bp.doc(summary="Get replies/comments for a post with nested structure.")
 @post_bp.arguments(GetPostRepliesRequest, location="query")
@@ -532,7 +547,7 @@ def get_alpha_post_replies(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = get_post_replies(auth, data)
-    validated = GetPostRepliesResponse().load(resp)
+    validated = get_post_replies_response.load(resp)
     return orjson_response(validated)
 
 
@@ -746,6 +761,9 @@ def post_alpha_post_poll_vote(data):
     return PollVoteResponse().load(resp)
 
 
+list_comments_response = ListCommentsResponse()
+
+
 # Reply
 @reply_bp.route('/comment/list', methods=['GET'])
 @reply_bp.doc(summary="List comments, with various filters.")
@@ -757,8 +775,11 @@ def get_alpha_comment_list(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = get_reply_list(auth, data)
-    validated = ListCommentsResponse().load(resp)
-    return orjson_response(validated)
+    if data.get('debug'):
+        validated = list_comments_response.load(resp)
+        return orjson_response(validated)
+    else:
+        return orjson_response(resp)
 
 
 @reply_bp.route('/comment/like', methods=['POST'])
