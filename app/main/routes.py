@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 from random import randint
 
 import flask
+from markupsafe import Markup
 from pyld import jsonld
 from sqlalchemy import or_, and_, func
 from ua_parser import parse as uaparse
@@ -1188,6 +1189,40 @@ def explore():
     return render_template('explore.html', topics=topics, menu_instance_feeds=menu_instance_feeds(),
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,)
+
+
+@bp.route('/r/random')
+@login_required_if_private_instance
+def random():
+    sql = """select c.id from "community" c
+            inner join instance i on c.instance_id = i.id
+            where c.banned is false and i.gone_forever is false and c.post_count > 0 and c.private is false
+            order by random()
+            limit 1"""
+    community_id = db.session.execute(text(sql)).scalar_one_or_none()
+    if community_id:
+        community = Community.query.get(community_id)
+        flash(Markup(_('<a href="/r/random">Try another random community</a>')))
+        return redirect(url_for('activitypub.community_profile', actor=community.link()))
+    else:
+        return render_template('generic_message.html', title=_('Sorry'), message=_('No communities found.'))
+
+
+@bp.route('/r/randnsfw')
+@login_required_if_private_instance
+def random_nsfw():
+    sql = """select c.id from "community" c
+            inner join instance i on c.instance_id = i.id
+            where c.banned is false and i.gone_forever is false and c.nsfw is true and c.post_count > 0 and c.private is false
+            order by random()
+            limit 1"""
+    community_id = db.session.execute(text(sql)).scalar_one_or_none()
+    if community_id:
+        community = Community.query.get(community_id)
+        flash(Markup(_('<a href="/r/randnsfw">Try another random community</a>')))
+        return redirect(url_for('activitypub.community_profile', actor=community.link()))
+    else:
+        return render_template('generic_message.html', title=_('Sorry'), message=_('No communities found.'))
 
 
 @bp.route('/content_warning')
