@@ -164,7 +164,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             join(Community, Community.id == CommunityMember.community_id).filter(
             Community.instance_id.not_in(blocked_instance_ids))
         
-        post_query_criteria.append('user_id = :user_id')
+        post_query_criteria.append('community_id IN (SELECT community_id FROM community_member WHERE user_id = :user_id AND is_banned = FALSE)')
         post_query_parameters['user_id'] = user_id
 
     elif (type == "ModeratorView" or type == "Moderating") and user_id is not None:
@@ -177,7 +177,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             join(Community, Community.id == CommunityMember.community_id).filter(
             Community.instance_id.not_in(blocked_instance_ids))
         
-        post_query_criteria.append('user_id = :user_id')
+        post_query_criteria.append('community_id IN (SELECT community_id FROM community_member WHERE user_id = :user_id AND is_moderator = TRUE)')
         post_query_parameters['user_id'] = user_id
 
     else:  # type == "All"
