@@ -1022,11 +1022,11 @@ div.navbar {
 }
 
 .tab-content > .tab-pane {
-  border-right: solid var(--border-1) var(--bs-body-color);
-  border-bottom: solid var(--border-1) var(--bs-body-color);
-  border-left: solid var(--border-1) var(--bs-body-color);
+  border-right: solid var(--border-1) var(--bs-border-color);
+  border-bottom: solid var(--border-1) var(--bs-border-color);
+  border-left: solid var(--border-1) var(--bs-border-color);
   border-radius: 0 0 var(--spacing-4) var(--spacing-4);
-  padding: var(--spacing-8) 0px 0px 0px;
+  padding: var(--spacing-8);
 }
 
 .tag_cloud_page > .tab-pane {
