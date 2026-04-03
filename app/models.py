@@ -774,6 +774,7 @@ class Community(db.Model):
 
     def humanize_subscribers(self, total=True, **kwargs):
         """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
+        from app.utils import humanize_number
 
         if "value" in kwargs:
             subscribers = kwargs.get("value")
@@ -782,14 +783,8 @@ class Community(db.Model):
                 subscribers = self.total_subscriptions_count if self.total_subscriptions_count else self.subscriptions_count
             else:
                 subscribers = self.subscriptions_count
-        
-        if not subscribers:
-            return "0"
 
-        if subscribers < 1000:
-            return str(subscribers)
-        else:
-            return str(int(subscribers / 100) / 10) + "k"
+        return humanize_number(subscribers)
     
     def notify_new_posts(self, user_id: int) -> bool:
         existing_notification = db.session.query(NotificationSubscription).\
