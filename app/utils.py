@@ -3243,7 +3243,7 @@ def post_ids_to_models(post_ids: List[int], sort: str):
     elif sort == 'scaled':
         posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort.startswith('top'):
-        posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.order_by(desc(Post.score))
     elif sort == 'new':
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == 'old':

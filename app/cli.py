@@ -473,6 +473,8 @@ def register(app):
                     from app import redis_client
                     try:  # avoid parallel runs of this task using Redis lock
                         with redis_client.lock("lock:send-queue", timeout=300, blocking_timeout=1):
+                            refresh_post_list_cache()
+
                             # Check size of redis memory. Abort if > 200 MB used
                             try:
                                 if redis_client and current_app.config['REDIS_MEMORY_LIMIT'] != -1 and \
@@ -604,6 +606,11 @@ def register(app):
 
                         task_selector('make_post', post_id=scheduled_post.id)
                         notify_about_post(scheduled_post)
+
+    def refresh_post_list_cache():
+        db.session.execute(text('REFRESH MATERIALIZED VIEW CONCURRENTLY post_view'))
+        db.session.execute(text('ANALYZE post_view'))
+        db.session.commit()
 
     @app.cli.command('send-batched-activities')
     def send_batched_activities_command():

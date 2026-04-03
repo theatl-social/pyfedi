@@ -1,3 +1,5 @@
+import time
+
 from flask import current_app, request, jsonify
 from flask_smorest import abort
 
