@@ -5,7 +5,6 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_communityname %}
-{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
 {% set active_child = 'home' %}
 
 {% block app_content %}
@@ -31,6 +30,7 @@
                     {% include 'post/_post_teaser.html' %}
                 </div>
             {% endfor -%}
+            {% set regular_posts_start = time.time() %}
             {% for post in posts -%}
                 {% include 'post/_post_teaser.html' %}
             {% else -%}
@@ -39,6 +39,8 @@
                     <p><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
                 {% endif -%}
             {% endfor -%}
+            {% set regular_posts_end = time.time() %}
+            <!-- Regular posts render time: {{ regular_posts_end - regular_posts_start }} -->
         </div>
 
         <nav aria-label="{{ _('Pagination') }}" class="mt-4" role="navigation">

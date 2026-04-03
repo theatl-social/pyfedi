@@ -1,5 +1,6 @@
 import os.path
 import json
+import time
 from datetime import timedelta, datetime
 from random import randint
 
@@ -26,7 +27,6 @@ from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm
 from app.post.routes import show_post
-from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
@@ -220,7 +220,7 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
                            moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            enable_mod_filter=enable_mod_filter,
-                           has_topics=num_topics() > 0,
+                           has_topics=num_topics() > 0, time=time,
                            user_pronouns=user_pronouns()
                            ))
     resp.headers.set('ETag', f"{sort}_{view_filter}_{hash(str(g.site.last_active))}")
