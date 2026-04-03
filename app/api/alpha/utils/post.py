@@ -182,6 +182,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     else:  # type == "All"
         if community_name:
+            use_faster_query = False
             segregate_instance_stickies = False
             if not '@' in community_name:
                 community_name = f"{community_name}@{current_app.config['SERVER_NAME']}"
@@ -207,6 +208,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             
             content_filters = user_filters_posts(user_id) if user_id else {}
         elif community_id:
+            use_faster_query = False
             segregate_instance_stickies = False
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
@@ -285,6 +287,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             
             content_filters = user_filters_posts(user_id) if user_id else {}
         elif person_id:
+            use_faster_query = False
             segregate_instance_stickies = False
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.community_id.not_in(blocked_community_ids),
@@ -328,6 +331,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     if user_id:
         if liked_only:
+            use_faster_query = False
             segregate_instance_stickies = False
             upvoted_post_ids = recently_upvoted_posts(user_id)
             posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
@@ -338,6 +342,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             post_query_parameters['upvoted_post_ids'] = tuple(upvoted_post_ids)
             post_query_parameters['user_id'] = user_id
         elif saved_only:
+            use_faster_query = False
             segregate_instance_stickies = False
             bookmarked_post_ids = tuple(db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
                                                      {"user_id": user_id}).scalars())
