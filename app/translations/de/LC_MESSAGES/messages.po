@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2026-03-11 19:18+1300\n"
-"PO-Revision-Date: 2026-02-12 17:11+0000\n"
+"PO-Revision-Date: 2026-03-20 22:46+0000\n"
 "Last-Translator: squirrel <squirrel@kobel.fyi>\n"
+"Language-Team: German <http://translate.piefed.social/projects/piefed/"
+"main-web-app/de/>\n"
 "Language: de\n"
-"Language-Team: German <http://translate.piefed.social/projects/piefed"
-"/main-web-app/de/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.17.0\n"
 
 #: app/__init__.py:54
@@ -161,16 +161,16 @@ msgstr "Beitrag verschieben"
 
 #: app/utils.py:696
 msgid "You can download a copy of the file instead."
-msgstr ""
+msgstr "Du kannst stattdessen eine Kopie der Datei runterladen."
 
 #: app/utils.py:702
 msgid "Your browser does not support playing HTML5 video."
-msgstr ""
+msgstr "Dein Browser unterstützt nicht die Wiedergabe von HTML5-Video."
 
 #: app/utils.py:704
 #, python-format
 msgid "Here is a description of the content: %s"
-msgstr ""
+msgstr "Hier ist eine Beschreibung des Inhalts: %s"
 
 #: app/auth/routes.py:173 app/auth/util.py:454 app/post/routes.py:849
 #: app/shared/auth.py:68 app/utils.py:2504
@@ -256,6 +256,8 @@ msgid ""
 "You have blocked %(instance_name)s which hosts this community so none of "
 "your posts or comments will be sent there."
 msgstr ""
+"Du hast %(instance_name)s blockiert welche diese Community hostet. Also "
+"werden keine deiner Beiträge oder Kommentare dorthin gesendet."
 
 #: app/utils.py:4258
 #, python-format
@@ -263,6 +265,8 @@ msgid ""
 "You have been banned from %(instance_name)s which hosts this community so"
 " none of your posts or comments will be accepted by them."
 msgstr ""
+"Du wurdest von %(instance_name)s, welche diese Community hostet, gebannt. "
+"Also werden keine deiner Beiträge oder Kommentare dort akzeptiert."
 
 #: app/activitypub/routes.py:547 app/activitypub/routes.py:551
 msgid "Community not found on this instance"
@@ -2993,15 +2997,15 @@ msgstr[1] ""
 #, python-format
 msgid "using %(num)d chat message"
 msgid_plural "using %(num)d chat messages"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "nutze %(num)d Chat-Nachricht"
+msgstr[1] "nutze %(num)d Chat-Nachrichten"
 
 #: app/community/routes.py:2457
 #, python-format
 msgid "and %(num)d email"
 msgid_plural "and %(num)d emails"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "und %(num)d E-Mail"
+msgstr[1] "und %(num)d E-Mails"
 
 #: app/community/routes.py:2461
 #, python-format
@@ -3316,7 +3320,7 @@ msgstr "Community in die gepostet werden soll"
 #: app/post/forms.py:69 app/post/forms.py:137
 #: app/templates/search/_search_form.html:25
 msgid "Enter a community name in the format xyz@example.com"
-msgstr ""
+msgstr "Gib einen Community-Namen im Format xyz@example.com ein"
 
 #: app/post/forms.py:75 app/post/forms.py:81 app/post/forms.py:87
 #: app/templates/admin/instances.html:91 app/templates/admin/users.html:44
@@ -11228,4 +11232,3 @@ msgstr "Deine Spende wurde storniert."
 
 #~ msgid "Suggest a topic\""
 #~ msgstr "Thema vorschlagen\""
-
