@@ -1218,6 +1218,7 @@ def random():
 
 
 @bp.route('/r/randnsfw')
+@bp.route('/r/randomnsfw')
 @login_required_if_private_instance
 def random_nsfw():
     if blocked := blocked_or_banned_instances(current_user.get_id()):
