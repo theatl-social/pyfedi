@@ -107,7 +107,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.up_votes - post.down_votes, 'upvotes': post.up_votes,
                   'downvotes': post.down_votes,
                   'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
-                  'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z',
+                  'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z' if post.last_active else post.posted_at.isoformat(timespec="microseconds") + 'Z',
                   'cross_posts': len(post.cross_posts) if post.cross_posts else 0}
         
         if user_id:
