@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 import flask
-from flask_babel import get_locale
+from flask_babel import get_locale, ngettext
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 
@@ -65,6 +65,7 @@ with app.app_context():
     app.jinja_env.globals['theme'] = current_theme
     app.jinja_env.globals['file_exists'] = os.path.exists
     app.jinja_env.globals['first_paragraph'] = first_paragraph
+    app.jinja_env.globals['ngettext'] = ngettext
     app.jinja_env.globals['html_to_text'] = html_to_text
     app.jinja_env.globals['csrf_token'] = generate_csrf
     app.jinja_env.globals['debug_checkpoint'] = debug_checkpoint
