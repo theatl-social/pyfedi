@@ -125,6 +125,10 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         post_query_criteria.append(f'user_id NOT IN :blocked_person_ids')
         post_query_parameters['blocked_person_ids'] = tuple(blocked_person_ids)
 
+    if blocked_community_ids:
+        post_query_criteria.append('community_id NOT IN :blocked_community_ids')
+        post_query_parameters['blocked_community_ids'] = tuple(blocked_community_ids)
+
     if blocked_domain_ids and not (type == "ModeratorView" or type == "Moderating"):
         post_query_criteria.append('(domain_id is null OR domain_id NOT IN :blocked_domain_ids)')
         post_query_parameters['blocked_domain_ids'] = tuple(blocked_domain_ids)
