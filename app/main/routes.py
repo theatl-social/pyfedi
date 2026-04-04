@@ -1192,13 +1192,14 @@ def explore():
 
 
 @bp.route('/r/random')
+@bp.route('/random')
 @login_required_if_private_instance
 def random():
     if blocked := blocked_or_banned_instances(current_user.get_id()):
         sql = """select c.id from "community" c
                 inner join instance i on c.instance_id = i.id
                 where c.banned is false and i.gone_forever is false and c.post_count > 0 and c.private is false
-                and i.id not in :blocked_instances
+                and i.id not in :blocked_instances and c.nsfw is false 
                 order by random()
                 limit 1"""
         community_id = db.session.execute(text(sql), {'blocked_instances': tuple(blocked)}).scalar_one_or_none()
@@ -1219,6 +1220,7 @@ def random():
 
 @bp.route('/r/randnsfw')
 @bp.route('/r/randomnsfw')
+@bp.route('/randomnsfw')
 @login_required_if_private_instance
 def random_nsfw():
     if blocked := blocked_or_banned_instances(current_user.get_id()):
