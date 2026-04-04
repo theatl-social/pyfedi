@@ -1584,7 +1584,7 @@ class Post(db.Model):
     from_bot = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the content arrived here
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the original server created it
-    last_active = db.Column(db.DateTime, index=True, default=utcnow)
+    last_active = db.Column(db.DateTime, index=True)
     ip = db.Column(db.String(50))
     up_votes = db.Column(db.Integer, default=0)
     down_votes = db.Column(db.Integer, default=0)

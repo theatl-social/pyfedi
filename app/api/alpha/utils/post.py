@@ -496,9 +496,9 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         post_query_criteria.extend(['ranking_scaled IS NOT NULL', 'from_bot = false'])
         sql_order_by.extend(['ranking_scaled DESC', 'ranking DESC', 'posted_at DESC'])
     elif sort == "Active":
-        posts = posts.filter(Post.reply_count > 0)
+        posts = posts.filter(Post.last_active != None)
         posts = posts.order_by(desc(Post.last_active))
-        post_query_criteria.append('reply_count > 0')
+        post_query_criteria.append('last_active is not null')
         sql_order_by.append('last_active DESC')
     elif sort.startswith("Old"):
         posts = posts.order_by(asc(Post.posted_at))
