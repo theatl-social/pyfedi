@@ -2545,8 +2545,8 @@ a.unread:before, div.unread:before {
   color: black;
 }
 .warning_badge.ai_generated {
-  border: var(--border-1) solid #722047;
-  color: #722047;
+  border: var(--border-1) solid #FF585B;
+  color: #FF585B;
 }
 
 [data-bs-theme=dark] .warning_badge.ai_generated {

@@ -2013,8 +2013,8 @@ a.unread, div.unread {
   }
 
   &.ai_generated {
-    border:var(--border-1) solid $burgundy;
-    color:$burgundy;
+    border:var(--border-1) solid $danger;
+    color:$danger;
   }
 }
 

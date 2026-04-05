@@ -1421,6 +1421,7 @@ class User(UserMixin, db.Model):
         db.session.execute(text('DELETE FROM "hidden_posts" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
+        db.session.query(ArchivedPostReply).filter(ArchivedPostReply.user_id == self.id).delete()
         db.session.query(Filter).filter(Filter.user_id == self.id).delete()
         db.session.query(UserFlair).filter(UserFlair.user_id == self.id).delete()
         db.session.query(UserFollower).filter(or_(UserFollower.local_user_id == self.id, UserFollower.remote_user_id == self.id)).delete()
@@ -2188,6 +2189,7 @@ class Post(db.Model):
             db.session.query(Report).filter(Report.suspect_post_reply_id == reply.id).delete()
 
         if self.archived:
+            db.session.query(ArchivedPostReply).filter(ArchivedPostReply.post_id == self.id).delete()
             if self.archived.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
                 from app.shared.tasks.maintenance import delete_from_s3
                 s3_path = self.archived.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
@@ -4004,6 +4006,14 @@ class Emoji(db.Model):
     category = db.Column(db.String(20))
     aliases = db.Column(db.String(100), index=True)
     instance_id = db.Column(db.Integer, index=True)
+
+
+class ArchivedPostReply(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    post_id = db.Column(db.Integer, index=True)
+    post_reply_id = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime)
 
 
 def _large_community_subscribers() -> float:

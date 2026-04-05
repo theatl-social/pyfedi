@@ -880,6 +880,7 @@ def archive_old_posts():
                   AND p.created_at < :cutoff
                   AND p.sticky = false
                   AND c.can_be_archived = true
+                  AND c.private = false
                   AND p.id NOT IN (
                       SELECT p2.id 
                       FROM "post" p2 

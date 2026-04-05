@@ -59,7 +59,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag, Emoji, UserExtraField
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag, Emoji, UserExtraField, ArchivedPostReply
 
 
 # Flask's render_template function, with support for themes added
@@ -4064,10 +4064,12 @@ def archive_post(post_id: int):
                 )
 
                 for reply in session.query(PostReply).filter(PostReply.post_id == post.id).order_by(desc(PostReply.created_at)):
+                    session.add(ArchivedPostReply(user_id=reply.user_id, post_id=post.id, post_reply_id=reply.id,
+                                                  created_at=reply.created_at))
                     if reply.id not in bookmarked_reply_ids:
                         reply.delete_dependencies()
                         session.delete(reply)
-                        session.commit()
+                    session.commit()
 
     except Exception:
         session.rollback()

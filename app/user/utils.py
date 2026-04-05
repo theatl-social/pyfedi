@@ -1,16 +1,19 @@
 import random
 import time
-from time import sleep
 
-from flask import current_app, json
+from flask import current_app
+from flask_login import current_user
+from sqlalchemy import text, desc, or_
 
 from app import celery, db
-from app.activitypub.signature import post_request, default_context, signed_get_request, send_post_request
+from app.activitypub.signature import signed_get_request, send_post_request
 from app.activitypub.util import actor_json_to_model
-from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
-from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
+from app.constants import POST_STATUS_REVIEWING
+from app.models import User, CommunityMember, Community, Site, BannedInstances, Post, \
+    PostVote, ArchivedPostReply, PostReply
 from app.shared.tasks import task_selector
-from app.utils import gibberish, ap_datetime, instance_banned, get_request, get_task_session, patch_db_session
+from app.utils import gibberish, get_request, get_task_session, patch_db_session, \
+    intlist_to_strlist, community_membership_private
 
 import httpx
 
@@ -154,3 +157,130 @@ def search_for_user(address: str, allow_fetch: bool = True):
 
     return None
 
+
+def _get_user_posts(user, post_page):
+    """Get posts for a user based on current user's permissions."""
+    base_query = Post.query.filter_by(user_id=user.id).filter(Post.community_id.not_in(community_membership_private(user.id)))
+
+    if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
+        # Admins see everything
+        return base_query.order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+    elif current_user.is_authenticated and current_user.id == user.id:
+        # Users see their own posts including soft-deleted ones they deleted
+        return base_query.filter(
+            or_(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.deleted_by == user.id)
+        ).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+    else:
+        # Everyone else sees only public, non-deleted posts
+        return base_query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(
+            desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+
+
+def _get_user_post_replies(user, replies_page):
+    """Get post replies for a user based on current user's permissions."""
+    base_query = PostReply.query.filter_by(user_id=user.id).filter(PostReply.community_id.not_in(community_membership_private(user.id)))
+
+    if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
+        # Admins see everything
+        return base_query.order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+    elif current_user.is_authenticated and current_user.id == user.id:
+        # Users see their own replies including soft-deleted ones they deleted
+        return base_query.filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(
+            desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+    else:
+        # Everyone else sees only non-deleted replies
+        return base_query.filter(PostReply.deleted == False).order_by(
+            desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+
+
+def _get_user_posts_and_replies(user, page):
+    """Get list of posts and replies in reverse chronological order based on current user's permissions"""
+    returned_list = []
+    user_id = user.id
+    per_page = 20
+    offset_val = (page - 1) * per_page
+    next_page = False
+
+    private = ','.join(intlist_to_strlist(community_membership_private(user_id)))
+    if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
+        # Admins see everything
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f" AND community_id NOT IN ({private})"
+    elif current_user.is_authenticated and current_user.id == user_id:
+        # Users see their own posts/replies including soft-deleted ones they deleted
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f" AND community_id NOT IN ({private})"
+    else:
+        # Everyone else sees only non-deleted posts/replies
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f" AND community_id NOT IN ({private})"
+
+    full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
+    query_result = db.session.execute(text(full_query))
+
+    for row in query_result:
+        if row.type == "post":
+            returned_list.append(Post.query.get(row.id))
+        elif row.type == "reply":
+            returned_list.append(PostReply.query.get(row.id))
+
+    if len(returned_list) > per_page:
+        next_page = True
+        returned_list = returned_list[:-1]
+
+    return (returned_list, next_page)
+
+
+def _get_user_archived_replies(user):
+    return ArchivedPostReply.query.filter(ArchivedPostReply.user_id == user.id).\
+        order_by(desc(ArchivedPostReply.created_at)).all()
+
+
+def _get_user_moderates(user):
+    """Get communities moderated by user."""
+
+    moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(
+        CommunityMember.user_id == user.id). \
+        filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner)). \
+        order_by(Community.name)
+
+    # Hide private mod communities unless user is admin or viewing their own profile
+    if current_user.is_anonymous or (user.id != current_user.id and not current_user.is_admin()):
+        moderates = moderates.filter(Community.private_mods == False)
+
+    return moderates.all()
+
+
+def _get_user_same_ip(user):
+    """Get users that have the same IP address as this user"""
+
+    if current_user.is_anonymous or user.ip_address is None or user.ip_address == '':
+        return []
+
+    return User.query.filter_by(ip_address=user.ip_address).filter(User.ap_id == None, User.id != user.id).all()
+
+
+def _get_user_upvoted_posts(user):
+    """Get posts upvoted by user (only for user themselves or admins)."""
+    if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()):
+        return Post.query.join(PostVote, PostVote.post_id == Post.id).filter(PostVote.effect > 0, PostVote.user_id == user.id). \
+            order_by(desc(PostVote.created_at)).limit(10).all()
+    return []
+
+
+def _get_user_subscribed_communities(user):
+    """Get communities subscribed to by user."""
+    if current_user.is_authenticated and (user.id == current_user.get_id()
+                                          or current_user.is_staff() or current_user.is_admin()
+                                          or user.show_subscribed_communities):
+        return Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).order_by(Community.name).all()
+    return []
