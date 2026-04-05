@@ -1373,6 +1373,8 @@ def import_settings_task(user_id, redis_key):
                     if note_target:
                         session.add(UserNote(user_id=user.id, target_id=note_target.id, body=user_note['body']))
 
+                cache.delete_memoized(user_notes, user.id)
+
                 for instance_domain in contents_json['blocked_instances'] if 'blocked_instances' in contents_json else []:
                     instance = Instance.query.filter(Instance.domain == instance_domain).first()
                     if instance:
@@ -2001,6 +2003,7 @@ def edit_user_note(actor):
         db.session.commit()
         from app.api.alpha.views import user_view
         cache.delete_memoized(user_view)
+        cache.delete_memoized(user_notes, current_user.id)
 
         flash(_('Your changes have been saved.'), 'success')
         if return_to:
