@@ -27,6 +27,8 @@ from flask_babel import _
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm
+from app.main.util import sidebar_active_communities, sidebar_new_instances, sidebar_upcoming_events, \
+    sidebar_new_communities
 from app.post.routes import show_post
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
@@ -150,48 +152,11 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
     prev_url = url_for('main.index', page=page - 1, sort=sort, view_filter=view_filter,
                        result_id=result_id) if page > 0 else None
 
-    # Active Communities
-    active_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False).filter_by(private=False)
-    if current_user.is_authenticated:  # do not show communities current user is banned from
-        banned_from = communities_banned_from(current_user.id)
-        if banned_from:
-            active_communities = active_communities.filter(Community.id.not_in(banned_from))
-        community_ids = blocked_communities(current_user.id)
-        if community_ids:
-            active_communities = active_communities.filter(Community.id.not_in(community_ids))
-        active_communities = active_communities.filter(Community.instance_id.not_in(blocked_or_banned_instances(current_user.id)))
-
-    active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
-
-    # New Communities
-    cutoff = utcnow() - timedelta(days=30)
-    new_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False).\
-        filter_by(private=False).filter(Community.created_at > cutoff)
-    if current_user.is_authenticated:  # do not show communities current user is banned from
-        banned_from = communities_banned_from(current_user.id)
-        if banned_from:
-            new_communities = new_communities.filter(Community.id.not_in(banned_from))
-        community_ids = blocked_communities(current_user.id)
-        if community_ids:
-            new_communities = new_communities.filter(Community.id.not_in(community_ids))
-        new_communities = new_communities.filter(Community.instance_id.not_in(blocked_or_banned_instances(current_user.id)))
-    new_communities = new_communities.order_by(desc(Community.first_federated_at)). \
-        order_by(desc(Community.created_at)).limit(5).all()
-
-    # New Instances
-    instances = db.session.query(Instance).\
-        outerjoin(BannedInstances, BannedInstances.domain == Instance.domain).\
-        filter(Instance.gone_forever == False, Instance.dormant == False,
-               BannedInstances.id == None, Instance.software == 'piefed').\
-        order_by(desc(Instance.created_at)).limit(5).all()
-
-    # Upcoming events
-    upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
-                                                 INNER JOIN post p on e.post_id = p.id
-                                                 WHERE e.start > now() AND p.deleted is false 
-                                                 AND p.status > :reviewing
-                                                 ORDER BY e.start LIMIT 5"""),
-                                         {'reviewing': POST_STATUS_REVIEWING}).all()
+    # Sidebar
+    active_communities = sidebar_active_communities(current_user.get_id())
+    new_communities = sidebar_new_communities(current_user.get_id())
+    instances = sidebar_new_instances()
+    upcoming_events = sidebar_upcoming_events()
 
     # Voting history and ban status
     if current_user.is_authenticated:

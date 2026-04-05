@@ -159,6 +159,8 @@ def add_local():
         cache.delete_memoized(joined_communities, current_user.id)
         cache.delete_memoized(moderating_communities, current_user.id)
         cache.delete_memoized(community_membership_private, current_user.id)
+        from app.main.util import sidebar_new_communities
+        cache.delete_memoized(sidebar_new_communities, current_user.id)
         return redirect('/c/' + community.name)
     else:
         form.publicize.data = not current_app.debug and not current_app.config['CONTENT_WARNING']
@@ -207,6 +209,8 @@ def add_remote():
                 flash(_('Community not found. If you are searching for a nsfw community it is blocked by this instance.'),
                       'warning')
         else:
+            from app.main.util import sidebar_new_communities
+            cache.delete_memoized(sidebar_new_communities, current_user.id)
             if new_community.banned:
                 flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
 
