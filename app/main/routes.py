@@ -28,7 +28,7 @@ from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm
 from app.main.util import sidebar_active_communities, sidebar_new_instances, sidebar_upcoming_events, \
-    sidebar_new_communities
+    sidebar_new_communities, _base_list_communities_context
 from app.post.routes import show_post
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
@@ -209,41 +209,25 @@ def list_topics():
     return render_template('list_topics.html', topics=topics, title=_('Browse by topic'),
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
 
+
 @bp.route('/add_post', methods=['GET'])
 @login_required
 def add_post():
     poss_communities = possible_communities()
-    default_community_id = -1
-    if "Joined communities" in poss_communities:
-        default_community_id = possible_communities()["Joined communities"][0][0]
-    elif "Moderating" in poss_communities:
-        default_community_id = possible_communities()["Moderating"][0][0]
-    elif "Others" in poss_communities:
-        default_community_id = possible_communities()["Others"][0][0]
+    if request.cookies.get('cross_post_community_id'):
+        default_community_id = int(request.cookies.get('cross_post_community_id'))
+    else:
+        default_community_id = -1
+        if "Joined communities" in poss_communities:
+            default_community_id = possible_communities()["Joined communities"][0][0]
+        elif "Moderating" in poss_communities:
+            default_community_id = possible_communities()["Moderating"][0][0]
+        elif "Others" in poss_communities:
+            default_community_id = possible_communities()["Others"][0][0]
     if default_community_id == -1:
         return ('', 204)
     default_community = Community.query.get(default_community_id)
-    return redirect(url_for('community.add_post',actor=default_community.link()))
-
-def _base_list_communities_context():
-    create_admin_only = g.site.community_creation_admin_only
-    default_user_add_remote = get_setting("allow_default_user_add_remote_community", True) 
-
-    is_admin = current_user.is_authenticated and current_user.is_admin()
-    is_staff = current_user.is_authenticated and current_user.is_staff()
-    return {
-        "SUBSCRIPTION_PENDING": SUBSCRIPTION_PENDING,
-        "SUBSCRIPTION_MEMBER": SUBSCRIPTION_MEMBER,
-        "SUBSCRIPTION_OWNER": SUBSCRIPTION_OWNER,
-        "SUBSCRIPTION_MODERATOR": SUBSCRIPTION_MODERATOR,
-        "current_user": current_user,
-        "is_admin": is_admin,
-        "is_staff": is_staff,
-        "create_admin_only": create_admin_only,
-        "default_user_add_remote": default_user_add_remote,
-        "joined_communities": joined_or_modding_communities(current_user.get_id()),
-        "pending_communities": pending_communities(current_user.get_id())
-    } 
+    return redirect(url_for('community.add_post', actor=default_community.link()))
 
 
 @bp.route('/communities', methods=['GET'])
