@@ -244,9 +244,9 @@ def list_topics():
     return render_template('list_topics.html', topics=topics, title=_('Browse by topic'),
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
 
-@bp.route('/create_post', methods=['GET'])
+@bp.route('/add_post', methods=['GET'])
 @login_required
-def create_post():
+def add_post():
     poss_communities = possible_communities()
     default_community_id = -1
     if "Joined communities" in poss_communities:
