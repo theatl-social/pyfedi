@@ -244,6 +244,21 @@ def list_topics():
     return render_template('list_topics.html', topics=topics, title=_('Browse by topic'),
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
 
+@bp.route('/create_post', methods=['GET'])
+@login_required
+def create_post():
+    poss_communities = possible_communities()
+    default_community_id = -1
+    if "Joined communities" in poss_communities:
+        default_community_id = possible_communities()["Joined communities"][0][0]
+    elif "Moderating" in poss_communities:
+        default_community_id = possible_communities()["Moderating"][0][0]
+    elif "Others" in poss_communities:
+        default_community_id = possible_communities()["Others"][0][0]
+    if default_community_id == -1:
+        return ('', 204)
+    default_community = Community.query.get(default_community_id)
+    return redirect(url_for('community.add_post',actor=default_community.link()))
 
 def _base_list_communities_context():
     create_admin_only = g.site.community_creation_admin_only
@@ -872,7 +887,6 @@ def share():
                                                                             Post.status > POST_STATUS_REVIEWING).all()
 
     return render_template('share.html', form=form, title=request.args.get('title'), communities=communities)
-
 
 @bp.route('/protocol_handler')
 @login_required
