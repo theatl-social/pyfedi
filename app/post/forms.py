@@ -66,7 +66,7 @@ class CrossPostForm(FlaskForm):
                                              'hx-swap': 'innerHTML settle:0ms',
                                              'autocomplete': 'off',
                                              'pattern': r'!?[^@\s]+@[^@\s]+\.[^@\s]+',
-                                             'title': _l('Enter a community name in the format xyz@example.com')})
+                                             'title': _l('Enter a community name in the format community@server.name')})
     submit = SubmitField(_l('Next'))
 
 
@@ -134,6 +134,6 @@ class MovePostForm(FlaskForm):
                                             'hx-swap': 'innerHTML settle:0ms',
                                             'autocomplete': 'off',
                                             'pattern': r'!?[^@\s]+@[^@\s]+\.[^@\s]+',
-                                            'title': _l('Enter a community name in the format xyz@example.com')
+                                            'title': _l('Enter a community name in the format community@server.name')
                                             })
     submit = SubmitField(_l('Move'))
