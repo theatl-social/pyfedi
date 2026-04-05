@@ -240,6 +240,13 @@
                                     {% endif -%}
                                 </ul>
                             </li>
+                            <li class="nav-item dropdown{% if active_parent == 'create' %} active{% endif %} create_menu_parent">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="{% if community %}{{ url_for('community.add_post', actor=community.link()) }} {% else %}{{url_for('main.add_post') }}{% endif %}" aria-haspopup="true" aria-expanded="false">{{ _('Create') }}</a>
+                                <ul class="dropdown-menu text-end text-lg-start">
+                                    <li><a class="dropdown-item{{ ' active' if active_child == 'create_post' }}" href="{% if community %}{{ url_for('community.add_post', actor=community.link()) }} {% else %}{{url_for('main.add_post') }}{% endif %}">{{ _('Post') }}</a></li>
+                                    <li><a class="dropdown-item{{ ' active' if active_child == 'create_community' }}" href="{{ url_for('community.add_local') }}">{{ _('Community') }}</a></li>
+                                    </ul>
+                            </li>
                             {% if current_user.is_admin_or_staff() %}
                                 <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %} admin_menu_parent">
                                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
