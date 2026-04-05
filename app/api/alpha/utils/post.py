@@ -1458,13 +1458,10 @@ def post_post_delete(auth, data):
     post_id = data['post_id']
     deleted = data['deleted']
 
-    from app import redis_client
-    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
-
-        if deleted == True:
-            user_id, post = delete_post(post_id, True, SRC_API, auth)
-        else:
-            user_id, post = restore_post(post_id, SRC_API, auth)
+    if deleted:
+        user_id, post = delete_post(post_id, True, SRC_API, auth)
+    else:
+        user_id, post = restore_post(post_id, SRC_API, auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json
@@ -1533,14 +1530,12 @@ def post_post_remove(auth, data):
     post_id = data['post_id']
     removed = data['removed']
 
-    from app import redis_client
-    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
-        if removed == True:
-            reason = data['reason'] if 'reason' in data else 'Removed by mod'
-            user_id, post = mod_remove_post(post_id, reason, SRC_API, auth)
-        else:
-            reason = data['reason'] if 'reason' in data else 'Restored by mod'
-            user_id, post = mod_restore_post(post_id, reason, SRC_API, auth)
+    if removed:
+        reason = data['reason'] if 'reason' in data else 'Removed by mod'
+        user_id, post = mod_remove_post(post_id, reason, SRC_API, auth)
+    else:
+        reason = data['reason'] if 'reason' in data else 'Restored by mod'
+        user_id, post = mod_restore_post(post_id, reason, SRC_API, auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json

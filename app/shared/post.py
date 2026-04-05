@@ -998,19 +998,21 @@ def mod_remove_post(post_id: int, reason, src, auth):
     else:
         user = current_user
 
-    post = db.session.query(Post).get(post_id)
+    from app import redis_client
+    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
+        post = db.session.query(Post).get(post_id)
 
-    if not post.community.is_moderator(user) and not user.is_admin_or_staff():
-        raise Exception('Does not have permission')
+        if not post.community.is_moderator(user) and not user.is_admin_or_staff():
+            raise Exception('Does not have permission')
 
-    if post.url:
-        post.calculate_cross_posts(delete_only=True)
+        if post.url:
+            post.calculate_cross_posts(delete_only=True)
 
-    post.deleted = True
-    post.deleted_by = user.id
-    post.author.post_count -= 1
-    post.community.post_count -= 1
-    db.session.commit()
+        post.deleted = True
+        post.deleted_by = user.id
+        post.author.post_count -= 1
+        post.community.post_count -= 1
+        db.session.commit()
 
     add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason,
                   community=post.community, post=post,
@@ -1039,18 +1041,20 @@ def mod_restore_post(post_id: int, reason, src, auth):
     else:
         user = current_user
 
-    post = db.session.query(Post).get(post_id)
-    if not post.community.is_moderator(user) and not user.is_admin_or_staff():
-        raise Exception('Does not have permission')
+    from app import redis_client
+    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
+        post = db.session.query(Post).get(post_id)
+        if not post.community.is_moderator(user) and not user.is_admin_or_staff():
+            raise Exception('Does not have permission')
 
-    if post.url:
-        post.calculate_cross_posts()
+        if post.url:
+            post.calculate_cross_posts()
 
-    post.deleted = False
-    post.deleted_by = None
-    post.author.post_count += 1
-    post.community.post_count += 1
-    db.session.commit()
+        post.deleted = False
+        post.deleted_by = None
+        post.author.post_count += 1
+        post.community.post_count += 1
+        db.session.commit()
 
     add_to_modlog('restore_post', actor=user, target_user=post.author, reason=reason,
                   community=post.community, post=post,
