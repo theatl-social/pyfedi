@@ -5,6 +5,7 @@
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import imaplib
+import logging
 import os
 import re
 import uuid
@@ -19,6 +20,7 @@ import redis
 from flask import json, current_app
 from flask_babel import _, force_locale
 from sqlalchemy import or_, desc, text
+from sqlalchemy.dialects.postgresql import insert
 
 from app import db, plugins
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
@@ -28,7 +30,7 @@ from app.community.util import is_bad_name
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
     POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE, NOTIF_REMINDER
 from app.email import send_email
-from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
+from app.models import CronJobLog, Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
     Community, SendQueue, _store_files_in_s3, PostVote, Poll, \
     ActivityBatch, Reminder
@@ -40,6 +42,8 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
     guess_mime_type, ensure_directory_exists, \
     render_from_tpl, get_task_session, patch_db_session, get_setting, get_recipient_language
+
+logger = logging.getLogger(__name__)
 
 
 def register(app):
@@ -117,6 +121,21 @@ def register(app):
                 # if the check fails just warn and continue
                 print(f"Warning: Could not check database encoding: {e}")
                 print("If using PostgreSQL, please ensure your database uses UTF8 encoding.")
+
+            # Drop materialized views first
+            try:
+                # List all materialized views that need to be dropped
+                materialized_views = ['post_view']  # Add others as discovered
+                for view in materialized_views:
+                    try:
+                        db.session.execute(text(f"DROP MATERIALIZED VIEW IF EXISTS {view} CASCADE"))
+                        logger.info(f"Dropped materialized view: {view}")
+                    except Exception as e:
+                        logger.warning(f"Warning: Could not drop {view}: {e}")
+                db.session.commit()
+            except Exception as e:
+                logger.error(f"Warning: Could not drop materialized views: {e}")
+                db.session.rollback()
 
             db.drop_all()
 
@@ -393,6 +412,28 @@ def register(app):
                 clean_up_tmp.delay()
                 print('All maintenance tasks scheduled successfully (production mode)')
 
+
+            session = get_task_session()
+            try:
+                with patch_db_session(session):
+                    stmt = insert(CronJobLog).values(
+                        name="daily_maintenance_celery",
+                        last_run=utcnow()
+                    )
+
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=['name'],  # conflict target
+                        set_=dict(last_run=stmt.excluded.last_run)  # what to update
+                    )
+                    db.session.execute(stmt)
+                    db.session.commit()
+            except Exception as e:
+                logging.error(f"error while saving cron logs to db: {e}")
+                session.rollback()
+            finally:
+                session.close()
+                session = get_task_session()
+
             plugins.fire_hook('cron_daily')
 
     @app.cli.command('daily-maintenance')
@@ -455,6 +496,25 @@ def register(app):
         print(f'21 {datetime.now()}')
         archive_old_users()
         print(f'Finished {datetime.now()}')
+
+        session = get_task_session()
+        try:
+            stmt = insert(CronJobLog).values(
+                name="daily_maintenance",
+                last_run=utcnow()
+            )
+
+            stmt = stmt.on_conflict_do_update(
+                index_elements=['name'],  # conflict target
+                set_=dict(last_run=stmt.excluded.last_run)  # what to update
+            )
+            db.session.execute(stmt)
+            db.session.commit()
+        except Exception as e:
+            logging.error(f"error while saving cron logs to db: {e}")
+            session.rollback()
+        finally:
+            session.close()
 
     @app.cli.command('archive-old-posts')
     def archive_old_p():
