@@ -3585,13 +3585,14 @@ def notify_admin(title, url, author_id, notif_type, subtype, targets):
     db.session.commit()
 
 
-def reported_posts(user_id, admin_ids) -> List[int]:
+@cache.memoize(timeout=60)
+def reported_posts(user_id: int, is_admin: bool) -> List[int]:
     if user_id is None:
         return []
-    if user_id in admin_ids:
+    if is_admin:
         post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0')).scalars())
     else:
-        community_ids = [community.id for community in moderating_communities(user_id)]
+        community_ids = moderating_communities_ids(user_id)
         if len(community_ids) > 0:
             post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0 AND community_id IN :community_ids'),
                                                {'community_ids': tuple(community_ids)}).scalars())
@@ -3646,6 +3647,7 @@ def possible_communities():
     return which_community
 
 
+@cache.memoize(timeout=300)
 def user_notes(user_id):
     if user_id is None:
         return {}
