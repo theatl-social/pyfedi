@@ -1,6 +1,7 @@
 from datetime import timedelta
 from typing import List
 
+from flask import g
 from flask_login import current_user
 from sqlalchemy import desc, text
 
