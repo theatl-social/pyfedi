@@ -101,7 +101,7 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
 
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
-        if request_etag_matches(current_etag):
+        if current_user.is_anonymous and request_etag_matches(current_etag):
             return return_304(current_etag)
 
         if post.mea_culpa:
@@ -434,7 +434,7 @@ def post_embed(post_id):
 
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}_{hash(post.last_active)}"
-        if request_etag_matches(current_etag):
+        if current_user.is_anonymous and request_etag_matches(current_etag):
             return return_304(current_etag)
 
         if post.mea_culpa:
