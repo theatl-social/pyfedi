@@ -100,6 +100,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                 site = session.query(Site).get(1)
 
                 is_peertube = is_guppe = is_wordpress = False
+                mod = None
                 if community.ap_profile_id == f"https://{server}/video-channels/{name}":
                     is_peertube = True
                 elif community.ap_profile_id.startswith('https://ovo.st/club'):
@@ -176,7 +177,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                 is_wordpress = True
                             if not activity:
                                 return
-                            if is_peertube:
+                            if is_peertube and mod:
                                 user = mod
                             elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
                                 user = find_actor_or_create(activity['attributedTo'])
