@@ -16,6 +16,7 @@ post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWe
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
 community_sort_list = ["Hot", "Top", "New", "Old", "Active", "TopAll", "TopPosts", "TopSubscribers", "NewFederated", "OldFederated"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
+nsfw_type_list = ["Exclude", "Only", "Include"]
 community_listing_type_list = ["All", "Local", "Subscribed", "Moderating", "ModeratorView"]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
@@ -1470,6 +1471,7 @@ class ListPostsRequest(Schema):
     community_name = fields.String()
     community_id = fields.Integer()
     saved_only = fields.Boolean(metadata={"default": False})
+    nsfw = fields.String(validate=validate.OneOf(nsfw_type_list), metadata={"default": 'Include'}, required=False)
     person_id = fields.Integer()
     limit = fields.Integer(metadata={"default": 50})
     page = fields.Integer(metadata={"default": 1})
