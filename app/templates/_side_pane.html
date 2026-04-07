@@ -139,6 +139,12 @@
                         </ul>
                     {% endif -%}
                     <hr>
+                    {% if current_user.allow_community_themes and not low_bandwidth and community and community.theme and file_exists('app/templates/themes/' + community.theme + '/styles.css') -%}
+                        <h3>{{ _('Community theme') }}</h3>
+                        <p>This community currently has the {{ community.theme }} theme applied</p>
+                        <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Disable theme') }}</a>
+                    {% endif %}
+                    <hr>
                     <div>
                         <span class="badge text-bg-secondary">{{ ngettext('%(count)s Subscriber', '%(count)s Subscribers', round_invisible_digits(community.subscriptions_count), count=community.humanize_subscribers()) }}</span>
                         <span class="badge text-bg-secondary">{{ ngettext('%(count)s Local Subscriber', '%(count)s Local Subscribers', round_invisible_digits(community.total_subscriptions_count if community.total_subscriptions_count else community.subscriptions_count), count=community.humanize_subscribers(total=False)) }}</span>
