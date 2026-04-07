@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 from datetime import timedelta
@@ -10,12 +11,12 @@ from flask import request, flash, json, url_for, current_app, redirect, g, abort
 from flask_login import current_user, login_user
 from flask_babel import _, ngettext
 from slugify import slugify
-from sqlalchemy import text, desc, or_, delete, update
+from sqlalchemy import text, desc, or_, delete, update, select
 from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
 
-from app import db, celery, cache
+from app import db, celery, cache, Config
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
 from app.activitypub.signature import post_request, default_context, RsaKeys
 from app.activitypub.util import extract_domain_and_actor
@@ -32,7 +33,7 @@ from app.community.util import save_icon_file, save_banner_file, search_for_comm
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
 from app.email import send_registration_approved_email
-from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
+from app.models import AllowedInstances, BannedInstances, ActivityPubLog, CronJobLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
     Tag, DefederationSubscription, BlockedImage, CmsPage, Notification, Emoji
 from app.shared.tasks import task_selector
@@ -81,7 +82,15 @@ def admin_home():
             translation_languages = lt.languages()
         except Exception:
             pass
-    
+
+    # Check maintenance cron tasks were run recently, show a warning if not
+    stmt = select(CronJobLog).where(CronJobLog.name.like("%maintenance%"))
+    result = db.session.execute(stmt).scalars().first()
+    if result:
+        diff_last_run = utcnow() - result.last_run
+        if diff_last_run > datetime.timedelta(days = Config.MAINTENANCE_CRON_WARNING_DAYS):
+            flash(_(f"Daily maintenance cron tasks haven't been run in more than {diff_last_run.days} days."), 'warning')
+
     return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15,
                            num_cores=num_cores, disk_usage=disk_usage,
                            plugins=plugins, plugin_hooks=plugin_hooks,

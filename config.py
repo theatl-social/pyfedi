@@ -1,11 +1,22 @@
+import logging
 import os
 
 from dotenv import load_dotenv
 
 import app.constants
 
+logger = logging.getLogger(__name__)
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
+
+def safe_int_env(var_name: str, default: int = 0) -> int:
+    raw = os.getenv(var_name, default)
+    try:
+        return int(raw)
+    except(ValueError, TypeError):
+        logger.warning(f"env {var_name}={raw} is not a valid int. Setting default: {default}s")
+        return default
 
 
 class Config(object):
@@ -159,7 +170,7 @@ class Config(object):
 
     # How long to keep content in remote communities before automatically deleting posts. See 'class EditCommunityForm()' for allowed values
     DEFAULT_CONTENT_RETENTION = int(os.environ.get('DEFAULT_CONTENT_RETENTION') or -1)  # -1 = forever, no deletion
-    
+
     # How long to keep bot content (that isn't stickied and has no replies), in months
     BOT_CONTENT_RETENTION = int(os.environ.get('BOT_CONTENT_RETENTION') or 6)  # -1 = forever, no deletion
 
@@ -173,3 +184,6 @@ class Config(object):
     DETECT_AI_ENDPOINT = os.environ.get('DETECT_AI_ENDPOINT') or ''
 
     REDIS_MEMORY_LIMIT = int(os.environ.get('REDIS_MEMORY_LIMIT') or 200000000)
+
+    # Miscellaneous settings
+    MAINTENANCE_CRON_WARNING_DAYS = safe_int_env('MAINTENANCE_CRON_WARNING_DAYS', 5)  # In days ('daily' maintenance)
