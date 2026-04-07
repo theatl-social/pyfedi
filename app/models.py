@@ -318,6 +318,12 @@ class CommunityInvitation(db.Model):
     inviter_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=utcnow)
 
+community_theme_allowed = db.Table('community_theme_allowed',
+                        db.Column('community_id',db.Integer,db.ForeignKey('community.id')),
+                        db.Column('user_id',db.Integer,db.ForeignKey('user.id')),
+                        db.Column('allowed',db.Boolean),
+                        db.PrimaryKeyConstraint('community_id','user_id')
+                        )
 
 community_language = db.Table('community_language',
                               db.Column('community_id', db.Integer, db.ForeignKey('community.id')),
@@ -875,6 +881,7 @@ class Community(db.Model):
                 post.delete_dependencies()
                 db.session.delete(post)
                 db.session.commit()
+        db.session.execute(text('DELETE FROM "community_theme_allowed" WHERE community_id = :community_id'), {'community_id': self.id})
         db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
@@ -1038,6 +1045,8 @@ class User(UserMixin, db.Model):
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
     extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic')
+    community_themes_allowed = db.relationship('Community', lazy='dynamic', secondary=community_theme_allowed,
+                            backref=db.backref('users_theming_allowed', lazy='dynamic'))
     passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
     modlog_target = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.target_user_id", back_populates='target_user', cascade="all, delete-orphan")
     modlog_actor = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.user_id", back_populates='author', cascade="all, delete-orphan")
@@ -1420,6 +1429,7 @@ class User(UserMixin, db.Model):
         db.session.execute(text('DELETE FROM "user_role" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.execute(text('DELETE FROM "hidden_posts" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id'), {'user_id': self.id})
+        db.session.execute(text('DELETE FROM "community_theme_allowed" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
         db.session.query(ArchivedPostReply).filter(ArchivedPostReply.user_id == self.id).delete()
         db.session.query(Filter).filter(Filter.user_id == self.id).delete()
