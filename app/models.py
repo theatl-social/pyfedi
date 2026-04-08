@@ -2061,7 +2061,10 @@ class Post(db.Model):
             # check new accounts to see if their comments are AI generated
             if current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(post.body) > 250:
                 from app.utils import get_request, notify_admin
-                is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
+                try:
+                    is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
+                except Exception as e:
+                    is_ai = None
                 if is_ai and is_ai.status_code == 200:
                     is_ai_result = is_ai.json()
                     if is_ai_result['confidence'] > 0.8:
@@ -2794,7 +2797,10 @@ class PostReply(db.Model):
         elif current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(reply.body) >= 250:
             # Use API to check new accounts to see if their comments are AI generated
             from app.utils import get_request, notify_admin
-            is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={reply.ap_id}")
+            try:
+                is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={reply.ap_id}")
+            except Exception as e:
+                is_ai = None
             if is_ai and is_ai.status_code == 200:
                 is_ai_result = is_ai.json()
                 if is_ai_result['confidence'] > 0.8:
