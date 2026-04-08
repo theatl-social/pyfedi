@@ -142,7 +142,11 @@
                     {% if current_user.allow_community_themes and not low_bandwidth and community and community.theme and file_exists('app/templates/themes/' + community.theme + '/styles.css') -%}
                         <h3>{{ _('Community theme') }}</h3>
                         <p>This community currently has the {{ community.theme }} theme applied</p>
-                        <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Disable theme') }}</a>
+                        <a class="w-100 btn btn-primary" href="#"
+                            hx-post="{{ url_for('community.flip_community_theme_allowed', community_id=community.id, user_id=current_user.id) }}"
+                            hx-refresh="true"
+                            hx-swap="innerHTML">
+                            {% if community_theme_allowed %} {{ _('Disable theme') }} {% else %} {{ _('Enable theme') }} {% endif %}</a>
                     {% endif %}
                     <hr>
                     <div>

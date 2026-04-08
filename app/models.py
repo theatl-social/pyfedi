@@ -1044,8 +1044,6 @@ class User(UserMixin, db.Model):
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
     extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic')
-    community_themes_allowed = db.relationship('Community', lazy='dynamic', secondary=CommunityThemeAllowed,
-                            backref=db.backref('users_theming_allowed', lazy='dynamic'))
     passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
     modlog_target = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.target_user_id", back_populates='target_user', cascade="all, delete-orphan")
     modlog_actor = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.user_id", back_populates='author', cascade="all, delete-orphan")

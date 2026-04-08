@@ -789,9 +789,19 @@ def save_banner_file(banner_file, directory='communities') -> File:
 
 
 def set_community_theme_allowed(community_id: int, user_id: int, allowed:bool):
-    theme_allowed = CommunityThemeAllowed(community_id=community_id,user_id=user_id,allowed=allowed)
-    db.session.add(theme_allowed)
+    community_theme_allowed = CommunityThemeAllowed.query.filter_by(community_id=community_id,user_id=user_id).first()
+    if community_theme_allowed is None:
+        theme_allowed = CommunityThemeAllowed(community_id=community_id, user_id=user_id, allowed=allowed)
+        db.session.add(theme_allowed)
+    else:
+        community_theme_allowed.allowed = allowed
     db.session.commit()
+
+def get_community_theme_allowed(community_id: int, user_id: int) ->bool:
+    community_theme_allowed = CommunityThemeAllowed.query.filter_by(community_id=community_id,user_id=user_id).first()
+    if community_theme_allowed is None:
+        return False
+    return community_theme_allowed.allowed
 
 
 # NB this always signs POSTs as the community so is only suitable for Announce activities
