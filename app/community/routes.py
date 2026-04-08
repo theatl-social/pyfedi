@@ -661,7 +661,7 @@ def show_community(community: Community):
                                          inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                          post_layout=post_layout, content_type=content_type, current_app=current_app,
                                          user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
-                                         current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts, community_theme_allowed=get_community_theme_allowed(community.id,current_user.id)))
+                                         current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts))
     resp.headers.set('ETag', f"{community.id}{sort}{post_layout}_{hash(community.last_active)}")
     if current_user.is_anonymous:
         resp.headers.set('Vary', 'Accept, Accept-Language')

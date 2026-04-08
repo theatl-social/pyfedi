@@ -879,7 +879,6 @@ class Community(db.Model):
                 post.delete_dependencies()
                 db.session.delete(post)
                 db.session.commit()
-        db.session.execute(text('DELETE FROM "community_theme_allowed" WHERE community_id = :community_id'), {'community_id': self.id})
         db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
@@ -1147,6 +1146,10 @@ class User(UserMixin, db.Model):
                 else:
                     return self.cover.source_url
         return ''
+
+    def community_theme_allowed(self,community_id:int) ->bool:
+        from app.community.util import get_community_theme_allowed
+        return get_community_theme_allowed(community_id,self.id)
 
     def filesize(self):
         size = 0
@@ -1426,7 +1429,6 @@ class User(UserMixin, db.Model):
         db.session.execute(text('DELETE FROM "user_role" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.execute(text('DELETE FROM "hidden_posts" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id'), {'user_id': self.id})
-        db.session.execute(text('DELETE FROM "community_theme_allowed" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
         db.session.query(ArchivedPostReply).filter(ArchivedPostReply.user_id == self.id).delete()
         db.session.query(Filter).filter(Filter.user_id == self.id).delete()
