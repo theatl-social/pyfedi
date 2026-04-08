@@ -800,7 +800,7 @@ def set_community_theme_allowed(community_id: int, user_id: int, allowed:bool):
 def get_community_theme_allowed(community_id: int, user_id: int) ->bool:
     community_theme_allowed = CommunityThemeAllowed.query.filter_by(community_id=community_id,user_id=user_id).first()
     if community_theme_allowed is None:
-        return False
+        return True
     return community_theme_allowed.allowed
 
 
