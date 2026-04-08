@@ -789,6 +789,7 @@ def save_banner_file(banner_file, directory='communities') -> File:
 
 
 def set_community_theme_allowed(community_id: int, user_id: int, allowed:bool):
+    cache.delete_memoized(get_community_theme_allowed,community_id,user_id)
     community_theme_allowed = CommunityThemeAllowed.query.filter_by(community_id=community_id,user_id=user_id).first()
     if community_theme_allowed is None:
         theme_allowed = CommunityThemeAllowed(community_id=community_id, user_id=user_id, allowed=allowed)
@@ -797,6 +798,7 @@ def set_community_theme_allowed(community_id: int, user_id: int, allowed:bool):
         community_theme_allowed.allowed = allowed
     db.session.commit()
 
+@cache.memoize(timeout=86400)
 def get_community_theme_allowed(community_id: int, user_id: int) ->bool:
     community_theme_allowed = CommunityThemeAllowed.query.filter_by(community_id=community_id,user_id=user_id).first()
     if community_theme_allowed is None:
