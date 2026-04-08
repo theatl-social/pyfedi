@@ -318,12 +318,10 @@ class CommunityInvitation(db.Model):
     inviter_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=utcnow)
 
-community_theme_allowed = db.Table('community_theme_allowed',
-                        db.Column('community_id',db.Integer,db.ForeignKey('community.id')),
-                        db.Column('user_id',db.Integer,db.ForeignKey('user.id')),
-                        db.Column('allowed',db.Boolean),
-                        db.PrimaryKeyConstraint('community_id','user_id')
-                        )
+class CommunityThemeAllowed(db.Model):
+    community_id = db.Column(db.Integer,db.ForeignKey('community.id'),primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'),primary_key=True)
+    allowed = db.Column(db.Boolean, default=False)
 
 community_language = db.Table('community_language',
                               db.Column('community_id', db.Integer, db.ForeignKey('community.id')),
@@ -891,6 +889,7 @@ class Community(db.Model):
         db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.community_id == self.id).update({ModLog.community_id: None})
         db.session.query(ActivityBatch).filter(ActivityBatch.community_id == self.id).delete()
+        db.session.query(CommunityThemeAllowed).filter(CommunityThemeAllowed.community_id == self.id).delete()
         db.session.commit()
 
 
@@ -1045,7 +1044,7 @@ class User(UserMixin, db.Model):
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
     extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic')
-    community_themes_allowed = db.relationship('Community', lazy='dynamic', secondary=community_theme_allowed,
+    community_themes_allowed = db.relationship('Community', lazy='dynamic', secondary=CommunityThemeAllowed,
                             backref=db.backref('users_theming_allowed', lazy='dynamic'))
     passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
     modlog_target = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.target_user_id", back_populates='target_user', cascade="all, delete-orphan")
@@ -1449,6 +1448,7 @@ class User(UserMixin, db.Model):
         db.session.query(Reminder).filter(Reminder.user_id == self.id).delete()
         db.session.query(CommunityWikiPageRevision).filter(CommunityWikiPageRevision.user_id == self.id).update({CommunityWikiPageRevision.user_id: None})
         db.session.query(UserNote).filter(or_(UserNote.user_id == self.id, UserNote.target_id == self.id)).delete()
+        db.session.query(CommunityThemeAllowed).filter(CommunityThemeAllowed.user_id == self.id).delete()
 
     def purge_content(self, soft=True, flush=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
