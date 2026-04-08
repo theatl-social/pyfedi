@@ -20,7 +20,7 @@
                hx-target="#community_suggestions"
                hx-swap="innerHTML settle:0ms"
                autocomplete="off"
-               value="{{ community | default('') }}"
+               value="{{ community_str | default('') }}"
                pattern="!?[^@\s]+@[^@\s]+\.[^@\s]+"
                title="{{ _('Enter a community name in the format community@server.name') }}"
         >

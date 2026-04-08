@@ -399,19 +399,12 @@ def show_community(community: Community):
             posts = posts.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
             # filter domains and instances
-            domains_ids = blocked_domains(current_user.id)
-            if domains_ids:
+            if domains_ids := blocked_domains(current_user.id):
                 posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-            instance_ids = blocked_or_banned_instances(current_user.id)
-            if instance_ids:
+            if instance_ids := blocked_or_banned_instances(current_user.id):
                 posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
-            community_ids = blocked_communities(current_user.id)
-            if community_ids:
-                posts = posts.filter(Post.community_id.not_in(community_ids))
-
             # filter blocked users
-            blocked_accounts = blocked_users(current_user.id)
-            if blocked_accounts:
+            if blocked_accounts := blocked_users(current_user.id):
                 posts = posts.filter(Post.user_id.not_in(blocked_accounts))
 
         # Filter by post flair

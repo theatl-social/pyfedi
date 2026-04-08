@@ -1,12 +1,16 @@
 from datetime import timedelta
 from typing import List
 
+from flask import g
+from flask_login import current_user
 from sqlalchemy import desc, text
 
 from app import cache, db
-from app.constants import POST_STATUS_REVIEWING
+from app.constants import POST_STATUS_REVIEWING, SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, \
+    SUBSCRIPTION_MODERATOR
 from app.models import Community, utcnow, BannedInstances, Instance
-from app.utils import blocked_communities, communities_banned_from, blocked_or_banned_instances
+from app.utils import blocked_communities, communities_banned_from, blocked_or_banned_instances, get_setting, \
+    joined_or_modding_communities, pending_communities
 
 
 @cache.memoize(timeout=10)
@@ -62,3 +66,23 @@ def sidebar_upcoming_events() -> List:
                                      ORDER BY e.start LIMIT 5"""),
                               {'reviewing': POST_STATUS_REVIEWING}).all()
 
+
+def _base_list_communities_context():
+    create_admin_only = g.site.community_creation_admin_only
+    default_user_add_remote = get_setting("allow_default_user_add_remote_community", True)
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
+    is_staff = current_user.is_authenticated and current_user.is_staff()
+    return {
+        "SUBSCRIPTION_PENDING": SUBSCRIPTION_PENDING,
+        "SUBSCRIPTION_MEMBER": SUBSCRIPTION_MEMBER,
+        "SUBSCRIPTION_OWNER": SUBSCRIPTION_OWNER,
+        "SUBSCRIPTION_MODERATOR": SUBSCRIPTION_MODERATOR,
+        "current_user": current_user,
+        "is_admin": is_admin,
+        "is_staff": is_staff,
+        "create_admin_only": create_admin_only,
+        "default_user_add_remote": default_user_add_remote,
+        "joined_communities": joined_or_modding_communities(current_user.get_id()),
+        "pending_communities": pending_communities(current_user.get_id())
+    }

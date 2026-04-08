@@ -265,9 +265,12 @@
                                     {% endif %}
                                 </a>
                             </li>
+                            <li class="nav-item content-center create_menu_parent">
+                                <a class="nav-link" href="{% if community %}{{ url_for('community.add_post', actor=community.link()) }} {% else %}{{url_for('main.add_post') }}{% endif %}"><span class="fe fe-plus"></span></a>
+                            </li>
                         {% endif %}
                         <li class="nav-item {% if current_user.is_anonymous %}right{% endif %} content-center" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
-                        <li class="nav-item content-center"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" data-dark="{{ _('Dark mode') }}" data-light="{{ _('Light mode') }}" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
+                        <li class="nav-item content-center" aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" data-dark="{{ _('Dark mode') }}" data-light="{{ _('Light mode') }}" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
                         {% if current_user.is_anonymous %}<li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/auth/instance_chooser">{{ _('Register') }}</a></li>{% endif %}
                         {% if current_user.is_authenticated %}<li class="nav-item content-center"  aria-label="{{ _('Settings') }}"><a class="nav-link" href="/user/settings" tabindex="" title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a></li>{% endif %}

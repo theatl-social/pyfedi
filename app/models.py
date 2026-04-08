@@ -2425,7 +2425,7 @@ class Post(db.Model):
                 return None
         with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=6):
             existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
-            if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
+            if existing_vote and vote_direction == 'reversal':  # api receives '1' for upvote, '-1' for downvote, and '0' for reversal
                 if existing_vote.effect == 1:
                     vote_direction = 'upvote'
                 elif existing_vote.effect == -1:

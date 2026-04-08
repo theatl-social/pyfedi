@@ -191,7 +191,7 @@ def run_search():
         return render_template('search/results.html', title=_('Search results for %(q)s', q=q), posts=posts,
                                replies=replies,
                                community_results=communities, q=q,
-                               community=community, community_id=community_id, language_id=language_id,
+                               community_str=community, community_id=community_id, language_id=language_id,
                                search_for=search_for, sort_by=sort_by, type=type,
                                software=software, nsfw=nsfw, minimum_upvote=minimum_upvote,
                                languages=languages, instance_software=instance_software,
