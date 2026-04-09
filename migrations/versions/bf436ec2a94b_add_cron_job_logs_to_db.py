@@ -1,7 +1,7 @@
 """Add cron job logs to db
 
 Revision ID: bf436ec2a94b
-Revises: 8f05d68118d0
+Revises: c81f9a7b87df
 Create Date: 2026-04-06 02:24:59.950389
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "bf436ec2a94b"
-down_revision = "8f05d68118d0"
+down_revision = "c81f9a7b87df"
 branch_labels = None
 depends_on = None
 
