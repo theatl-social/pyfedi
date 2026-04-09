@@ -1668,6 +1668,36 @@ class Post(db.Model):
             'id',
             postgresql_where=db.text('reports > 0')
         ),
+        Index(
+            'ix_post_feed_new',
+            desc('instance_sticky'), desc('posted_at'),
+            postgresql_where=db.text('deleted = false AND status > 0')
+        ),
+        Index(
+            'ix_post_feed_hot',
+            desc('instance_sticky'), desc('ranking'), desc('posted_at'),
+            postgresql_where=db.text('deleted = false AND status > 0')
+        ),
+        Index(
+            'ix_post_feed_scaled',
+            desc('instance_sticky'), desc('ranking_scaled'), desc('ranking'), desc('posted_at'),
+            postgresql_where=db.text('deleted = false AND status > 0')
+        ),
+        Index(
+            'ix_post_feed_top',
+            desc('posted_at'), desc('score'),
+            postgresql_where=db.text('deleted = false AND status > 0')
+        ),
+        Index(
+            'ix_post_feed_active',
+            desc('last_active'),
+            postgresql_where=db.text('deleted = false AND status > 0 AND last_active IS NOT NULL')
+        ),
+        Index(
+            'ix_post_feed_community',
+            'community_id', desc('sticky'), desc('posted_at'),
+            postgresql_where=db.text('deleted = false AND status > 0')
+        ),
     )
 
     def is_local(self):

@@ -3203,7 +3203,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
     elif sort.startswith('top'):
         if sort != 'top_all':
             post_id_where.append('p.posted_at > :top_cutoff ')
-        post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
+        post_id_sort = 'ORDER BY p.score DESC'
         if sort == 'top_1h':
             params['top_cutoff'] = utcnow() - timedelta(hours=1)
         elif sort == 'top_6h':
