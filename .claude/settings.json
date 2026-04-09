@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(do git:*)"
+      "Bash(do git:*)",
+      "Bash(gh workflow:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(uvx ruff:*)",
+      "Bash(uv lock:*)"
     ],
     "additionalDirectories": [
       "/tmp"

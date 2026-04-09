@@ -1,6 +1,6 @@
 <div class="post_body">
     {% if state == "show" -%}
-        {{ post_body | safe }}
+        <div class="post_source">{{ post_body | safe }}</div>
     {% elif state == "hide" -%}
         {{ post_body | community_links | feed_links | person_links | safe }}
     {% else -%}

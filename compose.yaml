@@ -13,7 +13,7 @@ services:
       - -c
       - shared_buffers=1GB
       - -c
-      - effective_cache_size=3GB
+      - effective_cache_size=2GB
       - -c
       - work_mem=32MB
       - -c
@@ -25,7 +25,7 @@ services:
       - -c
       - wal_buffers=16MB
       - -c
-      - max_wal_size=4GB
+      - max_wal_size=3GB
       - -c
       - min_wal_size=1GB
 

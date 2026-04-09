@@ -27,6 +27,7 @@
                        href="/c/{{ community_menu_item.link() }}">{% if community_menu_item.is_duplicate %}{{ community_menu_item.title }}<span class="text-muted small">@{{ community_menu_item.ap_domain | shorten(13) }}</span>{% else %}{{ community_menu_item.title }}{% endif %}</a></li>
             {% endfor -%}
           {% endif %}
+          <li><a class="dropdown-item" href="/r/random">{{ _('Random community') }}</a></li>
         </ul>
     </div>
     <hr>
@@ -35,4 +36,5 @@
     <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="{{ url_for("main.list_communities", home_select="local") }}">{{ _('Local communities') }}</a>
     <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a>
     <a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Feeds') }}</a>
+    <a class="dropdown-item" href="/r/random">{{ _('Random community') }}</a>
 {% endif %}

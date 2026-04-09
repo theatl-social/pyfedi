@@ -36,11 +36,7 @@
         <datalist id="suspect_suggestions"></datalist>
         <select name="communities" id="communities" class="form-select">
             <option value="">{{ _('All communities') }}</option>
-            {% for value, label in communities.items() %}
-                <option value="{{ value }}" {% if value == community_id %}selected{% endif %}>
-                    {{ label }}
-                </option>
-            {% endfor %}
+            {% for value, label in communities.items() -%}<option value="{{ value }}"{% if value == community_id %} selected{% endif %}>{{ label }}</option>{%- endfor %}
         </select>
         {% if is_admin %}
             <input type="search" name="user_name" placeholder="{{ _('Moderator user@instance') }}" value="{{ user_name }}"

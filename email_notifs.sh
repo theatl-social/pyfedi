@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source venv/bin/activate > /dev/null
+source venv/bin/activate > /dev/null 2>&1
 export FLASK_APP=pyfedi.py
 flask send_missed_notifs
 flask process_email_bounces

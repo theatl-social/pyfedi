@@ -5,8 +5,8 @@
 body.compact-min {
 
   .btn {
-    padding: 4px 8px;
-    font-size: 93%;
+    padding: var(--spacing-4) var(--spacing-8);
+    font-size: $fs93pc;
   }
   .post_teaser {
     .post_teaser_article_preview,
@@ -25,18 +25,18 @@ body.compact-min {
   }
 
   .community_icon {
-    width: 15vw;
-    height: 15vw;
-    max-width: 20px !important;
-    max-height: 20px;
-    min-width: 10px;
-    min-height: 10px;
+    width: var(--spacing-20);
+    height: var(--spacing-20);
+    max-width: var(--spacing-20) !important;
+    max-height: var(--spacing-20);
+    min-width: var(--spacing-12);
+    min-height: var(--spacing-12);
   }
 
   .side_pane {
     h2 {
       margin-bottom: 0;
-      font-size: 1.5rem;
+      font-size: $fs1x5rem;
     }
   }
 
@@ -46,28 +46,28 @@ body.compact-min {
   }
 
   #outer_container {
-    margin-top: 0.6rem;
+    margin-top: var(--spacing-12);
   }
 
   .table > :not(caption) > * > * {
-    padding: .3rem .3rem;
+    padding: var(--spacing-4) var(--spacing-4);
   }
 
   .mt-4 {
-    margin-top: 1.3rem!important;
+    margin-top: var(--spacing-20) !important;
   }
 
   .communities_table tbody tr th a {
-    padding-top: 4px;
-    padding-bottom: 4px;
+    padding-top: var(--spacing-4);
+    padding-bottom: var(--spacing-4);
   }
 
   .form-control {
-    padding: 0.275rem 0.55rem
+    padding: var(--spacing-4) var(--spacing-8);
   }
 
   .form-select {
-    padding: .275rem 2rem .275rem .55rem
+    padding: var(--spacing-4) var(--spacing-32) var(--spacing-4) var(--spacing-8);
   }
 
   .ts-wrapper {
@@ -83,29 +83,29 @@ body.compact-max {
       display: none;
     }
 
-    border-bottom-width: 1px;
-    padding-top: 4px;
+    border-bottom-width: var(--border-1);
+    padding-top: var(--spacing-4);
 
     img, .thumbnail {
       display: none;
     }
 
     .post_utilities_bar {
-      min-height: 30px;
-      font-size: 93%;
+      min-height: var(--spacing-28);
+      font-size: $fs93pc;
 
       div {
-        height: 30px;
-        line-height: 30px;
-        min-width: 30px;
+        height: var(--spacing-28);
+        line-height: $fs30px;
+        min-width: var(--spacing-32);
       }
 
       .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
-        min-width: 30px;
-        min-height: 30px;
+        min-width: var(--spacing-32);
+        min-height: var(--spacing-32);
 
         span {
-          line-height: 30px;
+          line-height: var(--spacing-32);
         }
       }
     }

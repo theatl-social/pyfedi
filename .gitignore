@@ -171,4 +171,5 @@ media/
 pgdata/
 logs/
 tmp/
-/app/plugins/piefed_onboarding/
+app/plugins/piefed_onboarding/
+app/static/styles.css.map
