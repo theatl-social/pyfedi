@@ -292,9 +292,23 @@ jobs:
           cat > check_templates.py << 'EOF'
           import os
           import sys
-          from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
+          from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, nodes
+          from jinja2.ext import Extension
 
-          env = Environment(loader=FileSystemLoader('app/templates'))
+          class CacheExtension(Extension):
+              tags = {'cache'}
+              def parse(self, parser):
+                  lineno = next(parser.stream).lineno
+                  args = [parser.parse_expression()]
+                  if parser.stream.current.test('comma'):
+                      next(parser.stream)
+                      args.append(parser.parse_expression())
+                  body = parser.parse_statements(['name:endcache'], drop_needle=True)
+                  return nodes.CallBlock(self.call_method('_cache', args), [], [], body).set_lineno(lineno)
+              def _cache(self, *args, caller=None):
+                  return caller()
+
+          env = Environment(loader=FileSystemLoader('app/templates'), extensions=[CacheExtension])
 
           def mock_filter(*args, **kwargs):
               return ''
