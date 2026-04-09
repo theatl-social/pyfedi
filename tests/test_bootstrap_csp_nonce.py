@@ -47,7 +47,6 @@ class TestBootstrapCSPNonce:
         assert (
             "bootstrap.load_js" in content and "nonce" in content
         ), "base.html should load bootstrap JS with nonce for CSP compliance"
-        )
 
     def test_nonce_is_unique_per_call(self):
         """Test that gibberish() generates unique values."""
