@@ -77,8 +77,25 @@ jobs:
           import sys
           from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
 
+          # Register cache as a known extension tag (used by Flask-Caching)
+          from jinja2 import nodes
+          from jinja2.ext import Extension
+
+          class CacheExtension(Extension):
+              tags = {'cache'}
+              def parse(self, parser):
+                  lineno = next(parser.stream).lineno
+                  args = [parser.parse_expression()]
+                  if parser.stream.current.test('comma'):
+                      next(parser.stream)
+                      args.append(parser.parse_expression())
+                  body = parser.parse_statements(['name:endcache'], drop_needle=True)
+                  return nodes.CallBlock(self.call_method('_cache', args), [], [], body).set_lineno(lineno)
+              def _cache(self, *args, caller=None):
+                  return caller()
+
           # Create environment with custom filters mocked
-          env = Environment(loader=FileSystemLoader('app/templates'))
+          env = Environment(loader=FileSystemLoader('app/templates'), extensions=[CacheExtension])
 
           # Add mock custom filters that are defined in the Flask app
           def mock_filter(*args, **kwargs):
