@@ -1,4 +1,4 @@
-VERSION = "1.6.17"
+VERSION = "1.6.17-peachpie"
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
