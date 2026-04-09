@@ -256,7 +256,7 @@ class NNTPServer(abc.ABC, socketserver.ThreadingMixIn, socketserver.TCPServer):
                 raise ValueError(
                     "You set use_ssl to True but the ssl module could not be imported."
                 )
-            self.ssl_version = ssl_version = ssl.PROTOCOL_TLS
+            self.ssl_version = ssl.PROTOCOL_TLS
         super().__init__(*args, **kwargs)
 
     def get_request(self) -> typing.Tuple[typing.Any, typing.Tuple[str, int]]:

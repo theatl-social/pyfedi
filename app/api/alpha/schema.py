@@ -1894,3 +1894,99 @@ class GetRegistrationListResponse(DefaultSchema):
 class RegistrationApproveRequest(DefaultSchema):
     approve = fields.Boolean(required=True)
     user_id = fields.Integer(required=True)
+
+
+# PeachPie: Private Registration & Admin API Schemas
+
+class AdminPrivateRegistrationRequest(DefaultSchema):
+    username = fields.String(
+        required=True,
+        validate=validate.Length(min=3, max=50),
+        metadata={"description": "Username (3-50 characters, alphanumeric + underscore)"},
+    )
+    email = fields.Email(required=True, metadata={"description": "Valid email address"})
+    display_name = fields.String(
+        validate=validate.Length(min=1, max=100),
+        metadata={"description": "Display name (1-100 characters)"},
+    )
+    password = fields.String(
+        validate=validate.Length(min=8, max=128),
+        metadata={"description": "Optional password (generated if not provided)"},
+    )
+    about = fields.String(
+        validate=validate.Length(max=500),
+        metadata={"description": "About text for user profile"},
+    )
+
+
+class AdminPrivateRegistrationResponse(DefaultSchema):
+    success = fields.Boolean(required=True, metadata={"description": "Registration success status"})
+    user_id = fields.Integer(required=True, metadata={"description": "Created user ID"})
+    username = fields.String(required=True, metadata={"description": "Created username"})
+    email = fields.String(required=True, metadata={"description": "User email address"})
+    display_name = fields.String(metadata={"description": "User display name"})
+    generated_password = fields.String(
+        metadata={"description": "Generated password (only if password was not provided)"}
+    )
+    activation_required = fields.Boolean(
+        metadata={"description": "Whether email activation is required"}
+    )
+
+
+class AdminPrivateRegistrationError(DefaultSchema):
+    success = fields.Boolean(required=True, metadata={"description": "Always false for errors"})
+    error = fields.String(
+        required=True,
+        metadata={
+            "description": "Error type",
+            "enum": [
+                "invalid_secret",
+                "rate_limited",
+                "validation_failed",
+                "user_exists",
+                "feature_disabled",
+                "ip_unauthorized",
+            ],
+        },
+    )
+    message = fields.String(required=True, metadata={"description": "Human-readable error message"})
+    details = fields.Dict(metadata={"description": "Additional error details"})
+
+
+class AdminHealthResponse(DefaultSchema):
+    private_registration = fields.Dict(required=True)
+    database = fields.String(required=True)
+    timestamp = fields.DateTime(required=True, format="iso")
+
+
+class AdminBulkUserRequest(DefaultSchema):
+    operation = fields.String(
+        required=True,
+        validate=validate.OneOf(["disable", "enable", "ban", "unban", "delete"]),
+    )
+    user_ids = fields.List(
+        fields.Integer(validate=validate.Range(min=1)),
+        required=True,
+        validate=validate.Length(min=1, max=100),
+    )
+    reason = fields.String(validate=validate.Length(min=1, max=500))
+    notify_users = fields.Boolean(metadata={"default": False})
+
+
+class AdminBulkUserResponse(DefaultSchema):
+    success = fields.Boolean(required=True)
+    operation = fields.String(required=True)
+    total_requested = fields.Integer(required=True)
+    successful = fields.Integer(required=True)
+    failed = fields.Integer(required=True)
+    results = fields.List(fields.Dict(), metadata={"description": "Per-user results"})
+    message = fields.String(required=True)
+
+
+class AdminUserStatsResponse(DefaultSchema):
+    total_users = fields.Integer(required=True)
+    local_users = fields.Integer(required=True)
+    remote_users = fields.Integer(required=True)
+    verified_users = fields.Integer(required=True)
+    banned_users = fields.Integer(required=True)
+    active_24h = fields.Integer(required=True)

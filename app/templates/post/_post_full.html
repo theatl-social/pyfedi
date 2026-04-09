@@ -438,6 +438,7 @@
         <div class="message_reactions" id="p_reactions_{{ post.id }}">
             {% for reaction in post.emoji_reactions -%}
                 <div class="message_reaction_container me-1">
+                    {# djlint:off H008 #}
                     <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
                          hx-post="/post/{{ post.id }}/emoji_set"
                          hx-vals='{"emoji": "{{ reaction['token'] }}"}'
