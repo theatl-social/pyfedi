@@ -15,7 +15,7 @@ def safe_int_env(var_name: str, default: int = 0) -> int:
     try:
         return int(raw)
     except(ValueError, TypeError):
-        logger.warning(f"env {var_name}={raw} is not a valid int. Setting default: {default}s")
+        logger.warning(f"env {var_name}={raw} is not a valid int. Setting default: {default}")
         return default
 
 
@@ -184,6 +184,3 @@ class Config(object):
     DETECT_AI_ENDPOINT = os.environ.get('DETECT_AI_ENDPOINT') or ''
 
     REDIS_MEMORY_LIMIT = int(os.environ.get('REDIS_MEMORY_LIMIT') or 200000000)
-
-    # Miscellaneous settings
-    MAINTENANCE_CRON_WARNING_DAYS = safe_int_env('MAINTENANCE_CRON_WARNING_DAYS', 5)  # In days ('daily' maintenance)
