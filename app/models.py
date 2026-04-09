@@ -209,7 +209,7 @@ class Conversation(db.Model):
             if member.instance.id != 1 and member.instance not in retval:
                 retval.append(member.instance)
         return retval
-    
+
     def delete_if_abandoned(self):
         # Delete the conversation if all the participants are either remote or have left the conversation
         keep_convo = False
@@ -217,13 +217,13 @@ class Conversation(db.Model):
             if member.is_local():
                 joined = db.session.execute(text("SELECT joined FROM conversation_member WHERE user_id = :person_id AND conversation_id = :conversation_id"),
                                             {"person_id": member.id, "conversation_id": self.id}).first()
-                
+
                 # Returns None or a tuple, need to make it into a bool
                 if joined and any(joined):
                     # There is still a local user joined to this conversation, just break and don't delete the convo
                     keep_convo = True
                     break
-        
+
         if not keep_convo:
             # Delete the conversation
             Report.query.filter(Report.suspect_conversation_id == self.id).delete()
@@ -244,21 +244,21 @@ class Conversation(db.Model):
 
     @staticmethod
     def find_existing_conversation(recipient, sender):
-        sql = """SELECT 
-                    c.id AS conversation_id, 
-                    c.created_at AS conversation_created_at, 
-                    c.updated_at AS conversation_updated_at, 
-                    cm1.user_id AS user1_id, 
-                    cm2.user_id AS user2_id 
-                FROM 
-                    public.conversation AS c 
-                JOIN 
-                    public.conversation_member AS cm1 ON c.id = cm1.conversation_id 
-                JOIN 
-                    public.conversation_member AS cm2 ON c.id = cm2.conversation_id 
-                WHERE 
-                    cm1.user_id = :user_id_1 AND 
-                    cm2.user_id = :user_id_2 AND 
+        sql = """SELECT
+                    c.id AS conversation_id,
+                    c.created_at AS conversation_created_at,
+                    c.updated_at AS conversation_updated_at,
+                    cm1.user_id AS user1_id,
+                    cm2.user_id AS user2_id
+                FROM
+                    public.conversation AS c
+                JOIN
+                    public.conversation_member AS cm1 ON c.id = cm1.conversation_id
+                JOIN
+                    public.conversation_member AS cm2 ON c.id = cm2.conversation_id
+                WHERE
+                    cm1.user_id = :user_id_1 AND
+                    cm2.user_id = :user_id_2 AND
                     cm1.user_id <> cm2.user_id;"""
         ec = db.session.execute(text(sql), {'user_id_1': recipient.id, 'user_id_2': sender.id}).fetchone()
         return db.session.query(Conversation).get(ec[0]) if ec else None
@@ -749,7 +749,7 @@ class Community(db.Model):
             return instance_role is not None
         else:
             return False
-    
+
     def is_admin_or_staff(self, user):
         return user.is_admin_or_staff()
 
@@ -789,7 +789,7 @@ class Community(db.Model):
                 subscribers = self.subscriptions_count
 
         return humanize_number(subscribers)
-    
+
     def notify_new_posts(self, user_id: int) -> bool:
         existing_notification = db.session.query(NotificationSubscription).\
             filter(NotificationSubscription.entity_id == self.id,
@@ -849,7 +849,7 @@ class Community(db.Model):
 
     def flair_for_ap(self, version=1):
         result = []
-        
+
         if version == 1:
             for flair in self.flair:
                 result.append({'type': 'lemmy:CommunityTag',
@@ -869,7 +869,7 @@ class Community(db.Model):
                     "backgroundColor": flair.background_color,
                     "blurImages": flair.blur_images,
                 })
-        
+
         return result
 
     def delete_dependencies(self):
@@ -1279,7 +1279,7 @@ class User(UserMixin, db.Model):
         # Use direct SQL queries to avoid potential ORM-related deadlocks
         # Count post upvotes and downvotes
         post_votes_result = db.session.execute(text("""
-            SELECT 
+            SELECT
                 COUNT(CASE WHEN effect > 0 THEN 1 END) AS upvotes,
                 COUNT(CASE WHEN effect < 0 THEN 1 END) AS downvotes
             FROM (
@@ -1296,7 +1296,7 @@ class User(UserMixin, db.Model):
 
         # Count comment upvotes and downvotes
         comment_votes_result = db.session.execute(text("""
-            SELECT 
+            SELECT
                 COUNT(CASE WHEN effect > 0 THEN 1 END) AS upvotes,
                 COUNT(CASE WHEN effect < 0 THEN 1 END) AS downvotes
             FROM (
@@ -1534,7 +1534,7 @@ class User(UserMixin, db.Model):
             return user_note.body
         else:
             return ''
-    
+
     def can_send_pm(self, recipient):
         if (
             self.created_very_recently()
@@ -1543,7 +1543,7 @@ class User(UserMixin, db.Model):
             or not self.verified
         ) and not (self.is_admin_or_staff() or recipient.is_admin_or_staff()):
             return False
-        
+
         return True
 
 
@@ -2785,7 +2785,7 @@ class PostReply(db.Model):
             else:
                 cache_report = False
                 previous_report = None
-            
+
             if not previous_report:
                 # usage of em-dash is highly suspect.
                 from app.utils import notify_admin
@@ -2800,7 +2800,7 @@ class PostReply(db.Model):
                                 }
                 notify_admin('Used em-dash in comment - likely AI', f'/u/{user.link()}', 1,
                             NOTIF_REPORT, 'user_reported', targets_data)
-                
+
                 # Store this in redis for a day so that duplicate reports aren't created if that setting is enabled
                 if cache_report:
                     cache.set(f'em-dash_used_by_{repr(reply.author)}', True, timeout=86400)
@@ -3449,14 +3449,14 @@ class Poll(db.Model):
             choice.num_votes += 1
             self.latest_vote = utcnow()
             db.session.commit()
-    
+
     def user_votes(self, user_id):
         existing_votes = PollChoiceVote.query.filter(PollChoiceVote.user_id == user_id,
                                                      PollChoiceVote.post_id == self.post_id).all()
-        
+
         if not existing_votes:
             existing_votes = []
-        
+
         return existing_votes
 
     def total_votes(self):
@@ -3574,7 +3574,7 @@ class ModLog(db.Model):
 
     def get_correct_link(self):
         user_action_list = ["add_mod", "remove_mod", "delete_user", "undelete_user", "ban_user", "unban_user"]
-        
+
         if self.action in user_action_list and not self.link.startswith("u/"):
             return "u/" + self.link
         else:
@@ -3636,7 +3636,7 @@ class Site(db.Model):
     private_instance = db.Column(db.Boolean, default=False)
     language_id = db.Column(db.Integer)
     honeypot = db.Column(db.Boolean, default=True)
-     
+
 
     @staticmethod
     def admins() -> List[User]:
@@ -4030,6 +4030,13 @@ class ArchivedPostReply(db.Model):
     post_id = db.Column(db.Integer, index=True)
     post_reply_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime)
+
+
+class CronJobLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), unique=True)
+    last_run = db.Column(db.DateTime, default=utcnow)
+    frequency = db.Column(db.Interval, nullable=True)
 
 
 def _large_community_subscribers() -> float:
