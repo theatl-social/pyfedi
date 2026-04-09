@@ -29,7 +29,7 @@ from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, \
     find_potential_moderators, hashtags_used_in_community, publicize_community, \
-    community_theme_list
+    community_theme_list, set_community_theme_allowed, get_community_theme_allowed
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
@@ -1322,6 +1322,22 @@ def remove_header(community_id):
             db.session.commit()
             cache.delete_memoized(Community.header_image, community)
     return '<div> ' + _('Banner removed!') + '</div>'
+
+@bp.route('/community/<int:community_id>/<int:user_id>/flip_community_theme_allowed', methods=['POST'])
+@login_required
+def flip_community_theme_allowed(community_id:int,user_id:int):
+    community_theme_allowed = not get_community_theme_allowed(community_id,user_id)
+    set_community_theme_allowed(community_id,user_id,community_theme_allowed)
+    if community_theme_allowed:
+        resp = make_response(_('Disable theme'))
+        resp.headers["HX-Refresh"] = "true"
+        print(resp)
+        return resp
+    else:
+        resp = make_response(_('Enable theme'))
+        resp.headers["HX-Refresh"] = "true"
+        print(resp)
+        return resp
 
 
 @bp.route('/community/<int:community_id>/delete', methods=['GET', 'POST'])

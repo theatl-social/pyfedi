@@ -138,7 +138,19 @@
                             <li><p><a href="{{ url_for('community.fixup_from_remote', actor=community.ap_id) }}">{{ _("Refresh community information from remote") }}</a></p></li>
                         </ul>
                     {% endif -%}
-                    <hr>
+                    {% if (current_user.allow_community_themes or current_user.is_anonymous)and not low_bandwidth and community and community.theme and file_exists('app/templates/themes/' + community.theme + '/styles.css') -%}
+                        <hr>
+                        <h3>{{ _('Community theme') }}</h3>
+                        <p>This community currently has the {{ community.theme }} theme applied</p>
+                        {% if not current_user.is_anonymous %}
+                        <a class="w-100 btn btn-primary" href="#"
+                            hx-post="{{ url_for('community.flip_community_theme_allowed', community_id=community.id, user_id=current_user.id) }}"
+                            hx-refresh="true"
+                            hx-swap="innerHTML">
+                            {% if current_user.community_theme_allowed(community.id) %} {{ _('Disable theme') }} {% else %} {{ _('Enable theme') }} {% endif %}</a>
+                        {% endif %}
+                        <hr>
+                    {% endif %}
                     <div>
                         <span class="badge text-bg-secondary">{{ ngettext('%(count)s Subscriber', '%(count)s Subscribers', round_invisible_digits(community.subscriptions_count), count=community.humanize_subscribers()) }}</span>
                         <span class="badge text-bg-secondary">{{ ngettext('%(count)s Local Subscriber', '%(count)s Local Subscribers', round_invisible_digits(community.total_subscriptions_count if community.total_subscriptions_count else community.subscriptions_count), count=community.humanize_subscribers(total=False)) }}</span>

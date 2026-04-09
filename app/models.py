@@ -318,6 +318,10 @@ class CommunityInvitation(db.Model):
     inviter_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=utcnow)
 
+class CommunityThemeAllowed(db.Model):
+    community_id = db.Column(db.Integer,db.ForeignKey('community.id'),primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'),primary_key=True)
+    allowed = db.Column(db.Boolean, default=False)
 
 community_language = db.Table('community_language',
                               db.Column('community_id', db.Integer, db.ForeignKey('community.id')),
@@ -884,6 +888,7 @@ class Community(db.Model):
         db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.community_id == self.id).update({ModLog.community_id: None})
         db.session.query(ActivityBatch).filter(ActivityBatch.community_id == self.id).delete()
+        db.session.query(CommunityThemeAllowed).filter(CommunityThemeAllowed.community_id == self.id).delete()
         db.session.commit()
 
 
@@ -1141,6 +1146,10 @@ class User(UserMixin, db.Model):
                 else:
                     return self.cover.source_url
         return ''
+
+    def community_theme_allowed(self,community_id:int) ->bool:
+        from app.community.util import get_community_theme_allowed
+        return get_community_theme_allowed(community_id,self.id)
 
     def filesize(self):
         size = 0
@@ -1439,6 +1448,7 @@ class User(UserMixin, db.Model):
         db.session.query(Reminder).filter(Reminder.user_id == self.id).delete()
         db.session.query(CommunityWikiPageRevision).filter(CommunityWikiPageRevision.user_id == self.id).update({CommunityWikiPageRevision.user_id: None})
         db.session.query(UserNote).filter(or_(UserNote.user_id == self.id, UserNote.target_id == self.id)).delete()
+        db.session.query(CommunityThemeAllowed).filter(CommunityThemeAllowed.user_id == self.id).delete()
 
     def purge_content(self, soft=True, flush=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
