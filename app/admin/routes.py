@@ -16,7 +16,7 @@ from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
 
-from app import db, celery, cache, Config
+from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
 from app.activitypub.signature import post_request, default_context, RsaKeys
 from app.activitypub.util import extract_domain_and_actor
@@ -84,12 +84,18 @@ def admin_home():
             pass
 
     # Check maintenance cron tasks were run recently, show a warning if not
-    stmt = select(CronJobLog).where(CronJobLog.name.like("%maintenance%"))
-    result = db.session.execute(stmt).scalars().first()
-    if result:
-        diff_last_run = utcnow() - result.last_run
-        if diff_last_run > datetime.timedelta(days = Config.MAINTENANCE_CRON_WARNING_DAYS):
-            flash(_(f"Daily maintenance cron tasks haven't been run in more than {diff_last_run.days} days."), 'warning')
+    result = db.session.execute(select(CronJobLog)).scalars().all()
+    overdue_tasks = []
+    for cron_task in result:
+        diff_last_run = utcnow() - cron_task.last_run
+        if diff_last_run > cron_task.frequency:
+            overdue_tasks.append(
+                f"{cron_task.name} (expected every {cron_task.frequency}, "
+                f"last run at {cron_task.last_run.strftime('%Y-%m-%d %H:%M UTC') if cron_task.last_run else 'never'})")
+    if overdue_tasks:
+        tasks_str = ", ".join(overdue_tasks)
+        message = f"Some cron tasks have not been run recently: {tasks_str}"
+        flash(_(message), 'warning')
 
     return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15,
                            num_cores=num_cores, disk_usage=disk_usage,

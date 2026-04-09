@@ -24,6 +24,7 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=True),
         sa.Column("last_run", sa.DateTime(), nullable=True),
+        sa.Column("frequency", sa.Interval(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
     )

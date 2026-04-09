@@ -41,7 +41,8 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, \
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
     guess_mime_type, ensure_directory_exists, \
-    render_from_tpl, get_task_session, patch_db_session, get_setting, get_recipient_language
+    render_from_tpl, get_task_session, patch_db_session, get_setting, get_recipient_language, \
+    log_cron_task_to_db
 
 logger = logging.getLogger(__name__)
 
@@ -122,10 +123,9 @@ def register(app):
                 print(f"Warning: Could not check database encoding: {e}")
                 print("If using PostgreSQL, please ensure your database uses UTF8 encoding.")
 
-            # Drop materialized views first
             try:
-                # List all materialized views that need to be dropped
-                materialized_views = ['post_view']  # Add others as discovered
+                # List all materialized views that need to be dropped on db creation
+                materialized_views = ['post_view']
                 for view in materialized_views:
                     try:
                         db.session.execute(text(f"DROP MATERIALIZED VIEW IF EXISTS {view} CASCADE"))
@@ -225,6 +225,20 @@ def register(app):
             admin_role.permissions.append(RolePermission(permission='edit cms pages'))
             db.session.add(admin_role)
 
+            # Add cron jobs to db to display warning to user if not run recently.
+            # Each job has its 'frequency' set with a slight buffer from the recommended time in INSTALL.md
+            # email_notifs.sh
+            db.session.add(CronJobLog(name='send_missed_notifs', frequency=timedelta(hours=7)))
+            db.session.add(CronJobLog(name='process_email_bounces', frequency=timedelta(hours=7)))
+            db.session.add(CronJobLog(name='clean_up_old_activities', frequency=timedelta(hours=7)))
+            # remove_orphan_files.sh
+            db.session.add(CronJobLog(name='remove_orphan_files', frequency=timedelta(days=8)))
+            # daily.sh
+            db.session.add(CronJobLog(name='daily_maintenance_celery', frequency=timedelta(hours=25)))
+            db.session.add(CronJobLog(name='daily_maintenance', frequency=timedelta(hours=25)))
+            # send_queue.sh
+            db.session.add(CronJobLog(name='send_queue', frequency=timedelta(minutes=5)))
+
             if interactive == 'yes':
                 # Admin user
                 print('The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
@@ -291,21 +305,21 @@ def register(app):
                                  SELECT count(*) FROM
                                  (
                                      SELECT p.user_id FROM "post" p
-                                     WHERE p.posted_at > :time_interval 
+                                     WHERE p.posted_at > :time_interval
                                          AND p.from_bot = False
                                          AND p.community_id = :community_id
                                      UNION
                                      SELECT pr.user_id FROM "post_reply" pr
                                      WHERE pr.posted_at > :time_interval
                                          AND pr.from_bot = False
-                                         AND pr.community_id = :community_id   
+                                         AND pr.community_id = :community_id
                                      UNION
                                      SELECT pv.user_id FROM "post_vote" pv
                                      INNER JOIN "user" u ON pv.user_id = u.id
                                      INNER JOIN "post" p ON pv.post_id = p.id
                                      WHERE pv.created_at > :time_interval
                                          AND u.bot = False
-                                         AND p.community_id = :community_id                            
+                                         AND p.community_id = :community_id
                                      UNION
                                      SELECT prv.user_id FROM "post_reply_vote" prv
                                      INNER JOIN "user" u ON prv.user_id = u.id
@@ -413,26 +427,7 @@ def register(app):
                 print('All maintenance tasks scheduled successfully (production mode)')
 
 
-            session = get_task_session()
-            try:
-                with patch_db_session(session):
-                    stmt = insert(CronJobLog).values(
-                        name="daily_maintenance_celery",
-                        last_run=utcnow()
-                    )
-
-                    stmt = stmt.on_conflict_do_update(
-                        index_elements=['name'],  # conflict target
-                        set_=dict(last_run=stmt.excluded.last_run)  # what to update
-                    )
-                    db.session.execute(stmt)
-                    db.session.commit()
-            except Exception as e:
-                logging.error(f"error while saving cron logs to db: {e}")
-                session.rollback()
-            finally:
-                session.close()
-                session = get_task_session()
+            log_cron_task_to_db("daily_maintenance_celery")
 
             plugins.fire_hook('cron_daily')
 
@@ -497,24 +492,7 @@ def register(app):
         archive_old_users()
         print(f'Finished {datetime.now()}')
 
-        session = get_task_session()
-        try:
-            stmt = insert(CronJobLog).values(
-                name="daily_maintenance",
-                last_run=utcnow()
-            )
-
-            stmt = stmt.on_conflict_do_update(
-                index_elements=['name'],  # conflict target
-                set_=dict(last_run=stmt.excluded.last_run)  # what to update
-            )
-            db.session.execute(stmt)
-            db.session.commit()
-        except Exception as e:
-            logging.error(f"error while saving cron logs to db: {e}")
-            session.rollback()
-        finally:
-            session.close()
+        log_cron_task_to_db("daily_maintenance")
 
     @app.cli.command('archive-old-posts')
     def archive_old_p():
@@ -585,6 +563,9 @@ def register(app):
                 raise
             finally:
                 session.close()
+
+            log_cron_task_to_db("send_queue")
+
 
     @app.cli.command('reopen')
     def reopen():
@@ -677,8 +658,8 @@ def register(app):
         send_batched_activities()
 
     def send_batched_activities():
-        instances_and_communities = db.session.execute(text("""SELECT DISTINCT instance_id, community_id 
-                                                                FROM "activity_batch" 
+        instances_and_communities = db.session.execute(text("""SELECT DISTINCT instance_id, community_id
+                                                                FROM "activity_batch"
                                                                 ORDER BY instance_id, community_id""")).fetchall()
         current_instance = None
         for instances_and_community in instances_and_communities:
@@ -882,6 +863,8 @@ def register(app):
                 if f is None:
                     os.unlink(file_path)
 
+            log_cron_task_to_db("remove_orphan_files")
+
     @app.cli.command("send_missed_notifs")
     def send_missed_notifs():
         with app.app_context():
@@ -932,6 +915,8 @@ def register(app):
                                                                        domain=current_app.config['SERVER_NAME'],
                                                                        protocol=current_app.config['HTTP_PROTOCOL']))
                             user.email_unread_sent = True
+
+
                             db.session.commit()
 
             except Exception:
@@ -939,6 +924,8 @@ def register(app):
                 raise
             finally:
                 session.close()
+
+            log_cron_task_to_db("send_missed_notifs")
 
     @app.cli.command("process_email_bounces")
     def process_email_bounces():
@@ -1013,6 +1000,8 @@ def register(app):
             finally:
                 session.close()
 
+            log_cron_task_to_db("process_email_bounces")
+
     @app.cli.command("clean_up_old_activities")
     def clean_up_old_activities():
         with app.app_context():
@@ -1026,6 +1015,8 @@ def register(app):
                 raise
             finally:
                 session.close()
+
+            log_cron_task_to_db("clean_up_old_activities")
 
     @app.cli.command("detect_vote_manipulation")
     def detect_vote_manipulation():
@@ -1158,8 +1149,8 @@ def register(app):
         # AS OF JUN 2025 link posts DO need a medium-sized version, as some mobile apps need larger images. DO NOT RUN THIS.
         with app.app_context():
             import boto3
-            sql = '''select file_path from "file" as f 
-                    inner join "post" as p on p.image_id  = f.id 
+            sql = '''select file_path from "file" as f
+                    inner join "post" as p on p.image_id  = f.id
                     where p.type = :type and f.file_path  is not null'''
             files = list(db.session.execute(text(sql), {'type': POST_TYPE_LINK}).scalars())
             s3_files_to_delete = []
@@ -1213,9 +1204,9 @@ def register(app):
                             ARRAY[0, id] AS path
                         FROM post_reply
                         WHERE parent_id IS NULL  -- Top-level replies
-                    
+
                         UNION ALL
-                    
+
                         -- Recursive case: build the path from parent replies
                         SELECT
                             pr.id,
