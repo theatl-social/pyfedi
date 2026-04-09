@@ -10,9 +10,9 @@ from app.api.alpha.views import (
     community_view,
     user_view,
     post_view,
-    cached_modlist_for_community,
     flair_view,
 )
+from app.shared.community import cached_modlist_for_community
 from app.community.util import search_for_community
 from app.constants import *
 from app.models import (

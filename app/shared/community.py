@@ -642,7 +642,6 @@ def restore_community(community_id: int, src, auth=None):
 
 
 def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
-    from app.api.alpha.views import cached_modlist_for_community, cached_modlist_for_user
     if src == SRC_API:
         user = authorise_api_user(auth, return_type="model")
     else:
@@ -736,7 +735,6 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
 
 
 def remove_mod_from_community(community_id: int, person_id: int, src, auth=None):
-    from app.api.alpha.views import cached_modlist_for_community, cached_modlist_for_user
     if src == SRC_API:
         user = authorise_api_user(auth, return_type="model")
     else:
@@ -844,3 +842,43 @@ def comm_flair_ap_format(flair: CommunityFlair | int | str) -> dict:
     flair_dict["blurImages"] = flair.blur_images
 
     return flair_dict
+
+
+@cache.memoize(timeout=3000)
+def cached_modlist_for_community(community_id):
+    from app.api.alpha.views import community_view, user_view
+
+    moderator_ids = db.session.execute(
+        text(
+            'SELECT user_id FROM "community_member" WHERE community_id = :community_id and (is_moderator = True or is_owner = True)'
+        ),
+        {"community_id": community_id},
+    ).scalars()
+    modlist = []
+    for m_id in moderator_ids:
+        entry = {
+            "community": community_view(community=community_id, variant=1, stub=True),
+            "moderator": user_view(user=m_id, variant=1, stub=True),
+        }
+        modlist.append(entry)
+    return modlist
+
+
+@cache.memoize(timeout=3000)
+def cached_modlist_for_user(user):
+    from app.api.alpha.views import community_view, user_view
+
+    community_ids = db.session.execute(
+        text(
+            'SELECT community_id FROM "community_member" WHERE user_id = :user_id and (is_moderator = True or is_owner = True)'
+        ),
+        {"user_id": user.id},
+    ).scalars()
+    modlist = []
+    for c_id in community_ids:
+        entry = {
+            "community": community_view(community=c_id, variant=1, stub=True),
+            "moderator": user_view(user=user, variant=1, stub=True),
+        }
+        modlist.append(entry)
+    return modlist
