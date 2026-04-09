@@ -5,6 +5,7 @@ Test that private registration properly sets up ActivityPub for new users
 import unittest
 from unittest.mock import patch, MagicMock, call
 import os
+import pytest
 
 
 class TestPrivateRegistrationActivityPubSetup(unittest.TestCase):
@@ -156,6 +157,10 @@ class TestPrivateRegistrationActivityPubSetup(unittest.TestCase):
         self.assertEqual(result["activation_required"], True)
 
 
+@pytest.mark.skipif(
+    "sqlite" in os.environ.get("DATABASE_URL", "sqlite"),
+    reason="Finalize user setup tests require PostgreSQL (SQLAlchemy mock incompatibility with SQLite)"
+)
 class TestFinalizeUserSetupBehavior(unittest.TestCase):
     def setUp(self):
         """Set up test Flask app context"""
