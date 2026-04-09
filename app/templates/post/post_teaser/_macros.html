@@ -141,7 +141,7 @@
     {% if not embed -%}
         <div class="post_options_link pull-right">
             {% if current_user.is_authenticated and joined_communities and post.community_id not in joined_communities %}
-                <a class="small" rel="nofollow" title="{{ _('Join this community') }}" aria-label="{{ _('Join this community') }}" href="{{ '/' + post.community.link() + '/subscribe' }}">{{ _('Join') }}</a>
+                <a class="small" rel="nofollow" title="{{ _('Join this community') }}" aria-label="{{ _('Join this community') }}" href="{{ '/c/' + post.community.link() + '/subscribe' }}">{{ _('Join') }}</a>
             {% endif -%}
             {% if current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}
                 <div class="post_translate_icon">
