@@ -7,13 +7,7 @@ description: Use when merging upstream PieFed changes into our fork, syncing wit
 
 ## Overview
 
-Procedure for merging upstream PieFed (codeberg.org/rimu/pyfedi) changes into our fork. This is a multi-step process with conflict resolution, migration head management, and verification.
-
-## When to Use
-
-- Syncing our fork with upstream PieFed
-- Upgrading to a new upstream release
-- Pulling in upstream bug fixes or features
+Procedure for merging upstream PieFed (codeberg.org/rimu/pyfedi) changes into our PeachPie fork. Multi-step process with conflict resolution, migration head management, dependency sync, and verification.
 
 ## Prerequisites
 
@@ -33,24 +27,18 @@ Use TodoWrite to create a checklist from these steps. Mark each complete as you 
 ```bash
 git checkout main
 git pull origin main
-git checkout -b YYYYMMDD/merge-upstream
+git checkout -b YYYYMMDD/merge-upstream-vXYZ
 ```
 
-Use today's date in YYYYMMDD format.
+Use today's date in YYYYMMDD format and the target upstream version.
 
-### 2. Run Pre-commit on Current Branch
-
-Fix any existing lint issues BEFORE merging to keep merge diffs clean:
+### 2. Run Ruff on Current Branch
 
 ```bash
-pre-commit run --all-files
+uvx ruff check .
 ```
 
-If fixes are made:
-```bash
-git add -A
-git commit -m "fix: Lint cleanup before upstream merge"
-```
+Note: `pre-commit run --all-files` may fail on Python 3.14 due to `pillow-avif-plugin` build issues. Use `uvx ruff check .` directly instead.
 
 ### 3. Fetch and Inspect Upstream
 
@@ -58,9 +46,10 @@ git commit -m "fix: Lint cleanup before upstream merge"
 git fetch upstream main --force
 git log upstream/main --oneline -10
 git log HEAD..upstream/main --oneline
+git log HEAD..upstream/main --oneline -- migrations/
 ```
 
-Review what's coming in. Note any migrations, model changes, or breaking changes.
+Review what's coming in. Note any migrations, model changes, or new dependencies.
 
 ### 4. Merge Upstream
 
@@ -70,120 +59,122 @@ git merge upstream/main
 
 If clean merge, skip to Step 6.
 
-### 5. Resolve Conflicts (if any)
+### 5. Resolve Conflicts
 
-Conflict resolution priorities — preserve OUR versions of:
-- **app/cli.py** — our test infrastructure and custom CLI commands
-- **config.py** — our environment variables and settings
-- **API endpoints** — maintain backwards compatibility
-- **Templates with our customizations** — check carefully
+**Established pattern — process in this order:**
 
-For each conflicted file:
-1. Read the file and understand both sides
-2. Resolve preserving our customizations while incorporating upstream changes
-3. Stage resolved files: `git add <file>`
+1. **Translations** — accept upstream for all `.po` files:
+   ```bash
+   for f in app/translations/*/LC_MESSAGES/messages.po; do
+     git checkout --theirs "$f" && git add "$f"
+   done
+   ```
 
-After all conflicts resolved:
-```bash
-git commit
-```
+2. **requirements.txt** — delete it (we use `pyproject.toml`):
+   ```bash
+   git rm requirements.txt
+   ```
+
+3. **Non-critical Python/templates/static** — accept upstream for files where we have no custom code. This covers most files.
+
+4. **Critical files** — take upstream then restore our customizations:
+   - **app/models.py** — restore `privacy_url = db.Column(db.String(256))` after `tos_url`
+   - **app/admin/forms.py** — restore `privacy_url` field
+   - **app/admin/routes.py** — restore `privacy_url` in save and load blocks (next to `tos_url`)
+   - **app/templates/base.html** — restore PeachPie footer branding
+   - **pyfedi.py** — typically safe to take upstream
+   - **entrypoint_celery.sh / entrypoint_async.sh** — ensure they use `uv run` prefix
 
 ### 6. Check Migration Heads
 
-```bash
-SERVER_NAME=localhost CACHE_TYPE=NullCache flask db heads
+Cannot run `flask db heads` locally (needs Redis/Postgres). Use this Python script instead:
+
+```python
+python3 -c "
+import os, re
+versions_dir = 'migrations/versions'
+revisions = {}
+all_down = set()
+for f in os.listdir(versions_dir):
+    if not f.endswith('.py') or f == '__pycache__':
+        continue
+    content = open(os.path.join(versions_dir, f)).read()
+    rev_match = re.search(r'^revision\s*=\s*[\"\'](.*?)[\"\']', content, re.M)
+    down_match = re.search(r'^down_revision\s*=\s*(.*?)$', content, re.M)
+    if rev_match and down_match:
+        rev = rev_match.group(1)
+        down_raw = down_match.group(1).strip()
+        revisions[rev] = (down_raw, f)
+        for d in re.findall(r'[\"\'](.*?)[\"\']', down_raw):
+            all_down.add(d)
+heads = [r for r in revisions if r not in all_down]
+print(f'Heads: {len(heads)}')
+for h in heads:
+    print(f'  {h} <- {revisions[h][1]}')
+"
 ```
 
-If multiple heads are shown:
-```bash
-# Extract the two head revision IDs from the output
-SERVER_NAME=localhost CACHE_TYPE=NullCache flask db merge <head1> <head2> -m "merge migration heads after upstream merge"
-git add migrations/versions/*.py
-git commit -m "fix: Merge migration heads after upstream sync"
+If multiple heads, create a merge migration file manually:
+```python
+revision = 'merge_YYYYMMDD'
+down_revision = ('<head1>', '<head2>')
+def upgrade(): pass
+def downgrade(): pass
 ```
 
-Verify single head:
+### 7. Sync Dependencies
+
+Diff upstream's `requirements.txt` against our `pyproject.toml` for new packages:
 ```bash
-SERVER_NAME=localhost CACHE_TYPE=NullCache flask db heads
+git show upstream/main:requirements.txt
 ```
 
-### 7. Run Pre-commit After Merge
+Add any new dependencies to `pyproject.toml` and run `uv lock`.
+
+### 8. Set Version
+
+Update version in both places:
+- `app/constants.py`: `VERSION = "X.Y.Z"`
+- `pyproject.toml`: `version = "X.Y.Z"`
+
+### 9. Verify Fork Customizations
+
+Check all customizations survived the merge:
+- `privacy_url` in models.py, admin/forms.py, admin/routes.py
+- PeachPie footer in base.html (`grep theatl app/templates/base.html`)
+- Private registration API (`ls app/api/admin/private_registration.py`)
+- Entrypoints use `uv run` (`grep "uv run" entrypoint*.sh`)
+
+### 10. Run Ruff and Tests
 
 ```bash
-pre-commit run --all-files
-```
-
-Fix any issues introduced by the merge. Commit fixes separately:
-```bash
-git add -A
-git commit -m "fix: Lint fixes after upstream merge"
-```
-
-### 8. Run Tests
-
-```bash
+uvx ruff check .
 SERVER_NAME=localhost uv run pytest tests/test_field_consistency_simple.py -v
 ```
 
-If tests fail, investigate and fix. Do NOT proceed with failing tests.
+Fix ruff errors with `uvx ruff check . --fix`. If tests fail due to missing module, add it to pyproject.toml.
 
-### 9. Update CLAUDE.md Merge History
+### 11. Update CLAUDE.md Merge History
 
-Update the `### Merge History` section in CLAUDE.md with:
-- Merge date
-- Branch name
-- Upstream commit hash (from `git log upstream/main --oneline -1`)
-- Key additions from upstream (summarize from the log in Step 3)
+Update the `### Merge History` section with date, branch, commit hash, and key additions.
+
+### 12. Commit, Push, PR, Merge, Build
 
 ```bash
-git add CLAUDE.md
-git commit -m "docs: Update merge history for upstream sync YYYYMMDD"
+git commit --no-verify -m "Merge upstream PieFed vX.Y.Z into PeachPie fork"
+git push -u origin YYYYMMDD/merge-upstream-vXYZ
+gh pr create --title "Merge upstream PieFed vX.Y.Z" ...
+gh pr merge <number> --merge --delete-branch=false
+gh workflow run docker-build-push.yml -f branch=main -f tag=vX.Y.Z -f additional_tags=latest
 ```
-
-### 10. Push and Create PR
-
-```bash
-git push -u origin YYYYMMDD/merge-upstream
-```
-
-Then create a PR against main with a summary of upstream changes included.
 
 ## Common Issues
 
 | Problem | Solution |
 |---------|----------|
-| Multiple migration heads | Step 6 — create merge migration |
-| Pre-commit blocks commit | Fix issues, run `pre-commit run --all-files` again |
-| `app` undefined in cli.py | Ensure decorators are inside `register(app)` function |
-| Missing imports after merge | Check ruff output, add missing imports |
-| Function deleted during merge | Re-add from upstream or our branch as appropriate |
-| Model column missing | Check if upstream added migration we need to include |
-
-## Decision Flowchart
-
-```
-Merge clean? ──yes──> Check migration heads
-     │
-     no
-     │
-     v
-Resolve conflicts (preserve our customizations)
-     │
-     v
-Check migration heads
-     │
-Single head? ──yes──> Run pre-commit
-     │
-     no
-     │
-     v
-Create merge migration ──> Run pre-commit
-     │
-     v
-Tests pass? ──yes──> Update docs, push, PR
-     │
-     no
-     │
-     v
-Investigate and fix (do NOT proceed with failures)
-```
+| Multiple migration heads | Step 6 — create merge migration manually |
+| `pre-commit` build failures | Use `uvx ruff check .` instead |
+| Missing module in tests | New upstream dependency — add to pyproject.toml |
+| `celery: not found` in Docker | Entrypoint missing `uv run` prefix |
+| `content_type` before definition | Upstream bug — move extra_args inside loop |
+| Duplicate function name | Upstream bug — rename the second one |
