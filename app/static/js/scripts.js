@@ -1586,7 +1586,8 @@ function setupDynamicContentObserver() {
         // Use a more efficient check - only look for specific class patterns
         const targetClasses = [
             'send_post', 'confirm_first', 'showElement', 'show-more',
-            'user_preview', 'hide_button', 'unhide', 'comment', 'autoresize'
+            'user_preview', 'hide_button', 'unhide', 'comment', 'autoresize',
+            'showPopupCommunitySidebar'
         ];
 
         for (const mutation of mutations) {

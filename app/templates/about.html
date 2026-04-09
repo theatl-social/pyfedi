@@ -9,11 +9,11 @@
     <main class="col-12 col-lg-8 position-relative main_pane">
         <h1>{{ _('About %(site_name)s', site_name=g.site.name) }}</h1>
         <p>{{ _('This site is a <a href="https://join.piefed.social/">PieFed</a> instance created on %(created_on)s', created_on=instance.created_at.strftime('%d-%m-%Y')) }}.
-           {{ ngettext('It is home to <a href="/people">%(num)d user</a>', 'It is home to <a href="/people">%(num)d users</a>', user_amount) }}
-           {{ ngettext('(of which %(num)d was active in the last month)', '(of which %(num)d were active in the last month)', mau) }}.
-           {{ ngettext('In <a href="/communities?home_select=local">%(num)d community</a> we discussed', 'In <a href="/communities?home_select=local">%(num)d communities</a> we discussed', community_amount) }}
-           {{ ngettext('content from <a href="/domains">%(num)d</a> website', 'content from <a href="/domains">%(num)d</a> websites', domains_amount) }}
-           {{ ngettext('and made %(num)d post', 'and made %(num)d posts', posts_amount) }}.</p>
+           {{ ngettext('It is home to <a href="/people">%(num)d user</a>', 'It is home to <a href="/people">%(num)d users</a>', user_amount) | safe }}
+           {{ ngettext('(of which %(num)d was active in the last month)', '(of which %(num)d were active in the last month)', mau) | safe}}.
+           {{ ngettext('In <a href="/communities?home_select=local">%(num)d community</a> we discussed', 'In <a href="/communities?home_select=local">%(num)d communities</a> we discussed', community_amount) | safe }}
+           {{ ngettext('content from <a href="/domains">%(num)d</a> website', 'content from <a href="/domains">%(num)d</a> websites', domains_amount) | safe }}
+           {{ ngettext('and made %(num)d post', 'and made %(num)d posts', posts_amount) | safe }}.</p>
         <h2>{{ _('Team') }}</h2>
         <p>{{ _('This instance is administered by') }} {% for admin in admins %}<a href="/u/{{ admin.user_name }}">{{ admin.user_name }}</a>{{ ", " if not loop.last }}{% endfor %}.</p>
         {% if staff %}

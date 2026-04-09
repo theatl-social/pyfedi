@@ -12,36 +12,14 @@ from app import db, cache, celery
 from app.activitypub.signature import send_post_request, default_context, RsaKeys
 from app.activitypub.util import find_actor_or_create, make_image_sizes
 from app.constants import *
-from app.models import (
-    User,
-    Feed,
-    FeedMember,
-    FeedItem,
-    Community,
-    FeedJoinRequest,
-    CommunityMember,
-    CommunityJoinRequest,
-    Instance,
-    File,
-)
+from app.models import User, Feed, FeedMember, FeedItem, Community, FeedJoinRequest, CommunityMember, \
+    CommunityJoinRequest, Instance, File
 from app.shared.tasks import task_selector
 from app.shared.community import leave_community
 from app.shared.upload import process_upload
-from app.utils import (
-    authorise_api_user,
-    feed_membership,
-    get_request,
-    menu_subscribed_feeds,
-    joined_communities,
-    community_membership,
-    gibberish,
-    get_task_session,
-    instance_banned,
-    menu_instance_feeds,
-    piefed_markdown_to_lemmy_markdown,
-    markdown_to_html,
-    is_image_url,
-)
+from app.utils import authorise_api_user, feed_membership, get_request, menu_subscribed_feeds, joined_communities, \
+    community_membership, gibberish, get_task_session, instance_banned, menu_instance_feeds, \
+    piefed_markdown_to_lemmy_markdown, markdown_to_html, is_image_url
 
 
 def join_feed(actor, user_id, src=SRC_WEB):
@@ -49,7 +27,7 @@ def join_feed(actor, user_id, src=SRC_WEB):
         remote = False
         actor = actor.strip()
         user = User.query.get(user_id)
-        if "@" in actor:
+        if '@' in actor:
             feed = Feed.query.filter_by(ap_id=actor).first()
             remote = True
         else:
@@ -58,7 +36,6 @@ def join_feed(actor, user_id, src=SRC_WEB):
         if feed is not None:
             if feed_membership(user, feed) == SUBSCRIPTION_NONMEMBER:
                 from app.community.routes import do_subscribe
-
                 success = True
 
                 # for local feeds, joining is instant
@@ -91,15 +68,10 @@ def join_feed(actor, user_id, src=SRC_WEB):
                             "to": [feed.public_url()],
                             "object": feed.public_url(),
                             "type": "Follow",
-                            "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}",
+                            "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
                         }
-                        send_post_request(
-                            feed.ap_inbox_url,
-                            follow,
-                            user.private_key,
-                            user.public_url() + "#main-key",
-                            timeout=10,
-                        )
+                        send_post_request(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key',
+                                          timeout=10)
 
                         # reach out and get the feeditems from the remote /following collection
                         res = get_request(feed.ap_following_url)
@@ -107,28 +79,20 @@ def join_feed(actor, user_id, src=SRC_WEB):
 
                         # for each of those add the communities
                         # subscribe the user if they have feed_auto_follow turned on
-                        for fci in following_collection["items"]:
+                        for fci in following_collection['items']:
                             community_ap_id = fci
-                            community = find_actor_or_create(
-                                community_ap_id, community_only=True
-                            )
+                            community = find_actor_or_create(community_ap_id, community_only=True)
                             if community and isinstance(community, Community):
-                                actor = (
-                                    community.ap_id
-                                    if community.ap_id
-                                    else community.name
-                                )
+                                actor = community.ap_id if community.ap_id else community.name
                                 if user.feed_auto_follow:
                                     do_subscribe(actor, user.id, joined_via_feed=True)
                                 # also make a feeditem in the local db
-                                feed_item = FeedItem(
-                                    feed_id=feed.id, community_id=community.id
-                                )
+                                feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
                                 db.session.add(feed_item)
                                 db.session.commit()
 
                 if success is True and src == SRC_WEB:
-                    flash(_("You subscribed to %(feed_title)s", feed_title=feed.title))
+                    flash(_('You subscribed to %(feed_title)s', feed_title=feed.title))
             else:
                 msg_to_user = "Already subscribed, or subscription pending"
                 if src == SRC_WEB:
@@ -152,17 +116,15 @@ def leave_feed(feed: int | Feed, src, auth=None, bulk_leave=False):
     elif isinstance(feed, int):
         feed_id = feed
         feed = db.session.query(Feed).get(feed_id)
-
+    
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     fm = db.session.query(FeedMember).filter_by(user_id=user_id, feed_id=feed_id).one()
 
     if not fm.is_owner:
-        task_selector("leave_feed", user_id=user_id, feed_id=feed_id)
-
-        db.session.query(FeedMember).filter_by(
-            user_id=user_id, feed_id=feed_id
-        ).delete()
+        task_selector('leave_feed', user_id=user_id, feed_id=feed_id)
+        
+        db.session.query(FeedMember).filter_by(user_id=user_id, feed_id=feed_id).delete()
         feed.subscriptions_count -= 1
         db.session.commit()
 
@@ -174,61 +136,41 @@ def leave_feed(feed: int | Feed, src, auth=None, bulk_leave=False):
                 feed_items = db.session.query(FeedItem).filter_by(feed_id=feed_id).all()
                 for feed_item in feed_items:
                     # Send the community unsub requests to celery - it will handle all the db commits and cache busting
-                    leave_community(
-                        community_id=feed_item.community_id,
-                        src=src,
-                        auth=auth,
-                        bulk_leave=bulk_leave,
-                    )
+                    leave_community(community_id=feed_item.community_id, src=src, auth=auth, bulk_leave=bulk_leave)
 
         if src == SRC_WEB and not bulk_leave:
-            flash(
-                _(
-                    "You have unsubscribed from the %(feed_name)s feed, "
-                    "please allow a couple minutes for it to fully process",
-                    feed_name=feed.title,
-                )
-            )
+            flash(_('You have unsubscribed from the %(feed_name)s feed, '
+                    'please allow a couple minutes for it to fully process', feed_name = feed.title))
     else:
         if src == SRC_API:
             raise Exception("You cannot leave your own feed")
         else:
-            flash(_("You cannot leave your own feed"), "warning")
+            flash(_('You cannot leave your own feed'), 'warning')
             return
 
 
-def make_feed(
-    input, src, auth=None, uploaded_icon_file=None, uploaded_banner_file=None
-):
+def make_feed(input, src, auth=None, uploaded_icon_file=None, uploaded_banner_file=None):
     if src == SRC_API:
-        url = input["url"]
-        title = input["title"]
-        public = input["public"]
-        description = input["description"]
-        icon_url = input["icon_url"]
-        banner_url = input["banner_url"]
-        nsfw = input["nsfw"]
-        nsfl = input["nsfl"]
-        communities = input["communities"]
-        is_instance_feed = input["is_instance_feed"]
-        show_child_posts = input["show_child_posts"]
-        parent_feed_id = input["parent_feed_id"]
-        user = authorise_api_user(auth, return_type="model")
+        url = input['url']
+        title = input['title']
+        public = input['public']
+        description = input['description']
+        icon_url = input['icon_url']
+        banner_url = input['banner_url']
+        nsfw = input['nsfw']
+        nsfl = input['nsfl']
+        communities = input['communities']
+        is_instance_feed = input['is_instance_feed']
+        show_child_posts = input['show_child_posts']
+        parent_feed_id = input['parent_feed_id']
+        user = authorise_api_user(auth, return_type='model')
     else:
         url = input.url.data
         title = input.title.data
         public = input.public.data
         description = piefed_markdown_to_lemmy_markdown(input.description.data)
-        icon_url = (
-            process_upload(uploaded_icon_file, destination="feeds")
-            if uploaded_icon_file
-            else None
-        )
-        banner_url = (
-            process_upload(uploaded_banner_file, destination="feeds")
-            if uploaded_banner_file
-            else None
-        )
+        icon_url = process_upload(uploaded_icon_file, destination='feeds') if uploaded_icon_file else None
+        banner_url = process_upload(uploaded_banner_file, destination='feeds') if uploaded_banner_file else None
         nsfw = input.nsfw.data
         nsfl = input.nsfl.data
         communities = input.communities.data
@@ -238,44 +180,21 @@ def make_feed(
         user = current_user
 
     private_key, public_key = RsaKeys.generate_keypair()
-    feed = Feed(
-        user_id=user.id,
-        title=title,
-        name=url,
-        machine_name=url,
-        description=piefed_markdown_to_lemmy_markdown(description),
-        description_html=markdown_to_html(description),
-        show_posts_in_children=show_child_posts,
-        nsfw=nsfw,
-        nsfl=nsfl,
-        private_key=private_key,
-        public_key=public_key,
-        public=public,
-        is_instance_feed=is_instance_feed,
-        ap_profile_id="https://"
-        + current_app.config["SERVER_NAME"]
-        + "/f/"
-        + url.lower(),
-        ap_public_url="https://" + current_app.config["SERVER_NAME"] + "/f/" + url,
-        ap_followers_url="https://"
-        + current_app.config["SERVER_NAME"]
-        + "/f/"
-        + url
-        + "/followers",
-        ap_following_url="https://"
-        + current_app.config["SERVER_NAME"]
-        + "/f/"
-        + url
-        + "/following",
-        ap_outbox_url="https://"
-        + current_app.config["SERVER_NAME"]
-        + "/f/"
-        + url
-        + "/outbox",
-        ap_domain=current_app.config["SERVER_NAME"],
-        subscriptions_count=1,
-        instance_id=1,
-    )
+    feed = Feed(user_id=user.id, title=title, name=url, machine_name=url,
+                description=piefed_markdown_to_lemmy_markdown(description),
+                description_html=markdown_to_html(description),
+                show_posts_in_children=show_child_posts,
+                nsfw=nsfw, nsfl=nsfl,
+                private_key=private_key,
+                public_key=public_key,
+                public=public, is_instance_feed=is_instance_feed,
+                ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/f/' + url.lower(),
+                ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + url,
+                ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + url + '/followers',
+                ap_following_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + url + '/following',
+                ap_outbox_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + url + '/outbox',
+                ap_domain=current_app.config['SERVER_NAME'],
+                subscriptions_count=1, instance_id=1)
     if parent_feed_id:
         feed.parent_feed_id = parent_feed_id
     else:
@@ -286,13 +205,13 @@ def make_feed(
         db.session.add(file)
         db.session.commit()
         feed.icon_id = file.id
-        make_image_sizes(feed.icon_id, 40, 250, "feeds", False)
+        make_image_sizes(feed.icon_id, 40, 250, 'feeds', False)
     if banner_url and is_image_url(banner_url):
         file = File(source_url=banner_url)
         db.session.add(file)
         db.session.commit()
         feed.image_id = file.id
-        make_image_sizes(feed.image_id, 878, 1600, "feeds", False)
+        make_image_sizes(feed.image_id, 878, 1600, 'feeds', False)
 
     db.session.add(feed)
     db.session.commit()
@@ -301,52 +220,34 @@ def make_feed(
     db.session.add(membership)
     db.session.commit()
 
-    new_communities = form_communities_to_ids(
-        communities
-    )  # the communities that are in the feed now
+    new_communities = form_communities_to_ids(communities)  # the communities that are in the feed now
 
     for added_community in new_communities:
         _feed_add_community(added_community, 0, feed.id, user.id)
 
 
-def edit_feed(
-    input,
-    feed,
-    src,
-    auth=None,
-    uploaded_icon_file=None,
-    uploaded_banner_file=None,
-    from_scratch=False,
-):
+def edit_feed(input, feed, src, auth=None, uploaded_icon_file=None, uploaded_banner_file=None, from_scratch=False):
     if src == SRC_API:
-        url = input["url"]
-        title = input["title"]
-        public = input["public"]
-        description = input["description"]
-        icon_url = input["icon_url"]
-        banner_url = input["banner_url"]
-        nsfw = input["nsfw"]
-        nsfl = input["nsfl"]
-        communities = input["communities"]
-        is_instance_feed = input["is_instance_feed"]
-        show_child_posts = input["show_child_posts"]
-        parent_feed_id = input["parent_feed_id"]
-        user = authorise_api_user(auth, return_type="model")
+        url = input['url']
+        title = input['title']
+        public = input['public']
+        description = input['description']
+        icon_url = input['icon_url']
+        banner_url = input['banner_url']
+        nsfw = input['nsfw']
+        nsfl = input['nsfl']
+        communities = input['communities']
+        is_instance_feed = input['is_instance_feed']
+        show_child_posts = input['show_child_posts']
+        parent_feed_id = input['parent_feed_id']
+        user = authorise_api_user(auth, return_type='model')
     else:
         url = input.url.data
         title = input.title.data
         public = input.public.data
         description = piefed_markdown_to_lemmy_markdown(input.description.data)
-        icon_url = (
-            process_upload(uploaded_icon_file, destination="feeds")
-            if uploaded_icon_file
-            else None
-        )
-        banner_url = (
-            process_upload(uploaded_banner_file, destination="feeds")
-            if uploaded_banner_file
-            else None
-        )
+        icon_url = process_upload(uploaded_icon_file, destination='feeds') if uploaded_icon_file else None
+        banner_url = process_upload(uploaded_banner_file, destination='feeds') if uploaded_banner_file else None
         nsfw = input.nsfw.data
         nsfl = input.nsfl.data
         communities = input.communities.data
@@ -358,13 +259,9 @@ def edit_feed(
     icon_url_changed = banner_url_changed = False
 
     if url:
-        url = slugify(url.strip().split("/")[0], separator="_").lower()
+        url = slugify(url.strip().split('/')[0], separator='_').lower()
         if not public:
-            url = (
-                slugify(url.strip(), separator="_").lower()
-                + "/"
-                + user.user_name.lower()
-            )
+            url = slugify(url.strip(), separator='_').lower() + '/' + user.user_name.lower()
         feed.name = url
         feed.machine_name = url
     feed.title = title
@@ -378,7 +275,7 @@ def edit_feed(
 
     if not from_scratch:
         if not (feed.user_id == user.id or user.is_admin()):
-            raise Exception("incorrect_login")
+            raise Exception('incorrect_login')
 
         if feed.icon_id and icon_url != feed.icon.source_url:
             if icon_url != feed.icon.medium_url():
@@ -406,13 +303,14 @@ def edit_feed(
         db.session.add(file)
         db.session.commit()
         feed.icon_id = file.id
-        make_image_sizes(feed.icon_id, 40, 250, "feeds", False)
+        make_image_sizes(feed.icon_id, 40, 250, 'feeds', False)
     if banner_url and (from_scratch or banner_url_changed) and is_image_url(banner_url):
         file = File(source_url=banner_url)
         db.session.add(file)
         db.session.commit()
         feed.image_id = file.id
-        make_image_sizes(feed.image_id, 878, 1600, "feeds", False)
+        make_image_sizes(feed.image_id, 878, 1600, 'feeds', False)
+
 
     if g.site.enable_nsfw:
         feed.nsfw = nsfw
@@ -421,12 +319,8 @@ def edit_feed(
     # unsubscribe every feed member except owner when moving from public to private
     if feed.public and not public:
         db.session.query(FeedMember).filter(FeedMember.is_owner == False).delete()
-        db.session.query(FeedJoinRequest).filter_by(
-            user_id=user.id, feed_id=feed.id
-        ).delete()
-        feed.subscriptions_count = (
-            db.session.query(FeedMember).filter(FeedMember.is_owner == False).count()
-        )
+        db.session.query(FeedJoinRequest).filter_by(user_id=user.id, feed_id=feed.id).delete()
+        feed.subscriptions_count = db.session.query(FeedMember).filter(FeedMember.is_owner == False).count()
     feed.public = public
     if user.is_admin():
         feed.is_instance_feed = is_instance_feed
@@ -436,11 +330,8 @@ def edit_feed(
 
     # Update FeedItems based on whatever has changed in the form.communities field
     old_communities = set(
-        existing_communities(feed.id)
-    )  # the communities that were in the feed before the edit was made
-    new_communities = form_communities_to_ids(
-        communities
-    )  # the communities that are in the feed now
+        existing_communities(feed.id))  # the communities that were in the feed before the edit was made
+    new_communities = form_communities_to_ids(communities)  # the communities that are in the feed now
     added_communities = new_communities - old_communities
     removed_communities = old_communities - new_communities
 
@@ -449,7 +340,7 @@ def edit_feed(
 
     for removed_community in removed_communities:
         _feed_remove_community(removed_community, feed.id)
-
+        
 
 def delete_feed(feed_id: int, src, auth=None):
     if src == SRC_API:
@@ -481,17 +372,12 @@ def delete_feed(feed_id: int, src, auth=None):
     db.session.commit()
 
 
-def _feed_add_community(
-    community_id: int, current_feed_id: int, feed_id: int, user_id: int
-):
+def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, user_id: int):
     # if current_feed_id is not 0 then we are moving a community from
     # one feed to another
     if current_feed_id != 0:
-        current_feed_item = (
-            FeedItem.query.filter_by(feed_id=current_feed_id)
-            .filter_by(community_id=community_id)
-            .first()
-        )
+        current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(
+            community_id=community_id).first()
         db.session.delete(current_feed_item)
         db.session.commit()
 
@@ -505,13 +391,9 @@ def _feed_add_community(
         if current_feed.public:
             community = Community.query.get(community_id)
             if current_app.debug:
-                announce_feed_add_remove_to_subscribers(
-                    "Remove", current_feed.id, community.id
-                )
+                announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
             else:
-                announce_feed_add_remove_to_subscribers.delay(
-                    "Remove", current_feed.id, community.id
-                )
+                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
 
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
@@ -533,25 +415,17 @@ def _feed_add_community(
             announce_feed_add_remove_to_subscribers.delay("Add", feed.id, community.id)
 
     # subscribe the user to the community if they are not already subscribed
-    current_membership = CommunityMember.query.filter_by(
-        user_id=user_id, community_id=community_id
-    ).first()
+    current_membership = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).first()
     if current_membership is None and current_user.feed_auto_follow:
         # import do_subscribe here, otherwise we get import errors from circular import problems
         from app.community.routes import do_subscribe
-
         community = Community.query.get(community_id)
         actor = community.ap_id if community.ap_id else community.name
         do_subscribe(actor, user_id, joined_via_feed=True)
 
 
 def _feed_remove_community(community_id: int, current_feed_id: int):
-    current_feed_item = (
-        db.session.query(FeedItem)
-        .filter_by(feed_id=current_feed_id)
-        .filter_by(community_id=community_id)
-        .first()
-    )
+    current_feed_item = db.session.query(FeedItem).filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
     db.session.delete(current_feed_item)
     db.session.commit()
 
@@ -562,69 +436,45 @@ def _feed_remove_community(community_id: int, current_feed_id: int):
     db.session.commit()
 
     community = db.session.query(Community).get(community_id)
-    community_members = (
-        db.session.query(CommunityMember).filter_by(community_id=community.id).all()
-    )
+    community_members = db.session.query(CommunityMember).filter_by(community_id=community.id).all()
     # make all local users un-follow the community - if user.feed_auto_leave, and the user joined the community
     # as a result of adding it to a feed
     for cm in community_members:
         user = db.session.query(User).get(cm.user_id)
-        if (
-            user.is_local()
-            and user.feed_auto_leave
-            and cm.joined_via_feed is not None
-            and cm.joined_via_feed
-        ):
+        if user.is_local() and user.feed_auto_leave and cm.joined_via_feed is not None and cm.joined_via_feed:
             subscription = community_membership(user, community)
             if subscription != SUBSCRIPTION_OWNER:
                 proceed = True
                 # Undo the Follow
-                if (
-                    not community.is_local()
-                ):  # this is a remote community, so activitypub is needed
+                if not community.is_local():  # this is a remote community, so activitypub is needed
                     if not community.instance.gone_forever:
                         follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{gibberish(15)}"
-                        if community.instance.domain == "ovo.st":
-                            join_request = (
-                                db.session.query(CommunityJoinRequest)
-                                .filter_by(user_id=user.id, community_id=community.id)
-                                .first()
-                            )
+                        if community.instance.domain == 'ovo.st':
+                            join_request = db.session.query(CommunityJoinRequest).filter_by(user_id=user.id,
+                                                                                            community_id=community.id).first()
                             if join_request:
                                 follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
-                        undo_id = (
-                            f"{current_app.config['SERVER_URL']}/activities/undo/"
-                            + gibberish(15)
-                        )
+                        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
                         follow = {
                             "actor": user.public_url(),
                             "to": [community.public_url()],
                             "object": community.public_url(),
                             "type": "Follow",
-                            "id": follow_id,
+                            "id": follow_id
                         }
                         undo = {
-                            "actor": user.public_url(),
-                            "to": [community.public_url()],
-                            "type": "Undo",
-                            "id": undo_id,
-                            "object": follow,
+                            'actor': user.public_url(),
+                            'to': [community.public_url()],
+                            'type': 'Undo',
+                            'id': undo_id,
+                            'object': follow
                         }
-                        send_post_request(
-                            community.ap_inbox_url,
-                            undo,
-                            user.private_key,
-                            user.public_url() + "#main-key",
-                            timeout=10,
-                        )
+                        send_post_request(community.ap_inbox_url, undo, user.private_key,
+                                          user.public_url() + '#main-key', timeout=10)
 
                 if proceed:
-                    db.session.query(CommunityMember).filter_by(
-                        user_id=user.id, community_id=community.id
-                    ).delete()
-                    db.session.query(CommunityJoinRequest).filter_by(
-                        user_id=user.id, community_id=community.id
-                    ).delete()
+                    db.session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).delete()
+                    db.session.query(CommunityJoinRequest).filter_by(user_id=user.id, community_id=community.id).delete()
                     community.subscriptions_count -= 1
                     db.session.commit()
 
@@ -634,19 +484,13 @@ def _feed_remove_community(community_id: int, current_feed_id: int):
     # announce the change to any potential subscribers
     if current_feed.public:
         if current_app.debug:
-            announce_feed_add_remove_to_subscribers(
-                "Remove", current_feed.id, community.id
-            )
+            announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
         else:
-            announce_feed_add_remove_to_subscribers.delay(
-                "Remove", current_feed.id, community.id
-            )
+            announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
 
 
 @celery.task
-def announce_feed_add_remove_to_subscribers(
-    action: str, feed_id: int, community_id: int
-):
+def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community_id: int):
     # find the feed
     feed = Feed.query.get(feed_id)
     # find the community
@@ -665,12 +509,18 @@ def announce_feed_add_remove_to_subscribers(
         "type": action,
         "actor": feed.ap_public_url,
         "id": f"{current_app.config['SERVER_URL']}/activities/feedadd/{gibberish(15)}",
-        "object": {"type": "Group", "id": community.ap_public_url},
-        "target": {"type": "Collection", "id": feed.ap_following_url},
+        "object": {
+            "type": "Group",
+            "id": community.ap_public_url
+        },
+        "target": {
+            "type": "Collection",
+            "id": feed.ap_following_url
+        }
     }
 
     # embed the object json in the Announce json
-    activity_json["object"] = object_json
+    activity_json['object'] = object_json
 
     # look up the feedmembers
     feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
@@ -689,25 +539,14 @@ def announce_feed_add_remove_to_subscribers(
             if fm_user.is_local():
                 # user is local so lets auto-subscribe them to the community
                 from app.community.routes import do_subscribe
-
                 actor = community.ap_id if community.ap_id else community.name
                 do_subscribe(actor, fm_user.id, joined_via_feed=True)
                 continue
 
             # if we get here the feedmember is a remote user
             instance: Instance = session.query(Instance).get(fm_user.instance.id)
-            if (
-                instance.inbox
-                and instance.online()
-                and not instance_banned(instance.domain)
-            ):
-                send_post_request(
-                    instance.inbox,
-                    activity_json,
-                    feed.private_key,
-                    feed.ap_profile_id + "#main-key",
-                    timeout=10,
-                )
+            if instance.inbox and instance.online() and not instance_banned(instance.domain):
+                send_post_request(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10)
     except Exception:
         session.rollback()
         raise
@@ -727,7 +566,10 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
         "type": "Delete",
         "actor": user.ap_public_url,
         "id": f"{current_app.config['SERVER_URL']}/delete/{gibberish(15)}",
-        "object": {"type": "Feed", "id": feed.ap_public_url},
+        "object": {
+            "type": "Feed",
+            "id": feed.ap_public_url
+        }
     }
 
     # find the feed members
@@ -747,18 +589,8 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
                 continue
             # if we get here the feedmember is a remote user
             instance: Instance = session.query(Instance).get(fm_user.instance.id)
-            if (
-                instance.inbox
-                and instance.online()
-                and not instance_banned(instance.domain)
-            ):
-                send_post_request(
-                    instance.inbox,
-                    delete_json,
-                    user.private_key,
-                    user.ap_profile_id + "#main-key",
-                    timeout=10,
-                )
+            if instance.inbox and instance.online() and not instance_banned(instance.domain):
+                send_post_request(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10)
     except Exception:
         session.rollback()
         raise
@@ -767,22 +599,18 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
 
 
 def existing_communities(feed_id: int) -> List:
-    return db.session.execute(
-        text("SELECT community_id FROM feed_item WHERE feed_id = :feed_id"),
-        {"feed_id": feed_id},
-    ).scalars()
-
+    return db.session.execute(text('SELECT community_id FROM feed_item WHERE feed_id = :feed_id'),
+                              {'feed_id': feed_id}).scalars()
 
 def form_communities_to_ids(form_communities: str) -> set:
     from app.community.util import search_for_community
-
     result = set()
-    parts = form_communities.strip().split("\n")
+    parts = form_communities.strip().split('\n')
     for community_ap_id in parts:
-        if not community_ap_id.startswith("!"):
-            community_ap_id = "!" + community_ap_id
-        if not "@" in community_ap_id:
-            community_ap_id = community_ap_id + "@" + current_app.config["SERVER_NAME"]
+        if not community_ap_id.startswith('!'):
+            community_ap_id = '!' + community_ap_id
+        if not '@' in community_ap_id:
+            community_ap_id = community_ap_id + '@' + current_app.config['SERVER_NAME']
         community = search_for_community(community_ap_id.strip())
         if community:
             result.add(community.id)

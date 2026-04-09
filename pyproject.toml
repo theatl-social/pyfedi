@@ -1,6 +1,6 @@
 [project]
 name = "pyfedi"
-version = "1.6.12"
+version = "1.6.17"
 description = "PieFed - A federated discussion and link aggregation platform"
 readme = "README.md"
 license = { text = "AGPL-3.0" }
@@ -62,6 +62,7 @@ dependencies = [
     "rich",
     "gunicorn",
     "tatsu==5.13.2",
+    "pendulum~=3.2.0",
 ]
 
 [project.optional-dependencies]

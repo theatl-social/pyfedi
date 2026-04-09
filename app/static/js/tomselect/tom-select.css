@@ -381,7 +381,7 @@
 
 .ts-wrapper {
   position: relative;
-  padding: 0;
+  padding: 0!important;
 }
 
 .ts-dropdown,

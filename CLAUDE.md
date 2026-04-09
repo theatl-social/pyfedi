@@ -217,6 +217,28 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Successfully merged with upstream v1.6.17 on 2026-04-09
+- Branch: `20260409/merge-upstream-v1617`
+- Upstream commit: b29aae26
+- Key additions from upstream:
+  - Random community feature (`/r/random`)
+  - Navbar create button for posts/communities
+  - Materialized view for API post list performance
+  - Community themes support (`allow_community_themes` user setting)
+  - Archived comments on user profiles
+  - Admin instance filtering for popular communities
+  - `finished_onboarding` database column
+  - Caching improvements (with some reverts for stability)
+  - NNTP server support
+  - Dropdown menu styling improvements
+  - Updated translations from Weblate
+  - New dependency: `pendulum~=3.2.0`
+  - New migration: `merge_heads_20260409.py`
+- Fixed upstream ruff errors (f-strings without placeholders, unused variables)
+
+- Successfully merged with upstream v1.6.12 on 2026-03-16
+- Branch: `20260316/merge-upstream-v1612`
+
 - Successfully merged with upstream v1.6.9 on 2026-03-06
 - Branch: `20260306/merge-upstream-v169`
 - Upstream commit: 9a4db0f4

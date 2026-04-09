@@ -39,6 +39,8 @@
             {{ render_field(form.theme) }}
             {{ render_field(form.compaction) }}
             {{ render_field(form.font) }}
+            {{ render_field(form.allow_community_themes) }}
+             <small class="field_hint">{{ _('This can override your user theme in communities, that have enabled this feature') }}</small>
             <table style="width: 100%; max-width: 400px;" class="mb-3">
                 <tr>
                     <td><a href="#" id="increase_font_size">{{ _('Increase font size') }}</a></td>
@@ -67,6 +69,7 @@
             {{ render_field(form.default_filter) }}
             {{ render_field(form.max_hours_per_day) }}
             <small class="field_hint d-none d-md-block">{{ _('You can have different values on each device.') }}</small>
+            {{ render_field(form.max_hours_change_restriction) }}
             {{ render_field(form.federate_votes) }}
             <small class="field_hint d-md-none">{{ _('Long press to vote differently.') }}</small>
             <small class="field_hint d-none d-md-block">{{ _('Hold down the mouse button to vote differently.') }}</small>

@@ -233,6 +233,7 @@
         </a>
     </li>
 {% endif -%}
+{% if offer_markdown_source == 'True' %}
 <li id="post_source_swap_{{ post.id }}">
     <a href="#" class="dropdown-item no-underline"
             hx-get="{{ url_for('post.post_source', post_id=post.id, state="show") }}"
@@ -243,6 +244,7 @@
         {{ _('View markdown source') }}
     </a>
 </li>
+{% endif %}
 {% if not post.deleted -%}
 <li>
     <a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">

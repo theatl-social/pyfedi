@@ -21,7 +21,8 @@
 
         {% if has_notifications %}
             <div class="nav nav-tabs nav-justified" id="typeTab" role="tablist" aria-label="{{ _('Filter notifications') }}">
-                <a class="nav-link{% if current_filter == ''%} active{% endif %}" type="button" role="tab" href='/notifications'>{{ _('All') }}</a>
+                <a class="nav-link{% if current_filter == ''%} active{% endif %}" type="button" role="tab" href='{{ url_for('user.notifications', type='') }}'>{{ _('All') }}</a>
+                {% if unread %}<a class="nav-link{% if current_filter == 'Unread'%} active{% endif %}" type="button" role="tab" href='{{ url_for('user.notifications', type='Unread') }}'>{{ _('Unread') }} ({{ unread }})</a>{% endif %}
                 {% for notification_type, new_notifications in notification_types.items() %}
                     <a class="nav-link{% if current_filter == str(notification_links[notification_type]) %} active{% endif %}"
                        id="notif_type_{{ notification_type }}" type="button" role="tab" href="?type={{ notification_links[notification_type] }}"

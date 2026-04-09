@@ -57,6 +57,8 @@
                 </p>
                 <div id="image_div" class="community_header mb-4" style="display: none; height: 240px; background-image: url({{ community.header_image() }});"></div>
             {% endif %}
+            {{ render_field(form.theme) }}
+            <small class="field_hint">{{ _('If you want to make your own theme,') }} <a href="https://codeberg.org/rimu/pyfedi/src/branch/main/docs/developer_docs/09_Theming_Guide.md">{{ _('learn how to do it here ') }}</a>{{ _('and propose it to our ') }} <a href="https://codeberg.org/rimu/pyfedi">{{ _('Codeberg repository') }}</a>. </small>
             {{ render_field(form.nsfw) }}
             {{ render_field(form.ai_generated) }}
             {{ render_field(form.restricted_to_mods) }}
