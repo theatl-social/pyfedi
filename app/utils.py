@@ -4328,3 +4328,25 @@ def show_reason_why_no_federation(instance_id):
         instance = Instance.query.get(instance_id)
         flash(_('You have been banned from %(instance_name)s which hosts this community.',
                 instance_name=instance.domain), 'warning')
+
+
+# Private Registration Utility Functions
+def is_private_registration_enabled():
+    """Check if private registration feature is enabled"""
+    env_value = os.environ.get("PRIVATE_REGISTRATION_ENABLED")
+    if env_value is not None:
+        return env_value.lower() == "true"
+    return get_setting("PRIVATE_REGISTRATION_ENABLED", "false").lower() == "true"
+
+
+def get_private_registration_secret():
+    """Get the private registration secret from environment"""
+    return os.environ.get("PRIVATE_REGISTRATION_SECRET", "")
+
+
+def get_private_registration_allowed_ips():
+    """Get list of allowed IP ranges for private registration"""
+    ips = get_setting("PRIVATE_REGISTRATION_IPS", "")
+    if not ips:
+        return []
+    return [ip.strip() for ip in ips.split(",") if ip.strip()]
