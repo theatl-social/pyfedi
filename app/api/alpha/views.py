@@ -45,7 +45,7 @@ from app.utils import (
     moderating_communities_ids_all_users,
     community_membership_private,
 )
-from app.shared.community import get_comm_flair_list
+from app.shared.community import get_comm_flair_list, cached_modlist_for_community, cached_modlist_for_user
 from app.shared.post import get_post_flair_list
 
 
@@ -1760,10 +1760,6 @@ def federated_instances_view():
         }
     }
     return v1
-
-
-# Re-exported from app.shared.community for backward compatibility
-from app.shared.community import cached_modlist_for_community, cached_modlist_for_user  # noqa: F401
 
 
 @cache.memoize(timeout=3000)
