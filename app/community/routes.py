@@ -1226,19 +1226,29 @@ def community_edit(community_id: int):
 
             icon_file = request.files['icon_file']
             if icon_file and icon_file.filename != '':
-                if community.icon_id:
-                    community.icon.delete_from_disk()
+                # Store old icon ID before uploading new one
+                old_icon_id = community.icon_id
                 file = save_icon_file(icon_file)
                 if file:
                     community.icon = file
+                    # Only delete old icon after new one is successfully saved
+                    if old_icon_id:
+                        old_icon_file = File.query.get(old_icon_id)
+                        db.session.delete(old_icon_file)
+                        old_icon_file.delete_from_disk()
             banner_file = request.files['banner_file']
             if banner_file and banner_file.filename != '':
-                if community.image_id:
-                    community.image.delete_from_disk()
+                # Store old banner ID before uploading new one
+                old_banner_id = community.image_id
                 file = save_banner_file(banner_file)
                 if file:
                     community.image = file
                     cache.delete_memoized(Community.header_image, community)
+                    # Only delete old banner after new one is successfully saved
+                    if old_banner_id:
+                        old_banner_file = File.query.get(old_banner_id)
+                        db.session.delete(old_banner_file)
+                        old_banner_file.delete_from_disk()
 
             # Languages of the community
             db.session.execute(text('DELETE FROM "community_language" WHERE community_id = :community_id'),

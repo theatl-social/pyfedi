@@ -273,27 +273,26 @@ def edit_feed(input, feed, src, auth=None, uploaded_icon_file=None, uploaded_ban
     else:
         feed.parent_feed_id = None
 
+    old_icon_id = 0
+    old_banner_id = 0
+
     if not from_scratch:
         if not (feed.user_id == user.id or user.is_admin()):
             raise Exception('incorrect_login')
 
+        # Store old file IDs before processing new URLs
+        old_icon_id = feed.icon_id
+        old_banner_id = feed.image_id
+        icon_url_changed = banner_url_changed = False
+
         if feed.icon_id and icon_url != feed.icon.source_url:
             if icon_url != feed.icon.medium_url():
                 icon_url_changed = True
-                remove_file = File.query.get(feed.icon_id)
-                if remove_file:
-                    remove_file.delete_from_disk()
-                feed.icon_id = None
         if not feed.icon_id:
             icon_url_changed = True
         if feed.image_id and banner_url != feed.image.source_url:
             if banner_url != feed.image.medium_url():
                 banner_url_changed = True
-                remove_file = File.query.get(feed.image_id)
-                if remove_file:
-                    remove_file.delete_from_disk()
-                feed.image_id = None
-                cache.delete_memoized(Feed.header_image, feed)
         if not feed.image_id:
             cache.delete_memoized(Feed.header_image, feed)
             banner_url_changed = True
@@ -304,13 +303,25 @@ def edit_feed(input, feed, src, auth=None, uploaded_icon_file=None, uploaded_ban
         db.session.commit()
         feed.icon_id = file.id
         make_image_sizes(feed.icon_id, 40, 250, 'feeds', False)
+        # Only delete old icon after new one is successfully saved
+        if not from_scratch and old_icon_id and old_icon_id != feed.icon_id:
+            remove_file = File.query.get(old_icon_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+                db.session.delete(remove_file)
     if banner_url and (from_scratch or banner_url_changed) and is_image_url(banner_url):
         file = File(source_url=banner_url)
         db.session.add(file)
         db.session.commit()
         feed.image_id = file.id
         make_image_sizes(feed.image_id, 878, 1600, 'feeds', False)
-
+        # Only delete old banner after new one is successfully saved
+        if not from_scratch and old_banner_id and old_banner_id != feed.image_id:
+            remove_file = File.query.get(old_banner_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+                db.session.delete(remove_file)
+                cache.delete_memoized(Feed.header_image, feed)
 
     if g.site.enable_nsfw:
         feed.nsfw = nsfw
