@@ -122,7 +122,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     #post_query_criteria.append(f'deleted is false AND status > {POST_STATUS_REVIEWING}')
 
     if blocked_person_ids:
-        post_query_criteria.append(f'user_id NOT IN :blocked_person_ids')
+        post_query_criteria.append(f'p.user_id NOT IN :blocked_person_ids')
         post_query_parameters['blocked_person_ids'] = tuple(blocked_person_ids)
 
     if blocked_community_ids:
@@ -130,7 +130,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         post_query_parameters['blocked_community_ids'] = tuple(blocked_community_ids)
 
     if blocked_domain_ids and not (type == "ModeratorView" or type == "Moderating"):
-        post_query_criteria.append('(domain_id is null OR domain_id NOT IN :blocked_domain_ids)')
+        post_query_criteria.append('(p.domain_id is null OR p.domain_id NOT IN :blocked_domain_ids)')
         post_query_parameters['blocked_domain_ids'] = tuple(blocked_domain_ids)
 
     if blocked_instance_ids:
@@ -644,6 +644,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
         user_id = authorise_api_user(auth)
 
     # get the user to check if the user has hide_read posts set later down the function
+    user_id = 1
     if user_id:
         user = User.query.get(user_id)
         g.user = user   # save the currently logged in user into g, to save loading it up again and again in post_view.
