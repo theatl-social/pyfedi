@@ -232,7 +232,7 @@ class CreatePostForm(FlaskForm):
                          choices=[('none', _l('None')), ('daily', _l('Daily')),
                                   ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
                          render_kw={'class': 'form-select'})
-    timezone = SelectField(_('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', "class": "form-control"})
+    timezone = SelectField(_l('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', "class": "form-control"})
     submit = SubmitField(_l('Publish'))
 
     def __init__(self, *args, **kwargs):
@@ -376,9 +376,9 @@ class CreateEventForm(CreatePostForm):
     end_datetime = DateTimeLocalField(_l('End'), validators=[DataRequired()], format="%Y-%m-%dT%H:%M")
     image_file = FileField(_l('Banner'), validators=[Optional()], render_kw={'accept': 'image/*'})
     more_info_url = StringField(_l('More information link'), validators=[Optional(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
-    event_timezone = SelectField(_('Timezone'), validators=[Optional()],
+    event_timezone = SelectField(_l('Timezone'), validators=[Optional()],
                            render_kw={'id': 'timezone', "class": "form-control tom-select"})
-    join_mode = SelectField(_('Cost'), validators=[Optional()])
+    join_mode = SelectField(_l('Cost'), validators=[Optional()])
     max_attendees = IntegerField(_l('Maximum number of attendees'))
     online = BooleanField(_l('Online'))
     online_link = StringField(_l('Online link'), validators=[Optional(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
@@ -459,7 +459,7 @@ class CreateEventForm(CreatePostForm):
 
 
 class CreatePollForm(CreatePostForm):
-    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Voters choose one option')),
+    mode = SelectField(_l('Mode'), validators=[DataRequired()], choices=[('single', _l('Voters choose one option')),
                                                                         ('multiple', _l('Voters choose many options'))],
                        render_kw={'class': 'form-select'})
     finish_choices = [
@@ -471,7 +471,7 @@ class CreatePollForm(CreatePostForm):
         ('3d', _l('3 days')),
         ('7d', _l('7 days')),
     ]
-    finish_in = SelectField(_('End voting in'), validators=[DataRequired()], choices=finish_choices,
+    finish_in = SelectField(_l('End voting in'), validators=[DataRequired()], choices=finish_choices,
                             render_kw={'class': 'form-select'})
     local_only = BooleanField(_l('Accept votes from this instance only'))
     choice_1 = StringField('Choice')  # intentionally left out of internationalization (no _l()) as this label is not used
