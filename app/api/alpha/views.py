@@ -5,7 +5,7 @@ import time
 
 from flask import current_app, g
 from sqlalchemy import text, func, or_
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound, DetachedInstanceError
 
 from app import cache, db
 from app.activitypub.util import active_month
@@ -347,7 +347,11 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 v1['flair'] = flair
         if user.extra_fields:
             v1['extra_fields'] = []
-            for field in user.extra_fields.limit(4):
+            try:
+                extra_fields = user.extra_fields
+            except DetachedInstanceError as e:  # when loading archived posts and their replies, temporary detatched users are created. See convert_archived_replies_to_tree()
+                extra_fields = User.query.get(user.id).extra_fields
+            for field in extra_fields:
                 user_field = {}
                 user_field['id'] = field.id
                 user_field['label'] = field.label
