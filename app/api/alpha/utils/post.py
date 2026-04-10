@@ -134,7 +134,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         post_query_parameters['blocked_domain_ids'] = tuple(blocked_domain_ids)
 
     if blocked_instance_ids:
-        post_query_criteria.append('community_instance_id NOT IN :blocked_instance_ids')
+        post_query_criteria.append('c.instance_id NOT IN :blocked_instance_ids')
         post_query_parameters['blocked_instance_ids'] = tuple(blocked_instance_ids)
 
     if type == "Local":
