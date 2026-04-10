@@ -309,6 +309,7 @@ def admin_misc():
         set_setting('allow_video_file_uploads', form.allow_video_file_uploads.data)
         set_setting('enable_report_em_dash_replies', form.enable_report_em_dash_replies.data)
         set_setting('limit_one_em_report_per_user', form.limit_one_em_report_per_user.data)
+        set_setting('read_posts_cutoff', int(form.read_posts_cutoff.data))
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -347,6 +348,7 @@ def admin_misc():
         form.allow_video_file_uploads.data = get_setting('allow_video_file_uploads', 'no')
         form.enable_report_em_dash_replies.data = get_setting('enable_report_em_dash_replies', True)
         form.limit_one_em_report_per_user.data = get_setting('limit_one_em_report_per_user', False)
+        form.read_posts_cutoff.data = get_setting('read_posts_cutoff', 180)
     return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
 
 
