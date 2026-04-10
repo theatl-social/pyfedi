@@ -644,7 +644,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
         user_id = authorise_api_user(auth)
 
     # get the user to check if the user has hide_read posts set later down the function
-    user_id = 1
+
     if user_id:
         user = User.query.get(user_id)
         g.user = user   # save the currently logged in user into g, to save loading it up again and again in post_view.
