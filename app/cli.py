@@ -220,7 +220,6 @@ def register(app):
             # remove_orphan_files.sh
             db.session.add(CronJobLog(name='remove_orphan_files', frequency=timedelta(days=8)))
             # daily.sh
-            db.session.add(CronJobLog(name='daily_maintenance_celery', frequency=timedelta(hours=25)))
             db.session.add(CronJobLog(name='daily_maintenance', frequency=timedelta(hours=25)))
             # send_queue.sh
             db.session.add(CronJobLog(name='send_queue', frequency=timedelta(minutes=5)))

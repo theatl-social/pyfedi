@@ -88,7 +88,7 @@ def admin_home():
     overdue_tasks = []
     for cron_task in result:
         diff_last_run = utcnow() - cron_task.last_run
-        if diff_last_run > cron_task.frequency:
+        if diff_last_run > cron_task.get_frequency():
             overdue_tasks.append(
                 f"{cron_task.name} (expected every {cron_task.frequency}, "
                 f"last run at {cron_task.last_run.strftime('%Y-%m-%d %H:%M UTC') if cron_task.last_run else 'never'})")

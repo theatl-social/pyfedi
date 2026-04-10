@@ -4068,6 +4068,24 @@ class CronJobLog(db.Model):
     last_run = db.Column(db.DateTime, default=utcnow)
     frequency = db.Column(db.Interval, nullable=True)
 
+    def get_frequency(self):
+        if self.frequency is not None:
+            return self.frequency
+        if self.name == 'send_missed_notifs':
+            return timedelta(hours=7)
+        elif self.name == 'process_email_bounces':
+            return timedelta(hours=7)
+        elif self.name == 'clean_up_old_activities':
+            return timedelta(hours=7)
+        elif self.name == 'remove_orphan_files':
+            return timedelta(days=8)
+        elif self.name == 'daily_maintenance_celery':
+            return timedelta(hours=25)
+        elif self.name == 'daily_maintenance':
+            return timedelta(hours=25)
+        elif self.name == 'send_queue':
+            return timedelta(minutes=5)
+
 
 def _large_community_subscribers() -> float:
     # average number of subscribers in the top 15% communities
