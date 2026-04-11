@@ -351,12 +351,16 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 extra_fields = user.extra_fields
             except DetachedInstanceError as e:  # when loading archived posts and their replies, temporary detatched users are created. See convert_archived_replies_to_tree()
                 extra_fields = User.query.get(user.id).extra_fields
+            num_extra_fields = 0
             for field in extra_fields:
                 user_field = {}
                 user_field['id'] = field.id
                 user_field['label'] = field.label
                 user_field['text'] = field.text
                 v1['extra_fields'].append(user_field)
+                num_extra_fields += 1
+                if num_extra_fields == 4:
+                    break
         if user_id:
             usernote_body = None
             if usernotes is not None:
