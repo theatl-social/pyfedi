@@ -3348,12 +3348,19 @@ class Post(db.Model):
                     vote_direction = "upvote"
                 elif existing_vote.effect == -1:
                     vote_direction = "downvote"
-            assert vote_direction == "upvote" or vote_direction == "downvote"
+            if vote_direction not in ("upvote", "downvote"):
+                return None  # effect==0 reversal or unexpected value
             undo = None
             if existing_vote:
                 prior_effect = (
                     existing_vote.effect
                 )  # capture before any commits expire the ORM state
+
+                # Vote had no effect (cannot_vote user) — just clean up the row
+                if prior_effect == 0:
+                    db.session.delete(existing_vote)
+                    db.session.commit()
+                    return None
 
                 # If emoji is provided and vote direction matches existing vote, just update the emoji
                 if emoji and (
@@ -3387,7 +3394,7 @@ class Post(db.Model):
                         db.session.commit()
                         self.up_votes -= 1
                         self.down_votes += 1
-                        self.score -= 2  # was +1, now -1, delta is -2
+                        self.score -= 2 * prior_effect  # prior was +1: score -= 2
                 else:  # previous vote was down
                     if (
                         vote_direction == "downvote"
@@ -3403,7 +3410,7 @@ class Post(db.Model):
                         db.session.commit()
                         self.up_votes += 1
                         self.down_votes -= 1
-                        self.score += 2  # was -1, now +1, delta is +2
+                        self.score -= 2 * prior_effect  # prior was -1: score += 2
                 db.session.commit()
             else:
                 if vote_direction == "upvote":
@@ -4087,12 +4094,19 @@ class PostReply(db.Model):
                     vote_direction = "upvote"
                 elif existing_vote.effect == -1:
                     vote_direction = "downvote"
-            assert vote_direction == "upvote" or vote_direction == "downvote"
+            if vote_direction not in ("upvote", "downvote"):
+                return None  # effect==0 reversal or unexpected value
             undo = None
             if existing_vote:
                 prior_effect = (
                     existing_vote.effect
                 )  # capture before any commits expire the ORM state
+
+                # Vote had no effect (cannot_vote user) — just clean up the row
+                if prior_effect == 0:
+                    db.session.delete(existing_vote)
+                    db.session.commit()
+                    return None
 
                 # If emoji is provided and vote direction matches existing vote, just update the emoji
                 if emoji and (
@@ -4125,7 +4139,7 @@ class PostReply(db.Model):
                         db.session.commit()
                         self.up_votes -= 1
                         self.down_votes += 1
-                        self.score -= 2
+                        self.score -= 2 * prior_effect  # prior was +1: score -= 2
                 else:  # previous vote was down
                     if (
                         vote_direction == "downvote"
@@ -4141,7 +4155,7 @@ class PostReply(db.Model):
                         db.session.commit()
                         self.up_votes += 1
                         self.down_votes -= 1
-                        self.score += 2
+                        self.score -= 2 * prior_effect  # prior was -1: score += 2
             else:
                 if user.cannot_vote():
                     effect = 0
