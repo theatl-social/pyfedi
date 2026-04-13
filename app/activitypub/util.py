@@ -4679,12 +4679,19 @@ def undo_vote(comment, post, target_ap_id, user):
     if isinstance(voted_on, Post):
         post = voted_on
         with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=6):
-            db.session.refresh(post)  # re-read within the lock to avoid stale ORM state
+            try:
+                db.session.refresh(post)
+            except Exception:
+                return None  # post deleted between find and lock acquisition
             existing_vote = PostVote.query.filter_by(
                 user_id=user.id, post_id=post.id
             ).first()
             if existing_vote:
                 prior_effect = existing_vote.effect
+                if prior_effect == 0:
+                    db.session.delete(existing_vote)
+                    db.session.commit()
+                    return post
                 db.session.execute(
                     text(
                         'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
@@ -4710,14 +4717,19 @@ def undo_vote(comment, post, target_ap_id, user):
         with redis_client.lock(
             f"lock:post_reply:{comment.id}", timeout=30, blocking_timeout=6
         ):
-            db.session.refresh(
-                comment
-            )  # re-read within the lock to avoid stale ORM state
+            try:
+                db.session.refresh(comment)
+            except Exception:
+                return None  # comment deleted between find and lock acquisition
             existing_vote = PostReplyVote.query.filter_by(
                 user_id=user.id, post_reply_id=comment.id
             ).first()
             if existing_vote:
                 prior_effect = existing_vote.effect
+                if prior_effect == 0:
+                    db.session.delete(existing_vote)
+                    db.session.commit()
+                    return comment
                 db.session.execute(
                     text(
                         'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
