@@ -324,7 +324,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     
     # for materialized view - private community filtering
     if private_community_ids:
-        post_query_criteria.append('(community_private is false OR community_id IN :private_community_ids)')
+        post_query_criteria.append('(c.private is false OR community_id IN :private_community_ids)')
         post_query_parameters['private_community_ids'] = tuple(private_community_ids)
 
     if query:
@@ -523,7 +523,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                     p.reply_count, p.language_id,
                     c.id as community_id, c.show_all, c.show_popular, c.instance_id as community_instance_id,
                     c.nsfw as community_nsfw, c.banned as community_banned,
-                    c.private as community_private, c.ap_id as community_ap_id, c.name as community_name, c.ap_domain
+                    c.private, c.ap_id as community_ap_id, c.name as community_name, c.ap_domain
                 FROM post p
                 JOIN community c ON c.id = p.community_id WHERE p.deleted = FALSE AND p.status > 0 AND c.banned = FALSE AND """
         sql += ' AND '.join(post_query_criteria) + ' ORDER BY ' + ', '.join(sql_order_by)
