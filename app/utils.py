@@ -4284,6 +4284,8 @@ def round_invisible_digits(value):
     Ensure 1.0k Users always uses the 'many' plural form, but for smaller numbers
     like 123 Users, respect the usual language rules.
     """
+    if value is None:
+        return 0
     if format_compact_decimal(value, locale=g.locale) == str(value):
         return value
     return int(value / 1000) * 1000
