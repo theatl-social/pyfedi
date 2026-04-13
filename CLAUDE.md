@@ -217,6 +217,24 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Successfully merged with upstream v1.6.18 on 2026-04-13
+- Branch: `20260413/merge-upstream-v1618`
+- Upstream commit: 7c270694
+- Key additions from upstream:
+  - CronJobLog model for cron run monitoring on admin home page
+  - Per-community theme disabling (`community_theme_allowed` table and user model)
+  - Post list without materialized view (indexes-based approach)
+  - More robust profile pic upload for users, communities, and feeds
+  - Read posts table trimming after admin-configurable number of days
+  - Extra fields limited to 4, with DetachedInstanceError handling
+  - Private community API crash fix
+  - Keyboard shortcuts page sidebar fix
+  - `round_invisible_digits` none guard
+  - Translatable labels in new post form and post teaser
+  - New migrations: community_theme_allowed, cron_job_log, post_list_indexes
+  - New migration: `merge_heads_20260413.py`
+- Fixed upstream ruff errors (f-strings without placeholders, unused variable in DetachedInstanceError)
+
 - Successfully merged with upstream v1.6.17 on 2026-04-09
 - Branch: `20260409/merge-upstream-v1617`
 - Upstream commit: b29aae26
