@@ -3348,13 +3348,24 @@ class Post(db.Model):
                     vote_direction = "upvote"
                 elif existing_vote.effect == -1:
                     vote_direction = "downvote"
-            assert vote_direction == "upvote" or vote_direction == "downvote"
+            if vote_direction not in ("upvote", "downvote"):
+                return None  # effect==0 reversal or unexpected value
             undo = None
             if existing_vote:
+                prior_effect = (
+                    existing_vote.effect
+                )  # capture before any commits expire the ORM state
+
+                # Vote had no effect (cannot_vote user) — just clean up the row
+                if prior_effect == 0:
+                    db.session.delete(existing_vote)
+                    db.session.commit()
+                    return None
+
                 # If emoji is provided and vote direction matches existing vote, just update the emoji
                 if emoji and (
-                    (existing_vote.effect > 0 and vote_direction == "upvote")
-                    or (existing_vote.effect < 0 and vote_direction == "downvote")
+                    (prior_effect > 0 and vote_direction == "upvote")
+                    or (prior_effect < 0 and vote_direction == "downvote")
                 ):
                     existing_vote.emoji = emoji
                     db.session.commit()
@@ -3367,15 +3378,15 @@ class Post(db.Model):
                         text(
                             'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
                         ),
-                        {"effect": existing_vote.effect, "user_id": self.user_id},
+                        {"effect": prior_effect, "user_id": self.user_id},
                     )
                     db.session.commit()
-                if existing_vote.effect > 0:  # previous vote was up
+                if prior_effect > 0:  # previous vote was up
                     if vote_direction == "upvote":  # new vote is also up, so remove it
                         db.session.delete(existing_vote)
                         db.session.commit()
                         self.up_votes -= 1
-                        self.score -= existing_vote.effect  # score - (+1) = score-1
+                        self.score -= prior_effect  # score - (+1) = score-1
                         undo = "Like"
                     else:  # new vote is down while previous vote was up, so reverse their previous vote
                         existing_vote.effect = -1
@@ -3383,7 +3394,7 @@ class Post(db.Model):
                         db.session.commit()
                         self.up_votes -= 1
                         self.down_votes += 1
-                        self.score += existing_vote.effect * 2  # score + (-2) = score-2
+                        self.score -= 2 * prior_effect  # prior was +1: score -= 2
                 else:  # previous vote was down
                     if (
                         vote_direction == "downvote"
@@ -3391,7 +3402,7 @@ class Post(db.Model):
                         db.session.delete(existing_vote)
                         db.session.commit()
                         self.down_votes -= 1
-                        self.score -= existing_vote.effect  # score - (-1) = score+1
+                        self.score -= prior_effect  # score - (-1) = score+1
                         undo = "Dislike"
                     else:  # new vote is up while previous vote was down, so reverse their previous vote
                         existing_vote.effect = 1
@@ -3399,7 +3410,7 @@ class Post(db.Model):
                         db.session.commit()
                         self.up_votes += 1
                         self.down_votes -= 1
-                        self.score += existing_vote.effect * 2  # score + (+2) = score+2
+                        self.score -= 2 * prior_effect  # prior was -1: score += 2
                 db.session.commit()
             else:
                 if vote_direction == "upvote":
@@ -4083,13 +4094,24 @@ class PostReply(db.Model):
                     vote_direction = "upvote"
                 elif existing_vote.effect == -1:
                     vote_direction = "downvote"
-            assert vote_direction == "upvote" or vote_direction == "downvote"
+            if vote_direction not in ("upvote", "downvote"):
+                return None  # effect==0 reversal or unexpected value
             undo = None
             if existing_vote:
+                prior_effect = (
+                    existing_vote.effect
+                )  # capture before any commits expire the ORM state
+
+                # Vote had no effect (cannot_vote user) — just clean up the row
+                if prior_effect == 0:
+                    db.session.delete(existing_vote)
+                    db.session.commit()
+                    return None
+
                 # If emoji is provided and vote direction matches existing vote, just update the emoji
                 if emoji and (
-                    (existing_vote.effect > 0 and vote_direction == "upvote")
-                    or (existing_vote.effect < 0 and vote_direction == "downvote")
+                    (prior_effect > 0 and vote_direction == "upvote")
+                    or (prior_effect < 0 and vote_direction == "downvote")
                 ):
                     existing_vote.emoji = emoji
                     db.session.commit()
@@ -4101,10 +4123,10 @@ class PostReply(db.Model):
                     text(
                         'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
                     ),
-                    {"effect": existing_vote.effect, "user_id": self.user_id},
+                    {"effect": prior_effect, "user_id": self.user_id},
                 )
                 db.session.commit()
-                if existing_vote.effect > 0:  # previous vote was up
+                if prior_effect > 0:  # previous vote was up
                     if vote_direction == "upvote":  # new vote is also up, so remove it
                         db.session.delete(existing_vote)
                         db.session.commit()
@@ -4117,7 +4139,7 @@ class PostReply(db.Model):
                         db.session.commit()
                         self.up_votes -= 1
                         self.down_votes += 1
-                        self.score -= 2
+                        self.score -= 2 * prior_effect  # prior was +1: score -= 2
                 else:  # previous vote was down
                     if (
                         vote_direction == "downvote"
@@ -4133,7 +4155,7 @@ class PostReply(db.Model):
                         db.session.commit()
                         self.up_votes += 1
                         self.down_votes -= 1
-                        self.score += 2
+                        self.score -= 2 * prior_effect  # prior was -1: score += 2
             else:
                 if user.cannot_vote():
                     effect = 0
