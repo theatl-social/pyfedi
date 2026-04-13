@@ -20,7 +20,7 @@ from app.activitypub.util import find_actor_or_create, actor_json_to_model, \
 from app.community.forms import CreateLinkForm
 from app.constants import SRC_WEB, POST_TYPE_LINK
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
-    Instance, User, Tag, CommunityFlair
+    Instance, User, Tag, CommunityFlair, CommunityThemeAllowed
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
     store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting, scale_gif, theme_list
 from sqlalchemy import func, desc, text
@@ -786,6 +786,24 @@ def save_banner_file(banner_file, directory='communities') -> File:
         return file
     else:
         abort(400)
+
+
+def set_community_theme_allowed(community_id: int, user_id: int, allowed:bool):
+    cache.delete_memoized(get_community_theme_allowed,community_id,user_id)
+    community_theme_allowed = CommunityThemeAllowed.query.filter_by(community_id=community_id,user_id=user_id).first()
+    if community_theme_allowed is None:
+        theme_allowed = CommunityThemeAllowed(community_id=community_id, user_id=user_id, allowed=allowed)
+        db.session.add(theme_allowed)
+    else:
+        community_theme_allowed.allowed = allowed
+    db.session.commit()
+
+@cache.memoize(timeout=86400)
+def get_community_theme_allowed(community_id: int, user_id: int) ->bool:
+    community_theme_allowed = CommunityThemeAllowed.query.filter_by(community_id=community_id,user_id=user_id).first()
+    if community_theme_allowed is None:
+        return True
+    return community_theme_allowed.allowed
 
 
 # NB this always signs POSTs as the community so is only suitable for Announce activities

@@ -38,12 +38,13 @@ def cleanup_old_notifications():
 
 @celery.task
 def cleanup_old_read_posts():
-    """Remove read_posts entries older than 90 days"""
+    """Remove read_posts entries older than 180 days"""
     session = get_task_session()
     try:
-        cutoff = utcnow() - timedelta(days=90)
-        session.execute(text("DELETE FROM read_posts WHERE interacted_at < :cutoff"), {"cutoff": cutoff})
-        session.commit()
+        with patch_db_session(session):
+            cutoff = utcnow() - timedelta(days=get_setting('read_posts_cutoff', 180))
+            session.execute(text("DELETE FROM read_posts WHERE interacted_at < :cutoff"), {"cutoff": cutoff})
+            session.commit()
     except Exception:
         session.rollback()
         raise

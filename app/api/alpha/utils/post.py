@@ -112,17 +112,17 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     # Depending on filters, determine whether instance stickies should be listed first or not
     segregate_instance_stickies = True
 
-    use_faster_query = True     # Set use_faster_query = False if a code path that cannot use post_view is hit
+    use_faster_query = True     # Set use_faster_query = False if a code path that cannot use raw sql is hit
     post_query_criteria = []    # these will be combined using ' AND '.join(post_query_criteria) later on
     post_query_parameters = {}  # this dict will be used to do parameter substitution on the above query
     sql_order_by = []           # for sorting - build ORDER BY clause
 
-    # As well as building a sqlalchemy query in the posts variable, build a plain text SQL query that uses the post_view materialized view
-    # This view will provide faster results most of the time but cannot be used for searching - so we need both.
+    # As well as building a sqlalchemy query in the posts variable, build a plain text SQL query
+    # This view will provide faster results most of the time but cannot be used for full-text searching - so we need both.
     #post_query_criteria.append(f'deleted is false AND status > {POST_STATUS_REVIEWING}')
 
     if blocked_person_ids:
-        post_query_criteria.append('user_id NOT IN :blocked_person_ids')
+        post_query_criteria.append(f'p.user_id NOT IN :blocked_person_ids')
         post_query_parameters['blocked_person_ids'] = tuple(blocked_person_ids)
 
     if blocked_community_ids:
@@ -130,11 +130,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         post_query_parameters['blocked_community_ids'] = tuple(blocked_community_ids)
 
     if blocked_domain_ids and not (type == "ModeratorView" or type == "Moderating"):
-        post_query_criteria.append('(domain_id is null OR domain_id NOT IN :blocked_domain_ids)')
+        post_query_criteria.append('(p.domain_id is null OR p.domain_id NOT IN :blocked_domain_ids)')
         post_query_parameters['blocked_domain_ids'] = tuple(blocked_domain_ids)
 
     if blocked_instance_ids:
-        post_query_criteria.append('community_instance_id NOT IN :blocked_instance_ids')
+        post_query_criteria.append('c.instance_id NOT IN :blocked_instance_ids')
         post_query_parameters['blocked_instance_ids'] = tuple(blocked_instance_ids)
 
     if type == "Local":
@@ -143,7 +143,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                   or_(Post.domain_id == None, Post.domain_id.not_in(blocked_domain_ids)),
                                   Post.community_id.not_in(blocked_community_ids)).\
             join(Community, Community.id == Post.community_id).filter_by(ap_id=None)
-        post_query_criteria.append('community_ap_id is null')
+        post_query_criteria.append('c.ap_id is null')
     elif type == "Popular":
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
@@ -154,7 +154,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                       Community.instance_id.not_in(
                                                                           blocked_instance_ids))
         
-        post_query_criteria.append('score > 100')
+        post_query_criteria.append(f'score > 100')
         post_query_criteria.append('show_popular is true')
 
     elif type == "Subscribed" and user_id is not None:
@@ -229,6 +229,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             
             content_filters = user_filters_posts(user_id) if user_id else {}
         elif feed_id:
+            use_faster_query = False
             segregate_instance_stickies = False
             feed = Feed.query.get(feed_id)
             if feed.show_posts_in_children:  # include posts from child feeds
@@ -260,6 +261,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             
             content_filters = user_filters_posts(user_id) if user_id else {}
         elif topic_id:
+            use_faster_query = False
             segregate_instance_stickies = False
             topic = Topic.query.get(topic_id)
             if topic.show_posts_in_children:  # include posts from child feeds
@@ -322,15 +324,15 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     
     # for materialized view - private community filtering
     if private_community_ids:
-        post_query_criteria.append('(community_private is false OR community_id IN :private_community_ids)')
+        post_query_criteria.append('(c.private is false OR community_id IN :private_community_ids)')
         post_query_parameters['private_community_ids'] = tuple(private_community_ids)
 
     if query:
         segregate_instance_stickies = False
-        use_faster_query = False
         if search_type == 'Url':
             posts = posts.filter(Post.url.ilike(f"%{query}%"))
         else:
+            use_faster_query = False
             posts = posts.search(query, sort=sort == 'Relevance').filter(Post.indexable == True)
 
     if user_id:
@@ -363,22 +365,22 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 post_query_criteria.append('from_bot = false')
             if user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
-                post_query_criteria.append('nsfl = false')
+                post_query_criteria.append('p.nsfl = false')
             if nsfw == '' and user.hide_nsfw == 1:
                 posts = posts.filter(Post.nsfw == False)
-                post_query_criteria.append('nsfw = false')
+                post_query_criteria.append('p.nsfw = false')
             else:
                 if nsfw == 'Exclude':
                     posts = posts.filter(Post.nsfw == False)
-                    post_query_criteria.append('nsfw = false')
+                    post_query_criteria.append('p.nsfw = false')
                 elif nsfw == 'Only':
                     posts = posts.filter(Post.nsfw == True)
-                    post_query_criteria.append('nsfw = true')
+                    post_query_criteria.append('p.nsfw = true')
                 elif nsfw == 'Include':
                     pass
             if user.hide_gen_ai == 1:
                 posts = posts.filter(Post.ai_generated == False)
-                post_query_criteria.append('ai_generated = false')
+                post_query_criteria.append('p.ai_generated = false')
             if user.hide_read_posts and not query:
                 # Alias the read_posts table
                 rp = read_posts.alias()
@@ -393,7 +395,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                     )
                 )
                 # SQL query building for hide_read_posts
-                post_query_criteria.append('post_id NOT IN :read_post_ids')
+                post_query_criteria.append('p.id NOT IN :read_post_ids')
                 post_query_parameters['read_post_ids'] = tuple(u_rp_ids)
 
         filtered_out_community_ids = filtered_out_communities(user)
@@ -404,10 +406,10 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     else:
         if nsfw == 'Exclude' or nsfw == '':
             posts = posts.filter(Post.nsfw == False)
-            post_query_criteria.append('nsfw = false')
+            post_query_criteria.append('p.nsfw = false')
         elif nsfw == 'Only':
             posts = posts.filter(Post.nsfw == True)
-            post_query_criteria.append('nsfw = true')
+            post_query_criteria.append('p.nsfw = true')
         elif nsfw == 'Include':
             pass
 
@@ -502,8 +504,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     elif sort == "Active":
         posts = posts.filter(Post.last_active != None)
         posts = posts.order_by(desc(Post.last_active))
-        post_query_criteria.append('last_active is not null')
-        sql_order_by.append('last_active DESC')
+        post_query_criteria.append('p.last_active is not null')
+        sql_order_by.append('p.last_active DESC')
     elif sort.startswith("Old"):
         posts = posts.order_by(asc(Post.posted_at))
         sql_order_by.append('posted_at ASC')
@@ -511,7 +513,21 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         pass    # sorting by relevance is already done by posts = posts.search(query, sort=True)
 
     if use_faster_query:
-        sql = 'SELECT post_id FROM "post_view" WHERE ' + ' AND '.join(post_query_criteria) + ' ORDER BY ' + ', '.join(sql_order_by)
+        sql = """SELECT
+                    p.id as post_id,
+                    p.user_id, p.domain_id, p.instance_id,
+                    p.status, p.deleted, p.deleted_by,
+                    p.type, p.nsfw, p.nsfl, p.sticky, p.instance_sticky, p.ai_generated,
+                    p.from_bot, p.created_at, p.posted_at, p.last_active,
+                    p.up_votes, p.down_votes, p.ranking, p.ranking_scaled, p.score,
+                    p.reply_count, p.language_id,
+                    c.id as community_id, c.show_all, c.show_popular, c.instance_id as community_instance_id,
+                    c.nsfw as community_nsfw, c.banned as community_banned,
+                    c.private, c.ap_id as community_ap_id, c.name as community_name, c.ap_domain
+                FROM post p
+                JOIN community c ON c.id = p.community_id WHERE p.deleted = FALSE AND p.status > 0 AND c.banned = FALSE AND """
+        sql += ' AND '.join(post_query_criteria) + ' ORDER BY ' + ', '.join(sql_order_by)
+        sql += ' LIMIT 1000'
         post_ids = db.session.execute(text(sql), post_query_parameters).scalars().all()
         has_next_page = len(post_ids) > page + 1 * limit
         post_ids = paginate_post_ids(post_ids, page - 1, page_length=limit)
@@ -628,6 +644,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
         user_id = authorise_api_user(auth)
 
     # get the user to check if the user has hide_read posts set later down the function
+
     if user_id:
         user = User.query.get(user_id)
         g.user = user   # save the currently logged in user into g, to save loading it up again and again in post_view.

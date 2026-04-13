@@ -44,7 +44,7 @@
                     <link href="{{ url_for('static', filename='pygments/fruity.css', v='1') }}" type="text/css" rel="stylesheet" />
                 {% endif -%}
             {% endif -%}
-            {% if current_user.allow_community_themes and not low_bandwidth and community and community.theme and file_exists('app/templates/themes/' + community.theme + '/styles.css') -%}
+            {% if not low_bandwidth and community and community.theme and file_exists('app/templates/themes/' + community.theme + '/styles.css') and ((current_user.allow_community_themes and current_user.community_theme_allowed(community.id)) or current_user.is_anonymous) -%}
                 <link href="{{ url_for('static', filename='themes/' + community.theme + '/styles.css', changed=getmtime('themes/' + community.theme + '/styles.css')) }}" type="text/css" rel="stylesheet" data-reload="true" />
             {% elif theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
                 <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css', changed=getmtime('themes/' + theme() + '/styles.css')) }}" type="text/css" rel="stylesheet" data-reload="true" />
