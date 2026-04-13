@@ -5,6 +5,7 @@ import bisect
 import gzip
 import hashlib
 import io
+import logging
 import mimetypes
 import math
 import random
@@ -37,11 +38,12 @@ from app.translation import LibreTranslateAPI
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
 from furl import furl
-from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort, session
+from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
 from sqlalchemy import text, or_, desc, asc, event, select, func, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
@@ -56,11 +58,12 @@ from PIL import Image, ImageOps, ImageCms
 from captcha.audio import AudioCaptcha
 from captcha.image import ImageCaptcha
 
-from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
+from app.models import CronJobLog, Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
     PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag, Emoji, UserExtraField, ArchivedPostReply
 
+logger = logging.getLogger(__name__)
 
 # Flask's render_template function, with support for themes added
 def render_template(template_name: str, skip_protocol_replacement: bool = False, **context) -> Response:
@@ -89,7 +92,7 @@ def render_template(template_name: str, skip_protocol_replacement: bool = False,
         '</static/js/htmx.min.js>; rel=preload; as=script, '
         '</static/fonts/feather/feather.woff>; rel=preload; as=font; crossorigin'
     )
-    
+
     return resp
 
 
@@ -416,7 +419,7 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
             tag_name = tag_content[:-1].split()[0]
         else:
             tag_name = tag_content.split()[0]
-        
+
         # Check if this looks like a valid HTML tag (allowed or not)
         # Valid HTML tags have specific patterns
         html_tags = ['a', 'abbr', 'acronym', 'address', 'area', 'article', 'aside', 'audio', 'b', 'bdi', 'bdo', 'big',
@@ -430,14 +433,14 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
                      'source', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'svg', 'table', 'tbody',
                      'tg-spoiler', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track',
                      'tt', 'u', 'ul', 'var', 'video', 'wbr']
-        
+
         if tag_name in html_tags:
             # This is a valid HTML tag - let BeautifulSoup handle it (it will remove if not allowed)
             return match.group(0)
         else:
             # This doesn't look like a valid HTML tag - escape it
             return f"&lt;{match.group(1)}&gt;"
-    
+
     html = re.sub(r'<([^<>]+?)>', escape_non_html_brackets, clean_html)
 
     # Parse the HTML using BeautifulSoup
@@ -459,11 +462,11 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
             # Add image-specific attributes for enhanced-images markdown extra
             if tag.name == 'img':
                 allowed_attrs.extend(['width', 'height', 'align', 'title', 'data-enhanced-img'])
-            
+
             if tag.name == 'video':
                 allowed_attrs.extend(['controls', 'loop', 'preload', 'autoplay', 'muted', 'playsinline',
                                       'disablepictureinpicture'])
-            
+
             if tag.name == 'source':
                 allowed_attrs.extend(['type'])
 
@@ -522,7 +525,7 @@ def escape_non_html_angle_brackets(text: str) -> str:
             return match.group(0)
         else:
             return f"&lt;{match.group(1)}&gt;"
-    
+
     bracket_regex = re.compile(r'<([^<>\n]+?)>', re.M)
     text = re.sub(bracket_regex, escape_tag, text)
 
@@ -559,7 +562,7 @@ def handle_bold_em(text: str) -> str:
 
 def escape_img(raw_html: str) -> str:
     """Prevents embedding images for places where an image would break formatting."""
-    
+
     re_img = re.compile(r"<img.+?>")
     raw_html = re_img.sub(r"<code><image placeholder></code>", raw_html)
 
@@ -570,12 +573,12 @@ def handle_lemmy_autocomplete(text: str) -> str:
     """
     Handles markdown formatted links that are in the format that lemmy autocompletes users/communities to and replaces
     them with instance-agnostic links.
-    
+
     Lemmy autocomplete format:
         [!news@lemmy.world](https://lemmy.world/c/news)
     Convert this to:
         !news@lemmy.world
-    
+
     ...which will be later converted to an instance-local link
     """
 
@@ -693,19 +696,19 @@ def handle_video_embeds(text: str) -> str:
         link = match.group(2)
 
         if is_video_url(link):
-            output = ('<video class="responsive-video" muted controls loop ' + 
+            output = ('<video class="responsive-video" muted controls loop ' +
                       'playsinline disablepictureinpicture" preload="metadata">')
             download_text = _('You can download a copy of the file instead.')
             if link.endswith('.webm'):
                 output += f'<source type="video/webm" src="{link}"> '
             elif link.endswith('.mp4'):
                 output += f'<source type="video/mp4" src="{link}"> '
-            
+
             output += _('Your browser does not support playing HTML5 video.')
             output += " " + f'<a href="{link}" download>' + download_text + '</a>'
             output += " " + _("Here is a description of the content: %s" % alt_text)
             output += '</video>'
-            
+
             return output
         else:
             # return things unchanged (probably an image link)
@@ -795,9 +798,9 @@ def handle_blockquotes(text: str) -> str:
         # Recursively handle blockquotes to deal with more layers of quoting
         if re.search(strip_leading_angle, contents):
             output = handle_blockquotes(output)
-        
+
         return output
-    
+
     # Step 4: Do the regex substitution work
     text = re.sub(md_quotes, wrap_blockquotes, text)
 
@@ -835,7 +838,7 @@ def links_with_parens(text: str) -> str:
                     link.insert_after(")")
                 else:
                     following_text.replace_with(")" + following_text)
-    
+
     better_html = str(soup)
 
     # This escapes <hr/> for some reason, so need to fix that
@@ -854,7 +857,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         # Escape <...> if it’s not a real HTML tag
         markdown_text = escape_non_html_angle_brackets(
             markdown_text)  # To handle situations like https://ani.social/comment/9666667
-        
+
         markdown_text = handle_blockquotes(markdown_text) # handle blockquotes ourselves to do it better in some cases
         markdown_text = handle_bold_em(markdown_text)  # Some preprocessing to better handle bold and italics
         markdown_text = handle_lemmy_autocomplete(markdown_text)
@@ -897,10 +900,10 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
                 raw_html = apply_enhanced_image_attributes(raw_html, md)
             except:
                 raw_html = ''
-        
+
         if not allow_img:
             raw_html = escape_img(raw_html)
-        
+
         raw_html = handle_lemmy_spoilers(raw_html)
         raw_html = make_quotes_straight(raw_html)
         raw_html = links_with_parens(raw_html)
@@ -1084,7 +1087,7 @@ def person_link_to_href(link: str, server_name_override: str | None = None) -> s
 
     code_placeholder = gibberish(10)
     link_placeholder = gibberish(10)
-    
+
     # Stash the <code> portions so they are not formatted
     code_snippets, link = stash_code_html(link, code_placeholder)
 
@@ -1099,10 +1102,10 @@ def person_link_to_href(link: str, server_name_override: str | None = None) -> s
 
     # Bring back the links
     link = pop_link(link_snippets=link_snippets, text=link, placeholder=link_placeholder)
-    
+
     # Bring back the <code> portions
     link = pop_code(code_snippets=code_snippets, text=link, placeholder=code_placeholder)
-    
+
     return link
 
 
@@ -1112,7 +1115,7 @@ def stash_code_html(text: str, placeholder: str) -> tuple[list, str]:
     def store_code(match):
         code_snippets.append(match.group(0))
         return f"{placeholder}{len(code_snippets) - 1}$"
-    
+
     text = re.sub(r'<code>[\s\S]*?<\/code>', store_code, text)
 
     return (code_snippets, text)
@@ -1124,7 +1127,7 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
     def store_code(match):
         code_snippets.append(match.group(0))
         return f"{placeholder}{len(code_snippets) - 1}$"
-    
+
     # Fenced code blocks (```...```)
     text = re.sub(r'```[\s\S]*?```', store_code, text)
     # Inline code (`...`)
@@ -1136,7 +1139,7 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
 def pop_code(code_snippets: list, text: str, placeholder: str) -> str:
     for i, code in enumerate(code_snippets):
         text = text.replace(f"{placeholder}{i}$", code)
-    
+
     return text
 
 
@@ -1146,7 +1149,7 @@ def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
     def store_link(match):
         link_snippets.append(match.group(0))
         return f"{placeholder}{len(link_snippets) - 1}$"
-    
+
     text = re.sub(r'<a href=[\s\S]*?<\/a>', store_link, text)
 
     return (link_snippets, text)
@@ -1155,7 +1158,7 @@ def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
 def pop_link(link_snippets: list, text: str, placeholder: str) -> str:
     for i, link in enumerate(link_snippets):
         text = text.replace(f"{placeholder}{i}$", link)
-    
+
     return text
 
 
@@ -1282,7 +1285,7 @@ def communities_banned_from_all_users() -> dict[int, List[int]]:
         ) all_bans
         GROUP BY user_id
     """)).fetchall()
-    
+
     return {user_id: list(community_ids) for user_id, community_ids in rows}
 
 
@@ -2016,7 +2019,7 @@ def moderating_communities_ids_all_users() -> dict[int, List[int]]:
           AND cm.is_banned = false
         GROUP BY cm.user_id
     """)).fetchall()
-    
+
     return {user_id: list(community_ids) for user_id, community_ids in rows}
 
 
@@ -2326,7 +2329,7 @@ def url_to_thumbnail_file(filename) -> File:
                 os.unlink(temp_file_path)
                 thumbnail_170_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
                                     '/' + new_filename + final_ext
-                
+
                 if final_ext != ".svg":
                     # Upload 512px thumbnail
                     s3.upload_file(temp_file_path_512, current_app.config['S3_BUCKET'], 'posts/' +
@@ -2792,30 +2795,30 @@ def patch_db_session(task_session):
     """Temporarily replace db.session with task_session for functions that use it internally"""
     from app import db
     from flask import has_request_context
-    
+
     # Only patch if we're not in a Flask request context (i.e., in a Celery worker)
     if has_request_context():
         # In Flask request context, don't patch - just use the existing session
         yield
         return
-    
+
     original_session = db.session
-    
+
     # Create a wrapper that makes the task session work with Flask-SQLAlchemy's Model.query
     class SessionWrapper:
         def __init__(self, session):  # noqa: F811
             self._session = session
-            
+
         def __call__(self):
             return self._session
-            
+
         def __getattr__(self, name):
             # Handle scoped session methods that don't exist on regular Session
             if name == 'remove':
                 # For task sessions, we don't want to remove since we manage the lifecycle
                 return lambda: None
             return getattr(self._session, name)
-    
+
     db.session = SessionWrapper(task_session)
     try:
         yield
@@ -3200,7 +3203,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
     elif sort.startswith('top'):
         if sort != 'top_all':
             post_id_where.append('p.posted_at > :top_cutoff ')
-        post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
+        post_id_sort = 'ORDER BY p.score DESC'
         if sort == 'top_1h':
             params['top_cutoff'] = utcnow() - timedelta(hours=1)
         elif sort == 'top_6h':
@@ -3331,7 +3334,7 @@ def get_instance_stickies(community_ids: List[int], sort: str):
 
             # We made it past all the filters, this post should be displayed
             visible_posts.append(post)
-    
+
     return visible_posts
 
 
@@ -3408,7 +3411,7 @@ def days_to_add_for_next_month(start_date):
     1. Try to use the same day as start_date
     2. If that's invalid (e.g., Feb 31), subtract a day and try again
     3. Repeat until we find a valid date
-    
+
     This ensures that posts scheduled for the 31st will:
     - Use the 31st in months that have 31 days
     - Use the last day (28-30) in months that don't have 31 days
@@ -3424,7 +3427,7 @@ def days_to_add_for_next_month(start_date):
 
     # Try to use the same day as start_date, backing off if needed
     new_day = start_date.day
-    
+
     # Try to create the date, backing off one day at a time if invalid
     while True:
         try:
@@ -3507,11 +3510,11 @@ def filtered_out_communities(user: User) -> List[int]:
             if keyword:
                 keyword_filters.append(or_(Community.name.ilike(f"%{keyword}%"),
                                            Community.title.ilike(f"%{keyword}%")))
-        
+
         if keyword_filters:
             communities = Community.query.filter(or_(*keyword_filters))
             return [community.id for community in communities.all()]
-    
+
     return []
 
 
@@ -3968,7 +3971,7 @@ def archive_post(post_id: int):
                     from app.post.util import post_replies
                     # Get replies sorted by 'hot' with scores preserved - keep hierarchical structure
                     hot_replies = post_replies(post, 'hot', None, db_only=True)  # No viewer to get all replies
-                    
+
                     # Serialization of hierarchical tree
                     def serialize_tree(reply_tree):
                         result = []
@@ -4011,7 +4014,7 @@ def archive_post(post_id: int):
                             }
                             result.append(serialized)
                         return result
-                    
+
                     save_this['replies'] = serialize_tree(hot_replies)
 
                 if store_files_in_s3():
@@ -4056,9 +4059,9 @@ def archive_post(post_id: int):
                 # First, get all reply IDs that have bookmarks by users other than the reply author
                 bookmarked_reply_ids = set(
                     session.execute(text('''
-                        SELECT DISTINCT prb.post_reply_id 
-                        FROM post_reply_bookmark prb 
-                        JOIN post_reply pr ON prb.post_reply_id = pr.id 
+                        SELECT DISTINCT prb.post_reply_id
+                        FROM post_reply_bookmark prb
+                        JOIN post_reply pr ON prb.post_reply_id = pr.id
                         WHERE pr.post_id = :post_id
                     '''), {'post_id': post.id}).scalars()
                 )
@@ -4237,7 +4240,7 @@ def save_new_gif(new_frames, old_gif_information, new_path):
 
 @cache.memoize(timeout=100)
 def community_membership_private(user_id: int) -> List[int]:
-    community_ids = db.session.execute(text("""SELECT c.id FROM "community" as c 
+    community_ids = db.session.execute(text("""SELECT c.id FROM "community" as c
                                                 INNER JOIN community_member cm on c.id = cm.community_id
                                                 WHERE c.private is true AND cm.user_id = :user_id AND cm.is_banned is false"""),
                                        {'user_id': user_id}).scalars()
@@ -4281,6 +4284,8 @@ def round_invisible_digits(value):
     Ensure 1.0k Users always uses the 'many' plural form, but for smaller numbers
     like 123 Users, respect the usual language rules.
     """
+    if value is None:
+        return 0
     if format_compact_decimal(value, locale=g.locale) == str(value):
         return value
     return int(value / 1000) * 1000
@@ -4350,3 +4355,34 @@ def get_private_registration_allowed_ips():
     if not ips:
         return []
     return [ip.strip() for ip in ips.split(",") if ip.strip()]
+
+
+def log_cron_task_to_db(task_name: str):
+    """Log a cron task run to the cron_job_log table.
+
+    Operates as an "upsert" to replace existing 'last_run' timestamp.
+    Always opens a new db session.
+
+    Args:
+        task_name: The 'name' column in the database.
+    """
+
+    stmt = pg_insert(CronJobLog).values(
+        name=task_name,
+        last_run=utcnow()
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=['name'],  # conflict target
+        set_=dict(last_run=stmt.excluded.last_run)  # what to update
+    )
+
+    session = get_task_session()
+    try:
+        with patch_db_session(session):
+            session.execute(stmt)
+            session.commit()
+    except Exception as e:
+        logger.error(f"error while saving cron logs to db: {e}")
+        session.rollback()
+    finally:
+        session.close()

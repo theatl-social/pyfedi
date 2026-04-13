@@ -5,7 +5,7 @@ import time
 
 from flask import current_app, g
 from sqlalchemy import text, func, or_
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound, DetachedInstanceError
 
 from app import cache, db
 from app.activitypub.util import active_month
@@ -45,7 +45,7 @@ from app.utils import (
     moderating_communities_ids_all_users,
     community_membership_private,
 )
-from app.shared.community import get_comm_flair_list, cached_modlist_for_community, cached_modlist_for_user
+from app.shared.community import get_comm_flair_list
 from app.shared.post import get_post_flair_list
 
 
@@ -536,12 +536,20 @@ def user_view(
                 v1["flair"] = flair
         if user.extra_fields:
             v1["extra_fields"] = []
-            for field in user.extra_fields.limit(4):
+            try:
+                extra_fields = user.extra_fields
+            except DetachedInstanceError:  # when loading archived posts and their replies, temporary detatched users are created. See convert_archived_replies_to_tree()
+                extra_fields = User.query.get(user.id).extra_fields
+            num_extra_fields = 0
+            for field in extra_fields:
                 user_field = {}
                 user_field["id"] = field.id
                 user_field["label"] = field.label
                 user_field["text"] = field.text
                 v1["extra_fields"].append(user_field)
+                num_extra_fields += 1
+                if num_extra_fields == 4:
+                    break
         if user_id:
             usernote_body = None
             if usernotes is not None:
@@ -1760,6 +1768,9 @@ def federated_instances_view():
         }
     }
     return v1
+
+
+from app.shared.community import cached_modlist_for_community, cached_modlist_for_user  # noqa: E402, F401
 
 
 @cache.memoize(timeout=3000)

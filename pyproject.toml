@@ -1,6 +1,6 @@
 [project]
 name = "pyfedi"
-version = "1.6.17+peachpie"
+version = "1.6.18+peachpie"
 description = "PieFed - A federated discussion and link aggregation platform"
 readme = "README.md"
 license = { text = "AGPL-3.0" }

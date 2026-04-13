@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 from datetime import timedelta
@@ -10,7 +11,7 @@ from flask import request, flash, json, url_for, current_app, redirect, g, abort
 from flask_login import current_user, login_user
 from flask_babel import _, ngettext
 from slugify import slugify
-from sqlalchemy import text, desc, or_, delete, update
+from sqlalchemy import text, desc, or_, delete, update, select
 from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
@@ -32,7 +33,7 @@ from app.community.util import save_icon_file, save_banner_file, search_for_comm
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
 from app.email import send_registration_approved_email
-from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
+from app.models import AllowedInstances, BannedInstances, ActivityPubLog, CronJobLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
     Tag, DefederationSubscription, BlockedImage, CmsPage, Notification, Emoji
 from app.shared.tasks import task_selector
@@ -81,7 +82,21 @@ def admin_home():
             translation_languages = lt.languages()
         except Exception:
             pass
-    
+
+    # Check maintenance cron tasks were run recently, show a warning if not
+    result = db.session.execute(select(CronJobLog)).scalars().all()
+    overdue_tasks = []
+    for cron_task in result:
+        diff_last_run = utcnow() - cron_task.last_run
+        if diff_last_run > cron_task.get_frequency():
+            overdue_tasks.append(
+                f"{cron_task.name} (expected every {cron_task.frequency}, "
+                f"last run at {cron_task.last_run.strftime('%Y-%m-%d %H:%M UTC') if cron_task.last_run else 'never'})")
+    if overdue_tasks:
+        tasks_str = ", ".join(overdue_tasks)
+        message = f"Some cron tasks have not been run recently: {tasks_str}"
+        flash(_(message), 'warning')
+
     return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15,
                            num_cores=num_cores, disk_usage=disk_usage,
                            plugins=plugins, plugin_hooks=plugin_hooks,
@@ -296,6 +311,7 @@ def admin_misc():
         set_setting('allow_video_file_uploads', form.allow_video_file_uploads.data)
         set_setting('enable_report_em_dash_replies', form.enable_report_em_dash_replies.data)
         set_setting('limit_one_em_report_per_user', form.limit_one_em_report_per_user.data)
+        set_setting('read_posts_cutoff', int(form.read_posts_cutoff.data))
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -334,6 +350,7 @@ def admin_misc():
         form.allow_video_file_uploads.data = get_setting('allow_video_file_uploads', 'no')
         form.enable_report_em_dash_replies.data = get_setting('enable_report_em_dash_replies', True)
         form.limit_one_em_report_per_user.data = get_setting('limit_one_em_report_per_user', False)
+        form.read_posts_cutoff.data = get_setting('read_posts_cutoff', 180)
     return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
 
 

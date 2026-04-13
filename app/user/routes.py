@@ -180,35 +180,40 @@ def edit_profile(actor):
             current_user.extra_fields.append(
                 UserExtraField(label=form.extra_label_4.data.strip(), text=form.extra_text_4.data.strip()))
         current_user.bot = form.bot.data
+        db.session.commit()
+
         profile_file = request.files['profile_file']
         if profile_file and profile_file.filename != '':
-            # remove old avatar
-            if current_user.avatar_id:
-                file = File.query.get(current_user.avatar_id)
-                file.delete_from_disk()
-                current_user.avatar_id = None
-                db.session.delete(file)
+            # remove old avatar after adding the new one succeeds
+            old_avatar = current_user.avatar_id
 
             # add new avatar
             file = save_icon_file(profile_file, 'users')
             if file:
                 current_user.avatar = file
+                if old_avatar:
+                    old_file = File.query.get(old_avatar)
+                    db.session.delete(old_file)
+                db.session.commit()
+                if old_avatar:
+                    old_file.delete_from_disk()
+
         banner_file = request.files['banner_file']
         if banner_file and banner_file.filename != '':
             # remove old cover
-            if current_user.cover_id:
-                file = File.query.get(current_user.cover_id)
-                file.delete_from_disk()
-                current_user.cover_id = None
-                db.session.delete(file)
+            old_banner = current_user.cover_id
 
             # add new cover
             file = save_banner_file(banner_file, 'users')
             if file:
                 current_user.cover = file
                 cache.delete_memoized(User.cover_image, current_user)
-
-        db.session.commit()
+                if old_banner:
+                    old_banner_file = File.query.get(old_banner)
+                    db.session.delete(old_banner_file)
+                db.session.commit()
+                if old_banner:
+                    old_banner_file.delete_from_disk()
 
         # Sync to LDAP
         try:

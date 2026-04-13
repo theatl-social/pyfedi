@@ -63,6 +63,8 @@ from app.community.util import (
     hashtags_used_in_community,
     publicize_community,
     community_theme_list,
+    set_community_theme_allowed,
+    get_community_theme_allowed,
 )
 from app.constants import (
     SUBSCRIPTION_MEMBER,
@@ -1796,19 +1798,29 @@ def community_edit(community_id: int):
 
             icon_file = request.files["icon_file"]
             if icon_file and icon_file.filename != "":
-                if community.icon_id:
-                    community.icon.delete_from_disk()
+                # Store old icon ID before uploading new one
+                old_icon_id = community.icon_id
                 file = save_icon_file(icon_file)
                 if file:
                     community.icon = file
+                    # Only delete old icon after new one is successfully saved
+                    if old_icon_id:
+                        old_icon_file = File.query.get(old_icon_id)
+                        db.session.delete(old_icon_file)
+                        old_icon_file.delete_from_disk()
             banner_file = request.files["banner_file"]
             if banner_file and banner_file.filename != "":
-                if community.image_id:
-                    community.image.delete_from_disk()
+                # Store old banner ID before uploading new one
+                old_banner_id = community.image_id
                 file = save_banner_file(banner_file)
                 if file:
                     community.image = file
                     cache.delete_memoized(Community.header_image, community)
+                    # Only delete old banner after new one is successfully saved
+                    if old_banner_id:
+                        old_banner_file = File.query.get(old_banner_id)
+                        db.session.delete(old_banner_file)
+                        old_banner_file.delete_from_disk()
 
             # Languages of the community
             db.session.execute(
@@ -1917,6 +1929,26 @@ def remove_header(community_id):
     return "<div> " + _("Banner removed!") + "</div>"
 
 
+@bp.route(
+    "/community/<int:community_id>/<int:user_id>/flip_community_theme_allowed",
+    methods=["POST"],
+)
+@login_required
+def flip_community_theme_allowed(community_id: int, user_id: int):
+    community_theme_allowed = not get_community_theme_allowed(community_id, user_id)
+    set_community_theme_allowed(community_id, user_id, community_theme_allowed)
+    if community_theme_allowed:
+        resp = make_response(_("Disable theme"))
+        resp.headers["HX-Refresh"] = "true"
+        print(resp)
+        return resp
+    else:
+        resp = make_response(_("Enable theme"))
+        resp.headers["HX-Refresh"] = "true"
+        print(resp)
+        return resp
+
+
 @bp.route("/community/<int:community_id>/delete", methods=["GET", "POST"])
 @login_required
 def community_delete(community_id: int):
@@ -1993,11 +2025,6 @@ def community_mod_list(community_id: int):
 @bp.route("/community/<int:community_id>/make_owner/<int:user_id>", methods=["POST"])
 @login_required
 def community_make_owner(community_id: int, user_id: int):
-    from app.shared.community import (
-        cached_modlist_for_community,
-        cached_modlist_for_user,
-    )
-
     community = Community.query.get_or_404(community_id)
     user = User.query.get_or_404(user_id)
 
@@ -2026,6 +2053,11 @@ def community_make_owner(community_id: int, user_id: int):
         cache.delete_memoized(community_moderators, community_id)
         cache.delete_memoized(Community.moderators, community)
 
+        from app.shared.community import (
+            cached_modlist_for_community,
+            cached_modlist_for_user,
+        )
+
         cache.delete_memoized(cached_modlist_for_community)
         cache.delete_memoized(cached_modlist_for_user, user)
 
@@ -2038,11 +2070,6 @@ def community_make_owner(community_id: int, user_id: int):
 @bp.route("/community/<int:community_id>/remove_owner/<int:user_id>", methods=["POST"])
 @login_required
 def community_remove_owner(community_id: int, user_id: int):
-    from app.shared.community import (
-        cached_modlist_for_community,
-        cached_modlist_for_user,
-    )
-
     community = Community.query.get_or_404(community_id)
     user = User.query.get_or_404(user_id)
 
@@ -2084,6 +2111,11 @@ def community_remove_owner(community_id: int, user_id: int):
 
             cache.delete_memoized(community_moderators, community_id)
             cache.delete_memoized(Community.moderators, community)
+
+            from app.shared.community import (
+                cached_modlist_for_community,
+                cached_modlist_for_user,
+            )
 
             cache.delete_memoized(cached_modlist_for_community)
             cache.delete_memoized(cached_modlist_for_user, user)
