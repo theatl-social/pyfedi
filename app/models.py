@@ -3363,16 +3363,13 @@ class Post(db.Model):
                     return None  # No undo, vote stays as-is with new emoji
 
                 if not self.community.low_quality:
-                    with redis_client.lock(
-                        f"lock:user:{self.user_id}", timeout=30, blocking_timeout=6
-                    ):
-                        db.session.execute(
-                            text(
-                                'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
-                            ),
-                            {"effect": existing_vote.effect, "user_id": self.user_id},
-                        )
-                        db.session.commit()
+                    db.session.execute(
+                        text(
+                            'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
+                        ),
+                        {"effect": existing_vote.effect, "user_id": self.user_id},
+                    )
+                    db.session.commit()
                 if existing_vote.effect > 0:  # previous vote was up
                     if vote_direction == "upvote":  # new vote is also up, so remove it
                         db.session.delete(existing_vote)
@@ -3441,16 +3438,13 @@ class Post(db.Model):
                 # upvotes do not increase reputation in low quality communities
                 if self.community.low_quality and effect > 0:
                     effect = 0
-                with redis_client.lock(
-                    f"lock:user:{self.user_id}", timeout=30, blocking_timeout=6
-                ):
-                    db.session.execute(
-                        text(
-                            'UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'
-                        ),
-                        {"effect": effect, "user_id": self.user_id},
-                    )
-                    db.session.commit()
+                db.session.execute(
+                    text(
+                        'UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'
+                    ),
+                    {"effect": effect, "user_id": self.user_id},
+                )
+                db.session.commit()
                 db.session.add(vote)
 
             if emoji or emoji == "-1":
@@ -4103,16 +4097,13 @@ class PostReply(db.Model):
                     db.session.commit()
                     return None  # No undo, vote stays as-is with new emoji
 
-                with redis_client.lock(
-                    f"lock:user:{self.user_id}", timeout=30, blocking_timeout=6
-                ):
-                    db.session.execute(
-                        text(
-                            'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
-                        ),
-                        {"effect": existing_vote.effect, "user_id": self.user_id},
-                    )
-                    db.session.commit()
+                db.session.execute(
+                    text(
+                        'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
+                    ),
+                    {"effect": existing_vote.effect, "user_id": self.user_id},
+                )
+                db.session.commit()
                 if existing_vote.effect > 0:  # previous vote was up
                     if vote_direction == "upvote":  # new vote is also up, so remove it
                         db.session.delete(existing_vote)
@@ -4161,16 +4152,13 @@ class PostReply(db.Model):
                     effect=effect,
                     emoji=emoji,
                 )
-                with redis_client.lock(
-                    f"lock:user:{self.user_id}", timeout=30, blocking_timeout=6
-                ):
-                    db.session.execute(
-                        text(
-                            'UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'
-                        ),
-                        {"effect": effect, "user_id": self.user_id},
-                    )
-                    db.session.commit()
+                db.session.execute(
+                    text(
+                        'UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'
+                    ),
+                    {"effect": effect, "user_id": self.user_id},
+                )
+                db.session.commit()
                 db.session.add(vote)
             if emoji or emoji == "-1":
                 db.session.commit()
