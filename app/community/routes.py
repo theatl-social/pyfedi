@@ -2053,7 +2053,7 @@ def community_make_owner(community_id: int, user_id: int):
         cache.delete_memoized(community_moderators, community_id)
         cache.delete_memoized(Community.moderators, community)
 
-        from app.api.alpha.views import (
+        from app.shared.community import (
             cached_modlist_for_community,
             cached_modlist_for_user,
         )
@@ -2112,7 +2112,7 @@ def community_remove_owner(community_id: int, user_id: int):
             cache.delete_memoized(community_moderators, community_id)
             cache.delete_memoized(Community.moderators, community)
 
-            from app.api.alpha.views import (
+            from app.shared.community import (
                 cached_modlist_for_community,
                 cached_modlist_for_user,
             )

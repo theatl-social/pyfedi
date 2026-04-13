@@ -1770,40 +1770,7 @@ def federated_instances_view():
     return v1
 
 
-@cache.memoize(timeout=3000)
-def cached_modlist_for_community(community_id):
-    moderator_ids = db.session.execute(
-        text(
-            'SELECT user_id FROM "community_member" WHERE community_id = :community_id and (is_moderator = True or is_owner = True)'
-        ),
-        {"community_id": community_id},
-    ).scalars()
-    modlist = []
-    for m_id in moderator_ids:
-        entry = {
-            "community": community_view(community=community_id, variant=1, stub=True),
-            "moderator": user_view(user=m_id, variant=1, stub=True),
-        }
-        modlist.append(entry)
-    return modlist
-
-
-@cache.memoize(timeout=3000)
-def cached_modlist_for_user(user):
-    community_ids = db.session.execute(
-        text(
-            'SELECT community_id FROM "community_member" WHERE user_id = :user_id and (is_moderator = True or is_owner = True)'
-        ),
-        {"user_id": user.id},
-    ).scalars()
-    modlist = []
-    for c_id in community_ids:
-        entry = {
-            "community": community_view(community=c_id, variant=1, stub=True),
-            "moderator": user_view(user=user, variant=1, stub=True),
-        }
-        modlist.append(entry)
-    return modlist
+from app.shared.community import cached_modlist_for_community, cached_modlist_for_user  # noqa: E402, F401
 
 
 @cache.memoize(timeout=3000)
