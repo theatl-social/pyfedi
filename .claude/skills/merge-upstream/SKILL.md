@@ -84,6 +84,10 @@ If clean merge, skip to Step 6.
    - **app/templates/base.html** — restore PeachPie footer branding
    - **pyfedi.py** — typically safe to take upstream
    - **entrypoint_celery.sh / entrypoint_async.sh** — ensure they use `uv run` prefix
+   - **app/community/routes.py** — if upstream adds `from app.api.alpha.views import cached_modlist_for_community, cached_modlist_for_user`, this creates a circular import. Our fork owns these functions in `app/shared/community.py`. Fix:
+     - In `app/community/routes.py`: change import to `from app.shared.community import cached_modlist_for_community, cached_modlist_for_user` (at the function-body level, not module level, to be safe)
+     - In `app/api/alpha/views.py`: if upstream re-adds the function definitions, replace them with a re-export: `from app.shared.community import cached_modlist_for_community, cached_modlist_for_user  # noqa: E402, F401`
+     - Tests in `tests/test_ci_fixes.py` enforce this architecture (they check that `views.py` imports from `shared.community`, and that `community/routes.py` does NOT import from `views.py`). If CI fails on these tests after merge, this is the fix.
 
 ### 6. Check Migration Heads
 
@@ -178,3 +182,5 @@ gh workflow run docker-build-push.yml -f branch=main -f tag=vX.Y.Z -f additional
 | `celery: not found` in Docker | Entrypoint missing `uv run` prefix |
 | `content_type` before definition | Upstream bug — move extra_args inside loop |
 | Duplicate function name | Upstream bug — rename the second one |
+| `ImportError: cannot import name 'cached_modlist_for_community'` (circular import) | See Step 5 item 4 — fix `community/routes.py` and `views.py` imports to use `app.shared.community` |
+| `test_ci_fixes.py` failures about `cached_modlist` | Same fix — our fork's architecture requires these functions in `shared/community.py` |
