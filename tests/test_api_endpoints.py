@@ -24,7 +24,7 @@ class TestConfig:
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     MAIL_SUPPRESS_SEND = True
     SERVER_NAME = "localhost"
-    SECRET_KEY = "test-secret-key"
+    SECRET_KEY = "test-secret-key-xxxxxxxxxxxxxxxxxxxxxxxx"
 
 
 @pytest.fixture

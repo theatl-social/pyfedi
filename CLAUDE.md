@@ -187,6 +187,18 @@ flask db upgrade
 - **.env** - Local environment variables (create from env.sample)
 - **CLAUDE_CODE_WORKFLOW.md** - Detailed testing workflow
 - **migrations/** - Database migration history
+- **SECURITY_PATCHES.md** - Tracks fork-specific security patches (SP-###) that must survive upstream merges. Each has a regression test in `tests/security/`.
+
+## Security Patches (SP-###)
+
+This fork carries security patches that are not yet in upstream. They are documented in `SECURITY_PATCHES.md` and protected by regression tests in `tests/security/`.
+
+**Before completing any upstream merge, run:**
+```bash
+SERVER_NAME=localhost uv run pytest tests/security/ -v
+```
+
+A failure means a patch has regressed during conflict resolution and must be re-applied. When upstream conflicts touch a patched file, **resolve in favor of the patch** unless upstream has independently fixed the same vulnerability.
 
 ## Testing Infrastructure
 

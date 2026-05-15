@@ -16,7 +16,7 @@ class TestConfig:
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     MAIL_SUPPRESS_SEND = True
     SERVER_NAME = "test.localhost"
-    SECRET_KEY = "test-secret-key"
+    SECRET_KEY = "test-secret-key-xxxxxxxxxxxxxxxxxxxxxxxx"
     PRIVATE_REGISTRATION_ENABLED = "true"
     PRIVATE_REGISTRATION_SECRET = "test-secret-123"
     CACHE_TYPE = "null"  # Disable caching for tests

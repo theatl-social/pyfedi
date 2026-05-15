@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Set minimal environment for imports
 os.environ.setdefault("SERVER_NAME", "test.localhost")
-os.environ.setdefault("SECRET_KEY", "test-ci-secret")
+os.environ.setdefault("SECRET_KEY", "test-ci-secret-padding-xxxxxxxxxxxxxxxx")
 os.environ.setdefault("DATABASE_URL", "sqlite:///memory:test.db")
 os.environ.setdefault("CACHE_TYPE", "NullCache")
 os.environ.setdefault("TESTING", "true")

@@ -144,16 +144,23 @@ Update version in both places:
 ### 9. Verify Fork Customizations
 
 Check all customizations survived the merge:
-- `privacy_url` in models.py, admin/forms.py, admin/routes.py
+- `privacy_url` in models.py (Site model, after `tos_url`), admin/forms.py, admin/routes.py
 - PeachPie footer in base.html (`grep theatl app/templates/base.html`)
 - Private registration API (`ls app/api/admin/private_registration.py`)
 - Entrypoints use `uv run` (`grep "uv run" entrypoint*.sh`)
+- **Security patches still apply (CRITICAL):**
+  ```bash
+  SERVER_NAME=localhost uv run pytest tests/security/ -v
+  ```
+  See `SECURITY_PATCHES.md`. Each `SP-###` patch has a regression test. If any of these fail, an upstream change has reverted a security patch — re-apply the patch and resolve the conflict in our favor before continuing. **Do not proceed with the merge until `tests/security/` is green.**
 
 ### 10. Run Ruff and Tests
 
 ```bash
 uvx ruff check .
 SERVER_NAME=localhost uv run pytest tests/test_field_consistency_simple.py -v
+SERVER_NAME=localhost uv run pytest tests/security/ -v
+SERVER_NAME=localhost uv run pytest tests/test_ci_fixes.py -v
 ```
 
 Fix ruff errors with `uvx ruff check . --fix`. If tests fail due to missing module, add it to pyproject.toml.
