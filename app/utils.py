@@ -2795,11 +2795,29 @@ def opengraph_parse(url):
 
 
 def url_to_thumbnail_file(filename) -> File:
+    # SP-010: filename is the og:image URL from a remote page (which an
+    # attacker controls when they post a link). SP-006 wrapped the page-fetch
+    # but the og:image fetch was overlooked; an attacker could set
+    # og:image to http://169.254.169.254/... and exfiltrate cloud metadata
+    # via the stored thumbnail. Now routed through the SSRF guard.
+    # See SECURITY_PATCHES.md.
+    from app.activitypub.ssrf_guard import safe_httpx_get, SsrfBlocked
+
     try:
         timeout = (
             15 if "washingtonpost.com" in filename else 5
         )  # Washington Post is really slow for some reason
-        response = httpx_client.get(filename, timeout=timeout)
+        allow_http = bool(current_app.config.get("SSRF_GUARD_ALLOW_HTTP"))
+        allow_private = bool(current_app.config.get("SSRF_GUARD_ALLOW_PRIVATE"))
+        response = safe_httpx_get(
+            httpx_client,
+            filename,
+            timeout=timeout,
+            allow_http=allow_http,
+            allow_private=allow_private,
+        )
+    except SsrfBlocked:
+        return None
     except:
         return None
 

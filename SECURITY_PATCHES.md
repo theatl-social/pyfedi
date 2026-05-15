@@ -87,6 +87,51 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream
 - **Fix summary:** When `HttpSignature.precheck` raised `VerificationFormatError` (malformed/missing digest, missing/stale date), the exception was logged but execution continued. The downstream `verify_request` call only re-checks the digest if the sender opted to include it in `signed-headers`, and does not independently re-verify date freshness, so a malformed digest could slip past. Added `return "", 400` after the precheck-failure log call.
 
+### SP-009 — Missing authorization on community ban/unban endpoints
+
+- **Disclosure:** 2026-05 (round-2 audit, IDOR sweep)
+- **Files:**
+  - `app/community/routes.py` — `community_ban_user()` and `community_unban_user()`
+- **Test:** `tests/security/test_sp009_community_ban_authz.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** Both routes had only `@login_required` and no role check, so ANY authenticated user could ban or unban anyone from any community by POSTing to `/community/<id>/<uid>/ban_user_community`. Added `if not (community.is_owner() or current_user.is_admin() or community.is_moderator()): abort(401)` immediately after the get-or-404 calls and before any state mutation.
+
+### SP-010 — SSRF in `url_to_thumbnail_file` (SP-006 incomplete)
+
+- **Disclosure:** 2026-05 (round-2 audit, adversarial bypass on SP-006)
+- **Files:**
+  - `app/utils.py` — `url_to_thumbnail_file()`
+- **Test:** `tests/security/test_sp010_thumbnail_ssrf.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** SP-006 wrapped `retrieve_metadata_of_url()` (the page fetch) but missed the downstream `url_to_thumbnail_file()` (the og:image fetch). An attacker creating a link post controls the og:image URL via their own page's HTML; the thumbnail fetch then bypassed the SSRF guard. Now `url_to_thumbnail_file` also routes through `safe_httpx_get`.
+
+### SP-011 — Atomic SETNX dedup in shared_inbox (TOCTOU close)
+
+- **Disclosure:** 2026-05 (round-2 audit, concurrency sweep)
+- **Files:**
+  - `app/activitypub/routes.py` — `shared_inbox()` activity-id dedup block
+- **Test:** `tests/security/test_sp011_inbox_dedup_atomic.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** Activity-ID dedup used `if redis_client.exists(id): return; redis_client.set(id, 1, ex=90)` — non-atomic. Two concurrent inbox POSTs for the same activity ID could both pass the existence check before either wrote the marker, causing double-processing of votes/Likes/etc. Replaced with `redis_client.set(id, 1, ex=90, nx=True)` which is atomic at the redis-server level — exactly one caller wins.
+
+### SP-012 — SECRET_KEY known-bad list now case- and whitespace-insensitive
+
+- **Disclosure:** 2026-05 (round-2 audit, adversarial bypass on SP-003)
+- **Files:**
+  - `app/__init__.py` — `_validate_secret_key()`
+- **Test:** `tests/security/test_sp012_secret_key_normalized.py`
+- **Upstream status:** NOT FIXED upstream (this is on top of our SP-003)
+- **Fix summary:** SP-003's known-bad set was exact-match, so `'YOU-WILL-NEVER-GUESSS'` (uppercase, the form usually shown in docs) and `' you-will-never-guesss '` (whitespace artifacts from copy-paste) bypassed the validator. Now the comparison normalizes via `.strip().lower()` before the membership check. The actual `SECRET_KEY` Flask uses is unchanged.
+
+### SP-013 — Email verification token cleared after first use
+
+- **Disclosure:** 2026-05 (round-2 audit, concurrency / token-replay)
+- **Files:**
+  - `app/auth/routes.py` — `verify_email()`
+- **Test:** `tests/security/test_sp013_verification_token_cleared.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** `verify_email` set `user.verified = True` but never cleared `user.verification_token`. A captured token (email-server log, ESP cache, browser history, referrer-header leak) could be replayed against the same account. The `if user.verified` guard only catches re-execution within the *same* request; an attacker could race against a not-yet-verified account or replay later. Now `user.verification_token = None` is set immediately before the commit.
+
 ### SP-004 — Shell-call command injection in CLI translate command
 
 - **Disclosure:** 2026-05 (private, embargoed) — lower severity since it requires CLI access, but still real

@@ -854,7 +854,12 @@ def shared_inbox():
 
         id = object["id"]
 
-    if redis_client.exists(id):  # Something is sending same activity multiple times
+    # SP-011: atomic check-and-set via SETNX. The previous exists()+set()
+    # was a TOCTOU — two concurrent inbox POSTs for the same activity ID
+    # could both pass the existence check before either wrote the marker,
+    # double-processing votes / Likes / etc. SET ... NX EX is atomic at the
+    # redis-server level; only one caller wins the race. See SECURITY_PATCHES.md.
+    if not redis_client.set(id, 1, ex=90, nx=True):
         log_incoming_ap(
             id,
             APLOG_DUPLICATE,
@@ -863,9 +868,6 @@ def shared_inbox():
             "Already aware of this activity",
         )
         return "", 200
-    redis_client.set(
-        id, 1, ex=90
-    )  # Save the activity ID into redis, to avoid duplicate activities
 
     # Ignore unutilised PeerTube activity
     if isinstance(request_json["actor"], str) and request_json["actor"].endswith(

@@ -2235,6 +2235,14 @@ def community_block(community_id: int):
 def community_ban_user(community_id: int, user_id: int):
     community = Community.query.get_or_404(community_id)
     user = User.query.get_or_404(user_id)
+    # SP-009: only mods/owners/admins may ban users from a community.
+    # Previously this route relied solely on @login_required, allowing any
+    # authenticated user to ban anyone from any community. See
+    # SECURITY_PATCHES.md.
+    if not (
+        community.is_owner() or current_user.is_admin() or community.is_moderator()
+    ):
+        abort(401)
     existing = CommunityBan.query.filter_by(
         community_id=community.id, user_id=user.id
     ).first()
@@ -2363,6 +2371,11 @@ def community_ban_user(community_id: int, user_id: int):
 def community_unban_user(community_id: int, user_id: int):
     community = Community.query.get_or_404(community_id)
     user = User.query.get_or_404(user_id)
+    # SP-009: only mods/owners/admins may unban. See SECURITY_PATCHES.md.
+    if not (
+        community.is_owner() or current_user.is_admin() or community.is_moderator()
+    ):
+        abort(401)
     existing_ban = CommunityBan.query.filter_by(
         community_id=community.id, user_id=user.id
     ).first()

@@ -133,7 +133,12 @@ def _validate_secret_key(
             f"(min {min_length} chars) and set the SECRET_KEY environment "
             "variable. See env.sample."
         )
-    if secret_key in known_bad:
+    # SP-012: normalize before comparison so that copy-paste artifacts
+    # ('YOU-WILL-NEVER-GUESSS', ' you-will-never-guesss ', etc.) don't slip
+    # past the known-bad list. The comparison is case- and whitespace-
+    # insensitive but the actual SECRET_KEY used by Flask is unchanged.
+    normalized = secret_key.strip().lower()
+    if normalized in known_bad:
         raise RuntimeError(
             "SP-003: SECRET_KEY is set to a known-default value. Generate a "
             f"strong random key (min {min_length} chars) and set the "
