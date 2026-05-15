@@ -269,6 +269,12 @@ def get_request_instance(
 
 # do a HEAD request to a uri, return the result
 def head_request(uri, params=None, headers=None) -> httpx.Response:
+    # SP-016: route through SSRF guard. HEAD against an attacker-supplied URL
+    # leaks server identity / port-open status / headers from internal
+    # services even though no response body is returned. Mirrors Lemmy
+    # GHSA-c482-7gjx-pp36. See SECURITY_PATCHES.md.
+    from app.activitypub.ssrf_guard import safe_httpx_head, SsrfBlocked
+
     if headers is None:
         headers = {
             "User-Agent": f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
@@ -279,10 +285,21 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
                 "User-Agent": f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
             }
         )
+    allow_http = bool(current_app.config.get("SSRF_GUARD_ALLOW_HTTP"))
+    allow_private = bool(current_app.config.get("SSRF_GUARD_ALLOW_PRIVATE"))
     try:
-        response = httpx_client.head(
-            uri, params=params, headers=headers, timeout=5, allow_redirects=True
+        response = safe_httpx_head(
+            httpx_client,
+            uri,
+            params=params,
+            headers=headers,
+            timeout=5,
+            allow_http=allow_http,
+            allow_private=allow_private,
         )
+    except SsrfBlocked as ssrf:
+        current_app.logger.warning(f"SSRF guard blocked HEAD {uri!r}: {ssrf}")
+        raise httpx.HTTPError(f"SSRF blocked: {ssrf}") from None
     except httpx.HTTPError as er:
         current_app.logger.info(f"{uri} {er}")
         raise httpx.HTTPError(f"HTTPError: {str(er)}") from er
@@ -407,8 +424,19 @@ def is_video_hosting_site(url: str) -> bool:
 @cache.memoize(timeout=10)
 def mime_type_using_head(url):
     # Find the mime type of a url by doing a HEAD request - this is the same as GET except only the HTTP headers are transferred
+    # SP-016: route through SSRF guard, see head_request above.
+    from app.activitypub.ssrf_guard import safe_httpx_head, SsrfBlocked
+
+    allow_http = bool(current_app.config.get("SSRF_GUARD_ALLOW_HTTP"))
+    allow_private = bool(current_app.config.get("SSRF_GUARD_ALLOW_PRIVATE"))
     try:
-        response = httpx_client.head(url, timeout=5)
+        response = safe_httpx_head(
+            httpx_client,
+            url,
+            timeout=5,
+            allow_http=allow_http,
+            allow_private=allow_private,
+        )
         response.raise_for_status()  # Raise an exception for HTTP errors
         content_type = response.headers.get("Content-Type")
         if content_type:
@@ -417,6 +445,8 @@ def mime_type_using_head(url):
             return content_type
         else:
             return ""
+    except SsrfBlocked:
+        return ""
     except httpx.HTTPError:
         return ""
 

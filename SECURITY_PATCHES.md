@@ -132,6 +132,34 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream
 - **Fix summary:** `verify_email` set `user.verified = True` but never cleared `user.verification_token`. A captured token (email-server log, ESP cache, browser history, referrer-header leak) could be replayed against the same account. The `if user.verified` guard only catches re-execution within the *same* request; an attacker could race against a not-yet-verified account or replay later. Now `user.verification_token = None` is set immediately before the commit.
 
+### SP-014 — Private community sidebar leak in `community_view`
+
+- **Disclosure:** 2026-05 (round-3 audit; mirrors Lemmy GHSA-95q8-x6r6-672m)
+- **Files:**
+  - `app/api/alpha/views.py` — `community_view` precondition gate
+- **Test:** `tests/security/test_sp014_private_community_leak.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** The full-info API responses (variants 3=`/community`, 4=`/community/follow`, 5=`/community/block`, 6=`resolve-object`) returned sidebar/description/banner/posting_warning/modlist for any community — including those marked `community.private = True` — without checking membership. Matches the missing check that `post_view` already enforces at line 287. Added the analogous gate at the top of `community_view` to raise an exception when a non-member queries a private community via these variants.
+
+### SP-015 — Email-enumeration via differential flash messages
+
+- **Disclosure:** 2026-05 (round-3 audit; mirrors Lemmy GHSA-qxrw-f6fh-34r7)
+- **Files:**
+  - `app/auth/routes.py` — `resend_email` and `reset_password_request`
+- **Test:** `tests/security/test_sp015_email_enumeration.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** Both endpoints flashed distinct messages depending on whether the submitted email was registered (`"No user found with that email address."` vs `"Verification email sent!"`; `"No account with that email address exists"` vs `"Check your email…"`). Trivial enumeration even with rate limiting. Both branches now flash the same neutral "If an account exists, a link has been sent" message and redirect to the same path. Server-side logging unchanged.
+
+### SP-016 — HEAD-request SSRF (SP-002 follow-up for HEAD method)
+
+- **Disclosure:** 2026-05 (round-3 audit; mirrors Lemmy GHSA-c482-7gjx-pp36)
+- **Files:**
+  - `app/activitypub/ssrf_guard.py` — new `safe_httpx_head` wrapper
+  - `app/utils.py` — `head_request` and `mime_type_using_head` route through the guard
+- **Test:** `tests/security/test_sp016_head_request_ssrf.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** SP-002 guarded outbound GETs; HEADs (`head_request`, `mime_type_using_head`) called `httpx_client.head` directly. HEAD has no body, but an attacker can still learn port-open status, response headers (`Server`, `X-Powered-By`), and probe internal services with attacker-supplied URLs (e.g. via `is_image_url` called on community/feed/post `icon_url` / `banner_url`). Same validation as the GET wrapper, same `SSRF_GUARD_ALLOW_HTTP` / `SSRF_GUARD_ALLOW_PRIVATE` config switches.
+
 ### SP-004 — Shell-call command injection in CLI translate command
 
 - **Disclosure:** 2026-05 (private, embargoed) — lower severity since it requires CLI access, but still real

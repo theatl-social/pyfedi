@@ -132,9 +132,16 @@ def resend_email():
             .first()
         )
 
+        # SP-015: mirror Lemmy GHSA-qxrw-f6fh-34r7. Don't reveal whether the
+        # email is registered. A neutral message is shown regardless, so an
+        # attacker can't enumerate accounts via differential responses.
+        # See SECURITY_PATCHES.md.
+        _neutral_message = _(
+            "If an account exists for that email, a verification link has been sent."
+        )
         if user is None:
-            flash(_("No user found with that email address."), "error")
-            return redirect(url_for("auth.resend_email"))
+            flash(_neutral_message)
+            return redirect(url_for("auth.check_email"))
 
         # Create verification token if it doesn't exist already or else verification is impossible
         if not user.verification_token:
@@ -144,16 +151,15 @@ def resend_email():
         if user:
             try:
                 send_email_verification(user)
-                flash(_("Verification email sent!"))
+                flash(_neutral_message)
                 return redirect(url_for("auth.check_email"))
             except Exception:
-                flash(
-                    _(
-                        "Problem sending email, please contact the administrator for support"
-                    ),
-                    "warning",
+                # Still don't leak; log server-side and show the neutral msg.
+                current_app.logger.warning(
+                    "send_email_verification failed in resend_email"
                 )
-                return redirect(url_for("auth.resend_email"))
+                flash(_neutral_message)
+                return redirect(url_for("auth.check_email"))
 
     return render_template(
         "auth/resend_email_request.html",
@@ -182,12 +188,15 @@ def reset_password_request():
                 .filter_by(ap_id=None, deleted=False)
                 .first()
             )
+            # SP-015: mirror Lemmy GHSA-qxrw-f6fh-34r7. Same neutral message
+            # whether or not the account exists; no enumeration via flash.
+            _neutral_msg = _(
+                "If an account exists for that email, a password-reset link has been sent."
+            )
             if user:
                 send_password_reset_email(user)
-                flash(_("Check your email for a link to reset your password."))
-                return redirect(url_for("auth.login"))
-            else:
-                flash(_("No account with that email address exists"), "warning")
+            flash(_neutral_msg)
+            return redirect(url_for("auth.login"))
     return render_template(
         "auth/reset_password_request.html", title=_("Reset Password"), form=form
     )

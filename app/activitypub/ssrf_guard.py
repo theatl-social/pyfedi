@@ -134,6 +134,27 @@ def _resolve_host(host: str) -> list[ipaddress._BaseAddress]:
     return out
 
 
+def safe_httpx_head(
+    client,
+    url: str,
+    *,
+    allow_private: bool = False,
+    allow_http: bool = False,
+    **kwargs,
+):
+    """httpx HEAD with SSRF validation. SP-016.
+
+    HEAD doesn't return a body, but an attacker can still learn open-vs-closed
+    ports, response headers (Server, X-Powered-By, etc.), and infer service
+    presence on internal addresses. Same destination validation as
+    ``safe_httpx_get``. Redirects are NOT followed for HEAD by default — if a
+    caller passes ``follow_redirects=True``, the underlying client decides
+    (httpx defaults to no-redirects for HEAD).
+    """
+    validate_outbound_url(url, allow_private=allow_private, allow_http=allow_http)
+    return client.head(url, **kwargs)
+
+
 def safe_httpx_get(
     client,
     url: str,
