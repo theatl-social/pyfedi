@@ -50,6 +50,43 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Fix summary:** `SECRET_KEY` previously fell back to the literal string `'you-will-never-guesss'` if the env var was unset, allowing any attacker who knew that string to forge Flask sessions and JWT password-reset tokens. Now there is no fallback, and the app refuses to boot if `SECRET_KEY` is missing, shorter than 32 characters, or in a small known-bad-default list.
 - **Operational note:** `env.sample` should reference `SECRET_KEY` and document the 32-char minimum.
 
+### SP-005 — Predictable token / ID generation via `random.choice`
+
+- **Disclosure:** 2026-05 (whole-codebase audit, found post-disclosure)
+- **Files:**
+  - `app/auth/util.py` — `random_token()` (used for password-reset and email-verification tokens at `app/auth/util.py:267`, `app/auth/routes.py:114`, `app/admin/routes.py:1727`, `app/user/routes.py:173`, `app/cli.py:423`)
+  - `app/utils.py` — `gibberish()` (used for upload filenames in `app/shared/upload.py:39` and other places)
+- **Test:** `tests/security/test_sp005_crypto_randomness.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** Both functions used `random.choice` (Mersenne Twister, predictable from observed output). With ~624 observed outputs the internal state can be reconstructed and future tokens predicted. An attacker who can self-serve enough password-reset tokens (legitimate flow) can then predict reset tokens for any account → account takeover. Switched both to `secrets.choice` which reads from `os.urandom` per call.
+
+### SP-006 — SSRF in `retrieve_metadata_of_url`
+
+- **Disclosure:** 2026-05 (whole-codebase audit)
+- **Files:**
+  - `app/community/routes.py` — `retrieve_metadata_of_url()` (called from link-post creation; reads user-supplied URLs)
+- **Test:** `tests/security/test_sp006_metadata_ssrf.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** Function was calling `httpx_client.get(url, follow_redirects=True)` with no SSRF guard. An attacker creating a link post could probe internal services (Redis, Postgres, cloud-metadata) by setting the link URL accordingly; the response would surface in the post title/description preview. Now routed through `safe_httpx_get`.
+
+### SP-007 — Open redirect via `instance_url` form field
+
+- **Disclosure:** 2026-05 (whole-codebase audit)
+- **Files:**
+  - `app/user/routes.py` — `fediverse_redirect()` (the `/u/<actor>/from/<instance>` flow that bounces a user to their home instance to follow a remote actor)
+- **Test:** `tests/security/test_sp007_open_redirect.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** `form.instance_url.data` was interpolated into the redirect URL with no validation, allowing inputs like `evil.com/path/to/phish` or `evil.com@victim.com/...` to redirect victims off-site. Now validated against `_SAFE_INSTANCE_HOST_RE` (LDH-label hostname pattern, no scheme/path/userinfo/port).
+
+### SP-008 — Precheck failure silently continued in `shared_inbox`
+
+- **Disclosure:** 2026-05 (whole-codebase audit)
+- **Files:**
+  - `app/activitypub/routes.py` — `shared_inbox()` precheck block (~line 883-888)
+- **Test:** `tests/security/test_sp008_precheck_early_return.py`
+- **Upstream status:** NOT FIXED upstream
+- **Fix summary:** When `HttpSignature.precheck` raised `VerificationFormatError` (malformed/missing digest, missing/stale date), the exception was logged but execution continued. The downstream `verify_request` call only re-checks the digest if the sender opted to include it in `signed-headers`, and does not independently re-verify date freshness, so a malformed digest could slip past. Added `return "", 400` after the precheck-failure log call.
+
 ### SP-004 — Shell-call command injection in CLI translate command
 
 - **Disclosure:** 2026-05 (private, embargoed) — lower severity since it requires CLI access, but still real

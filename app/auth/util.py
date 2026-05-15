@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import secrets
 from datetime import datetime, timedelta
 from typing import Any
 from unicodedata import normalize
@@ -46,15 +47,16 @@ from app.utils import (
 )
 
 
-# Return a random string of 6 letter/digits.
+# Return a cryptographically-random string of letters/digits.
+#
+# SP-005: previously used random.choice (Mersenne Twister, predictable from
+# observed output). Switched to secrets.choice — every byte from os.urandom.
+# Used for password-reset / email-verification tokens; predictability is
+# account takeover. See SECURITY_PATCHES.md.
 def random_token(length=6) -> str:
     return "".join(
-        [
-            random.choice(
-                "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            )
-            for x in range(length)
-        ]
+        secrets.choice("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        for _ in range(length)
     )
 
 
@@ -577,7 +579,9 @@ def determine_next_page():
     if not next_page or urlsplit(next_page).netloc != "":
         check_user_finished_onboarding()
         next_page = url_for(
-            "auth.filter_selection" if not current_user.finished_onboarding else "main.index"
+            "auth.filter_selection"
+            if not current_user.finished_onboarding
+            else "main.index"
         )
     return next_page
 

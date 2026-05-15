@@ -9,6 +9,7 @@ import logging
 import mimetypes
 import math
 import random
+import secrets
 import time
 import urllib
 import warnings
@@ -326,7 +327,10 @@ random_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
 def gibberish(length: int = 10) -> str:
-    return "".join([random.choice(random_chars) for x in range(length)])
+    # SP-005: cryptographic randomness for IDs that may end up in URLs or
+    # filenames (e.g., file uploads). Switched from random.choice to
+    # secrets.choice. See SECURITY_PATCHES.md.
+    return "".join(secrets.choice(random_chars) for _ in range(length))
 
 
 # used by @cache.cached() for home page and post caching

@@ -883,9 +883,15 @@ def shared_inbox():
     try:
         HttpSignature.precheck(request)
     except VerificationFormatError as e:
+        # SP-008: previously this caught the precheck failure and continued
+        # execution; verify_request below does not independently re-check
+        # date freshness, and re-checks digest only if the sender included it
+        # in signed-headers, so a malformed digest could slip through.
+        # See SECURITY_PATCHES.md.
         log_incoming_ap(
             id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, "Precheck failed: " + str(e)
         )
+        return "", 400
 
     # Ignore account deletion requests from users that do not already exist here
     account_deletion = False
