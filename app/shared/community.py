@@ -9,7 +9,7 @@ from slugify import slugify
 from sqlalchemy import text, func
 from sqlalchemy.exc import IntegrityError
 
-from app import db, cache
+from app import db, cache, plugins
 from app.activitypub.signature import RsaKeys
 from app.activitypub.util import make_image_sizes
 from app.chat.util import send_message
@@ -388,6 +388,9 @@ def make_community(
         uploaded_banner_file,
         from_scratch=True,
     )
+
+    # Fire plugin hook for new local community
+    plugins.fire_hook("new_local_community", community)
 
     if src == SRC_API:
         return user.id, community.id

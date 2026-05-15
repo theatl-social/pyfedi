@@ -40,6 +40,8 @@ def show_topic(topic_path):
     content_type = request.args.get('content_type', 'posts')
     tag = request.args.get('tag', '')
     page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
+    if current_user.is_authenticated and current_user.page_length and current_user.page_length < page_length:
+        page_length = current_user.page_length
     if post_layout == 'masonry':
         page_length = 200
     elif post_layout == 'masonry_wide':
@@ -192,7 +194,7 @@ def show_topic(topic_path):
                                joined_communities=joined_or_modding_communities(current_user.get_id()),
                                rss_feed=f"{current_app.config['SERVER_URL']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,
-                               reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                               reported_posts=reported_posts(current_user.get_id(), current_user.get_id() in g.admin_ids),
                                user_notes=user_notes(current_user.get_id()),
                                moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                                show_post_community=True, recently_upvoted=recently_upvoted,

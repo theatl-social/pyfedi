@@ -342,6 +342,7 @@ def put_user_save_user_settings(auth, data):
     feed_auto_follow = data['feed_auto_follow'] if 'feed_auto_follow' in data else None
     feed_auto_leave = data['feed_auto_leave'] if 'feed_auto_leave' in data else None
     bot = data['bot'] if 'bot' in data else None
+    display_name = data['display_name'] if 'display_name' in data else False
 
     if "avatar" in data:
         if not data["avatar"]:
@@ -596,6 +597,13 @@ def put_user_save_user_settings(auth, data):
         user.bot = True
     elif bot == False:
         user.bot = False
+    
+    if display_name == "[deleted]":
+        raise Exception("this display name is reserved")
+    elif display_name:
+        user.title = display_name
+    elif display_name is None:
+        user.title = None
 
     # save the change to the db
     db.session.commit()
@@ -968,3 +976,11 @@ def post_user_unban(auth, data):
         abort(403)
 
     return user_view(user=target_user_id, variant=5, user_id=user.id)
+
+
+def post_user_register(data):
+    ...
+
+
+def get_user_captcha():
+    ...

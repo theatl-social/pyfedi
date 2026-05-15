@@ -76,7 +76,6 @@ def show_profile(user):
 
     # posts and replies
     moderates = _get_user_moderates(user)
-    upvoted = _get_user_upvoted_posts(user)
     subscribed = _get_user_subscribed_communities(user)
     posts = _get_user_posts(user, post_page)
     post_replies = _get_user_post_replies(user, replies_page)
@@ -116,13 +115,13 @@ def show_profile(user):
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
                            moderates=moderates, canonical=canonical, title=_('Posts by %(user_name)s',
                                                                              user_name=user.user_name),
-                           description=description, subscribed=subscribed, upvoted=upvoted, disable_voting=True,
+                           description=description, subscribed=subscribed, disable_voting=True,
                            user_notes=user_notes(current_user.get_id()),
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
-                           reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                           reported_posts=reported_posts(current_user.get_id(), current_user.get_id() in g.admin_ids),
                            moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                            rss_feed=f"{current_app.config['SERVER_URL']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
@@ -130,6 +129,26 @@ def show_profile(user):
                            overview_items=overview_items, overview_next_url=overview_next_url,
                            overview_prev_url=overview_prev_url, same_ip_address=same_ip_address,
                            archived_post_replies=archived_post_replies)
+
+
+@bp.route('/u/<actor>/upvotes')
+@login_required_if_private_instance
+def user_upvotes(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
+    else:
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
+
+    upvoted = _get_user_upvoted_posts(user)
+
+    if user is not None:
+        return render_template('user/show_upvoted.html', user=user,
+                               title=_('Posts upvoted by %(user_name)s', user_name=user.user_name),
+                               upvoted=upvoted, disable_voting=True,
+                               user_notes=user_notes(current_user.get_id()),
+                               rss_feed=f"{current_app.config['SERVER_URL']}/u/{user.link()}/feed" if user.post_count > 0 else None,
+                               rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None)
 
 
 @bp.route('/u/<actor>/profile', methods=['GET', 'POST'])
@@ -474,6 +493,7 @@ def user_settings():
         current_user.font = form.font.data
         current_user.code_style = form.code_style.data
         current_user.additional_css = form.additional_css.data
+        current_user.page_length = form.page_length.data
         session['ui_language'] = form.interface_language.data
         current_user.vote_privately = not form.federate_votes.data
         current_user.show_subscribed_communities = form.show_subscribed_communities.data
@@ -481,6 +501,9 @@ def user_settings():
             db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
                                {'user_id': current_user.id,
                                 'indexable': current_user.indexable})
+
+        if current_user.page_length and current_user.page_length > current_app.config['PAGE_LENGTH']:
+            current_user.page_length = current_app.config['PAGE_LENGTH']
 
         db.session.commit()
         from app.api.alpha.views import user_view
@@ -558,6 +581,7 @@ def user_settings():
         form.feed_auto_follow.data = current_user.feed_auto_follow
         form.feed_auto_leave.data = current_user.feed_auto_leave
         form.read_languages.data = current_user.read_language_ids
+        form.page_length.data = current_user.page_length
         if request.cookies.get('compact_level', None) is None and current_app.config['HTTP_PROTOCOL'] == 'mixed':
             form.compaction.data = 'compact-min compact-max'
         else:
@@ -876,9 +900,13 @@ def report_profile(actor):
                             'reporter_id': current_user.id,
                             'reporter_user_name': current_user.user_name
                             }
-            report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                            type=0, reporter_id=current_user.id, suspect_user_id=user.id, 
-                            source_instance_id=1, targets=targets_data)
+            report = Report(reasons=form.reasons_to_string(form.reasons.data),
+                            description=form.description.data,
+                            type=REPORT_TYPE_USER,
+                            reporter_id=current_user.id,
+                            suspect_user_id=user.id, 
+                            source_instance_id=1,
+                            targets=targets_data)
             db.session.add(report)
 
             # Notify site admin

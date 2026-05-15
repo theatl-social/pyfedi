@@ -73,6 +73,10 @@ $fs150pc: 150%; // .fe
   padding-right: var(--spacing-4);
 }
 
+.fe-link-diagonal::before {
+  content: "\e982";
+}
+
 .fe-subscription::before {
   content: "\e9b9";
 }
@@ -413,6 +417,10 @@ h1 {
 
 .fe-rules::before {
   content: "\e907";
+}
+
+.fe-back::before {
+  content: "\e92f";
 }
 
 .fe-add-person::before {

@@ -435,6 +435,8 @@ def show_feed(feed):
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     tag = request.args.get('tag', '')
     page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
+    if current_user.is_authenticated and current_user.page_length and current_user.page_length < page_length:
+        page_length = current_user.page_length
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
     if post_layout == 'masonry':
         page_length = 200
@@ -528,7 +530,7 @@ def show_feed(feed):
                                              joined_communities=joined_or_modding_communities(current_user.get_id()),
                                              moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                                              recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                                             reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                                             reported_posts=reported_posts(current_user.get_id(), current_user.get_id() in g.admin_ids),
                                              user_notes=user_notes(current_user.get_id()),
                                              user_pronouns=user_pronouns(),
                                              inoculation=inoculation[

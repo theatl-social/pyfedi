@@ -23,8 +23,8 @@ from app.api.alpha.utils.private_message import get_private_message_list, post_p
     post_private_message_report, post_leave_conversation
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
     put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
-    post_reply_lock, \
-    get_reply_like_list, post_reply_mark_as_answer
+    post_reply_lock, get_reply_report_list, get_reply_like_list, \
+    post_reply_mark_as_answer, post_reply_distinguish
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
     get_site_instance_chooser_search, get_site_version, get_site_metadata
 from app.api.alpha.utils.topic import get_topic_list
@@ -34,7 +34,7 @@ from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_
     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
     put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair, get_user_details, \
-    get_user_media, post_user_set_note, post_user_ban, post_user_unban
+    get_user_media, post_user_set_note, post_user_ban, post_user_unban, post_user_register, get_user_captcha
 from app.api.alpha.utils.admin import get_registration_list, put_registration_approve
 from app.constants import *
 from app.utils import orjson_response, get_setting
@@ -877,6 +877,19 @@ def post_alpha_comment_report(data):
     return GetCommentReportResponse().load(resp)
 
 
+@reply_bp.route('/comment/report/list', methods=['GET'])
+@reply_bp.doc(summary="Get list of comment reports.")
+@reply_bp.arguments(GetCommentReportListRequest, location="query")
+@reply_bp.response(200, GetCommentReportListResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def get_alpha_comment_report_list(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = get_reply_report_list(auth, data)
+    return GetCommentReportListResponse().load(resp)
+
+
 @reply_bp.route('/comment/remove', methods=['POST'])
 @reply_bp.doc(summary="Remove a comment as a moderator.")
 @reply_bp.arguments(RemoveCommentRequest)
@@ -914,6 +927,19 @@ def post_alpha_comment_mark_as_answer(data):
     auth = request.headers.get('Authorization')
     resp = post_reply_mark_as_answer(auth, data)
     return GetCommentReplyResponse().load(resp)
+
+
+@reply_bp.route('/comment/distinguish', methods=['POST'])
+@reply_bp.doc(summary="Distinguish your comment as a moderator comment")
+@reply_bp.arguments(MarkCommentAsDistinguishedRequest)
+@reply_bp.response(200, GetCommentResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def post_alpha_comment_distinguish(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = post_reply_distinguish(auth, data)
+    return GetCommentResponse().load(resp)
 
 
 @reply_bp.route("/comment", methods=["GET"])
@@ -1349,6 +1375,30 @@ def post_alpha_user_unban(data):
     resp = post_user_unban(auth, data)
     return UserBanResponse().load(resp)
 
+
+@user_bp.route('/api/alpha/user/register', methods=['POST'])
+@user_bp.doc(summary="Register a new user")
+@user_bp.arguments(UserRegistrationRequest)
+@user_bp.response(200, UserRegistrationResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def post_alpha_user_register(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    resp = post_user_register(data)
+    return UserRegistrationRequest().load(resp)
+
+
+@user_bp.route('/api/alpha/user/get_captcha', methods=['GET'])
+@user_bp.doc(summary="Fetch a Captcha")
+@user_bp.response(200, FetchCaptchaResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def get_alpha_user_get_captcha():
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    resp = get_user_captcha()
+    return FetchCaptchaResponse().load(resp)
+
+
 # Upload
 @upload_bp.route('/upload/image', methods=['POST'])
 @upload_bp.doc(summary="Upload a general image.")
@@ -1483,9 +1533,7 @@ def alpha_post():
 
 
 # Reply - not yet implemented
-@bp.route('/api/alpha/comment/distinguish', methods=['POST'])  # Not really used
 @bp.route('/api/alpha/comment/report/resolve', methods=['PUT'])  # Stage 2
-@bp.route('/api/alpha/comment/report/list', methods=['GET'])  # Stage 2
 def alpha_reply():
     return jsonify({"error": "not_yet_implemented"}), 400
 
@@ -1498,8 +1546,6 @@ def alpha_chat():
 
 
 # User - not yet implemented
-@bp.route('/api/alpha/user/register', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/user/get_captcha', methods=['GET'])  # Not available in app
 @bp.route('/api/alpha/user/mention/mark_as_read',
           methods=['POST'])  # No DB support / Not available in app (using mark_all instead)
 @bp.route('/api/alpha/user/banned', methods=['GET'])  # Admin function. No plans to implement

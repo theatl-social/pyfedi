@@ -26,6 +26,7 @@ import pendulum
 import flask
 import httpx
 import jwt
+from jwt.exceptions import DecodeError
 import markdown2
 import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning, NavigableString
@@ -105,9 +106,9 @@ def request_etag_matches(etag):
 
 def return_304(etag, content_type=None):
     resp = make_response('', 304)
-    resp.headers.add_header('ETag', request.headers['If-None-Match'])
     resp.headers.add_header('Cache-Control', 'no-cache, must-revalidate')
     if current_user.is_anonymous:
+        resp.headers.add_header('ETag', request.headers['If-None-Match'])
         resp.headers.add_header('Vary', 'Accept, Accept-Language')
     else:
         resp.headers.add_header('Vary', 'Accept, Cookie, Accept-Language')
@@ -847,6 +848,54 @@ def links_with_parens(text: str) -> str:
     return better_html
 
 
+def handle_better_lists(text: str) -> str:
+    """Handles lists that don't have a blank line preceding them."""
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_html(text, placeholder)
+
+    # Step 2: Split the whole entry into each newline
+    text_list = text.splitlines()
+
+    # Step 3: Define regex for beginning of line of each list type
+    re_numbered_list = re.compile(r'^\d+\.\s+')
+    re_bulleted_list = re.compile(r'^-\s+')
+    
+    # Step 4: Loop through the lines, inserting an extra entry where needed to help markdown processing
+    new_text_list = []  # list that will store processed text, each item is a line of text
+    prev_line = ""
+    for line in text_list:
+        if not prev_line:
+            # First line in string
+            prev_line = line
+            new_text_list.append(line)
+            continue
+        
+        # Check for bulleted lists preceded by hyphen and space
+        if re.search(re_bulleted_list, line) and not re.search(re_bulleted_list, prev_line):
+            # First line in a bulleted list, insert a blank line first to make it render correctly
+            new_text_list.append("")
+        
+        # Check for numbered lists preceded by number(s), period, and then space
+        if re.search(re_numbered_list, line) and not re.search(re_numbered_list, prev_line):
+            # First line in a numbered list, insert a blank line first to make it render correctly
+            new_text_list.append("")
+
+        # End of iteration, add line to processed output and set new prev_line
+        new_text_list.append(line)
+        prev_line = line
+
+    # Step 5: Join the lines into one string
+    text = "\n".join(new_text_list)
+
+    # Step 6: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_target="_blank", test_env=False) -> str:
@@ -860,6 +909,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
 
         markdown_text = handle_blockquotes(markdown_text) # handle blockquotes ourselves to do it better in some cases
         markdown_text = handle_bold_em(markdown_text)  # Some preprocessing to better handle bold and italics
+        markdown_text = handle_better_lists(markdown_text)  # preprocessing to handle lists not preceded by blank line
         markdown_text = handle_lemmy_autocomplete(markdown_text)
         markdown_text = handle_naked_spoilers(markdown_text)
         markdown_text = handle_spoiler_spacing(markdown_text)
@@ -1875,7 +1925,7 @@ def reply_is_just_link_to_gif_reaction(body) -> bool:
         return False
 
 
-def reply_is_stupid(body) -> bool:
+def reply_is_low_effort(body) -> bool:
     lower_body = body.lower().strip()
     if lower_body == 'this' or lower_body == 'this.' or lower_body == 'this!':
         return True
@@ -2734,7 +2784,11 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | dict | i
         raise Exception('incorrect_login')
     token = auth[7:]  # remove 'Bearer '
 
-    decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+    try:
+        decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+    except DecodeError:
+        raise Exception('incorrect_login - problem decoding bearer token')
+
     if decoded:
         user_id = decoded['sub']
         user = User.query.get(user_id)
@@ -3594,6 +3648,7 @@ def reported_posts(user_id: int, is_admin: bool) -> List[int]:
         return []
     if is_admin:
         post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0')).scalars())
+        print(post_ids)
     else:
         community_ids = moderating_communities_ids(user_id)
         if len(community_ids) > 0:
@@ -3998,6 +4053,7 @@ def archive_post(post_id: int):
                                 'down_votes': int(comment.down_votes) if comment.down_votes else 0,
                                 'child_count': int(comment.child_count) if comment.child_count else 0,
                                 'path': list(comment.path) if comment.path else [],
+                                'answer': bool(comment.answer),
                                 'author_name': str(comment.author.display_name()) if comment.author and comment.author.display_name() else 'Unknown',
                                 'author_id': int(comment.author.id) if comment.author and comment.author.id else None,
                                 'author_indexable': bool(comment.author.indexable) if comment.author else True,
@@ -4386,3 +4442,14 @@ def log_cron_task_to_db(task_name: str):
         session.rollback()
     finally:
         session.close()
+
+
+def display_back_button():
+    ua = request.user_agent.string or ""
+    if "iPhone" in ua or "iPad" in ua or "iPod" in ua:
+        if request.referrer and request.referrer.startswith(current_app.config['SERVER_URL']):
+            return 'display_back_button'
+        else:
+            return ''
+    else:
+        return ''

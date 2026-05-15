@@ -10,7 +10,7 @@ from pyld import jsonld
 from sqlalchemy import or_, and_, func
 from ua_parser import parse as uaparse
 
-from app import db, cache, limiter
+from app import db, cache, limiter, plugins
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature, HttpSignature
@@ -87,6 +87,9 @@ def index(sort=None, view_filter=None):
 def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
 
     page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
+
+    if current_user.is_authenticated and current_user.page_length and current_user.page_length < page_length:
+        page_length = current_user.page_length
 
     # view filter - subscribed/local/all
     community_ids = [-1]
@@ -167,6 +170,8 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
         recently_upvoted = []
         recently_downvoted = []
         communities_banned_from_list = []
+    
+    user_id = current_user.get_id()
 
     resp = make_response(render_template('index.html', posts=posts, active_communities=active_communities,
                            new_communities=new_communities, upcoming_events=upcoming_events,
@@ -180,17 +185,17 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
                            description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
                            announcement=get_setting('announcement_html', get_setting('announcement')),
-                           reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
-                           user_notes=user_notes(current_user.get_id()),
-                           joined_communities=joined_or_modding_communities(current_user.get_id()),
-                           moderated_community_ids=moderating_communities_ids(current_user.get_id()),
+                           reported_posts=reported_posts(user_id, user_id in g.admin_ids),
+                           user_notes=user_notes(user_id),
+                           joined_communities=joined_or_modding_communities(user_id),
+                           moderated_community_ids=moderating_communities_ids(user_id),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            enable_mod_filter=enable_mod_filter,
                            has_topics=num_topics() > 0, time=time,
                            user_pronouns=user_pronouns()
                            ))
-    resp.headers.set('ETag', f"{sort}_{view_filter}_{hash(str(g.site.last_active))}")
     if current_user.is_anonymous:
+        resp.headers.set('ETag', f"{sort}_{view_filter}_{hash(str(g.site.last_active))}")
         resp.headers.set('Vary', 'Accept, Accept-Language')
         resp.headers.set('Cache-Control', 'public, max-age=60')
     else:
@@ -482,13 +487,14 @@ def modlog():
 
     instances = {instance.id: instance.domain for instance in Instance.query.all()}
     communities = {community.id: community.display_name() for community in Community.query.filter(Community.banned == False).all()}
+    community_trusted = db.session.execute(text('SELECT c.id FROM "community" as c INNER JOIN "instance" as i on c.instance_id = i.id WHERE i.trusted is true or i.id = 1')).scalars()
 
     return render_template('modlog.html',
                            title=_('Moderation Log'), modlog_entries=modlog_entries, can_see_names=can_see_names,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
                            instances=instances, is_admin=is_admin, communities=communities,
                            mod_action=mod_action, suspect_user_name=suspect_user_name, community_id=community_id,
-                           user_name=user_name,
+                           user_name=user_name, community_trusted=list(community_trusted),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
 
@@ -637,12 +643,7 @@ def honey_pot(whatever=None):
     if count >= 3:
         redis_client.set(f"ban:{ip}", 1, ex=86400 * 7 * 4)  # ban scraper for 4 weeks
 
-    if whatever:
-        try:
-            return show_post(int(whatever), 'hot', False, False)
-        except Exception:
-            pass
-    return ''
+    return gibberish(100)
 
 
 @bp.route('/test')
@@ -1227,6 +1228,19 @@ def content_warning():
 @login_required
 def my_year_in_review(year):
     return render_template('generic_message.html', title=_('This page is intentionally left blank.'), message=_("We don't track you, so there's not much data to make graphs of."))
+
+
+@bp.route('/webhook', methods=['POST'])
+@limiter.limit("60 per 1 minutes", methods=['POST'])
+def receive_webhook():
+    payload = request.get_json()
+
+    if not payload:
+        return jsonify({"error": "no payload received"}), 400
+    
+    plugins.fire_hook("webhook", payload)
+
+    return '', 202
 
 
 @bp.route('/health', methods=['HEAD', 'GET'])

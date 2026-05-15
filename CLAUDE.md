@@ -217,6 +217,31 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Successfully merged with upstream v1.6.24 on 2026-05-15
+- Branch: `20260515/merge-upstream-v1624`
+- Upstream commit: 3cb02f52
+- Key additions from upstream (v1.6.19 → v1.6.24):
+  - API authorization tightening (v1.6.19): exact `user_id` match on post edit/delete/restore; mod-status check on `move_post`
+  - Performance & stability fixes; configurable read posts trimming (v1.6.19)
+  - CSS fixes; plugin webhook hooks; user API improvements (v1.6.20)
+  - New API endpoints: `/comment/distinguish`, `/comment/report/list` (v1.6.21)
+  - Caching fixes (v1.6.21)
+  - HTTP signature verification fix: removed `cache=False` from `request.get_json()` in shared_inbox; HTTP date parsing via stdlib `parsedate_to_datetime`; date comparison via `total_seconds()` (v1.6.22)
+  - Ban notifications; modlog privacy; **instance silencing** feature (v1.6.23) — new migration `fbcb15c817e0_instance_silencing.py`
+  - New themes: Groovebox, Quack; iOS PWA back button support (v1.6.24)
+  - `ai_generated` flag in community variant-1 schema; variant-2 for `comment_report_view`
+  - `community.link()` correction in Post.generate_ap_id/slug (handles remote vs local correctly)
+  - Null guards for `Post.url.startswith()` and `last_active` in `posted_at_localized`
+  - `reply_is_stupid` renamed to `reply_is_low_effort`
+  - `plugins.fire_hook("new_local_community", community)` on local community creation
+  - Per-user `page_length` override in community pagination
+  - User registration / captcha API schemas added
+- Restored fork customizations:
+  - `privacy_url` in Site model + admin/forms.py + admin/routes.py
+  - `cached_modlist_for_community/_for_user` re-export from `app.shared.community` to break the circular import (function-local import in `community/routes.py`); test_ci_fixes.py enforces this
+- New migration: `merge_heads_20260515.py` (merges `merge_20260413` and `fbcb15c817e0`)
+- Fixed upstream ruff errors auto-fixable: f-strings without placeholders in `app/api/alpha/utils/post.py`; unused exception variables in `app/models.py`
+
 - Successfully merged with upstream v1.6.18 on 2026-04-13
 - Branch: `20260413/merge-upstream-v1618`
 - Upstream commit: 7c270694
