@@ -29,6 +29,10 @@ def test_generate_slug_basic(app):
         # Create a mock community
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         # Create a mock post
@@ -52,6 +56,10 @@ def test_generate_slug_does_not_overwrite_existing_slug(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
@@ -72,6 +80,10 @@ def test_generate_slug_with_empty_string_slug(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
@@ -91,6 +103,10 @@ def test_generate_slug_with_special_characters(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
@@ -114,6 +130,10 @@ def test_generate_slug_fallback_for_emoji_titles(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
@@ -138,6 +158,10 @@ def test_generate_ap_id_basic(app):
         # Create a mock community
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         # Create a mock post
@@ -167,6 +191,10 @@ def test_generate_ap_id_does_not_overwrite_existing(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
@@ -188,6 +216,10 @@ def test_generate_ap_id_with_empty_string(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
@@ -208,6 +240,10 @@ def test_generate_ap_id_with_length_ten_string(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
@@ -228,6 +264,10 @@ def test_generate_ap_id_with_special_characters(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
@@ -251,6 +291,10 @@ def test_ap_id_fallback_for_emoji_titles(app):
     with app.app_context():
         community = Mock()
         community.name = "testcommunity"
+        # Upstream v1.6.24 swapped community.name -> community.link() in
+        # Post.generate_slug / generate_ap_id; mock the callable to return the
+        # same string so URL assertions match.
+        community.link.return_value = "testcommunity"
         community.post_url_type = None
 
         post = Post()
