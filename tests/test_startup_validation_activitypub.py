@@ -17,7 +17,7 @@ class TestConfig:
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     MAIL_SUPPRESS_SEND = True
     SERVER_NAME = "test.localhost"
-    SECRET_KEY = "test-secret-key"
+    SECRET_KEY = "test-secret-key-xxxxxxxxxxxxxxxxxxxxxxxx"
     CACHE_TYPE = "null"
     CELERY_ALWAYS_EAGER = True
 
@@ -235,14 +235,14 @@ def test_startup_validation_code_exists():
     import os
     import ast
 
-    # Read the app/__init__.py file
+    # Read the app/__init__.py file (kept for future tightening; presently the
+    # check below only verifies the module is importable, not the wiring).
     file_path = os.path.join(os.path.dirname(__file__), "..", "app", "__init__.py")
-
-    with open(file_path, "r") as f:
-        source = f.read()
+    assert os.path.exists(file_path)
 
     # Verify startup validation module exists (may or may not be wired into __init__.py)
     import importlib
+
     spec = importlib.util.find_spec("app.startup_validation")
     assert spec is not None, "app.startup_validation module should exist"
 

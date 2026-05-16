@@ -751,6 +751,20 @@ def community_view(
                 func.lower(Community.ap_domain) == ap_domain.lower(),
             ).one()
 
+    # SP-014: matches the post_view check at line ~287. Variants 3/4/5/6 are
+    # the full "/community/*" API responses that include description, sidebar,
+    # banner, posting_warning, modlist — none of which a non-member of a
+    # private community should see. Mirrors the Lemmy GHSA-95q8-x6r6-672m
+    # fix. See SECURITY_PATCHES.md.
+    if (
+        variant in (3, 4, 5, 6)
+        and community.private
+        and (
+            user_id is None or community.id not in community_membership_private(user_id)
+        )
+    ):
+        raise Exception("Private community - membership required")
+
     # Variant 1 - models/community/community.dart
     if variant == 1:
         include = [
@@ -778,7 +792,7 @@ def community_view(
                 "removed": False,
                 "actor_id": community.public_url(),
                 "local": community.is_local(),
-                "hidden": not community.show_all,
+                "hidden": community.private,
                 "instance_id": community.instance_id if community.instance_id else 1,
                 "ap_domain": community.ap_domain,
                 "ai_generated": bool(v1["ai_generated"]),
@@ -1243,7 +1257,7 @@ def reply_view(
         return v6
 
 
-def reply_report_view(report, reply_id, user_id) -> dict:
+def reply_report_view(report, reply_id, user_id, variant=1) -> dict:
     # /comment/report api endpoint
     # similar to a reply_view in many ways, except that the 'creator' is the report creator,
     # not the reported comment's creator.
@@ -1280,12 +1294,20 @@ def reply_report_view(report, reply_id, user_id) -> dict:
         "resolved": report.status == 3,
         "published": report.created_at.isoformat(timespec="microseconds") + "Z",
     }
+
+    if report.description:
+        report_json["comment_report"]["description"] = report.description
     # TODO when it's easy to get a report's resolver
     # - add resolver_id to 'comment_report'
     # - add resolver{} user_view
 
-    v1 = {"comment_report_view": report_json}
-    return v1
+    if variant == 1:
+        v1 = {"comment_report_view": report_json}
+        return v1
+
+    if variant == 2:
+        # GET /comment/report/list - just return the bare json to be appended onto a list by another function
+        return report_json
 
 
 def post_report_view(report, post_id, user_id) -> dict:
@@ -1770,7 +1792,13 @@ def federated_instances_view():
     return v1
 
 
-from app.shared.community import cached_modlist_for_community, cached_modlist_for_user  # noqa: E402, F401
+# cached_modlist_* lives in app.shared.community to avoid circular imports
+# between app.community.routes and app.api.alpha.views. Re-exported here for
+# backwards compatibility with callers that still import from this module.
+from app.shared.community import (  # noqa: E402, F401
+    cached_modlist_for_community,
+    cached_modlist_for_user,
+)
 
 
 @cache.memoize(timeout=3000)

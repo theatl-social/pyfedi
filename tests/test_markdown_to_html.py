@@ -137,6 +137,16 @@ class TestMarkdownToHtml(unittest.TestCase):
         self.assertTrue("<ul>\n<li>Item 1</li>\n<li>Item 2</li>\n</ul>" in result)
         self.assertTrue("<ol>\n<li>First</li>\n<li>Second</li>\n</ol>" in result)
 
+        markdown = "Line of text:\n- first bullet\n- second bullet"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>Line of text:</p>\n<ul>\n<li>first bullet</li>\n<li>second bullet</li>\n</ul>\n'
+        self.assertEqual(correct_html, result)
+
+        markdown = "Line of text:\n1. first item\n2. second item"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>Line of text:</p>\n<ol>\n<li>first item</li>\n<li>second item</li>\n</ol>\n'
+        self.assertEqual(correct_html, result)
+
     def test_javascript_links(self):
         """Test that bad links are nuked"""
         markdown = (

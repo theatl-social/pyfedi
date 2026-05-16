@@ -43,6 +43,30 @@ def example_new_registration_for_approval(application):
     return application
 
 
+@hook("new_remote_community")
+def example_new_remote_community(community):
+    """Hook that runs when a new remote community is added to the instance"""
+    if int(os.environ.get('FLASK_DEBUG', '0')):
+        print(f"[PLUGIN DEBUG] Remote community of {community.lemmy_link()} has been added")
+    return community
+
+
+@hook("new_local_community")
+def example_new_local_community(community):
+    """Hook that runs when a new local community is added to the instance"""
+    if int(os.environ.get('FLASK_DEBUG', '0')):
+        print(f"[PLUGIN DEBUG] Local community of {community.lemmy_link()} has been added")
+    return community
+
+
+@hook("webhook")
+def example_webhook(data):
+    """Hook that runs whenever a webhook is received by the instance"""
+    if int(os.environ.get('FLASK_DEBUG', '0')):
+        print(f"[PLUGIN DEBUG] Data received by webhook: {data}")
+    return data
+
+
 def plugin_info():
     """Plugin metadata"""
     return {

@@ -1,4 +1,4 @@
-VERSION = "1.6.18-peachpie"
+VERSION = "1.6.24-peachpie-20260515"
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -38,6 +38,12 @@ REPORT_STATE_ESCALATED = 1
 REPORT_STATE_APPEALED = 2
 REPORT_STATE_RESOLVED = 3
 REPORT_STATE_DISCARDED = -1
+
+REPORT_TYPE_USER = 0
+REPORT_TYPE_POST = 1
+REPORT_TYPE_REPLY = 2
+REPORT_TYPE_COMMUNITY = 3
+REPORT_TYPE_MESSAGE = 4
 
 # different types of content notification that people can have. e.g. when a new post is made by a user or in a community.
 # see NotificationSubscription in models.py

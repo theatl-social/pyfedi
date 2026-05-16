@@ -91,7 +91,7 @@
                             {% if modlog_entry.community_id -%}
                                 <a href="/c/{{ modlog_entry.community.link() }}">{{ _(' in %(community_name)s', community_name='' + modlog_entry.community.display_name()) }}</a>
                             {% endif -%}
-                            {% if modlog_entry.reason -%}
+                            {% if modlog_entry.reason and (current_user.get_id() in admin_ids or modlog_entry.community_id in community_trusted) -%}
                                 <br>{{ _('Reason:') }} {{ modlog_entry.reason }}
                             {% endif -%}
                         </td>

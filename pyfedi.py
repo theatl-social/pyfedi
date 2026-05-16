@@ -20,7 +20,8 @@ from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, 
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
     in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
     notif_id_to_string, feed_link_to_href, get_setting, set_setting, show_explore, human_filesize, can_upload_video, \
-    debug_checkpoint, compaction_level, humanize_number, round_invisible_digits, get_site_as_dict, localize_datetime
+    debug_checkpoint, compaction_level, humanize_number, round_invisible_digits, get_site_as_dict, localize_datetime, \
+    display_back_button
 
 app = create_app()
 cli.register(app)
@@ -73,6 +74,7 @@ with app.app_context():
     app.jinja_env.globals['humanize_number'] = humanize_number
     app.jinja_env.globals['round_invisible_digits'] = round_invisible_digits
     app.jinja_env.globals['localize_datetime'] = localize_datetime
+    app.jinja_env.globals['display_back_button'] = display_back_button
     app.jinja_env.filters['community_links'] = community_link_to_href
     app.jinja_env.filters['feed_links'] = feed_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
@@ -143,7 +145,7 @@ def after_request(response):
             if hasattr(g, 'nonce') and "api/alpha/swagger" not in request.path:
                 # Don't set CSP header for htmx fragment requests - they use parent page's CSP
                 is_htmx = request.headers.get('HX-Request') == 'true'
-                if not is_htmx:
+                if not is_htmx and response.status_code != 304:
                     # strict-dynamic allows scripts dynamically added by nonce-validated scripts (needed for htmx)
                     if current_user.is_authenticated:
                         response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';"
@@ -164,9 +166,10 @@ def after_request(response):
                 'Cache-Control',
                 'no-store, no-cache, must-revalidate, private'
             )
-            response.headers.setdefault('Vary', 'Accept-Language, Cookie')
         else:
-            response.headers.setdefault('Vary', 'Accept-Language')
+            # Don't let flask set a session cookie for logged out users
+            flask.session.modified = False
+        response.headers.setdefault('Vary', 'Accept-Language, Cookie')
     return response
 
 

@@ -46,7 +46,7 @@ jobs:
           uv run pytest tests/test_startup_validation.py -v --tb=short
         env:
           SERVER_NAME: test.localhost
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
           DATABASE_URL: sqlite:///memory:test.db
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
@@ -60,7 +60,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
           SERVER_NAME: test.localhost
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
           DATABASE_URL: sqlite:///memory:test.db
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
@@ -94,7 +94,7 @@ jobs:
           uv run pytest tests/test_field_consistency_simple.py -v
         env:
           SERVER_NAME: test.localhost
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
           DATABASE_URL: sqlite:///memory:test.db
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
@@ -106,7 +106,7 @@ jobs:
           uv run pytest tests/test_allowlist_html.py -v
         env:
           SERVER_NAME: test.localhost
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
           DATABASE_URL: sqlite:///memory:test.db
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
@@ -118,7 +118,7 @@ jobs:
           uv run pytest tests/test_migration_heads.py -v
         env:
           SERVER_NAME: test.localhost
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
           DATABASE_URL: sqlite:///memory:test.db
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
@@ -131,7 +131,7 @@ jobs:
           uv run python tests/test_explore_ci_real_world.py
         env:
           SERVER_NAME: test.localhost
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
           DATABASE_URL: sqlite:///memory:test.db
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
@@ -144,7 +144,7 @@ jobs:
           uv run pytest tests/test_connection_pool_thread_safety.py -v
         env:
           SERVER_NAME: test.localhost
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
           DATABASE_URL: sqlite:///memory:test.db
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
@@ -183,7 +183,7 @@ jobs:
           fi
         env:
           SERVER_NAME: test.localhost
-          SECRET_KEY: test-secret-key-for-ci
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
           DATABASE_URL: sqlite:///memory:test.db
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
@@ -385,7 +385,7 @@ jobs:
             --entrypoint uv \
             -e PYTHONPATH=/app \
             -e SERVER_NAME=test.localhost \
-            -e SECRET_KEY=test-secret-key \
+            -e SECRET_KEY=test-secret-key-padding-must-be-32-plus-chars \
             -e DATABASE_URL=sqlite:///memory:test.db \
             -e CACHE_TYPE=NullCache \
             -e CACHE_REDIS_URL=memory:// \
@@ -400,7 +400,7 @@ jobs:
           docker run --rm \
             --entrypoint sh \
             -e SERVER_NAME=test.localhost \
-            -e SECRET_KEY=test-secret-key \
+            -e SECRET_KEY=test-secret-key-padding-must-be-32-plus-chars \
             -e DATABASE_URL=sqlite:///memory:test.db \
             -e CACHE_TYPE=NullCache \
             -e TESTING=true \

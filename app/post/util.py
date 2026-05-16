@@ -9,7 +9,7 @@ from flask_login import current_user
 from sqlalchemy import desc, asc, text, or_
 
 from app import db, cache
-from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL
+from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL, POST_TYPE_ARTICLE
 from app.models import PostReply, Post, Community, User, Language, utcnow
 from app.utils import blocked_or_banned_instances, blocked_users, is_video_hosting_site, get_request
 
@@ -77,6 +77,7 @@ def convert_archived_replies_to_tree(archived_replies: list, post: Post) -> List
         post_reply.down_votes = reply_data.get('down_votes', 0)
         post_reply.child_count = reply_data.get('child_count', 0)
         post_reply.path = reply_data.get('path', [])
+        post_reply.answer = reply_data.get('answer', False)
         post_reply.reports = 0
         
         # Post relationship
@@ -260,7 +261,7 @@ def flair_to_string(post: Post) -> str:
 
 def body_has_no_archive_link(body):
     if body:
-        return 'https://archive.' not in body and 'https://12ft.io' not in body
+        return 'https://archive.' not in body and 'https://12ft.io' not in body and 'https://removepaywalls.com' not in body
     else:
         return True
 
@@ -285,7 +286,7 @@ def url_needs_archive(url) -> bool:
 
 
 def generate_archive_link(url) -> bool:
-    return 'https://archive.ph/' + url
+    return 'https://removepaywalls.com/' + url
 
 
 # Forms like the cross post form need the type for the url
@@ -293,10 +294,12 @@ def post_type_to_form_url_type(post_type: int, post_url: str):
     if post_type == POST_TYPE_LINK or is_video_hosting_site(post_url):
         return 'link'
     elif post_type == POST_TYPE_IMAGE:
-        return 'image'
+        return 'link'
     elif post_type == POST_TYPE_VIDEO:
         return 'video'
     elif post_type == POST_TYPE_POLL:
         return 'poll'
+    elif post_type == POST_TYPE_ARTICLE:
+        return 'discussion'
     else:
         return ''

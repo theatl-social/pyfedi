@@ -26,7 +26,7 @@ class PrivateRegistrationTestConfig:
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     MAIL_SUPPRESS_SEND = True
     SERVER_NAME = "localhost"
-    SECRET_KEY = "test-secret-key-for-private-reg-testing"
+    SECRET_KEY = "test-secret-key-for-private-reg-testing-padding-xxxxxxxx"
 
     # Private registration test settings
     PRIVATE_REGISTRATION_ENABLED = "true"

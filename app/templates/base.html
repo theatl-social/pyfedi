@@ -68,8 +68,6 @@
         {% endif -%}
         {% if description -%}
             <meta name="description" content="{{ description }}" />
-        {% else -%}
-            <meta name="description" content="{{ html_to_text(g.site.sidebar) }}" />
         {% endif -%}
         {% if og_image -%}
             <meta property="og:image" content="{{ og_image }}" />
@@ -109,7 +107,7 @@
     {% block schema_org %}
     {% endblock %}
   </head>
-  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ compaction_level() }}" hx-headers='{"x-csrftoken": "{{ cs }}"}'>
+  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ compaction_level() }} {{ display_back_button() }}" hx-headers='{"x-csrftoken": "{{ cs }}"}'>
     {%- include "translation.html" -%}
     {%- include "svg_sprites.html" -%}
     {% if 'fontSize' in request.cookies -%}
@@ -136,6 +134,7 @@
     {% block navbar -%}
     <div class="navbar navbar-expand-lg sticky-lg-top">
         <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }} pl-lg-0" role="banner">
+            <a href="#" id="navbar-back-ios"><span class="fe fe-back"></span></a>
             <a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">
                 {% if not low_bandwidth -%}
                     <img src="{% if g.site.logo and g.site.logo.endswith('.svg') -%}
@@ -354,6 +353,7 @@
             </div>
             <div id="reaction_dialog_contents"></div>
         </dialog>
+        <div id="loading_animation" class="hidden"><img src="/static/images/spinner.svg"></div>
     {% endblock -%}
 
     {% block scripts -%}

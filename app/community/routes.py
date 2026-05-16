@@ -95,6 +95,7 @@ from app.constants import (
     INVITE_MEMBERS_ONLY,
     INVITE_MODS_ONLY,
     INVITE_OWNER_ONLY,
+    REPORT_TYPE_COMMUNITY,
 )
 from app.email import send_email
 from app.inoculation import inoculation
@@ -315,6 +316,9 @@ def add_local():
             Language.query.filter(Language.code == "und").first()
         )
         db.session.commit()
+
+        # Fire the plugin hook for a new local community
+        plugins.fire_hook("new_local_community", community)
 
         if (
             not form.local_only.data
@@ -738,6 +742,12 @@ def show_community(community: Community):
             posts = posts.filter(Post.reply_count > 0)
             posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
         per_page = 20 if low_bandwidth else current_app.config["PAGE_LENGTH"]
+        if (
+            current_user.is_authenticated
+            and current_user.page_length
+            and current_user.page_length < per_page
+        ):
+            per_page = current_user.page_length
         if post_layout == "masonry":
             per_page = 200
         elif post_layout == "masonry_wide":
@@ -1031,7 +1041,9 @@ def show_community(community: Community):
             flair=flair,
             show_post_community=False,
             tags=hashtags_used_in_community(community.id, content_filters),
-            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+            reported_posts=reported_posts(
+                current_user.get_id(), current_user.get_id() in g.admin_ids
+            ),
             user_notes=user_notes(current_user.get_id()),
             banned_from_community=banned_from_community,
             moderated_community_ids=moderating_communities_ids(current_user.get_id()),
@@ -1048,10 +1060,10 @@ def show_community(community: Community):
             sticky_posts=sticky_posts,
         )
     )
-    resp.headers.set(
-        "ETag", f"{community.id}{sort}{post_layout}_{hash(community.last_active)}"
-    )
     if current_user.is_anonymous:
+        resp.headers.set(
+            "ETag", f"{community.id}{sort}{post_layout}_{hash(community.last_active)}"
+        )
         resp.headers.set("Vary", "Accept, Accept-Language")
         resp.headers.set("Cache-Control", "public, max-age=30")
     else:
@@ -1626,11 +1638,9 @@ def add_post(actor, type=None):
         form.language_id.data = current_user.language_id or g.site.language_id
 
         # The source query parameter is used when cross-posting - load the source post's content into the form
-        if (
-            post_type == POST_TYPE_LINK or post_type == POST_TYPE_VIDEO
-        ) and request.args.get("source"):
+        if request.args.get("source"):
             source_post = Post.query.get(request.args.get("source"))
-            if source_post.deleted:
+            if source_post is None or source_post.deleted:
                 abort(404)
             form.title.data = source_post.title
             form.body.data = source_post.body
@@ -1638,11 +1648,13 @@ def add_post(actor, type=None):
             form.nsfl.data = source_post.nsfl
             form.ai_generated.data = source_post.ai_generated
             form.language_id.data = source_post.language_id
+            form.tags.data = tags_to_string(source_post)
             if post_type == POST_TYPE_LINK:
+                # Source could be a LINK, IMAGE, or video-hosted-link post —
+                # all three end up here. source_post.url is the right value for all.
                 form.link_url.data = source_post.url
             elif post_type == POST_TYPE_VIDEO:
                 form.video_url.data = source_post.url
-            form.tags.data = tags_to_string(source_post)
 
         if (
             post_type == POST_TYPE_LINK or post_type == POST_TYPE_VIDEO
@@ -1708,7 +1720,7 @@ def community_report(community_id: int):
         report = Report(
             reasons=form.reasons_to_string(form.reasons.data),
             description=form.description.data,
-            type=1,
+            type=REPORT_TYPE_COMMUNITY,
             reporter_id=current_user.id,
             suspect_community_id=community.id,
             source_instance_id=1,
@@ -2025,6 +2037,11 @@ def community_mod_list(community_id: int):
 @bp.route("/community/<int:community_id>/make_owner/<int:user_id>", methods=["POST"])
 @login_required
 def community_make_owner(community_id: int, user_id: int):
+    from app.shared.community import (
+        cached_modlist_for_community,
+        cached_modlist_for_user,
+    )
+
     community = Community.query.get_or_404(community_id)
     user = User.query.get_or_404(user_id)
 
@@ -2053,11 +2070,6 @@ def community_make_owner(community_id: int, user_id: int):
         cache.delete_memoized(community_moderators, community_id)
         cache.delete_memoized(Community.moderators, community)
 
-        from app.shared.community import (
-            cached_modlist_for_community,
-            cached_modlist_for_user,
-        )
-
         cache.delete_memoized(cached_modlist_for_community)
         cache.delete_memoized(cached_modlist_for_user, user)
 
@@ -2070,6 +2082,11 @@ def community_make_owner(community_id: int, user_id: int):
 @bp.route("/community/<int:community_id>/remove_owner/<int:user_id>", methods=["POST"])
 @login_required
 def community_remove_owner(community_id: int, user_id: int):
+    from app.shared.community import (
+        cached_modlist_for_community,
+        cached_modlist_for_user,
+    )
+
     community = Community.query.get_or_404(community_id)
     user = User.query.get_or_404(user_id)
 
@@ -2111,11 +2128,6 @@ def community_remove_owner(community_id: int, user_id: int):
 
             cache.delete_memoized(community_moderators, community_id)
             cache.delete_memoized(Community.moderators, community)
-
-            from app.shared.community import (
-                cached_modlist_for_community,
-                cached_modlist_for_user,
-            )
 
             cache.delete_memoized(cached_modlist_for_community)
             cache.delete_memoized(cached_modlist_for_user, user)
@@ -2223,6 +2235,14 @@ def community_block(community_id: int):
 def community_ban_user(community_id: int, user_id: int):
     community = Community.query.get_or_404(community_id)
     user = User.query.get_or_404(user_id)
+    # SP-009: only mods/owners/admins may ban users from a community.
+    # Previously this route relied solely on @login_required, allowing any
+    # authenticated user to ban anyone from any community. See
+    # SECURITY_PATCHES.md.
+    if not (
+        community.is_owner() or current_user.is_admin() or community.is_moderator()
+    ):
+        abort(401)
     existing = CommunityBan.query.filter_by(
         community_id=community.id, user_id=user.id
     ).first()
@@ -2351,6 +2371,11 @@ def community_ban_user(community_id: int, user_id: int):
 def community_unban_user(community_id: int, user_id: int):
     community = Community.query.get_or_404(community_id)
     user = User.query.get_or_404(user_id)
+    # SP-009: only mods/owners/admins may unban. See SECURITY_PATCHES.md.
+    if not (
+        community.is_owner() or current_user.is_admin() or community.is_moderator()
+    ):
+        abort(401)
     existing_ban = CommunityBan.query.filter_by(
         community_id=community.id, user_id=user.id
     ).first()
@@ -3714,20 +3739,13 @@ def check_url_already_posted():
     url = request.args.get("link_url")
     if url:
         url = remove_tracking_from_link(url.strip())
-        communities = (
-            Community.query.filter_by(banned=False)
-            .join(Post)
-            .filter(
-                Post.url == url,
-                Post.deleted == False,
-                Post.status > POST_STATUS_REVIEWING,
-            )
-            .all()
-        )
+        posts = Post.query.filter(
+            Post.url == url, Post.deleted == False, Post.status > POST_STATUS_REVIEWING
+        ).all()
         title, description = retrieve_metadata_of_url(url)
         return flask.render_template(
             "community/check_url_posted.html",
-            communities=communities,
+            posts=posts,
             title=title,
             description=description,
         )
@@ -3756,10 +3774,25 @@ def get_sidebar(community_id):
 
 
 def retrieve_metadata_of_url(url):
+    # SP-006: routes through SSRF guard. Previously called httpx_client.get
+    # directly with `follow_redirects=True` and no IP validation, allowing
+    # callers (e.g. link-post creation reading user-supplied URLs) to probe
+    # internal addresses. See SECURITY_PATCHES.md.
+    from app.activitypub.ssrf_guard import safe_httpx_get, SsrfBlocked
+
     title = ""
     description = ""
     try:
-        response = httpx_client.get(url, timeout=10, follow_redirects=True)
+        allow_http = bool(current_app.config.get("SSRF_GUARD_ALLOW_HTTP"))
+        allow_private = bool(current_app.config.get("SSRF_GUARD_ALLOW_PRIVATE"))
+        response = safe_httpx_get(
+            httpx_client,
+            url,
+            timeout=10,
+            follow_redirects=True,
+            allow_http=allow_http,
+            allow_private=allow_private,
+        )
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, "html.parser")
 

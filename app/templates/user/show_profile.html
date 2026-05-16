@@ -385,19 +385,13 @@
                 </div>
             </div>
         {% endif %}
-        {% if upvoted %}
+        {% if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()) %}
             <div class="card mb-3">
                 <div class="card-header">
                      <h2>{{ _('Upvoted') }}</h2>
                 </div>
                 <div class="card-body">
-
-                        <ul>
-                            {% for post in upvoted %}
-                                <li><a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}">{{ post.title }}</a></li>
-                            {% endfor %}
-                        </ul>
-
+                    <a href="{{ user.link() }}/upvotes">{{ _('Posts upvoted by %(user_name)s', user_name=user.user_name) }}</a>
                 </div>
             </div>
         {% endif %}

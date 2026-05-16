@@ -20,7 +20,7 @@ class TestConfig:
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     MAIL_SUPPRESS_SEND = True
     SERVER_NAME = "test.localhost"
-    SECRET_KEY = "test-secret-key"
+    SECRET_KEY = "test-secret-key-xxxxxxxxxxxxxxxxxxxxxxxx"
     CACHE_TYPE = "null"
     CELERY_ALWAYS_EAGER = True
 

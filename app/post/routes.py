@@ -339,8 +339,8 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                              f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
         oembed_url = url_for('post.post_oembed', post_id=post.id, _external=True)
         response.headers.set('Link', f'<{oembed_url}>; rel="alternate"; type="application/json+oembed"')
-        response.headers.set('ETag', f"{post.id}{sort}_{hash(post.last_active)}")
         if current_user.is_anonymous:
+            response.headers.set('ETag', f"{post.id}{sort}_{hash(post.last_active)}")
             response.headers.set('Vary', 'Accept, Accept-Language')
             response.headers.set('Cache-Control', 'public, max-age=30')
         else:
@@ -709,11 +709,14 @@ def continue_discussion(post_id, comment_id):
     for u_flair in UserFlair.query.filter(UserFlair.community_id == post.community_id):
         user_flair[u_flair.user_id] = u_flair.flair
 
+    description = shorten_string(markdown_to_text(comment.body), 200) if comment.body else None
+    og_image = post.image.source_url if post.image_id else None
+
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title),
                                post=post, mods=mod_list, has_voted=has_voted, poll_results=poll_results,
                                poll_data=poll_data,
                                poll_choices=poll_choices, poll_total_votes=poll_total_votes,
-                               event=event,
+                               event=event, description=description, og_image=og_image,
                                is_moderator=is_moderator, comment=comment, replies=replies,
                                markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
@@ -721,6 +724,7 @@ def continue_discussion(post_id, comment_id):
                                recently_downvoted_replies=recently_downvoted_replies,
                                community=post.community, parent_id=parent_id,
                                community_flair=get_comm_flair_list(post.community),
+                               user_notes=user_notes(current_user.get_id()) if current_user.is_authenticated else {},
                                user_pronouns = user_pronouns(), user_flair=user_flair,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
@@ -1037,7 +1041,7 @@ def post_edit(post_id: int):
         mod_user_ids = [mod.user_id for mod in mods]
         mod_list = User.query.filter(User.id.in_(mod_user_ids), User.deleted.is_(False)).all()
 
-    if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+    if post.user_id == current_user.id:
 
         if post.community.id in communities_banned_from(current_user.id):
             abort(403)
@@ -1862,7 +1866,7 @@ def post_reply_edit(post_id: int, comment_id: int):
         comment = None
     form = EditReplyForm()
     form.language_id.choices = languages_for_form()
-    if post_reply.user_id == current_user.id or post.community.is_moderator():
+    if post_reply.user_id == current_user.id:
         if form.validate_on_submit():
             edit_reply(form, post_reply, post, SRC_WEB)
             return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
@@ -2069,6 +2073,7 @@ def post_reply_notification(post_reply_id: int):
 
 
 @bp.route('/post/<int:post_id>/cross_posts', methods=['GET'])
+@login_required_if_private_instance
 def post_cross_posts(post_id: int):
     post = Post.query.get_or_404(post_id)
     if post.cross_posts:

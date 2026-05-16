@@ -15,7 +15,7 @@ class TestConfig:
     SQLALCHEMY_ENGINE_OPTIONS = {}  # SQLite doesn't support pool settings
     MAIL_SUPPRESS_SEND = True
     SERVER_NAME = "test.localhost"
-    SECRET_KEY = "test-secret-key"
+    SECRET_KEY = "test-secret-key-xxxxxxxxxxxxxxxxxxxxxxxx"
     PRIVATE_REGISTRATION_ENABLED = "true"
     PRIVATE_REGISTRATION_SECRET = "test-secret-123"
     CACHE_TYPE = "NullCache"

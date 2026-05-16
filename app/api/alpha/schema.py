@@ -553,7 +553,8 @@ class CommentReport(DefaultSchema):
     creator_id = fields.Integer(required=True)
     comment_id = fields.Integer(required=True)
     original_comment_text = fields.String()
-    reason = fields.String()
+    reason = fields.String(metadata={"description": "Categories of report selected by the reporter"})
+    description = fields.String(metadata={"description": "Any additional information provided by the reporter"})
     resolved = fields.Boolean(required=True)
     # TODO: resolver_id = fields.Integer(required=True)
     published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
@@ -953,6 +954,7 @@ class CommentReplyView(DefaultSchema):
     creator_blocked = fields.Boolean(required=True)
     creator_is_admin = fields.Boolean(required=True)
     creator_is_moderator = fields.Boolean(required=True)
+    distinguished = fields.Boolean()
     my_vote = fields.Integer(required=True)
     post = fields.Nested(Post, required=True)
     recipient = fields.Nested(Person, required=True)
@@ -1089,6 +1091,7 @@ class UserSaveSettingsRequest(DefaultSchema):
     cover = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     default_comment_sort_type = fields.String(validate=validate.OneOf(default_comment_sorts_list))
     default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
+    display_name = fields.String(allow_none=True, validate=validate.Length(max=255), metadata={"description": "Pass a null value to remove the display name"})
     email_unread = fields.Boolean(metadata={"description": "Receive email about missed notifications (if set up by local admin)"})
     extra_fields = fields.List(fields.Nested(NewUserExtraField),
                                metadata={"description": "A user can't have more than four total extra fields."})
@@ -1242,6 +1245,19 @@ class GetCommentReportResponse(DefaultSchema):
     comment_report_view = fields.Nested(CommentReportView, required=True)
 
 
+class GetCommentReportListRequest(DefaultSchema):
+    comment_id = fields.Integer(metadata={"description": "Get the reports for a single comment"})
+    community_id = fields.Integer(metadata={"description": "Limit reports to within a single community"})
+    limit = fields.Integer(metadata={"default": 20})
+    page = fields.Integer(metadata={"default": 1})
+    unresolved_only = fields.Boolean(metadata={"default": True})
+
+
+class GetCommentReportListResponse(DefaultSchema):
+    comment_reports = fields.List(fields.Nested(CommentReportView), required=True)
+    next_page = fields.String(allow_none=True)
+
+
 class RemoveCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     removed = fields.Boolean(required=True)
@@ -1256,6 +1272,11 @@ class MarkCommentAsReadRequest(DefaultSchema):
 class MarkCommentAsAnswerRequest(DefaultSchema):
     comment_reply_id = fields.Integer(required=True)
     answer = fields.Boolean(required=True)
+
+
+class MarkCommentAsDistinguishedRequest(DefaultSchema):
+    comment_reply_id = fields.Integer(required=True)
+    distinguished = fields.Boolean(required=True)
 
 
 class GetCommentReplyResponse(DefaultSchema):
@@ -2111,3 +2132,31 @@ class AdminUserExportResponse(DefaultSchema):
     download_url = fields.String(metadata={"description": "Temporary download URL"})
     expires_at = fields.DateTime(format='iso')
     message = fields.String(required=True)
+
+
+class UserRegistrationRequest(DefaultSchema):
+    username = fields.String(required=True)
+    password = fields.String(required=True)
+    password_verify = fields.String(required=True)
+    show_nsfw = fields.Boolean()
+    email = fields.String()
+    captcha_uuid = fields.String()
+    captcha_answer = fields.String()
+    honeypot = fields.String()
+    answer = fields.String()
+
+
+class UserRegistrationResponse(DefaultSchema):
+    jwt = fields.String()
+    registration_created = fields.Boolean()
+    verify_email_sent = fields.Boolean()
+
+
+class CaptchaFields(DefaultSchema):
+    png = fields.String()
+    wav = fields.String()
+    uuid = fields.String()
+
+
+class FetchCaptchaResponse(DefaultSchema):
+    ok = fields.List(fields.Nested(CaptchaFields))

@@ -15,7 +15,7 @@ from unittest.mock import patch, MagicMock
 # Set test environment before importing app
 os.environ["TESTING"] = "true"
 os.environ["SERVER_NAME"] = "test.localhost"
-os.environ["SECRET_KEY"] = "test-secret-key-real-world"
+os.environ["SECRET_KEY"] = "test-secret-key-real-world-padding-xxxxxxxx"
 os.environ["CACHE_TYPE"] = "NullCache"
 os.environ["CACHE_REDIS_URL"] = "memory://"
 os.environ["CELERY_BROKER_URL"] = "memory://localhost/"

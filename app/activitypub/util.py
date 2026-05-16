@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone, timedelta
@@ -21,7 +22,7 @@ from furl import furl
 from sqlalchemy import text, Integer, update
 from sqlalchemy.exc import IntegrityError
 
-from app import db, cache, celery
+from app import db, cache, celery, plugins
 from app.activitypub.signature import (
     signed_get_request,
     send_post_request,
@@ -107,8 +108,25 @@ from app.utils import (
 
 def public_key():
     if not os.path.exists("./public.pem"):
-        os.system("openssl genrsa -out private.pem 2048")
-        os.system("openssl rsa -in private.pem -outform PEM -pubout -out public.pem")
+        # SP-004: subprocess.run with list args; no shell interpolation.
+        subprocess.run(
+            ["openssl", "genrsa", "-out", "private.pem", "2048"],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "openssl",
+                "rsa",
+                "-in",
+                "private.pem",
+                "-outform",
+                "PEM",
+                "-pubout",
+                "-out",
+                "public.pem",
+            ],
+            check=True,
+        )
     else:
         publicKey = open("./public.pem", "r").read()
         PUBLICKEY = publicKey.replace(
@@ -1787,6 +1805,9 @@ def actor_json_to_model(activity_json, address, server):
         community.show_popular = (
             db.session.query(Instance).get(community.instance_id).popular
         )
+        community.show_all = (
+            not db.session.query(Instance).get(community.instance_id).silenced
+        )
 
         if description_html is not None and description_html != "":
             if not description_html.startswith("<"):  # PeerTube
@@ -1892,6 +1913,10 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(community.icon_id, 60, 250, "communities")
         if community.image_id:
             make_image_sizes(community.image_id, 700, 1600, "communities")
+
+        # Fire plugin hook for a new remote community
+        plugins.fire_hook("new_remote_community", community)
+
         return community
     elif activity_json["type"] == "Feed":
         feed = (
@@ -3209,23 +3234,26 @@ def ban_user(blocker, blocked, community, core_activity):
                 ).delete()
 
                 # Notify banned person
-                targets_data = {"gen": "0", "community_id": community.id}
-                notify = Notification(
-                    title=shorten_string(
-                        "You have been banned from " + community.title
-                    ),
-                    url=f"/chat/ban_from_mod/{blocked.id}/{community.id}",
-                    user_id=blocked.id,
-                    author_id=blocker.id,
-                    notif_type=NOTIF_BAN,
-                    subtype="user_banned_from_community",
-                    targets=targets_data,
-                )
-                db.session.add(notify)
-                if not current_app.debug:  # user.unread_notifications += 1 hangs app if 'user' is the same person
-                    blocked.unread_notifications += (
-                        1  # who pressed 'Re-submit this activity'.
+                if community.has_poster(
+                    blocked
+                ):  # ... but only if they have posted in there before (mods can use bans to harass)
+                    targets_data = {"gen": "0", "community_id": community.id}
+                    notify = Notification(
+                        title=shorten_string(
+                            "You have been banned from " + community.title
+                        ),
+                        url=f"/chat/ban_from_mod/{blocked.id}/{community.id}",
+                        user_id=blocked.id,
+                        author_id=blocker.id,
+                        notif_type=NOTIF_BAN,
+                        subtype="user_banned_from_community",
+                        targets=targets_data,
                     )
+                    db.session.add(notify)
+                    if not current_app.debug:  # user.unread_notifications += 1 hangs app if 'user' is the same person
+                        blocked.unread_notifications += (
+                            1  # who pressed 'Re-submit this activity'.
+                        )
 
                 # Remove their notification subscription,  if any
                 db.session.query(NotificationSubscription).filter(
@@ -3305,27 +3333,26 @@ def unban_user(blocker, blocked, community, core_activity):
 
         if blocked.is_local():
             # Notify unbanned person
-            targets_data = {"gen": "0", "community_id": community.id}
-            notify = Notification(
-                title=shorten_string(
-                    "You have been unbanned from " + community.display_name()
-                ),
-                url=f"/chat/ban_from_mod/{blocked.id}/{community.id}",
-                user_id=blocked.id,
-                author_id=blocker.id,
-                notif_type=NOTIF_UNBAN,
-                subtype="user_unbanned_from_community",
-                targets=targets_data,
-            )
-            db.session.add(notify)
-            if (
-                not current_app.debug
-            ):  # user.unread_notifications += 1 hangs app if 'user' is the same person
-                blocked.unread_notifications += (
-                    1  # who pressed 'Re-submit this activity'.
+            if community.has_poster(blocked):
+                targets_data = {"gen": "0", "community_id": community.id}
+                notify = Notification(
+                    title=shorten_string(
+                        "You have been unbanned from " + community.display_name()
+                    ),
+                    url=f"/chat/ban_from_mod/{blocked.id}/{community.id}",
+                    user_id=blocked.id,
+                    author_id=blocker.id,
+                    notif_type=NOTIF_UNBAN,
+                    subtype="user_unbanned_from_community",
+                    targets=targets_data,
                 )
+                db.session.add(notify)
+                if not current_app.debug:  # user.unread_notifications += 1 hangs app if 'user' is the same person
+                    blocked.unread_notifications += (
+                        1  # who pressed 'Re-submit this activity'.
+                    )
 
-            db.session.commit()
+                db.session.commit()
 
             cache.delete_memoized(communities_banned_from, blocked.id)
             cache.delete_memoized(communities_banned_from_all_users)
@@ -4187,7 +4214,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 def update_post_from_activity(post: Post, request_json: dict):
     from app import redis_client
 
-    with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=6):
+    with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
         # redo body without checking if it's changed
         if (
             "content" in request_json["object"]
@@ -4672,82 +4699,52 @@ def update_post_from_activity(post: Post, request_json: dict):
 
 
 def undo_vote(comment, post, target_ap_id, user):
-    from app import redis_client
-    from app.utils import wilson_confidence_lower_bound
-
     voted_on = find_liked_object(target_ap_id)
     if isinstance(voted_on, Post):
         post = voted_on
-        with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=6):
-            try:
-                db.session.refresh(post)
-            except Exception:
-                return None  # post deleted between find and lock acquisition
-            existing_vote = PostVote.query.filter_by(
-                user_id=user.id, post_id=post.id
-            ).first()
-            if existing_vote:
-                prior_effect = existing_vote.effect
-                if prior_effect == 0:
-                    db.session.delete(existing_vote)
-                    db.session.commit()
-                    return post
+        existing_vote = PostVote.query.filter_by(
+            user_id=user.id, post_id=post.id
+        ).first()
+        if existing_vote:
+            with db.session.begin_nested():
                 db.session.execute(
                     text(
                         'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
                     ),
-                    {"effect": prior_effect, "user_id": post.user_id},
+                    {"effect": existing_vote.effect, "user_id": post.user_id},
                 )
-                if (
-                    prior_effect < 0
-                ):  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
-                    post.down_votes -= 1
-                else:
-                    post.up_votes -= 1
-                post.score -= prior_effect
-                post.ranking = post.post_ranking(
-                    post.score + post.reply_count, post.created_at
-                )
-                post.ranking_scaled = int(post.ranking + post.community.scale_by())
-                db.session.delete(existing_vote)
-                db.session.commit()
+            if (
+                existing_vote.effect < 0
+            ):  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
+                post.down_votes -= 1
+            else:
+                post.up_votes -= 1
+            post.score -= existing_vote.effect
+            db.session.delete(existing_vote)
+            db.session.commit()
         return post
     if isinstance(voted_on, PostReply):
         comment = voted_on
-        with redis_client.lock(
-            f"lock:post_reply:{comment.id}", timeout=30, blocking_timeout=6
-        ):
-            try:
-                db.session.refresh(comment)
-            except Exception:
-                return None  # comment deleted between find and lock acquisition
-            existing_vote = PostReplyVote.query.filter_by(
-                user_id=user.id, post_reply_id=comment.id
-            ).first()
-            if existing_vote:
-                prior_effect = existing_vote.effect
-                if prior_effect == 0:
-                    db.session.delete(existing_vote)
-                    db.session.commit()
-                    return comment
+        existing_vote = PostReplyVote.query.filter_by(
+            user_id=user.id, post_reply_id=comment.id
+        ).first()
+        if existing_vote:
+            with db.session.begin_nested():
                 db.session.execute(
                     text(
                         'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
                     ),
-                    {"effect": prior_effect, "user_id": comment.user_id},
+                    {"effect": existing_vote.effect, "user_id": comment.user_id},
                 )
-                if (
-                    prior_effect < 0
-                ):  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
-                    comment.down_votes -= 1
-                else:
-                    comment.up_votes -= 1
-                comment.score -= prior_effect
-                comment.ranking = wilson_confidence_lower_bound(
-                    comment.up_votes, comment.down_votes
-                )
-                db.session.delete(existing_vote)
-                db.session.commit()
+            if (
+                existing_vote.effect < 0
+            ):  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
+                comment.down_votes -= 1
+            else:
+                comment.up_votes -= 1
+            comment.score -= existing_vote.effect
+            db.session.delete(existing_vote)
+            db.session.commit()
         return comment
 
     return None
@@ -4766,7 +4763,7 @@ def process_report(user, reported, request_json, session):
     if isinstance(reported, User):
         if reported.reports == -1:
             return
-        type = 0
+        type = REPORT_TYPE_USER
         source_instance = session.query(Instance).get(user.instance_id)
         targets_data = {
             "gen": "0",
@@ -4812,7 +4809,7 @@ def process_report(user, reported, request_json, session):
     elif isinstance(reported, Post):
         if reported.reports == -1:
             return
-        type = 1
+        type = REPORT_TYPE_POST
         suspect_author = session.query(User).get(reported.author.id)
         source_instance = session.query(Instance).get(user.instance_id)
         targets_data = {
@@ -4861,7 +4858,7 @@ def process_report(user, reported, request_json, session):
     elif isinstance(reported, PostReply):
         if reported.reports == -1:
             return
-        type = 2
+        type = REPORT_TYPE_REPLY
         post = session.query(Post).get(reported.post_id)
         suspect_author = session.query(User).get(reported.author.id)
         source_instance = session.query(Instance).get(user.instance_id)
