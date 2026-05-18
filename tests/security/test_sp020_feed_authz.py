@@ -96,6 +96,31 @@ def test_make_feed_gates_is_instance_feed_on_admin():
 # --- F-H-4: show_feed_rss now has the same privacy gate as show_feed
 
 
+def test_feed_add_community_preserves_admin_override():
+    """Privileged-path: an admin must be able to edit another user's feed.
+    The fix added an `or not current_user.is_admin()` (negative form) to the
+    ownership check; this test confirms it survives refactors."""
+    src = _function_source(FEED_ROUTES, "feed_add_community")
+    # The check should reject only when the user is neither owner nor admin.
+    # Two acceptable patterns:
+    #   if target_feed.user_id != user_id and not current_user.is_admin():
+    #       abort(...)
+    # or
+    #   if not current_user.is_admin() and target_feed.user_id != user_id:
+    #       abort(...)
+    src_collapsed = " ".join(src.split())
+    has_admin_override = (
+        "not current_user.is_admin()" in src_collapsed
+        or "current_user.is_admin() " in src_collapsed
+        or "current_user.is_admin()," in src_collapsed
+    )
+    assert has_admin_override, (
+        "SP-020 REGRESSION: feed_add_community no longer preserves an "
+        "admin-override path. Site admins can no longer edit other users' "
+        "feeds; this is a legitimate workflow regression."
+    )
+
+
 def test_show_feed_rss_has_privacy_gate():
     src = _function_source(FEED_ROUTES, "show_feed_rss")
     assert "feed.public" in src, (

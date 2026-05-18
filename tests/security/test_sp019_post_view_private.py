@@ -1,5 +1,6 @@
-"""SP-019 regression: post_view variants 3/4/5 must gate posts in private
-communities by requester membership.
+"""SP-019 regression and privileged-path tests: post_view variants 3/4/5
+must gate posts in private communities by requester membership, BUT must
+allow legitimate members and admins through.
 
 This mirrors SP-014, which gated community_view (variants 3/4/5/6) for
 private communities but left the sibling post_view function unprotected.
@@ -21,6 +22,24 @@ SQL-level community filters.
 
 import ast
 import pathlib
+from unittest.mock import Mock, patch
+
+import pytest
+
+from app import create_app
+from config import Config
+
+
+class _TestConfig(Config):
+    TESTING = True
+    WTF_CSRF_ENABLED = False
+    MAIL_SUPPRESS_SEND = True
+    CACHE_TYPE = "NullCache"
+
+
+@pytest.fixture
+def app():
+    return create_app(_TestConfig)
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -92,6 +111,107 @@ def test_post_view_gate_handles_anonymous_caller():
         "short-circuit is the documented contract that mirrors community_view "
         "and shouldn't be removed without explicit reason."
     )
+
+
+# --- Privileged-path tests: legitimate flows must not be blocked --------
+
+
+def _build_mock_post(community_id=42, private=True):
+    """Build a Mock post with just enough surface for the SP-019 gate."""
+    post = Mock()
+    post.community.private = private
+    post.community_id = community_id
+    # Defeat the isinstance(post, int) check inside post_view
+    post.__class__ = Mock
+    return post
+
+
+def test_gate_allows_member_of_private_community(app):
+    """A logged-in user who IS a member of the private community must not
+    be rejected by the SP-019 gate. The downstream Mock-incomplete variant
+    will raise something else, but never the 'Private community' message."""
+    with app.app_context():
+        post = _build_mock_post(community_id=42, private=True)
+        with patch(
+            "app.api.alpha.views.community_membership_private",
+            return_value=[42],
+        ):
+            from app.api.alpha.views import post_view
+
+            try:
+                post_view(post=post, variant=4, user_id=1)
+            except Exception as e:
+                msg = str(e)
+                assert "Private community" not in msg, (
+                    f"SP-019 REGRESSION: gate is rejecting a legitimate "
+                    f"member (community_id=42 is in their membership list). "
+                    f"Got: {msg!r}"
+                )
+            # If no exception raised, that's also fine — the gate let it
+            # through. (Won't happen in practice because the Mock can't
+            # satisfy variant 4's downstream calls, but harmless.)
+
+
+def test_gate_rejects_non_member_of_private_community(app):
+    """Negative control: a non-member must hit the gate. Confirms the test
+    above isn't a false positive caused by the gate being broken in the
+    opposite direction."""
+    with app.app_context():
+        post = _build_mock_post(community_id=42, private=True)
+        with patch(
+            "app.api.alpha.views.community_membership_private",
+            return_value=[99],  # User is in community 99, post is in 42
+        ):
+            from app.api.alpha.views import post_view
+
+            with pytest.raises(Exception, match="Private community"):
+                post_view(post=post, variant=4, user_id=1)
+
+
+def test_gate_skips_public_community(app):
+    """Public-community posts must never hit the gate, regardless of
+    requester membership."""
+    with app.app_context():
+        post = _build_mock_post(community_id=42, private=False)
+        with patch(
+            "app.api.alpha.views.community_membership_private",
+            return_value=[],  # Anonymous-equivalent
+        ):
+            from app.api.alpha.views import post_view
+
+            try:
+                post_view(post=post, variant=4, user_id=None)
+            except Exception as e:
+                msg = str(e)
+                assert "Private community" not in msg, (
+                    f"SP-019 REGRESSION: gate is rejecting on a PUBLIC "
+                    f"community. Got: {msg!r}"
+                )
+
+
+def test_gate_does_not_run_on_variants_1_and_2(app):
+    """Variants 1 and 2 are stub helpers called from list endpoints with
+    their own SQL-level filters. They must NOT be blocked by the SP-019
+    gate even when the requester is not a member of a private community —
+    otherwise list endpoints would break on private-community posts they
+    intentionally surface (e.g. to moderators)."""
+    with app.app_context():
+        post = _build_mock_post(community_id=42, private=True)
+        with patch(
+            "app.api.alpha.views.community_membership_private",
+            return_value=[99],  # Not a member
+        ):
+            from app.api.alpha.views import post_view
+
+            for variant in (1, 2):
+                try:
+                    post_view(post=post, variant=variant, user_id=1)
+                except Exception as e:
+                    msg = str(e)
+                    assert "Private community" not in msg, (
+                        f"SP-019 REGRESSION: gate is rejecting on variant "
+                        f"{variant} (stub/internal helper). Got: {msg!r}"
+                    )
 
 
 def test_post_view_v4_does_not_inline_skip_gate():

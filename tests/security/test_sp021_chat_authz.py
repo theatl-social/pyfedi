@@ -158,3 +158,52 @@ def test_chat_delete_preserves_reports_for_member_initiated_delete():
         "SP-021 REGRESSION: the non-admin branch no longer null-updates "
         "suspect_conversation_id."
     )
+
+
+def test_chat_delete_orders_update_before_conversation_delete():
+    """Privileged-path: the Report update/delete must appear in source BEFORE
+    the Conversation delete. SQLAlchemy's flush dependency tracking generally
+    handles this correctly, but source-order is the safer guarantee — if
+    someone refactors to db.session.delete(conversation) first, we'd hit FK
+    violations or (worse) lose Reports to the cascade before we can null
+    their FK column."""
+    src = _function_source(CHAT_ROUTES, "chat_delete")
+    tree = ast.parse(src)
+    func = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "chat_delete"
+    )
+
+    # Walk the body in source order and find:
+    # (a) the line that touches Report.query (any .delete() or .update())
+    # (b) the line that calls db.session.delete(conversation)
+    report_line = None
+    conv_delete_line = None
+    for node in ast.walk(func):
+        if isinstance(node, ast.Call):
+            call_src = ast.unparse(node)
+            if "Report.query" in call_src and (
+                ".delete()" in call_src or ".update(" in call_src
+            ):
+                if report_line is None or node.lineno < report_line:
+                    report_line = node.lineno
+            if "db.session.delete" in call_src and "conversation" in call_src:
+                if conv_delete_line is None or node.lineno < conv_delete_line:
+                    conv_delete_line = node.lineno
+
+    assert report_line is not None, (
+        "SP-021 REGRESSION: chat_delete contains no Report.query touch — "
+        "the Report-handling logic has disappeared entirely."
+    )
+    assert conv_delete_line is not None, (
+        "SP-021 REGRESSION: chat_delete no longer calls "
+        "db.session.delete(conversation)."
+    )
+    assert report_line < conv_delete_line, (
+        f"SP-021 REGRESSION: Report.query update/delete at line "
+        f"{report_line} comes AFTER db.session.delete(conversation) at "
+        f"line {conv_delete_line}. With FK constraints this will either "
+        f"fail with a foreign-key violation or (if cascade is set) wipe "
+        f"Report rows we intended to preserve."
+    )
