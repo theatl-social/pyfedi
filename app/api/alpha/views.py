@@ -72,6 +72,21 @@ def post_view(
         if post is None:
             raise NoResultFound
 
+    # SP-019: gate private-community posts at the variant dispatch.
+    # Mirrors SP-014 (which gated community_view). Variants 3, 4, 5 are the
+    # full-info responses (post body, comments, votes, polls, cross-posts);
+    # variants 1 and 2 are stub/internal helpers used by list endpoints whose
+    # callers apply their own SQL-level community filter.
+    if (
+        variant in (3, 4, 5)
+        and post.community.private
+        and (
+            user_id is None
+            or post.community_id not in community_membership_private(user_id)
+        )
+    ):
+        raise Exception("Private community - membership required")
+
     # Variant 1 - models/post/post.dart
     if variant == 1:
         include = [
@@ -429,11 +444,8 @@ def post_view(
                 except NoResultFound:
                     continue
 
-        if (
-            post.community.private
-            and post.community_id not in community_membership_private(user_id)
-        ):
-            raise Exception("Private community - membership required")
+        # Note: private-community gate is now at the top of post_view
+        # (SP-019), covering variants 3/4/5 uniformly.
 
         v3 = {
             "post_view": post_view(

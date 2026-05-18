@@ -162,6 +162,41 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream
 - **Fix summary:** SP-002 guarded outbound GETs; HEADs (`head_request`, `mime_type_using_head`) called `httpx_client.head` directly. HEAD has no body, but an attacker can still learn port-open status, response headers (`Server`, `X-Powered-By`), and probe internal services with attacker-supplied URLs (e.g. via `is_image_url` called on community/feed/post `icon_url` / `banner_url`). Same validation as the GET wrapper, same `SSRF_GUARD_ALLOW_HTTP` / `SSRF_GUARD_ALLOW_PRIVATE` config switches.
 
+### SP-021 — Chat/DM authorization (membership, blocks, report preservation)
+
+- **Disclosure:** 2026-05 (round-4 audit, chat/DM surface)
+- **Files:**
+  - `app/chat/routes.py` — `chat_home` POST gate; `chat_delete` admin vs member branching
+  - `app/api/alpha/utils/private_message.py` — `post_private_message` block + preference check
+- **Test:** `tests/security/test_sp021_chat_authz.py`
+- **Upstream status:** NOT FIXED upstream as of v1.6.27
+- **Fix summary:** Three High-severity authz gaps in the chat/DM surface:
+  1. POST `/chat/<conversation_id>` (`chat_home`) skipped the membership check — it existed only in the GET branch. Any authenticated user could inject messages into any conversation they were not part of. Now POST resolves the conversation and aborts 403 unless the actor is a member or admin.
+  2. API `post_private_message` ignored bidirectional blocks and the recipient's `accept_private_messages` preference. The web `new_message` flow and the federation `ChatMessage` handler both enforce these; the API path bypassed them entirely, letting a blocked user DM the blocker via `/api/alpha/private_message`. Now mirrors the same checks.
+  3. `chat_delete` previously hard-deleted all `Report` rows referencing the conversation whenever any member triggered the delete. A reported user could destroy their own evidence by deleting the conversation before staff review. Admins still purge reports; non-admin member-initiated deletes now null out `Report.suspect_conversation_id` instead, so the evidence persists as an orphan-but-readable report.
+
+### SP-020 — Feeds authorization suite (IDOR, is_instance_feed gate, RSS privacy)
+
+- **Disclosure:** 2026-05 (round-4 audit, feeds surface)
+- **Files:**
+  - `app/feed/routes.py` — `feed_add_community` IDOR fix; `show_feed_rss` privacy gate
+  - `app/shared/feed.py` — `make_feed` admin gate on `is_instance_feed`
+- **Test:** `tests/security/test_sp020_feed_authz.py`
+- **Upstream status:** NOT FIXED upstream as of v1.6.27
+- **Fix summary:** Three findings:
+  1. **(Critical)** `feed_add_community` (`GET /feed/add_community`) read `user_id` from `request.args`, making the ownership check `Feed.query.get(feed_id).user_id != user_id` tautological — attacker controls both sides. Any logged-in user could add or remove communities to any other user's feed; for public feeds, the modification federated under the victim feed's private key. Now `user_id = current_user.id`; the target (and source, for moves) feed must be owned by the session user, otherwise 403. Admin override preserved.
+  2. **(High)** `make_feed` accepted `is_instance_feed=True` from non-admins. The web form disables the field client-side (trivial bypass); the API has no equivalent control. `edit_feed` already admin-gates this flag; creation now matches. The flag surfaces a feed in the site-wide instance-feeds menu, so the leak let any user publish into a global navigation surface.
+  3. **(High)** `show_feed_rss` had no privacy gate. The HTML sibling `show_feed` rejects non-owner/non-subscriber access on `feed.public == False`; the `.rss` path served all comers. Private feed names are auto-suffixed with the owner's username and are enumerable from public user listings. Now `show_feed_rss` is decorated with `login_required_if_private_instance` and applies the same owner/subscriber gate.
+
+### SP-019 — Private community gate for post_view variants 3/4/5
+
+- **Disclosure:** 2026-05 (round-4 audit, post_view surface)
+- **Files:**
+  - `app/api/alpha/views.py` — gate lifted to top of `post_view`, conditional on `variant in (3, 4, 5)`; inline gate in variant 3 removed as redundant
+- **Test:** `tests/security/test_sp019_post_view_private.py`
+- **Upstream status:** NOT FIXED upstream as of v1.6.27
+- **Fix summary:** SP-014 gated `community_view` for private communities; the sibling `post_view` was left partially unprotected. Variant 4 (`/post/like`, `/post/save`) and variant 5 (resolve-object lookup-by-AP-id) had no gate — any user could fetch full post body, votes, comments, polls, and cross-posts of a private-community post by hitting these endpoints. Variant 3 had its own inline gate but didn't mirror `community_view`'s `user_id is None or` short-circuit. Fix lifts a single gate to the top of `post_view`, conditional on `variant in (3, 4, 5)`. Variants 1 and 2 remain unguarded because they are stub/internal helpers called from list endpoints whose callers apply their own SQL-level community filter.
+
 ### SP-018 — Celery serialization pinned to JSON (defense-in-depth)
 
 - **Disclosure:** 2026-05 (round-4 audit, Celery surface)
