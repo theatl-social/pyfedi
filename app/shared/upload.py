@@ -13,6 +13,7 @@ from app.utils import (
     ensure_directory_exists,
     store_files_in_s3,
     guess_mime_type,
+    sanitize_svg,
 )
 
 
@@ -58,6 +59,11 @@ def process_upload(image_file, destination="posts", user_id=None):
     file_size = os.path.getsize(final_place)
 
     final_ext = file_ext.lower()  # track file extension for conversion
+
+    # SP-017: strip <script>, event handlers, and javascript: URLs from
+    # uploaded SVGs before any code (PIL or downstream renderers) touches them.
+    if final_ext == ".svg":
+        sanitize_svg(final_place)
 
     if file_ext.lower() == ".heic":
         register_heif_opener()

@@ -160,6 +160,20 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream
 - **Fix summary:** SP-002 guarded outbound GETs; HEADs (`head_request`, `mime_type_using_head`) called `httpx_client.head` directly. HEAD has no body, but an attacker can still learn port-open status, response headers (`Server`, `X-Powered-By`), and probe internal services with attacker-supplied URLs (e.g. via `is_image_url` called on community/feed/post `icon_url` / `banner_url`). Same validation as the GET wrapper, same `SSRF_GUARD_ALLOW_HTTP` / `SSRF_GUARD_ALLOW_PRIVATE` config switches.
 
+### SP-017 — SVG XSS sanitization on uploads and remote og:image fetches
+
+- **Disclosure:** 2026-05 (upstream-discovered; adopted from upstream v1.6.27 commit `dc215422`)
+- **Files:**
+  - `app/utils.py` — new `sanitize_svg_bytes()` and `sanitize_svg()` helpers using `py-svg-hush~=0.3.0`
+  - `app/utils.py` — `url_to_thumbnail_file()` sanitizes SVG content from remote og:image fetches
+  - `app/shared/upload.py` — `process_upload()` sanitizes `.svg` uploads in place after save
+  - `app/shared/post.py` — `edit_post()` image-upload branch sanitizes `.svg` in place after save
+  - `pyproject.toml` — adds `py-svg-hush~=0.3.0`
+- **Test:** `tests/security/test_sp017_svg_sanitize.py`
+- **Upstream status:** FIXED upstream in v1.6.27. We adopted the same library and approach.
+- **Fix summary:** SVG is `image/svg+xml` and renders inline. An attacker uploading an SVG with `<script>`, event handlers (`onload`, `onclick`), or `javascript:` URLs in `xlink:href` achieves persistent XSS for any user who views the SVG (community icon, user avatar, post image, og:image preview). `py-svg-hush` parses the SVG against an allowlist and strips dangerous nodes/attributes.
+- **Notes:** The sanitizer is fail-closed on the *upload* path (errors return False without writing) but fail-open on `sanitize_svg_bytes` (errors return original bytes after logging). The latter is intentional for the thumbnail-fetch path so a malformed remote SVG doesn't break the whole link-preview pipeline — but it does mean the persistence path is the load-bearing one.
+
 ### SP-004 — Shell-call command injection in CLI translate command
 
 - **Disclosure:** 2026-05 (private, embargoed) — lower severity since it requires CLI access, but still real
