@@ -239,6 +239,20 @@ def create_app(config_class=Config):
     app_bcrypt.init_app(app)
     celery.conf.update(app.config)
 
+    # SP-018: explicitly pin Celery to JSON serialization for broker messages
+    # and task results. Celery 5.x defaults to JSON, but defaults can change
+    # with major versions, and the bulk app.config merge above would silently
+    # honor a CELERY_TASK_SERIALIZER env var if one were ever set. Unsafe
+    # legacy serializers (the p-word and yaml's default Loader) execute
+    # arbitrary code on deserialization, which against broker messages is
+    # remote code execution on every worker. Explicit allowlist > default.
+    # Old-style setting names to match the surrounding CELERY_ROUTES style.
+    celery.conf.update(
+        CELERY_TASK_SERIALIZER="json",
+        CELERY_RESULT_SERIALIZER="json",
+        CELERY_ACCEPT_CONTENT=["json"],
+    )
+
     celery.conf.update(
         CELERY_ROUTES={
             "app.shared.tasks.users.check_user_application": {"queue": "background"},

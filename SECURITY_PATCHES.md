@@ -162,6 +162,16 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream
 - **Fix summary:** SP-002 guarded outbound GETs; HEADs (`head_request`, `mime_type_using_head`) called `httpx_client.head` directly. HEAD has no body, but an attacker can still learn port-open status, response headers (`Server`, `X-Powered-By`), and probe internal services with attacker-supplied URLs (e.g. via `is_image_url` called on community/feed/post `icon_url` / `banner_url`). Same validation as the GET wrapper, same `SSRF_GUARD_ALLOW_HTTP` / `SSRF_GUARD_ALLOW_PRIVATE` config switches.
 
+### SP-018 — Celery serialization pinned to JSON (defense-in-depth)
+
+- **Disclosure:** 2026-05 (round-4 audit, Celery surface)
+- **Files:**
+  - `app/__init__.py` — `create_app()` celery.conf.update block now explicitly sets `CELERY_TASK_SERIALIZER`, `CELERY_RESULT_SERIALIZER`, `CELERY_ACCEPT_CONTENT` to JSON-only.
+- **Test:** `tests/security/test_sp018_celery_json_only.py`
+- **Upstream status:** Not addressed upstream (Celery 5.x defaults to JSON, so neither side has an active vuln). This patch is defense-in-depth.
+- **Fix summary:** Celery accepts a configurable serializer for broker messages. Unsafe legacy serializers (the p-word, yaml's default Loader) execute arbitrary code on deserialization, which against broker messages is remote code execution on every worker process. Celery 5.x defaults to JSON, but two paths could silently flip the default: a future major-version upgrade changing defaults, or the existing `celery.conf.update(app.config)` bulk-merge honoring a `CELERY_TASK_SERIALIZER=<unsafe>` env var. Explicit allowlist eliminates both paths.
+- **Why this matters even though no vuln is currently active:** the regression test asserts the allowlist on every test run, so any future drift fails the build loudly.
+
 ### SP-017 — SVG XSS sanitization on uploads and remote og:image fetches
 
 - **Disclosure:** 2026-05 (upstream-discovered; adopted from upstream v1.6.27 commit `dc215422`)
