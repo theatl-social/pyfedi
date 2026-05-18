@@ -239,12 +239,13 @@ def verify_email(token):
                 flash(_("Thank you for verifying your email address."))
                 return redirect(url_for("auth.login"))
             user.verified = True
-            # SP-013: invalidate the verification token after first use so a
+            # SP-013: rotate the verification token after first use so a
             # captured token (email-server log, ESP cache, browser history,
-            # referrer leak) cannot be reused. The `if user.verified` guard
-            # above only catches re-execution; clearing the token defends
-            # against capture-and-later-replay. See SECURITY_PATCHES.md.
-            user.verification_token = None
+            # referrer leak) cannot be reused. Replacing with a fresh random
+            # token (instead of setting to None) preserves the unsubscribe
+            # URLs in newsletter/welcome emails that key off this column.
+            # Matches upstream PieFed v1.6.27 commit b3474d19.
+            user.verification_token = random_token(16)
 
             # Update any pending application status from -1 to 0 when email is verified
             application = UserRegistration.query.filter_by(

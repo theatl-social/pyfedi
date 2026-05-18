@@ -123,14 +123,16 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream (this is on top of our SP-003)
 - **Fix summary:** SP-003's known-bad set was exact-match, so `'YOU-WILL-NEVER-GUESSS'` (uppercase, the form usually shown in docs) and `' you-will-never-guesss '` (whitespace artifacts from copy-paste) bypassed the validator. Now the comparison normalizes via `.strip().lower()` before the membership check. The actual `SECRET_KEY` Flask uses is unchanged.
 
-### SP-013 — Email verification token cleared after first use
+### SP-013 — Email verification token rotated after first use
 
 - **Disclosure:** 2026-05 (round-2 audit, concurrency / token-replay)
 - **Files:**
-  - `app/auth/routes.py` — `verify_email()`
+  - `app/auth/routes.py` — `verify_email()` (rotates token to fresh random value)
+  - `app/templates/email/newsletter.html`, `newsletter.txt`, `welcome.html`, `welcome.txt` (added `{% if %}` guards around unsubscribe links)
 - **Test:** `tests/security/test_sp013_verification_token_cleared.py`
-- **Upstream status:** NOT FIXED upstream
-- **Fix summary:** `verify_email` set `user.verified = True` but never cleared `user.verification_token`. A captured token (email-server log, ESP cache, browser history, referrer-header leak) could be replayed against the same account. The `if user.verified` guard only catches re-execution within the *same* request; an attacker could race against a not-yet-verified account or replay later. Now `user.verification_token = None` is set immediately before the commit.
+- **Upstream status:** FIXED upstream in v1.6.27 (commits `f71b8259` + `b3474d19`). We adopted upstream's rotate-token approach.
+- **Fix summary:** `verify_email` set `user.verified = True` but never invalidated `user.verification_token`. A captured token (email-server log, ESP cache, browser history, referrer-header leak) could be replayed against the same account. The `if user.verified` guard only catches re-execution within the *same* request; an attacker could race against a not-yet-verified account or replay later. The fix invalidates the token immediately before the commit.
+- **Why rotate instead of clear:** Initial SP-013 set the token to `None`. The same column is referenced in newsletter/welcome email templates as the unsubscribe-link token; setting it to `None` caused `url_for(token=None)` to crash those sends. Upstream's later fix (b3474d19) rotates to a fresh random token, which is equivalent in security terms (the captured token is invalidated by being overwritten) but preserves the unsubscribe URLs. The four affected templates also gained `{% if %}` guards as defense-in-depth.
 
 ### SP-014 — Private community sidebar leak in `community_view`
 

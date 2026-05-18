@@ -8,6 +8,8 @@
 </p>
 {{ email_body | safe }}
 <p>&nbsp;</p>
+{% if user.verification_token %}
 <p>
     <small><a href="{{ url_for('user.user_newsletter_unsubscribe', user_id=user.id, token=user.verification_token, _external=True) }}">Unsubscribe from PieFed newsletter</a></small>
 </p>
+{% endif %}
