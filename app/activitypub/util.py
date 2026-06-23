@@ -1266,6 +1266,10 @@ def refresh_community_profile_task(community_id, activity_json):
                                     )
                                     is_mod = False
                                     for actor in mods_data["orderedItems"]:
+                                        # nodebb sends the mods collection as a list of
+                                        # objects rather than strings (upstream v1.6.27 c8edd293)
+                                        if isinstance(actor, dict):
+                                            actor = actor["id"]
                                         if (
                                             actor.lower()
                                             == member_user.profile_id().lower()
@@ -1553,6 +1557,10 @@ def actor_json_to_model(activity_json, address, server):
     if (
         "type" not in activity_json
     ):  # some Akkoma instances return an empty actor?! e.g. https://donotsta.re/users/april
+        return None
+    # Reject actors whose id does not belong to the server they were fetched from
+    # (upstream v1.6.27 ada8e2ea) - prevents an instance impersonating actors on another domain.
+    if server not in activity_json["id"]:
         return None
     if activity_json["type"] == "Person" or activity_json["type"] == "Service":
         user = (

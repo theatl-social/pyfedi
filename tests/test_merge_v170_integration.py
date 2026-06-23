@@ -66,6 +66,19 @@ def test_api_util_modules_import():
     import app.api.alpha.views  # noqa: F401
 
 
+def test_actor_json_to_model_rejects_cross_server_id(app):
+    # v1.6.27 backport (ada8e2ea): an actor whose `id` is not on the server it
+    # was fetched from must be rejected, so an instance can't impersonate actors
+    # on another domain.
+    from app.activitypub.util import actor_json_to_model
+
+    with app.app_context():
+        spoof = {"type": "Person", "id": "https://evil.example/u/spoof"}
+        assert actor_json_to_model(spoof, "spoof@good.example", "good.example") is None
+        # an actor with no type is also rejected (pre-existing guard, unaffected)
+        assert actor_json_to_model({}, "x@good.example", "good.example") is None
+
+
 def test_circular_import_architecture():
     # The fork owns cached_modlist_* in shared.community to break the
     # views <-> community circular import. test_ci_fixes covers this too; we
