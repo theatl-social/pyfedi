@@ -2371,6 +2371,7 @@ def can_upload_video(user=None):
     return True
 
 
+@cache.memoize(timeout=300)
 def favorite_communities(user_id):
     if user_id is None:
         return []

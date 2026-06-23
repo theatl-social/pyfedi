@@ -165,15 +165,21 @@ class MediaLibrary {
             'incorrect_login': t.loginRequired || 'You must be logged in to upload images.',
             'filetype not allowed': t.filetypeNotAllowed || 'That file type is not allowed.',
             'file not uploaded': t.selectFile || 'Please select a file.',
+            'rate_limited': t.rateLimited || 'You are uploading too fast. Please wait a while before trying again.',
         };
         return map[code] || t.uploadError || 'Upload failed. Please try again.';
     }
 
     /**
-     * Read the JSON error body from a failed upload response and throw an Error
-     * whose message is the API error code, so .catch() can surface the reason.
+     * Read the error from a failed upload response and throw an Error whose
+     * message is the API error code, so .catch() can surface the reason.
+     * HTTP 429 (the endpoint is rate-limited at 15/hour) carries a limiter
+     * string rather than one of our codes, so map it by status instead.
      */
     throwUploadError(response) {
+        if (response.status === 429) {
+            return Promise.reject(new Error('rate_limited'));
+        }
         return response.json()
             .catch(() => ({}))
             .then(data => { throw new Error((data && data.message) || 'upload_failed'); });
