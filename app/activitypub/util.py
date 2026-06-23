@@ -1266,6 +1266,10 @@ def refresh_community_profile_task(community_id, activity_json):
                                     )
                                     is_mod = False
                                     for actor in mods_data["orderedItems"]:
+                                        # nodebb sends the mods collection as a list of
+                                        # objects rather than strings (upstream v1.6.27 c8edd293)
+                                        if isinstance(actor, dict):
+                                            actor = actor["id"]
                                         if (
                                             actor.lower()
                                             == member_user.profile_id().lower()
@@ -1553,6 +1557,24 @@ def actor_json_to_model(activity_json, address, server):
     if (
         "type" not in activity_json
     ):  # some Akkoma instances return an empty actor?! e.g. https://donotsta.re/users/april
+        return None
+    # Reject actors whose id host does not belong to the server they were fetched
+    # from - prevents an instance impersonating actors on another domain.
+    # Hardened beyond upstream v1.6.27 (ada8e2ea), which used `server not in id`:
+    # that substring check is bypassable (e.g. https://good.example.evil.com/...,
+    # https://evilgood.example/..., or server appearing in the URL path). We parse
+    # the host and require an exact match or a subdomain (the latter preserves
+    # webfinger subdomain delegation that the substring check allowed).
+    actor_id = activity_json.get("id")
+    expected = (server or "").rstrip(".").lower()
+    parsed = urlparse(actor_id) if isinstance(actor_id, str) else None
+    host = (parsed.hostname or "").rstrip(".").lower() if parsed else ""
+    if (
+        not parsed
+        or parsed.scheme not in ("http", "https")
+        or not expected
+        or not (host == expected or host.endswith("." + expected))
+    ):
         return None
     if activity_json["type"] == "Person" or activity_json["type"] == "Service":
         user = (

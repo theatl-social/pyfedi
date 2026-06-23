@@ -66,6 +66,32 @@ def test_api_util_modules_import():
     import app.api.alpha.views  # noqa: F401
 
 
+def test_actor_json_to_model_rejects_cross_server_id(app):
+    # v1.6.27 backport (ada8e2ea), hardened: an actor whose `id` HOST is not the
+    # server it was fetched from (or a subdomain) must be rejected, so an instance
+    # can't impersonate actors on another domain. Upstream used a bypassable
+    # `server not in id` substring check; these cases prove the hostname check.
+    from app.activitypub.util import actor_json_to_model
+
+    server = "good.example"
+    reject = [
+        "https://evil.example/u/spoof",            # different domain
+        "https://good.example.evil.com/u/spoof",   # substring bypass (suffix)
+        "https://evilgood.example/u/spoof",         # substring bypass (no dot)
+        "https://evil.com/good.example/u/spoof",    # server in the URL path
+        "javascript:alert(1)//good.example",        # non-http scheme
+    ]
+    with app.app_context():
+        for bad in reject:
+            assert (
+                actor_json_to_model({"type": "Person", "id": bad}, "spoof@good.example", server)
+                is None
+            ), f"should reject {bad}"
+        # missing type and missing id are also rejected (no crash)
+        assert actor_json_to_model({}, "x@good.example", server) is None
+        assert actor_json_to_model({"type": "Person"}, "x@good.example", server) is None
+
+
 def test_circular_import_architecture():
     # The fork owns cached_modlist_* in shared.community to break the
     # views <-> community circular import. test_ci_fixes covers this too; we
