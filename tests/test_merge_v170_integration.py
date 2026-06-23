@@ -67,16 +67,29 @@ def test_api_util_modules_import():
 
 
 def test_actor_json_to_model_rejects_cross_server_id(app):
-    # v1.6.27 backport (ada8e2ea): an actor whose `id` is not on the server it
-    # was fetched from must be rejected, so an instance can't impersonate actors
-    # on another domain.
+    # v1.6.27 backport (ada8e2ea), hardened: an actor whose `id` HOST is not the
+    # server it was fetched from (or a subdomain) must be rejected, so an instance
+    # can't impersonate actors on another domain. Upstream used a bypassable
+    # `server not in id` substring check; these cases prove the hostname check.
     from app.activitypub.util import actor_json_to_model
 
+    server = "good.example"
+    reject = [
+        "https://evil.example/u/spoof",            # different domain
+        "https://good.example.evil.com/u/spoof",   # substring bypass (suffix)
+        "https://evilgood.example/u/spoof",         # substring bypass (no dot)
+        "https://evil.com/good.example/u/spoof",    # server in the URL path
+        "javascript:alert(1)//good.example",        # non-http scheme
+    ]
     with app.app_context():
-        spoof = {"type": "Person", "id": "https://evil.example/u/spoof"}
-        assert actor_json_to_model(spoof, "spoof@good.example", "good.example") is None
-        # an actor with no type is also rejected (pre-existing guard, unaffected)
-        assert actor_json_to_model({}, "x@good.example", "good.example") is None
+        for bad in reject:
+            assert (
+                actor_json_to_model({"type": "Person", "id": bad}, "spoof@good.example", server)
+                is None
+            ), f"should reject {bad}"
+        # missing type and missing id are also rejected (no crash)
+        assert actor_json_to_model({}, "x@good.example", server) is None
+        assert actor_json_to_model({"type": "Person"}, "x@good.example", server) is None
 
 
 def test_circular_import_architecture():
