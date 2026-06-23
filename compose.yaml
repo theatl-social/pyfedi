@@ -58,7 +58,7 @@ services:
   celery:
     build:
       context: .
-      target: builder
+      target: runtime
     container_name: piefed_celery1
     restart: unless-stopped
     depends_on:
@@ -83,7 +83,7 @@ services:
   web:
     build:
       context: .
-      target: builder
+      target: runtime
     container_name: piefed_app1
     restart: unless-stopped
     depends_on:
@@ -110,7 +110,7 @@ services:
   piefednotifs:
     build:
       context: .
-      target: builder
+      target: runtime
     container_name: piefed_notifs
     restart: unless-stopped
     depends_on:
@@ -134,7 +134,7 @@ services:
     image: adminer
     restart: unless-stopped
     ports:
-      - 8888:8080
+      - 127.0.0.1:8888:8080
     depends_on:
       - db
     networks:

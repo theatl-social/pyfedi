@@ -1,4 +1,4 @@
-VERSION = "1.6.24-peachpie-20260515"
+VERSION = "1.7.0-peachpie-20260623"
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -64,6 +64,7 @@ NOTIF_UNBAN = 9  # I have been un-banned from a community
 NOTIF_NEW_MOD = 10  # I have been made a moderator for a community
 NOTIF_REMINDER = 11  # A reminder that the user set before
 NOTIF_ANSWER = 12  # An answer was accepted as the preferred one
+NOTIF_FOLLOW = 13  # I have a new follower
 
 # --- mod/admin level ---
 NOTIF_REPORT = 20  # a user, post, comment, or community have been reported
@@ -132,9 +133,11 @@ APLOG_MOVE = (True, "Move")
 APLOG_ANNOUNCE = (True, "Announce")
 APLOG_PT_VIEW = (True, "PeerTube View")
 
-REQUEST_TIMEOUT = 2
-
 INVITE_APPLY = 1
 INVITE_MEMBERS_ONLY = 2
 INVITE_MODS_ONLY = 3
 INVITE_OWNER_ONLY = 4
+
+ALLOWLIST_WEAK = 0      # A weak allowlist only has the effect of stopping people from adding remote communities from instances outside the list.
+ALLOWLIST_STRONG = 1    # Strong allowlists drop activities from instances not on the list.
+ALLOWLIST_INTENSE = 2   # As above but also drops activities originally authored by non-allowlist instances and relayed on via allowed instances. See can_create_post() for usage.

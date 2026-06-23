@@ -123,14 +123,16 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream (this is on top of our SP-003)
 - **Fix summary:** SP-003's known-bad set was exact-match, so `'YOU-WILL-NEVER-GUESSS'` (uppercase, the form usually shown in docs) and `' you-will-never-guesss '` (whitespace artifacts from copy-paste) bypassed the validator. Now the comparison normalizes via `.strip().lower()` before the membership check. The actual `SECRET_KEY` Flask uses is unchanged.
 
-### SP-013 — Email verification token cleared after first use
+### SP-013 — Email verification token rotated after first use
 
 - **Disclosure:** 2026-05 (round-2 audit, concurrency / token-replay)
 - **Files:**
-  - `app/auth/routes.py` — `verify_email()`
+  - `app/auth/routes.py` — `verify_email()` (rotates token to fresh random value)
+  - `app/templates/email/newsletter.html`, `newsletter.txt`, `welcome.html`, `welcome.txt` (added `{% if %}` guards around unsubscribe links)
 - **Test:** `tests/security/test_sp013_verification_token_cleared.py`
-- **Upstream status:** NOT FIXED upstream
-- **Fix summary:** `verify_email` set `user.verified = True` but never cleared `user.verification_token`. A captured token (email-server log, ESP cache, browser history, referrer-header leak) could be replayed against the same account. The `if user.verified` guard only catches re-execution within the *same* request; an attacker could race against a not-yet-verified account or replay later. Now `user.verification_token = None` is set immediately before the commit.
+- **Upstream status:** FIXED upstream in v1.6.27 (commits `f71b8259` + `b3474d19`). We adopted upstream's rotate-token approach.
+- **Fix summary:** `verify_email` set `user.verified = True` but never invalidated `user.verification_token`. A captured token (email-server log, ESP cache, browser history, referrer-header leak) could be replayed against the same account. The `if user.verified` guard only catches re-execution within the *same* request; an attacker could race against a not-yet-verified account or replay later. The fix invalidates the token immediately before the commit.
+- **Why rotate instead of clear:** Initial SP-013 set the token to `None`. The same column is referenced in newsletter/welcome email templates as the unsubscribe-link token; setting it to `None` caused `url_for(token=None)` to crash those sends. Upstream's later fix (b3474d19) rotates to a fresh random token, which is equivalent in security terms (the captured token is invalidated by being overwritten) but preserves the unsubscribe URLs. The four affected templates also gained `{% if %}` guards as defense-in-depth.
 
 ### SP-014 — Private community sidebar leak in `community_view`
 
@@ -159,6 +161,65 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Test:** `tests/security/test_sp016_head_request_ssrf.py`
 - **Upstream status:** NOT FIXED upstream
 - **Fix summary:** SP-002 guarded outbound GETs; HEADs (`head_request`, `mime_type_using_head`) called `httpx_client.head` directly. HEAD has no body, but an attacker can still learn port-open status, response headers (`Server`, `X-Powered-By`), and probe internal services with attacker-supplied URLs (e.g. via `is_image_url` called on community/feed/post `icon_url` / `banner_url`). Same validation as the GET wrapper, same `SSRF_GUARD_ALLOW_HTTP` / `SSRF_GUARD_ALLOW_PRIVATE` config switches.
+
+### SP-021 — Chat/DM authorization (membership, blocks, report preservation)
+
+- **Disclosure:** 2026-05 (round-4 audit, chat/DM surface)
+- **Files:**
+  - `app/chat/routes.py` — `chat_home` POST gate; `chat_delete` admin vs member branching
+  - `app/api/alpha/utils/private_message.py` — `post_private_message` block + preference check
+- **Test:** `tests/security/test_sp021_chat_authz.py`
+- **Upstream status:** NOT FIXED upstream as of v1.6.27
+- **Fix summary:** Three High-severity authz gaps in the chat/DM surface:
+  1. POST `/chat/<conversation_id>` (`chat_home`) skipped the membership check — it existed only in the GET branch. Any authenticated user could inject messages into any conversation they were not part of. Now POST resolves the conversation and aborts 403 unless the actor is a member or admin.
+  2. API `post_private_message` ignored bidirectional blocks and the recipient's `accept_private_messages` preference. The web `new_message` flow and the federation `ChatMessage` handler both enforce these; the API path bypassed them entirely, letting a blocked user DM the blocker via `/api/alpha/private_message`. Now mirrors the same checks.
+  3. `chat_delete` previously hard-deleted all `Report` rows referencing the conversation whenever any member triggered the delete. A reported user could destroy their own evidence by deleting the conversation before staff review. Admins still purge reports; non-admin member-initiated deletes now null out `Report.suspect_conversation_id` instead, so the evidence persists as an orphan-but-readable report.
+
+### SP-020 — Feeds authorization suite (IDOR, is_instance_feed gate, RSS privacy)
+
+- **Disclosure:** 2026-05 (round-4 audit, feeds surface)
+- **Files:**
+  - `app/feed/routes.py` — `feed_add_community` IDOR fix; `show_feed_rss` privacy gate
+  - `app/shared/feed.py` — `make_feed` admin gate on `is_instance_feed`
+- **Test:** `tests/security/test_sp020_feed_authz.py`
+- **Upstream status:** NOT FIXED upstream as of v1.6.27
+- **Fix summary:** Three findings:
+  1. **(Critical)** `feed_add_community` (`GET /feed/add_community`) read `user_id` from `request.args`, making the ownership check `Feed.query.get(feed_id).user_id != user_id` tautological — attacker controls both sides. Any logged-in user could add or remove communities to any other user's feed; for public feeds, the modification federated under the victim feed's private key. Now `user_id = current_user.id`; the target (and source, for moves) feed must be owned by the session user, otherwise 403. Admin override preserved.
+  2. **(High)** `make_feed` accepted `is_instance_feed=True` from non-admins. The web form disables the field client-side (trivial bypass); the API has no equivalent control. `edit_feed` already admin-gates this flag; creation now matches. The flag surfaces a feed in the site-wide instance-feeds menu, so the leak let any user publish into a global navigation surface.
+  3. **(High)** `show_feed_rss` had no privacy gate. The HTML sibling `show_feed` rejects non-owner/non-subscriber access on `feed.public == False`; the `.rss` path served all comers. Private feed names are auto-suffixed with the owner's username and are enumerable from public user listings. Now `show_feed_rss` is decorated with `login_required_if_private_instance` and applies the same owner/subscriber gate.
+
+### SP-019 — Private community gate for post_view variants 3/4/5
+
+- **Disclosure:** 2026-05 (round-4 audit, post_view surface)
+- **Files:**
+  - `app/api/alpha/views.py` — gate lifted to top of `post_view`, conditional on `variant in (3, 4, 5)`; inline gate in variant 3 removed as redundant
+- **Test:** `tests/security/test_sp019_post_view_private.py`
+- **Upstream status:** NOT FIXED upstream as of v1.6.27
+- **Fix summary:** SP-014 gated `community_view` for private communities; the sibling `post_view` was left partially unprotected. Variant 4 (`/post/like`, `/post/save`) and variant 5 (resolve-object lookup-by-AP-id) had no gate — any user could fetch full post body, votes, comments, polls, and cross-posts of a private-community post by hitting these endpoints. Variant 3 had its own inline gate but didn't mirror `community_view`'s `user_id is None or` short-circuit. Fix lifts a single gate to the top of `post_view`, conditional on `variant in (3, 4, 5)`. Variants 1 and 2 remain unguarded because they are stub/internal helpers called from list endpoints whose callers apply their own SQL-level community filter.
+
+### SP-018 — Celery serialization pinned to JSON (defense-in-depth)
+
+- **Disclosure:** 2026-05 (round-4 audit, Celery surface)
+- **Files:**
+  - `app/__init__.py` — `create_app()` celery.conf.update block now explicitly sets `CELERY_TASK_SERIALIZER`, `CELERY_RESULT_SERIALIZER`, `CELERY_ACCEPT_CONTENT` to JSON-only.
+- **Test:** `tests/security/test_sp018_celery_json_only.py`
+- **Upstream status:** Not addressed upstream (Celery 5.x defaults to JSON, so neither side has an active vuln). This patch is defense-in-depth.
+- **Fix summary:** Celery accepts a configurable serializer for broker messages. Unsafe legacy serializers (the p-word, yaml's default Loader) execute arbitrary code on deserialization, which against broker messages is remote code execution on every worker process. Celery 5.x defaults to JSON, but two paths could silently flip the default: a future major-version upgrade changing defaults, or the existing `celery.conf.update(app.config)` bulk-merge honoring a `CELERY_TASK_SERIALIZER=<unsafe>` env var. Explicit allowlist eliminates both paths.
+- **Why this matters even though no vuln is currently active:** the regression test asserts the allowlist on every test run, so any future drift fails the build loudly.
+
+### SP-017 — SVG XSS sanitization on uploads and remote og:image fetches
+
+- **Disclosure:** 2026-05 (upstream-discovered; adopted from upstream v1.6.27 commit `dc215422`)
+- **Files:**
+  - `app/utils.py` — new `sanitize_svg_bytes()` and `sanitize_svg()` helpers using `py-svg-hush~=0.3.0`
+  - `app/utils.py` — `url_to_thumbnail_file()` sanitizes SVG content from remote og:image fetches
+  - `app/shared/upload.py` — `process_upload()` sanitizes `.svg` uploads in place after save
+  - `app/shared/post.py` — `edit_post()` image-upload branch sanitizes `.svg` in place after save
+  - `pyproject.toml` — adds `py-svg-hush~=0.3.0`
+- **Test:** `tests/security/test_sp017_svg_sanitize.py`
+- **Upstream status:** FIXED upstream in v1.6.27. We adopted the same library and approach.
+- **Fix summary:** SVG is `image/svg+xml` and renders inline. An attacker uploading an SVG with `<script>`, event handlers (`onload`, `onclick`), or `javascript:` URLs in `xlink:href` achieves persistent XSS for any user who views the SVG (community icon, user avatar, post image, og:image preview). `py-svg-hush` parses the SVG against an allowlist and strips dangerous nodes/attributes.
+- **Notes:** The sanitizer is fail-closed on the *upload* path (errors return False without writing) but fail-open on `sanitize_svg_bytes` (errors return original bytes after logging). The latter is intentional for the thumbnail-fetch path so a malformed remote SVG doesn't break the whole link-preview pipeline — but it does mean the persistence path is the load-bearing one.
 
 ### SP-004 — Shell-call command injection in CLI translate command
 

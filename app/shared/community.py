@@ -28,6 +28,7 @@ from app.models import (
     CommunityFlair,
     utcnow,
     CommunityInvitation,
+    CommunityFavorite,
 )
 from app.shared.tasks import task_selector
 from app.shared.upload import process_upload
@@ -50,6 +51,7 @@ from app.utils import (
     moderating_communities_ids,
     moderating_communities_ids_all_users,
     gibberish,
+    favorite_communities,
 )
 
 
@@ -581,6 +583,52 @@ def subscribe_community(community_id: int, subscribe, src, auth=None):
         return render_template(
             "community/_notification_toggle.html", community=community
         )
+
+
+def favorite_community(community_id: int, subscribe, src, auth=None):
+    community = db.session.query(Community).filter_by(id=community_id, banned=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
+
+    if src == SRC_WEB:
+        subscribe = False if community_id in favorite_communities(user_id) else True
+
+    existing_fave = CommunityFavorite.query.filter_by(community_id=community_id, user_id=user_id).first()
+    if subscribe == False:
+        if existing_fave:
+            db.session.delete(existing_fave)
+            db.session.commit()
+        else:
+            msg = 'A favorite for this community did not exist.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+
+    else:
+        if existing_fave:
+            msg = 'A favorite for this community already existed.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+        else:
+            if community_id in communities_banned_from(user_id):
+                msg = 'You are banned from this community.'
+                if src == SRC_API:
+                    raise Exception(msg)
+                else:
+                    flash(_(msg))
+            else:
+                new_notification = CommunityFavorite(community_id=community_id,user_id=user_id)
+                db.session.add(new_notification)
+                db.session.commit()
+
+    cache.delete_memoized(favorite_communities, user_id)
+
+    if src == SRC_API:
+        return user_id
+    else:
+        return render_template('community/_notification_toggle.html', community=community)
 
 
 def delete_community(community_id: int, src, auth=None):

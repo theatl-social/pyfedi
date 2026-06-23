@@ -1,6 +1,6 @@
 [project]
 name = "pyfedi"
-version = "1.6.24+peachpie.20260515"
+version = "1.7.0+peachpie.20260623"
 description = "PieFed - A federated discussion and link aggregation platform"
 readme = "README.md"
 license = { text = "AGPL-3.0" }
@@ -63,6 +63,7 @@ dependencies = [
     "gunicorn",
     "tatsu==5.13.2",
     "pendulum~=3.2.0",
+    "py-svg-hush~=0.3.0",
 ]
 
 [project.optional-dependencies]

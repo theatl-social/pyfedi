@@ -67,6 +67,7 @@ from app import db, cache, httpx_client, celery, plugins
 from app.constants import *
 import re
 from PIL import Image, ImageOps, ImageCms
+from py_svg_hush import filter_svg
 
 from captcha.audio import AudioCaptcha
 from captcha.image import ImageCaptcha
@@ -108,6 +109,7 @@ from app.models import (
     Emoji,
     UserExtraField,
     ArchivedPostReply,
+    CommunityFavorite,
 )
 
 logger = logging.getLogger(__name__)
@@ -1382,6 +1384,15 @@ def mastodon_extra_field_link(extra_field: str) -> str:
         return tag["href"]
 
 
+def microblog_content_to_link(html: str, exclude: str):
+    soup = BeautifulSoup(html, "html.parser")
+
+    for link in soup.find_all("a"):
+        if furl(link.get("href")).host != exclude:
+            return link.get("href")
+    return None
+
+
 def microblog_content_to_title(html: str) -> Tuple[str, str]:
     title = ""
     link = ""
@@ -2351,17 +2362,37 @@ def can_create_post_reply(user, content: Community) -> bool:
     return True
 
 
-def can_upload_video():
+def can_upload_video(user=None):
+    """Checks if the user can upload a video.
+
+    :param user: The user to check, e.g. for API contexts. If not provided, uses the current_user from flask_login.
+    """
     upload_access = get_setting("allow_video_file_uploads", "no")
+    upload_user = user or current_user
     if upload_access == "no":
         return False
-    elif upload_access == "user 1" and current_user.get_id() != 1:
+    elif upload_access == "user 1" and upload_user.get_id() != 1:
         return False
-    elif upload_access == "admins" and not current_user.is_admin_or_staff():
+    elif upload_access == "admins" and not upload_user.is_admin_or_staff():
         return False
-    elif upload_access == "users" and not current_user.is_authenticated:
+    elif upload_access == "users" and not upload_user.is_authenticated:
         return False
     return True
+
+
+@cache.memoize(timeout=300)
+def favorite_communities(user_id):
+    if user_id is None:
+        return []
+    return (
+        db.session.execute(
+            select(CommunityFavorite.community_id).where(
+                CommunityFavorite.user_id == user_id
+            )
+        )
+        .scalars()
+        .all()
+    )
 
 
 def reply_already_exists(user_id, post_id, parent_id, body) -> bool:
@@ -2854,8 +2885,12 @@ def url_to_thumbnail_file(filename) -> File:
     if response.status_code == 200:
         content_type = response.headers.get("content-type")
         if content_type and content_type.startswith("image"):
-            # Don't need to generate thumbnail for svg image
+            response_content = response.content
+            # SP-017: sanitize SVG content fetched as og:image — attacker can
+            # serve a malicious SVG and we persist it as a thumbnail rendered
+            # inline elsewhere.
             if "svg" in content_type:
+                response_content = sanitize_svg_bytes(response_content)
                 file_extension = final_ext = ".svg"
             else:
                 # Generate file extension from mime type
@@ -2875,6 +2910,13 @@ def url_to_thumbnail_file(filename) -> File:
                     if "?" in file_extension:
                         file_extension = file_extension.split("?")[0]
 
+            # Also sanitize when extension is .svg but content-type wasn't
+            # (server lying about content-type, or extension inferred from URL)
+            if file_extension == ".svg" and (
+                content_type is None or "svg" not in content_type
+            ):
+                response_content = sanitize_svg_bytes(response_content)
+
             new_filename = gibberish(15)
             if store_files_in_s3():
                 directory = "app/static/tmp"
@@ -2889,7 +2931,7 @@ def url_to_thumbnail_file(filename) -> File:
             temp_file_path = os.path.join(directory, new_filename + file_extension)
 
             with open(temp_file_path, "wb") as f:
-                f.write(response.content)
+                f.write(response_content)
             response.close()
 
             if file_extension != ".svg":
@@ -3201,8 +3243,10 @@ def fixup_url(url):
         path = parsed_url.path
         query_params = parse_qs(parsed_url.query)
 
-        # Handle YouTube playlists - let them through unmolested
-        if path == "/playlist" and "list" in query_params:
+        # Handle YouTube playlists and posts - let them through unmolested
+        if (path == "/playlist" and "list" in query_params) or path.startswith(
+            "/post/"
+        ):
             thumbnail_url = ""
             embed_url = url
             return thumbnail_url, embed_url
@@ -5476,3 +5520,33 @@ def display_back_button():
             return ""
     else:
         return ""
+
+
+# SP-017: SVG sanitization. SVG is image/svg+xml and can carry active content
+# (<script>, event handlers, javascript: URLs in xlink:href, foreignObject
+# embedding HTML, etc.). py-svg-hush strips all of these via an allowlist
+# parser. Adopted from upstream v1.6.27 (commit dc215422); see SECURITY_PATCHES.md.
+def sanitize_svg_bytes(svg_bytes: bytes) -> bytes:
+    try:
+        # Allow common image MIME types in data URLs (e.g. <image href="data:image/png;...">)
+        keep_data_url_mime_types = {
+            "image": ["jpeg", "png", "gif", "webp", "avif"],
+        }
+        return filter_svg(svg_bytes, keep_data_url_mime_types)
+    except Exception as e:
+        current_app.logger.error(f"Error sanitizing SVG: {e}")
+        return svg_bytes
+
+
+def sanitize_svg(filepath: str) -> bool:
+    try:
+        with open(filepath, "rb") as f:
+            svg_bytes = f.read()
+        sanitized = sanitize_svg_bytes(svg_bytes)
+        if sanitized != svg_bytes:
+            with open(filepath, "wb") as f:
+                f.write(sanitized)
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Error sanitizing SVG: {e}")
+        return False
