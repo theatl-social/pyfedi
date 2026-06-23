@@ -163,8 +163,8 @@ class Config(object):
     )
 
     FILE_UPLOAD_QUOTA = int(
-        os.environ.get("FILE_UPLOAD_QUOTA") or 1073741824
-    )  # default 1 GB (per-user cumulative upload cap; override via env var)
+        os.environ.get("FILE_UPLOAD_QUOTA") or 5368709120
+    )  # default 5 GB (per-user cumulative upload cap; override via env var)
 
     # LDAP configuration - common config
     LDAP_SERVER = os.environ.get("LDAP_SERVER") or ""

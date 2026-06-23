@@ -1,7 +1,7 @@
 """Regression tests for the image-upload quota bug fix and the v1.7.0 merge grafts.
 
 Covers:
-- FILE_UPLOAD_QUOTA default raised to 1 GB (config.py)
+- FILE_UPLOAD_QUOTA default raised to 5 GB (config.py)
 - favorite_communities() graft: new function, @cache.memoize restored, CommunityFavorite import
 - can_upload_video(user=...) signature graft (upstream video-upload change)
 - the exact upload error-code strings that app/static/js/media_library.js maps
@@ -51,15 +51,15 @@ def app():
 
 # --- FILE_UPLOAD_QUOTA -------------------------------------------------------
 
-def test_file_upload_quota_default_literal_is_1gb():
+def test_file_upload_quota_default_literal_is_5gb():
     # Assert the source default so the test is immune to a FILE_UPLOAD_QUOTA env
-    # var being set in CI. 1073741824 == 1 GiB.
+    # var being set in CI. 5368709120 == 5 GiB.
     src = (REPO_ROOT / "config.py").read_text()
-    assert "1073741824" in src, "FILE_UPLOAD_QUOTA default should be 1 GB (1073741824)"
+    assert "5368709120" in src, "FILE_UPLOAD_QUOTA default should be 5 GB (5368709120)"
 
 
 def test_file_upload_quota_config_value():
-    expected = int(os.environ.get("FILE_UPLOAD_QUOTA") or 1073741824)
+    expected = int(os.environ.get("FILE_UPLOAD_QUOTA") or 5368709120)
     assert Config.FILE_UPLOAD_QUOTA == expected
 
 
