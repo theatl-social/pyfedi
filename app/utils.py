@@ -3967,7 +3967,11 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
 
 
 def get_deduped_post_ids(
-    result_id: str, community_ids: List[int], sort: str, hashtag: str = ""
+    result_id: str,
+    community_ids: List[int],
+    sort: str,
+    hashtag: str = "",
+    include_following=False,  # noqa: ARG001 - accepted for caller compatibility (upstream v1.7.0); the follow-feed source is not yet wired (no user_follower table in this fork)
 ) -> List[int]:
     from app import redis_client
 
@@ -4879,7 +4883,7 @@ def is_valid_xml_utf8(pystring):
     return True
 
 
-def archive_post(post_id: int):
+def archive_post(post_id: int, s3_connection=None):  # noqa: ARG001 - s3_connection accepted for caller compatibility (upstream v1.7.0); this fork opens its own client internally
     from app import redis_client
     import os
 
