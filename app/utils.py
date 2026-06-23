@@ -1384,6 +1384,15 @@ def mastodon_extra_field_link(extra_field: str) -> str:
         return tag["href"]
 
 
+def microblog_content_to_link(html: str, exclude: str):
+    soup = BeautifulSoup(html, "html.parser")
+
+    for link in soup.find_all("a"):
+        if furl(link.get("href")).host != exclude:
+            return link.get("href")
+    return None
+
+
 def microblog_content_to_title(html: str) -> Tuple[str, str]:
     title = ""
     link = ""
