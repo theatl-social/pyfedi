@@ -65,49 +65,55 @@ class MediaLibrary {
      * @param {number} delay - Delay in ms to wait for DownArea initialization (default: 100)
      */
     overrideDownAreaImageButton(textareaSelector, delay = 100) {
-        setTimeout(() => {
-            let imageButton;
+        // DownArea initializes asynchronously and independently of MediaLibrary,
+        // so a single fixed-delay lookup races against the editor being ready.
+        // On a heavier page (e.g. a post with many comment editors) the toolbar
+        // can take well over `delay` ms to appear; when the lookup missed, the
+        // toolbar image button kept DownArea's default handler and inserted an
+        // empty "![](https://)" placeholder instead of opening the media library.
+        // Poll up to ~5s so the override attaches reliably regardless of timing.
+        const maxAttempts = 50;
 
-            console.log('overrideDownAreaImageButton called with selector:', textareaSelector, 'delay:', delay);
-
+        const findImageButton = () => {
             if (textareaSelector) {
-                // Find image button within specific textarea's DownArea toolbar
                 const textarea = document.querySelector(textareaSelector);
-                console.log('Found textarea:', textarea);
-
                 if (textarea && textarea.parentNode && textarea.parentNode.parentNode) {
-                    console.log('parentNode:', textarea.parentNode);
-                    console.log('parentNode.parentNode:', textarea.parentNode.parentNode);
-                    imageButton = textarea.parentNode.parentNode.querySelector('.downarea-toolbar-tool[data-action="image"]');
-                    console.log('Found image button:', imageButton);
-                } else {
-                    console.log('Could not navigate parent nodes');
+                    return textarea.parentNode.parentNode.querySelector('.downarea-toolbar-tool[data-action="image"]');
                 }
-            } else {
-                // Find first image button on page
-                imageButton = document.querySelector('.downarea-toolbar-tool[data-action="image"]');
-                console.log('Found first image button on page:', imageButton);
+                return null;
             }
+            return document.querySelector('.downarea-toolbar-tool[data-action="image"]');
+        };
+
+        const attach = (attempt) => {
+            const imageButton = findImageButton();
 
             if (imageButton) {
-                console.log('Overriding image button click handler');
-                // Remove the default click handler by cloning the element
+                // Idempotency guard: don't re-bind if we've already overridden it.
+                if (imageButton.dataset.mediaLibraryBound === '1') return;
+
+                // Remove the default click handler by cloning the element.
                 const newImageButton = imageButton.cloneNode(true);
+                newImageButton.dataset.mediaLibraryBound = '1';
                 imageButton.parentNode.replaceChild(newImageButton, imageButton);
 
-                // Add new click handler to open media library
+                // Open the media library dialog instead of inserting a placeholder.
                 newImageButton.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Media library image button clicked, triggerLink:', this.triggerLink);
                     if (this.triggerLink) {
                         this.triggerLink.click();
                     }
                 });
-            } else {
-                console.log('Image button NOT found!');
+                return;
             }
-        }, delay);
+
+            if (attempt < maxAttempts) {
+                setTimeout(() => attach(attempt + 1), delay);
+            }
+        };
+
+        setTimeout(() => attach(1), delay);
     }
 
     setupDialogHandlers() {
@@ -147,6 +153,32 @@ class MediaLibrary {
         });
     }
 
+    /**
+     * Map an API error code (the `message` field returned by the alpha API's
+     * shared_error_handler) to a human-friendly, actionable message.
+     * Falls back to the generic uploadError translation for unknown codes.
+     */
+    friendlyUploadError(code) {
+        const t = this.translations || {};
+        const map = {
+            'quota_exceeded': t.quotaExceeded || 'Storage quota exceeded. Delete some images from your media library below to free up space, then try again.',
+            'incorrect_login': t.loginRequired || 'You must be logged in to upload images.',
+            'filetype not allowed': t.filetypeNotAllowed || 'That file type is not allowed.',
+            'file not uploaded': t.selectFile || 'Please select a file.',
+        };
+        return map[code] || t.uploadError || 'Upload failed. Please try again.';
+    }
+
+    /**
+     * Read the JSON error body from a failed upload response and throw an Error
+     * whose message is the API error code, so .catch() can surface the reason.
+     */
+    throwUploadError(response) {
+        return response.json()
+            .catch(() => ({}))
+            .then(data => { throw new Error((data && data.message) || 'upload_failed'); });
+    }
+
     setupUploadHandlers() {
         if (!this.uploadButton) return;
 
@@ -177,7 +209,7 @@ class MediaLibrary {
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Upload failed');
+                    return this.throwUploadError(response);
                 }
                 return response.json();
             })
@@ -198,7 +230,9 @@ class MediaLibrary {
             })
             .catch(error => {
                 console.error('Upload error:', error);
-                this.uploadStatus.innerHTML = `<p class="text-danger small">${this.translations.uploadError}</p>`;
+                // friendlyUploadError only matches error.message against a fixed
+                // map and returns controlled strings, so nothing untrusted reaches innerHTML.
+                this.uploadStatus.innerHTML = `<p class="text-danger small">${this.friendlyUploadError(error.message)}</p>`;
                 this.uploadButton.disabled = false;
             });
         });
@@ -233,7 +267,7 @@ class MediaLibrary {
                     })
                     .then(response => {
                         if (!response.ok) {
-                            throw new Error('Upload failed');
+                            return this.throwUploadError(response);
                         }
                         return response.json();
                     })
@@ -254,7 +288,8 @@ class MediaLibrary {
                         console.error('Paste upload error:', error);
                         // Replace placeholder with error message
                         this.targetTextarea.value = this.targetTextarea.value.replace(placeholder, '\n[Image upload failed]\n');
-                        alert(this.translations.pasteUploadError);
+                        // Surface the actual reason (e.g. quota exceeded) instead of a generic message.
+                        alert(this.friendlyUploadError(error.message));
                     });
 
                     break;
