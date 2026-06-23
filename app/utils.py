@@ -109,6 +109,7 @@ from app.models import (
     Emoji,
     UserExtraField,
     ArchivedPostReply,
+    CommunityFavorite,
 )
 
 logger = logging.getLogger(__name__)
@@ -2352,17 +2353,36 @@ def can_create_post_reply(user, content: Community) -> bool:
     return True
 
 
-def can_upload_video():
+def can_upload_video(user=None):
+    """Checks if the user can upload a video.
+
+    :param user: The user to check, e.g. for API contexts. If not provided, uses the current_user from flask_login.
+    """
     upload_access = get_setting("allow_video_file_uploads", "no")
+    upload_user = user or current_user
     if upload_access == "no":
         return False
-    elif upload_access == "user 1" and current_user.get_id() != 1:
+    elif upload_access == "user 1" and upload_user.get_id() != 1:
         return False
-    elif upload_access == "admins" and not current_user.is_admin_or_staff():
+    elif upload_access == "admins" and not upload_user.is_admin_or_staff():
         return False
-    elif upload_access == "users" and not current_user.is_authenticated:
+    elif upload_access == "users" and not upload_user.is_authenticated:
         return False
     return True
+
+
+def favorite_communities(user_id):
+    if user_id is None:
+        return []
+    return (
+        db.session.execute(
+            select(CommunityFavorite.community_id).where(
+                CommunityFavorite.user_id == user_id
+            )
+        )
+        .scalars()
+        .all()
+    )
 
 
 def reply_already_exists(user_id, post_id, parent_id, body) -> bool:

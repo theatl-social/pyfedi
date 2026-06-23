@@ -229,6 +229,29 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Successfully merged with upstream PieFed (v1.7.0-dev) on 2026-06-23
+- Branch: `20260623/merge-upstream-v170`
+- Upstream commit: 0c4a7092 (133 commits since v1.6.24)
+- Base: merged onto `20260518/upstream-security-followup` HEAD (carries SP-013/017/018/019/020/021 not yet on `main`), NOT off `main`, to preserve the security work
+- New version: `1.7.0-peachpie-20260623`
+- Conflict resolution strategy (fork had reformatted all files with ruff/black; upstream uses single quotes — so nearly every Python file conflicted on formatting):
+  - `ruff check` only selects `E4/E7/E9/F` (NOT quote style), so taking upstream's single-quote code stays lint-clean
+  - SP-patched files: took **ours** (`git checkout --ours`) to guarantee every SP-### patch survived; verified by `tests/security/` (131 pass)
+  - Many upstream deltas were upstream *independently adopting our SP fixes* (SP-005 secrets token, SP-013 token rotation, SP-015 non-differential flashes, SP-017 SVG sanitize) — confirmed already present in ours
+  - Non-fork files: took **theirs**; required grafts done where resolved imports demanded them: `can_upload_video(user=None)` signature, new `favorite_communities()` in utils.py (+`CommunityFavorite` import), config vars `JWT_EXPIRY_DAYS`/`BOUNCE_HOST_TYPE`/`S3_PUBLIC_ACL`
+  - `shared/upload.py` taken from upstream (superset: `user=` signature + video uploads + SVG sanitize + S3 ACL)
+  - Dockerfile + entrypoints kept **ours** (Debian-slim + uv + gosu + cron, not upstream's alpine/pip/supercronic)
+  - Fixed two upstream lint issues: `content_type` used-before-def in `app/admin/util.py` (moved `extra_args` into the loop); dead `nsfw_count` in `app/admin/routes.py` (lines 664, 733)
+- Key additions from upstream (v1.6.24 → 1.7.0-dev):
+  - Allow uploading **videos** via `/api/alpha/upload/image` (#1829/#1774); `process_upload(user=...)` signature
+  - Favorite communities (`CommunityFavorite` model + `favorite_communities()` jinja global; migration `5eb2bf95ed8b`)
+  - Per-user follow counts (`num_following`/`num_followers`; migration `9208f044a1db`)
+  - CSS variables refactor (legibility), Hacker BBS theme suite, multi-stage Docker (upstream), YunoHost docs
+  - Federation robustness, anti-harassment ban notifications (`has_poster` gate), S3 public-read ACL
+  - New migrations: `1adb45ab3971` topic_countries, `21ed7db16be0` allowlist_mode, `5eb2bf95ed8b` favorite_communities, `9208f044a1db` user_follow_counts, `b7d47f22842f` revoke_tokens, `e2e129221248` domain_warning_types
+  - New merge migration: `merge_heads_20260623.py` (merges `merge_20260515` + `5eb2bf95ed8b`)
+- **DEFERRED (follow-up):** new upstream moderation/report API endpoints were NOT wired up to keep the fork API layer (`api/alpha/routes.py`, `views.py`, `utils/private_message.py`) at our patched version and avoid SP-014/019/021 re-application risk. Deferred endpoints: post/comment report list+resolve, comment distinguish, private-message conversation reports, `user/logout` token revoke (migration `b7d47f22842f` is applied, table unused). The util functions exist (auto-merged) but are unrouted. Also deferred: POP3 bounce handling in `cli.py`, `find_microblogging_community()`, `un_moderated` flag (missing deps in our tree). Revisit by taking upstream for the API layer + re-applying SP-014/019/021 + circular-import re-export.
+
 - Successfully merged with upstream v1.6.24 on 2026-05-15
 - Branch: `20260515/merge-upstream-v1624`
 - Upstream commit: 3cb02f52

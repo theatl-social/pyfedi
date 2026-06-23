@@ -1,10 +1,10 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileRequired, FileAllowed
+from flask_wtf.file import FileAllowed
 from sqlalchemy import func
-from wtforms import StringField, PasswordField, SubmitField, EmailField, HiddenField, BooleanField, TextAreaField, \
-    SelectField, FileField, IntegerField, FloatField, RadioField
+from wtforms import StringField, PasswordField, SubmitField, EmailField, BooleanField, TextAreaField, \
+    SelectField, FileField, IntegerField, RadioField
 from wtforms.fields.choices import SelectMultipleField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
+from wtforms.validators import ValidationError, DataRequired, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
@@ -97,6 +97,11 @@ class FederationForm(FlaskForm):
         ('allowlist', _l('Allowlist - only allow federation with specified instances'))
     ], default='blocklist')
     allowlist = TextAreaField(_l('Allow federation with these instances'))
+    allowlist_mode = RadioField(_l('Allowlist mode'), choices=[
+        (0, _l('Weak')),
+        (1, _l('Strong')),
+        (2, _l('Intense'))
+    ], default=0)
     blocklist = TextAreaField(_l('Deny federation with these instances'))
     defederation_subscription = TextAreaField(_l('Auto-defederate from any instance defederated by'))
     blocked_phrases = TextAreaField(_l('Discard all posts, comments and PMs with these phrases (one per line)'))
@@ -201,6 +206,7 @@ class EditTopicForm(FlaskForm):
     machine_name = StringField(_l('Slug'), validators=[DataRequired()], render_kw={'title': _l('A short and unique identifier that becomes part of the URL.')})
     parent_id = SelectField(_l('Parent topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     show_posts_in_children = BooleanField(_l('Show posts from child topics'), validators=[Optional()])
+    countries = TextAreaField(_l('Countries'), validators=[Optional()], render_kw={'title': _l('Use two-letter country codes, one per line.')})
     submit = SubmitField(_l('Save'))
 
 
