@@ -229,6 +229,27 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Merged upstream PieFed release branch `v1.7.x` on 2026-07-03
+- Branch: `20260703-merge-upstream-v17x`
+- Upstream branch commit: `a114efdc`
+- Version unchanged: `1.7.0-peachpie-20260703` / `1.7.0+peachpie.20260703`
+- Key additions from upstream release branch:
+  - Follow detection now ignores inward follower rows when checking whether the local user follows another user
+  - `user_follower` table now has a standalone `id` primary key and indexed follow direction/user columns
+  - Slightly smaller post teaser heading typography
+  - New upstream migration: `97e954045fd6_user_follow_pk.py`
+  - New fork merge migration: `merge_20260703_v17x.py` (merges `merge_20260703` + `97e954045fd6`)
+- Fork fix carried with this merge:
+  - Restored missing web route `POST /community/<community_id>/fave`; the v1.7.0 merge had kept the template and shared helper but dropped the route, causing 404s from `/community/111/fave`
+  - Added regression coverage in `tests/test_merge_v170_integration.py`
+- Verification:
+  - `uvx ruff check .`
+  - `DATABASE_URL= SERVER_NAME=localhost uv run pytest tests/test_merge_v170_integration.py -v`
+  - `DATABASE_URL= SERVER_NAME=localhost uv run pytest tests/test_ci_fixes.py -v`
+  - `DATABASE_URL= SERVER_NAME=localhost uv run pytest tests/test_field_consistency_simple.py -v`
+  - `DATABASE_URL= SERVER_NAME=localhost uv run pytest tests/security/ -v`
+  - `DATABASE_URL= SERVER_NAME=localhost SECRET_KEY=test-secret-key-xxxxxxxxxxxxxxxxxxxxxxxx uv run pytest tests/test_migration_heads.py -v`
+
 - Successfully merged upstream PieFed release tag `v1.7.0` on 2026-07-03
 - Branch: `20260703/merge-upstream-v170`
 - Upstream tag commit: `b6f4345e` (actual `v1.7.0` release tag; not an ancestor of the prior `v1.7.0-dev` main merge)

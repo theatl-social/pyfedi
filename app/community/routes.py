@@ -139,6 +139,7 @@ from app.shared.community import (
     add_mod_to_community,
     remove_mod_from_community,
     get_comm_flair_list,
+    favorite_community,
 )
 from app.utils import (
     get_setting,
@@ -2445,6 +2446,15 @@ def community_unban_user(community_id: int, user_id: int):
 def community_notification(community_id: int):
     try:
         return subscribe_community(community_id, None, SRC_WEB)
+    except NoResultFound:
+        abort(404)
+
+
+@bp.route("/<int:community_id>/fave", methods=["POST"])
+@login_required
+def community_fave(community_id: int):
+    try:
+        return favorite_community(community_id, None, SRC_WEB)
     except NoResultFound:
         abort(404)
 
