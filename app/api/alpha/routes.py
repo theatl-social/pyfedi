@@ -35,7 +35,7 @@ from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
     put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair, get_user_details, \
     get_user_media, post_user_set_note, post_user_ban, post_user_unban, post_user_register, get_user_captcha, \
-    post_user_logout, post_user_follow, post_user_unfollow
+    post_user_follow, post_user_unfollow
 from app.api.alpha.utils.admin import get_registration_list, put_registration_approve
 from app.constants import *
 from app.utils import orjson_response, get_setting
@@ -1159,19 +1159,6 @@ def post_alpha_user_login(data):
     with limiter.limit('20/hour', exempt_when=is_trusted_request):
         resp = log_user_in(data, SRC_API)
         return UserLoginResponse().load(resp)
-
-
-@user_bp.route("/user/logout", methods=["POST"])
-@user_bp.doc(summary="Logout / Revoke JWT token")
-@user_bp.response(200, LogoutResponse)
-@user_bp.alt_response(400, schema=DefaultError)
-def post_alpha_user_logout():
-    if not enable_api():
-        return abort(400, message="alpha api is not enabled")
-    auth = request.headers.get("Authorization")
-    resp = post_user_logout(auth)
-    with limiter.limit("5/minute"):
-        return LogoutResponse().load(resp)
 
 
 @user_bp.route('/user/unread_count', methods=['GET'])
