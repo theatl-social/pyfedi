@@ -5,6 +5,7 @@
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import imaplib
+import poplib
 import logging
 import os
 import re
@@ -73,7 +74,7 @@ from app.models import (
     Reminder,
 )
 from app.shared.tasks import task_selector
-from app.shared.tasks.maintenance import add_remote_communities, remove_old_bot_content
+from app.shared.tasks.maintenance import add_remote_communities, remove_old_bot_content, pwn_bots
 from app.utils import (
     retrieve_block_list,
     blocked_domains,
@@ -699,6 +700,8 @@ def register(app):
         archive_old_posts()  # 2 hours
         print(f"21 {datetime.now()}")
         archive_old_users()
+        print(f"22 {datetime.now()}")
+        pwn_bots()
         print(f"Finished {datetime.now()}")
 
         log_cron_task_to_db("daily_maintenance")
@@ -1261,24 +1264,22 @@ def register(app):
                 with patch_db_session(session):
                     import email
 
-                    imap_host = current_app.config["BOUNCE_HOST"]
-                    imap_user = current_app.config["BOUNCE_USERNAME"]
-                    imap_pass = current_app.config["BOUNCE_PASSWORD"]
+                    bounce_host = current_app.config["BOUNCE_HOST"]
+                    host_type = (current_app.config["BOUNCE_HOST_TYPE"] or "imap").lower()
+                    inbox_user = current_app.config["BOUNCE_USERNAME"]
+                    inbox_pass = current_app.config["BOUNCE_PASSWORD"]
                     something_deleted = False
+                    emails = set()
 
-                    if imap_host:
-                        # connect to host using SSL
-                        imap = imaplib.IMAP4_SSL(imap_host, port=993)
+                    if bounce_host and host_type == "imap":
+                        imap = imaplib.IMAP4_SSL(bounce_host, port=993)
 
-                        ## login to server
-                        imap.login(imap_user, imap_pass)
+                        imap.login(inbox_user, inbox_pass)
 
                         imap.select("Inbox")
 
                         tmp, data = imap.search(None, "ALL")
                         rgx = r"[\w\.-]+@[\w\.-]+"
-
-                        emails = set()
 
                         for num in data[0].split():
                             tmp, data = imap.fetch(num, "(RFC822)")
@@ -1324,21 +1325,64 @@ def register(app):
                             pass
 
                         imap.close()
+                    elif bounce_host and host_type == "pop3":
+                        pop3 = poplib.POP3(bounce_host, port=110)
+                        pop3.user(inbox_user)
+                        pop3.pass_(inbox_pass)
 
-                        # Keep track of how many times email to an account has bounced. After 2 bounces, disable email sending to them
-                        for bounced_email in emails:
-                            bounced_accounts = User.query.filter_by(
-                                email=bounced_email
-                            ).all()
-                            for account in bounced_accounts:
-                                if account.bounces is None:
-                                    account.bounces = 0
-                                if account.bounces > 2:
-                                    account.newsletter = False
-                                    account.email_unread = False
-                                else:
-                                    account.bounces += 1
-                            db.session.commit()
+                        rgx = r"[\w\.-]+@[\w\.-]+"
+                        tmp = pop3.list()
+                        message_ids = [msg.decode().split()[0] for msg in tmp[1]]
+
+                        for msg_id in message_ids:
+                            tmp, lines, octets = pop3.retr(msg_id)
+                            email_message = email.message_from_bytes(b"\n".join(lines))
+                            match = []
+                            if not isinstance(email_message._payload, str):
+                                if isinstance(email_message._payload[0]._payload, str):
+                                    payload = (
+                                        email_message._payload[0]
+                                        ._payload.replace("\n", " ")
+                                        .replace("\r", " ")
+                                    )
+                                    match = re.findall(rgx, payload)
+                                elif isinstance(email_message._payload[0]._payload, list):
+                                    if isinstance(
+                                        email_message._payload[0]._payload[0]._payload,
+                                        str,
+                                    ):
+                                        payload = (
+                                            email_message._payload[0]
+                                            ._payload[0]
+                                            ._payload.replace("\n", " ")
+                                            .replace("\r", " ")
+                                        )
+                                        match = re.findall(rgx, payload)
+
+                            for m in match:
+                                if (
+                                    current_app.config["SERVER_NAME"] not in m
+                                    and current_app.config["SERVER_NAME"].upper() not in m
+                                ):
+                                    emails.add(m)
+                                    print(str(msg_id) + " " + m)
+
+                            pop3.dele(msg_id)
+
+                        pop3.quit()
+
+                    # Keep track of how many times email to an account has bounced. After 2 bounces, disable email sending to them
+                    for bounced_email in emails:
+                        bounced_accounts = session.query(User).filter_by(email=bounced_email.strip()).all()
+                        for account in bounced_accounts:
+                            if account.bounces is None:
+                                account.bounces = 0
+                            if account.bounces > 2:
+                                account.newsletter = False
+                                account.email_unread = False
+                            else:
+                                account.bounces += 1
+                            session.commit()
             except Exception:
                 session.rollback()
                 raise

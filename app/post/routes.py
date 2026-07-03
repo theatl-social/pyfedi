@@ -2288,7 +2288,7 @@ def preview():
             target_id = "#textarea_in_reply_to_preview_"
             if preview_id:
                 target_id += preview_id
-    elif preview_type == "post":
+    elif preview_type == "post" or preview_type == "wiki":
         oob_target = "post_preview_btn"
         target_id = "#preview"
     
@@ -2317,7 +2317,8 @@ def show_post_ical(post_id: int):
         evt.name = post.title
         evt.description = f'For more information see {post.ap_id}'
         evt.begin = post.event.start
-        evt.end = post.event.end
+        if post.event.start and post.event.end and post.event.end > post.event.start:
+            evt.end = post.event.end
         alarm = DisplayAlarm(display_text=str(escape(post.title)), trigger=timedelta(minutes=30))
         evt.alarms += [alarm]
         ical.events.add(evt)

@@ -103,6 +103,7 @@ from app.utils import (
     instance_community_ids,
     banned_instances,
     instance_banned,
+    communities_run_by_inactive_mods,
 )
 
 
@@ -331,6 +332,7 @@ def post_to_page(post: Post):
         activity_data["buyTicketsLink"] = event.buy_tickets_link
         activity_data["feeCurrency"] = event.event_fee_currency
         activity_data["feeAmount"] = event.event_fee_amount
+        activity_data["location"] = event.location
 
     if post.indexable:
         activity_data["searchableBy"] = "https://www.w3.org/ns/activitystreams#Public"
@@ -1328,6 +1330,9 @@ def refresh_community_profile_task(community_id, activity_json):
                                     if post:
                                         post.sticky = True
                                         session.commit()
+
+                    community.un_moderated = community.id in communities_run_by_inactive_mods()
+                    session.commit()
 
     except Exception:
         session.rollback()
@@ -2939,6 +2944,8 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
                         f"lock:post:{to_delete.id}", timeout=10, blocking_timeout=6
                     ):
                         to_delete.post.reply_count -= 1
+                        if to_delete.post.reply_count_cross_posted:
+                            to_delete.post.reply_count_cross_posted -= 1
                         db.session.commit()
             with redis_client.lock(
                 f"lock:community:{community.id}", timeout=10, blocking_timeout=6
@@ -4236,7 +4243,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 def update_post_from_activity(post: Post, request_json: dict):
     from app import redis_client
 
-    with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
+    with redis_client.lock(f"lock:post:{post.id}", timeout=60, blocking_timeout=60):
         # redo body without checking if it's changed
         if (
             "content" in request_json["object"]
@@ -4875,6 +4882,20 @@ def process_report(user, reported, request_json, session):
             )
             session.add(notification)
             already_notified.add(mod.user_id)
+
+        if reported.community.is_local() and reported.community.un_moderated:
+            # Notify site admin if community is un-moderated
+            already_notified = set()
+            for admin in Site.admins():
+                if admin.id not in already_notified:
+                    notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
+                                          author_id=user.id, notif_type=NOTIF_REPORT,
+                                          subtype='user_reported',
+                                          targets=targets_data)
+                    session.add(notify)
+                    admin.unread_notifications += 1
+                    session.commit()
+
         reported.reports += 1
         session.commit()
     elif isinstance(reported, PostReply):
@@ -4925,6 +4946,20 @@ def process_report(user, reported, request_json, session):
             )
             session.add(notification)
             already_notified.add(mod.user_id)
+
+        if reported.community.is_local() and reported.community.un_moderated:
+            # Notify site admin if community is un-moderated
+            already_notified = set()
+            for admin in Site.admins():
+                if admin.id not in already_notified:
+                    notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
+                                          author_id=user.id, notif_type=NOTIF_REPORT,
+                                          subtype='user_reported',
+                                          targets=targets_data)
+                    session.add(notify)
+                    admin.unread_notifications += 1
+                    session.commit()
+
         reported.reports += 1
         session.commit()
     elif isinstance(reported, Community):

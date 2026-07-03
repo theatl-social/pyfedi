@@ -229,6 +229,26 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Successfully merged upstream PieFed release tag `v1.7.0` on 2026-07-03
+- Branch: `20260703/merge-upstream-v170`
+- Upstream tag commit: `b6f4345e` (actual `v1.7.0` release tag; not an ancestor of the prior `v1.7.0-dev` main merge)
+- New version: `1.7.0-peachpie-20260703` / `1.7.0+peachpie.20260703`
+- Key additions from upstream release line:
+  - Vote quota enforcement (`VOTE_QUOTA`), follower/following UX and API routes, bot challenge flow, RSS token support, PM send permission flag, event location federation, wiki/post body preview tooling
+  - New migrations: `c4f4625a6922_can_send_pms.py`, `1521210bd33a_bot_challenge.py`, `b9846545ef49_rss_token.py`, `7752ded50189_emoji_token_length_increase.py`
+  - New merge migration: `merge_20260703.py` (merges `merge_20260623` + `7752ded50189`)
+  - Dependency sync from upstream requirements into `pyproject.toml`/`uv.lock`: Flask 3.1.3, urllib3 2.7, cryptography 48, Werkzeug 3.1.8, Authlib 1.7, marshmallow 4.3, orjson 3.11, pygments 2.20
+- Conflict resolution notes:
+  - Kept fork Dockerfile shape (Debian slim + uv + gosu/cron), while adding upstream labels, healthcheck, and `EXPOSE`
+  - Kept hardened fork security patches over upstream where stronger: signed-request SSRF guard, actor host validation, chat/PM SP-021 checks, cached modlist shared-module architecture
+  - Took upstream templates for v1.7.0 UI changes, then restored fork Jinja compatibility by replacing `len(...)` with `|length`
+  - Took upstream translations wholesale per merge policy
+- Verification:
+  - `uvx ruff check .`
+  - `SERVER_NAME=localhost uv run pytest tests/test_field_consistency_simple.py -v`
+  - `SERVER_NAME=localhost uv run pytest tests/security/ -v`
+  - `SERVER_NAME=localhost uv run pytest tests/test_ci_fixes.py -v`
+
 - Successfully merged with upstream PieFed (v1.7.0-dev) on 2026-06-23
 - Branch: `20260623/merge-upstream-v170`
 - Upstream commit: 0c4a7092 (133 commits since v1.6.24)

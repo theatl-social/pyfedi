@@ -78,11 +78,13 @@ from app.models import (
     IpBan,
     user_file,
     ArchivedPostReply,
+    UserFollower,
+    BotChallenge,
+    votes_cast_today,
 )
 from app.shared.site import block_remote_instance
-from app.shared.tasks import task_selector
 from app.shared.upload import process_file_delete, process_upload
-from app.shared.user import subscribe_user, ban_user, unban_user
+from app.shared.user import subscribe_user, ban_user, unban_user, follow_user, unfollow_user, bot_challenge_user
 from app.user import bp
 from app.user.forms import (
     ProfileForm,
@@ -159,6 +161,7 @@ from app.utils import (
     user_pronouns,
     community_membership_private,
     intlist_to_strlist,
+    permission_required,
 )
 
 
@@ -220,6 +223,13 @@ def show_profile(user):
     if len(user_public_feeds) > 0:
         user_has_public_feeds = True
 
+    following = User.query.filter(User.banned == False).join(UserFollower, UserFollower.remote_user_id == User.id).\
+        filter(UserFollower.local_user_id == user.id, UserFollower.is_inward == False).all()
+    followers = User.query.filter(User.banned == False).join(UserFollower, UserFollower.remote_user_id == User.id). \
+        filter(UserFollower.local_user_id == user.id, UserFollower.is_inward == True).all()
+
+    bot_challenge = BotChallenge.query.filter(BotChallenge.user_id == user.id).first()
+
     # pagination urls
     post_next_url = (
         url_for(
@@ -276,6 +286,13 @@ def show_profile(user):
         else None
     )
 
+    if current_user.is_authenticated:
+        vote_quota_used = (
+            votes_cast_today(current_user.get_id()) / current_app.config["VOTE_QUOTA"]
+        )
+    else:
+        vote_quota_used = 0
+
     return render_template(
         "user/show_profile.html",
         user=user,
@@ -313,6 +330,10 @@ def show_profile(user):
         overview_prev_url=overview_prev_url,
         same_ip_address=same_ip_address,
         archived_post_replies=archived_post_replies,
+        followers=followers,
+        following=following,
+        bot_challenge=bot_challenge,
+        vote_quota_used=vote_quota_used,
     )
 
 
@@ -2833,7 +2854,76 @@ def user_preview(user_id):
     return render_template("user/user_preview.html", user=user, return_to=return_to)
 
 
-@bp.route("/user/lookup/<person>/<domain>")
+@bp.route('/u/<actor>/follow', methods=['POST'])
+@login_required
+def user_follow(actor):
+    actor = actor.strip()
+    return_to = request.args.get('return_to', f'/u/{actor}').strip()
+    if return_to.startswith('http'):
+        abort(401)
+    if '@' in actor:
+        user: User = User.query.filter_by(ap_id=actor, deleted=False).first()
+    else:
+        user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
+    if user is None:
+        abort(404)
+
+    follow_user(user.id, src=SRC_WEB)
+
+    if request.headers.get('HX-Request') == 'true':
+        return '<div class="ms-auto">' + _('Done') + '</div>'
+    else:
+        flash(_('Follow request sent.'), 'success')
+        return redirect(return_to)
+
+
+@bp.route('/u/<actor>/unfollow', methods=['POST'])
+@login_required
+def user_unfollow(actor):
+    actor = actor.strip()
+    return_to = request.args.get('return_to', f'/u/{actor}').strip()
+    if return_to.startswith('http'):
+        abort(401)
+    if '@' in actor:
+        user: User = User.query.filter_by(ap_id=actor, deleted=False).first()
+    else:
+        user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
+    if user is None:
+        abort(404)
+
+    unfollow_user(user.id, src=SRC_WEB)
+
+    if request.headers.get('HX-Request') == 'true':
+        return '<div class="ms-auto">' + _('Done') + '</div>'
+    else:
+        flash(_('Unfollowed.'), 'success')
+        return redirect(return_to)
+
+
+@bp.route('/u/<actor>/bot_challenge', methods=['POST'])
+@permission_required('change instance settings')
+def user_bot_challenge(actor):
+    actor = actor.strip()
+    return_to = request.args.get('return_to', f'/u/{actor}').strip()
+    if return_to.startswith('http'):
+        abort(401)
+    if '@' in actor:
+        user: User = User.query.filter_by(ap_id=actor, deleted=False).first()
+    else:
+        user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
+    if user is None:
+        abort(404)
+
+    bot_challenge_user(user.id, src=SRC_WEB)
+
+    flash(_('Bot challenge was sent. If they do not respond within 48 hours their account will be flagged as a bot.'), 'success')
+    if request.headers.get('HX-Request') == 'true':
+        return '<div class="ms-auto">' + _('Done') + '</div>'
+    else:
+        return redirect(return_to)
+
+
+@bp.route('/user/lookup/<person>/<domain>')
 def lookup(person, domain):
     if domain == current_app.config["SERVER_NAME"]:
         return redirect("/u/" + person)

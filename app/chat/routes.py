@@ -36,6 +36,8 @@ def chat_home(conversation_id=None):
         if conversation_id is None:
             abort(400)
         conversation = Conversation.query.get_or_404(conversation_id)
+        if current_user.banned or not current_user.verified or not current_user.can_send_pm:
+            return redirect(url_for("chat.denied"))
         if not (current_user.is_admin() or conversation.is_member(current_user)):
             abort(403)
         send_message(form.message.data, conversation_id)
@@ -117,7 +119,7 @@ def chat_home(conversation_id=None):
 def new_message(to):
     recipient = User.query.get_or_404(to)
 
-    if not current_user.can_send_pm(recipient):
+    if not current_user.can_send_pm_to(recipient):
         return redirect(url_for("chat.denied"))
 
     if recipient.has_blocked_user(current_user.id) or current_user.has_blocked_user(

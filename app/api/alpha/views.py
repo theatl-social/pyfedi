@@ -701,6 +701,7 @@ def user_view(
                     "feed_auto_follow": user.feed_auto_follow,
                     "feed_auto_leave": user.feed_auto_leave,
                     "ai_visibility": ai_visibility_options[user.hide_gen_ai],
+                    "manually_approves_followers": user.ap_manually_approves_followers,
                 },
                 "person": {
                     "id": user.id,
