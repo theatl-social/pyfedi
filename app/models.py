@@ -1588,7 +1588,8 @@ class User(UserMixin, db.Model):
 
     def is_following(self, other_user) -> str:
         user_follow = db.session.query(UserFollower).filter(UserFollower.local_user_id == self.id,
-                                                            UserFollower.remote_user_id == other_user.id).first()
+                                                            UserFollower.remote_user_id == other_user.id,
+                                                            UserFollower.is_inward == False).first()
         if user_follow:
             if user_follow.is_accepted is True:
                 return 'following'
@@ -3364,10 +3365,11 @@ class CommunityWikiPageRevision(db.Model):
 
 
 class UserFollower(db.Model):
-    local_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    remote_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    local_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    remote_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     is_accepted = db.Column(db.Boolean)              # None = request sent. True = accepted. False = Rejected
-    is_inward = db.Column(db.Boolean, default=True)  # true = remote user is following a local one
+    is_inward = db.Column(db.Boolean, default=True, index=True)  # true = remote user is following a local one
     created_at = db.Column(db.DateTime, default=utcnow)
 
 
