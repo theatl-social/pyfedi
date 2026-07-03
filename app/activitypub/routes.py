@@ -100,6 +100,8 @@ from app.models import (
     IpBan,
     ActivityBatch,
     InstanceBan,
+    UserFollowRequest,
+    votes_cast_today,
 )
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
@@ -1563,6 +1565,25 @@ def process_inbox_request(request_json, store_ap_json):
                                 local_user.private_key,
                                 f"{local_user.public_url()}#main-key",
                             )
+                            targets_data = {
+                                "gen": "0",
+                                "author_id": remote_user.id,
+                                "author_user_name": remote_user.ap_id
+                                if remote_user.ap_id
+                                else remote_user.user_name,
+                            }
+                            new_notification = Notification(
+                                title=_("You have a new follower"),
+                                url=f"/user/{remote_user.id}",
+                                user_id=local_user.id,
+                                author_id=remote_user.id,
+                                notif_type=NOTIF_FOLLOW,
+                                subtype="new_follower",
+                                targets=targets_data,
+                            )
+                            session.add(new_notification)
+                            local_user.unread_notifications += 1
+                            session.commit()
                             log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
                     return
 
@@ -3817,7 +3838,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
     if can_upvote(user, liked.community) and not instance_banned(user.instance.domain):
         if isinstance(liked, (Post, PostReply)) and user.id not in blocked_users(
             liked.author.id
-        ):
+        ) and votes_cast_today(user.id) <= current_app.config["VOTE_QUOTA"]:
             liked.vote(user, "upvote", emoji)
             log_incoming_ap(id, APLOG_LIKE, APLOG_SUCCESS, saved_json)
             if not announced:
@@ -3847,7 +3868,7 @@ def process_downvote(user, store_ap_json, request_json, announced):
     ):
         if isinstance(liked, (Post, PostReply)) and user.id not in blocked_users(
             liked.author.id
-        ):
+        ) and votes_cast_today(user.id) <= current_app.config["VOTE_QUOTA"]:
             liked.vote(user, "downvote", None)
             log_incoming_ap(id, APLOG_DISLIKE, APLOG_SUCCESS, saved_json)
             if not announced:

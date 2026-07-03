@@ -49,7 +49,7 @@ from furl import furl
 from pyld import jsonld
 from sqlalchemy import text
 
-from app import db, celery, httpx_client
+from app import celery, httpx_client
 from app.constants import DATETIME_MS_FORMAT
 from app.models import (
     utcnow,
@@ -60,7 +60,7 @@ from app.models import (
     User,
     SendQueue,
 )
-from app.utils import get_task_session
+from app.utils import get_task_session, is_invalid_get_request_uri
 
 
 def http_date(epoch_seconds=None):
@@ -537,6 +537,8 @@ class HttpSignature:
         """
         if "://" not in uri:
             raise ValueError("URI does not contain a scheme")
+        if is_invalid_get_request_uri(uri):
+            raise ValueError("URI is invalid")
         # Create the core header field set
         uri_parts = urlparse(uri)
         date_string = http_date()

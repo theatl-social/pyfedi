@@ -6,7 +6,7 @@ import os
 import uuid
 import re
 import unicodedata
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from time import time
 from typing import List, Union
 from urllib.parse import urlparse, parse_qs, urlencode
@@ -42,6 +42,14 @@ def utcnow(naive=True):
     if naive:
         return datetime.now(ZoneInfo('UTC')).replace(tzinfo=None)
     return datetime.now(ZoneInfo('UTC'))
+
+
+def votes_cast_today(user_id: int) -> int:
+    from app import redis_client
+    num = redis_client.get(f'votes_cast_{date.today()}_{user_id}')
+    if num is None:
+        return 0
+    return int(num)
 
 
 class PostReplyValidationError(Exception):
@@ -883,7 +891,7 @@ class Community(db.Model):
     def delete_dependencies(self):
         from app import redis_client
         for post in db.session.query(Post).filter_by(community_id=self.id):
-            with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+            with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
                 post.delete_dependencies()
                 db.session.delete(post)
                 db.session.commit()
@@ -994,6 +1002,7 @@ class User(UserMixin, db.Model):
     bot_override = db.Column(db.Boolean, default=False, index=True)
     suppress_crossposts = db.Column(db.Boolean, default=False, index=True)
     vote_privately = db.Column(db.Boolean, default=False)
+    can_send_pm = db.Column(db.Boolean, default=True)
     finished_onboarding = db.Column(db.Boolean, default=False)
     ignore_bots = db.Column(db.Integer, default=0)
     unread_notifications = db.Column(db.Integer, default=0)
@@ -1030,6 +1039,7 @@ class User(UserMixin, db.Model):
     page_length = db.Column(db.Integer)
     num_following = db.Column(db.Integer, default=0)    # number of users being followed, not number of communities
     num_followers = db.Column(db.Integer, default=0)    # number of users that follow this user
+    rss_token = db.Column(db.String(20), index=True)
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
@@ -1225,12 +1235,6 @@ class User(UserMixin, db.Model):
         if self.created_recently() and self.reputation < 100:
             return False
         return True
-
-    def cannot_vote(self):
-        if self.is_local():
-            return False
-        return self.post_count == 0 and self.post_reply_count == 0 and len(
-            self.user_name) == 8  # most vote manipulation bots have 8 character user names and never post any content
 
     def link(self) -> str:
         if self.is_local():
@@ -1452,6 +1456,8 @@ class User(UserMixin, db.Model):
         db.session.query(CommunityMember).filter(CommunityMember.user_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.user_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.user_id == self.id).delete()
+        db.session.query(BotChallenge).filter(BotChallenge.user_id == self.id).delete()
+        db.session.query(BotChallenge).filter(BotChallenge.sent_by == self.id).delete()
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.user_id == self.id).delete()
         db.session.query(ChatMessage).filter(or_(ChatMessage.sender_id == self.id, ChatMessage.recipient_id == self.id)).delete()
         db.session.query(UserBlock).filter(or_(UserBlock.blocker_id == self.id, UserBlock.blocked_id == self.id)).delete()
@@ -1557,12 +1563,13 @@ class User(UserMixin, db.Model):
         else:
             return ''
 
-    def can_send_pm(self, recipient):
+    def can_send_pm_to(self, recipient):
         if (
             self.created_very_recently()
             or self.reputation <= -10
             or self.banned
             or not self.verified
+            or not self.can_send_pm
         ) and not (self.is_admin_or_staff() or recipient.is_admin_or_staff()):
             return False
 
@@ -2104,7 +2111,8 @@ class Post(db.Model):
                               online=request_json['object']['isOnline'],
                               buy_tickets_link=request_json['object']['buyTicketsLink'],
                               event_fee_currency=request_json['object']['feeCurrency'],
-                              event_fee_amount=request_json['object']['feeAmount'])
+                              event_fee_amount=request_json['object']['feeAmount'],
+                              location=request_json['object']['location'])
                 db.session.add(event)
                 post.url = ''   # Mobilizon puts the AP ID in request_json['object']['url'] and any attached website links in a request_json['object']['attachment'] list
                 if ('attachment' in request_json['object'] and
@@ -2538,11 +2546,16 @@ class Post(db.Model):
                 return None
         with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=6):
             existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
-            if existing_vote and vote_direction == 'reversal':  # api receives '1' for upvote, '-1' for downvote, and '0' for reversal
-                if existing_vote.effect == 1:
-                    vote_direction = 'upvote'
-                elif existing_vote.effect == -1:
-                    vote_direction = 'downvote'
+            if vote_direction == 'reversal':
+                if existing_vote:  # api receives '1' for upvote, '-1' for downvote, and '0' for reversal
+                    if existing_vote.effect == 1:
+                        vote_direction = 'upvote'
+                    elif existing_vote.effect == -1:
+                        vote_direction = 'downvote'
+                    else:
+                        return None  # no point reversing a vote with no effect. There shouldn't be any more of these anyway, now that the vote manipulation bot detection code is removed.
+                else:
+                    return None      # cannot reverse non-existent vote
             assert vote_direction == 'upvote' or vote_direction == 'downvote'
             undo = None
             if existing_vote:
@@ -2602,8 +2615,6 @@ class Post(db.Model):
                         spicy_effect = effect * current_app.config['SPICY_UNDER_30']
                     elif self.up_votes + self.down_votes <= 60:
                         spicy_effect = effect * current_app.config['SPICY_UNDER_60']
-                    if user.cannot_vote():
-                        effect = spicy_effect = 0
                     self.up_votes += 1
                     self.score += spicy_effect  # score + (+1) = score+1
                 else:
@@ -2615,8 +2626,7 @@ class Post(db.Model):
                         spicy_effect *= current_app.config['SPICY_UNDER_30']
                     elif self.up_votes + self.down_votes <= 60:
                         spicy_effect *= current_app.config['SPICY_UNDER_60']
-                    if user.cannot_vote():
-                        effect = spicy_effect = 0
+                    effect = spicy_effect = 0
                     self.score += spicy_effect  # score + (-1) = score-1
                 vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
                                 effect=effect, emoji=emoji)
@@ -2629,6 +2639,13 @@ class Post(db.Model):
                     db.session.commit()
                 db.session.add(vote)
 
+                # keep track of how many votes this user has cast today
+                votes_cast = votes_cast_today(user.id)
+                if votes_cast == 0:
+                    redis_client.set(f'votes_cast_{date.today()}_{user.id}', 1, ex=86400)
+                else:
+                    redis_client.incr(f'votes_cast_{date.today()}_{user.id}')
+
             if emoji or emoji == '-1':
                 db.session.commit()
                 self.update_reaction_cache()
@@ -2638,6 +2655,7 @@ class Post(db.Model):
             self.ranking_scaled = int(self.ranking + self.community.scale_by())
 
             db.session.commit()
+
             if user.is_local():
                 with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                     user.last_seen = utcnow()
@@ -3146,10 +3164,7 @@ class PostReply(db.Model):
                         self.down_votes -= 1
                         self.score += 2
             else:
-                if user.cannot_vote():
-                    effect = 0
-                else:
-                    effect = 1
+                effect = 1
                 if vote_direction == 'upvote':
                     self.up_votes += 1
                 else:
@@ -3163,6 +3178,14 @@ class PostReply(db.Model):
                                        {'effect': effect, 'user_id': self.user_id})
                     db.session.commit()
                 db.session.add(vote)
+
+                # keep track of how many votes this user has cast today
+                votes_cast = votes_cast_today(user.id)
+                if votes_cast == 0:
+                    redis_client.set(f'votes_cast_{date.today()}_{user.id}', 1, ex=86400)
+                else:
+                    redis_client.incr(f'votes_cast_{date.today()}_{user.id}')
+
             if emoji or emoji == '-1':
                 db.session.commit()
                 self.update_reaction_cache()
@@ -3428,7 +3451,7 @@ class PostVote(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id', ondelete='CASCADE'), index=True)
     effect = db.Column(db.Float, index=True)
-    emoji = db.Column(db.String(20))
+    emoji = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=utcnow)
 
     __table_args__ = (
@@ -3447,7 +3470,7 @@ class PostReplyVote(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # the author of the reply voted on - who's reputation is affected
     post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id', ondelete='CASCADE'), index=True)
     effect = db.Column(db.Float)
-    emoji = db.Column(db.String(20))
+    emoji = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=utcnow)
 
     __table_args__ = (
@@ -3763,7 +3786,7 @@ class Site(db.Model):
     show_inoculation_block = db.Column(db.Boolean, default=True)
     additional_css = db.Column(db.Text)
     additional_js = db.Column(db.Text)
-    private_instance = db.Column(db.Boolean, default=False)
+    private_instance = db.Column(db.Boolean, default=True)
     language_id = db.Column(db.Integer)
     honeypot = db.Column(db.Boolean, default=True)
     allowlist_mode = db.Column(db.Integer, default=0)   # 0 = weak, 1 = strong, 2 = intense
@@ -4149,7 +4172,7 @@ class Reminder(db.Model):
 class Emoji(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(1024))
-    token = db.Column(db.String(20), index=True)
+    token = db.Column(db.String(50), index=True)
     category = db.Column(db.String(20))
     aliases = db.Column(db.String(100), index=True)
     instance_id = db.Column(db.Integer, index=True)
@@ -4192,6 +4215,15 @@ class RevokedToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String(36), unique=True, index=True)  # JWT ID
     revoked_at = db.Column(db.DateTime, default=utcnow)
+
+
+class BotChallenge(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(50), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    sent_at = db.Column(db.DateTime, default=utcnow)
+    sent_by = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    is_a_bot = db.Column(db.Boolean)        # null means waiting for response
 
 
 def _large_community_subscribers() -> float:

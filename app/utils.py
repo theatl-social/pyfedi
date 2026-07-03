@@ -8,6 +8,8 @@ import io
 import logging
 import mimetypes
 import math
+import socket
+import ipaddress
 import random
 import secrets
 import time
@@ -109,7 +111,9 @@ from app.models import (
     Emoji,
     UserExtraField,
     ArchivedPostReply,
+    RevokedToken,
     CommunityFavorite,
+    UserFollower,
 )
 
 logger = logging.getLogger(__name__)
@@ -4551,12 +4555,7 @@ def reported_posts(user_id: int, is_admin: bool) -> List[int]:
     if user_id is None:
         return []
     if is_admin:
-        post_ids = list(
-            db.session.execute(
-                text('SELECT id FROM "post" WHERE reports > 0')
-            ).scalars()
-        )
-        print(post_ids)
+        post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0')).scalars())
     else:
         community_ids = moderating_communities_ids(user_id)
         if len(community_ids) > 0:
@@ -4643,6 +4642,33 @@ def user_notes(user_id):
     for note in UserNote.query.filter(UserNote.user_id == user_id).all():
         result[note.target_id] = note.body
     return result
+
+
+def communities_run_by_inactive_mods():
+    cutoff = utcnow() - timedelta(days=90)
+
+    sql = """
+        SELECT c.id
+        FROM community c
+        JOIN community_member cm
+          ON cm.community_id = c.id
+         AND cm.is_banned = false
+         AND (cm.is_moderator OR cm.is_owner)
+        JOIN "user" u
+          ON u.id = cm.user_id
+        GROUP BY c.id
+        HAVING COUNT(*) > 0
+           AND SUM(
+                CASE
+                    WHEN COALESCE(u.bot, false) = false
+                     AND COALESCE(u.bot_override, false) = false
+                     AND u.last_seen >= :cutoff
+                    THEN 1 ELSE 0
+                END
+           ) = 0
+    """
+
+    return db.session.execute(text(sql), {"cutoff": cutoff}).scalars().all()
 
 
 class SqlKeysetPagination:
@@ -5304,6 +5330,22 @@ def user_pronouns() -> defaultdict:
     return result
 
 
+def following_user_ids(user_id):
+    if user_id == 0:
+        return []
+    stmt = (
+        select(User.id)
+        .join(UserFollower, UserFollower.remote_user_id == User.id)
+        .where(
+            User.banned == False,
+            UserFollower.local_user_id == user_id,
+            UserFollower.is_inward == False
+        )
+    )
+
+    return db.session.execute(stmt).scalars().all()
+
+
 def expand_hex_color(text: str) -> str:
     new_text = "#" + text[1] * 2 + text[2] * 2 + text[3] * 2
     return new_text
@@ -5524,6 +5566,52 @@ def display_back_button():
             return ""
     else:
         return ""
+
+
+@cache.memoize(timeout=300)
+def is_invalid_get_request_uri(uri):
+    if current_app.debug:
+        return False
+
+    try:
+        f = furl(uri)
+        if not f.host:
+            return True
+
+        if f.host.endswith(".local"):
+            return True
+
+        if f.scheme not in ("http", "https"):
+            return True
+
+        # check if host is an IP literal
+        try:
+            ip = ipaddress.ip_address(f.host)
+            ips = [ip]
+        except ValueError:
+            # otherwise, resolve hostname and check the IP(s) associated with that.
+            # Resolution can fail transiently (a single flaky/overloaded nameserver,
+            # packet loss, UDP rate-limiting). Don't let a momentary DNS blip mark a
+            # valid peer invalid: on a resolution failure, fail open (return False)
+            # rather than treating the URI as invalid.
+            try:
+                infos = socket.getaddrinfo(f.host, None)
+            except (socket.gaierror, socket.timeout):
+                return False
+
+            ips = []
+            for info in infos:
+                sockaddr = info[4]
+                ip_str = sockaddr[0]
+                ips.append(ipaddress.ip_address(ip_str))
+
+        if any(not ip.is_global for ip in ips):
+            return True
+
+        return False
+
+    except Exception:
+        return True
 
 
 # SP-017: SVG sanitization. SVG is image/svg+xml and can carry active content

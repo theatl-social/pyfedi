@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     gcc \
     python3-dev \
+    libpq-dev \
+    curl \
     tesseract-ocr \
     tesseract-ocr-eng \
     postgresql-client \
@@ -40,6 +42,16 @@ RUN uv run pybabel compile -d app/translations || true
 RUN chmod u+x ./entrypoint.sh
 RUN chmod u+x ./entrypoint_celery.sh
 RUN chmod u+x ./entrypoint_async.sh
+
+EXPOSE 5000
+ENV CRON="false"
+
+LABEL org.opencontainers.image.authors="rimu"
+LABEL org.opencontainers.image.source="https://codeberg.org/rimu/pyfedi"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
+LABEL org.opencontainers.image.description="A Lemmy/Mbin alternative written in Python with Flask."
+
+HEALTHCHECK --interval=60s --retries=2 --timeout=10s CMD curl -ILfSs http://localhost:5000/health >/dev/null || exit 1
 
 # Run as root so cron daemon can start, then entrypoint.sh will drop to python user via gosu
 ENTRYPOINT ["./entrypoint.sh"]

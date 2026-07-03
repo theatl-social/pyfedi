@@ -7,13 +7,13 @@ from datetime import datetime
 
 import boto3
 from PIL import Image, ImageOps
-from flask import flash, request, current_app, g
+from flask import flash, request, current_app, g, abort
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from pillow_heif import register_heif_opener
 from sqlalchemy import text, Integer
 
-from app import db, cache, plugins
+from app import db, cache, plugins, limiter
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import (
     tags_from_string_old,
@@ -38,6 +38,7 @@ from app.models import (
     Instance,
     Event,
     Community,
+    votes_cast_today,
 )
 from app.shared.tasks import task_selector
 from app.utils import (
@@ -68,6 +69,7 @@ from app.utils import (
     can_upload_video,
     is_video_url,
     sanitize_svg,
+    user_ip_banned,
 )
 
 
@@ -100,6 +102,12 @@ def vote_for_post(
                 recently_upvoted=[],
                 recently_downvoted=[],
             )
+
+    if user.banned or user_ip_banned():
+        abort(403)
+
+    if votes_cast_today(user.id) > current_app.config["VOTE_QUOTA"]:
+        abort(429)
 
     undo = post.vote(user, vote_direction, emoji)
 
@@ -1048,6 +1056,9 @@ def report_post(post: Post, input, src, auth=None):
             )
         )
         report_remote = input.report_remote.data
+
+    if post.community.is_local() and post.community.un_moderated:
+        notify_admins = True
 
     targets_data = {
         "gen": "0",
