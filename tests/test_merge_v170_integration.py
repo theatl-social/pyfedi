@@ -56,6 +56,24 @@ def test_app_builds_with_routes(app):
     assert len(rules) > 100, "create_app() produced too few routes; build likely broke"
 
 
+def test_community_favorite_route_is_registered(app):
+    route = next(
+        (
+            rule
+            for rule in app.url_map.iter_rules()
+            if rule.endpoint == "community.community_fave"
+        ),
+        None,
+    )
+
+    assert route is not None, (
+        "community favorite route missing; templates post to "
+        "/community/<id>/fave"
+    )
+    assert str(route) == "/community/<int:community_id>/fave"
+    assert "POST" in route.methods
+
+
 def test_api_util_modules_import():
     # These auto-merged modules import serializers from app.api.alpha.views at
     # module load. A successful import proves our (ours) views.py provides every
