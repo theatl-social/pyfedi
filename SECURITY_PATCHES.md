@@ -279,6 +279,42 @@ Any failure means a patch has regressed and must be re-applied before the merge 
   `HX-Redirect` with *no* check at all. Migrating each is a one-line change to
   `safe_hx_redirect_url()`; do it as a dedicated pass, not inside a merge.
 
+### SP-024 — Remember-me cookie missing Secure / explicit SameSite
+
+- **Origin:** pre-existing in this fork and upstream; not introduced by any merge
+- **Files:**
+  - `config.py` — `REMEMBER_COOKIE_SECURE` / `_HTTPONLY` / `_SAMESITE` now set explicitly
+  - `env.sample` — documents the `*_SECURE` override for local HTTP development
+- **Test:** `tests/security/test_sp024_remember_cookie_flags.py`
+- **Upstream status:** PRESENT upstream as of v1.7.8
+- **Fix summary:** Flask-Login configures its remember-me cookie separately from Flask's
+  session cookie, and its library defaults are weaker — `flask_login/config.py` ships
+  `COOKIE_SECURE = False` and `COOKIE_SAMESITE = None`, which `login_manager.py:472-474`
+  reads via `config.get("REMEMBER_COOKIE_*", <library default>)`. This fork set
+  `SESSION_COOKIE_SECURE/HTTPONLY/SAMESITE` but never the `REMEMBER_COOKIE_*` equivalents,
+  so the **long-lived** credential was the weak one: `app/auth/routes.py` calls
+  `login_user(user, remember=True)` on every login and the cookie lasts 365 days, yet it
+  carried no `Secure` flag (transmissible over plain HTTP) and no explicit `SameSite`.
+  Now mirrors the session cookie.
+- **Why explicit SameSite matters:** an omitted attribute leans on browser defaults.
+  Modern browsers treat that as Lax, but Chrome's "Lax+POST" intervention grants a
+  ~2 minute cross-site POST window to cookies with no explicit `SameSite` — which is
+  the layer the CSRF posture below depends on.
+- **Deployment note:** `REMEMBER_COOKIE_SECURE` defaults to on. A deployment served over
+  plain HTTP will stop honoring remember-me until it sets `REMEMBER_COOKIE_SECURE=0`
+  (documented in `env.sample`) or, preferably, moves to HTTPS.
+- **RELATED, NOT FIXED — CSRF depends on a single layer.** 133 cookie-authenticated POST
+  routes carry no per-form CSRF token, including `admin_user_delete`,
+  `admin_community_delete`, `admin_approve_registrations_approve`, `post_purge` and
+  `delete_profile`. There is no global `CSRFProtect`; the only thing preventing
+  cross-site forgery is `SESSION_COOKIE_SAMESITE = "Lax"`. That is real protection in
+  current browsers but has no defense in depth behind it, and `Lax` is same-*site*, not
+  same-*origin* — a subdomain can still POST with cookies. Registering `CSRFProtect`
+  globally is the durable fix and is a dedicated piece of work.
+  (Not affected: the ~70 `/api/alpha/*` routes authenticate by bearer token only —
+  `authorise_api_user` reads solely the `Authorization` header, with no cookie fallback —
+  and the 9 ActivityPub inboxes are HTTP-signature verified under SP-001.)
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.
