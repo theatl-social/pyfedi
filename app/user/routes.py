@@ -122,6 +122,7 @@ from app.user.utils import (
     insert_or_update_user_note,
 )
 from app.utils import (
+    safe_hx_redirect_url,
     render_template,
     markdown_to_html,
     user_access,
@@ -1473,12 +1474,14 @@ def user_flair_unblock(flair_id):
 
     if request.headers.get("HX-Request"):
         resp = make_response()
-        curr_url = request.headers.get("HX-Current-Url")
-
-        if "/user/" in curr_url:
-            resp.headers["HX-Redirect"] = curr_url
-        else:
-            resp.headers["HX-Redirect"] = url_for("main.index")
+        # Upstream v1.7.8 echoes HX-Current-Url back after only `"/user/" in curr_url`,
+        # which https://evil.com/user/x satisfies. Validate host + path instead; see
+        # SP-007 for the same open-redirect class elsewhere in this file.
+        resp.headers["HX-Redirect"] = safe_hx_redirect_url(
+            request.headers.get("HX-Current-Url"),
+            path_prefix="/user/",
+            fallback=url_for("main.index"),
+        )
 
         return resp
 

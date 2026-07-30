@@ -250,6 +250,35 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Note:** if upstream later adopts a global `CSRFProtect`, this patch becomes redundant
   and can be reduced back to upstream's form.
 
+### SP-023 — Open redirect via unvalidated `HX-Current-Url` echoed into `HX-Redirect`
+
+- **Introduced:** upstream v1.7.8 `user_flair_unblock` (this fork's 2026-07-30 merge)
+- **Files:**
+  - `app/utils.py` — new `safe_hx_redirect_url()` validator
+  - `app/user/routes.py` — `user_flair_unblock()` uses it
+- **Test:** `tests/security/test_sp023_hx_redirect_open_redirect.py`
+- **Upstream status:** PRESENT upstream as of v1.7.8
+- **Severity:** Low — defense-in-depth, not directly exploitable through a browser.
+  `HX-Current-Url` is a non-simple header, so a cross-origin `fetch` setting it triggers
+  a CORS preflight, and this app only ever emits `Access-Control-Allow-Origin` (on two
+  ActivityPub endpoints) and never `Access-Control-Allow-Headers`. `HX-Redirect` is then
+  honored by htmx only in the origin that issued the request. Practical abuse requires
+  same-origin script execution, which is already game over.
+- **Fix summary:** `HX-Current-Url` is set by htmx but is an ordinary request header and
+  therefore client-controlled. Upstream echoes it straight back into `HX-Redirect` after
+  only a substring test (`if "/user/" in curr_url`), which `https://evil.com/user/x`
+  satisfies. `safe_hx_redirect_url()` parses instead: rejects non-http(s) schemes
+  (`javascript:`, `data:`), requires a relative URL or an exact `request.host` match
+  (so `localhost.evil.com` fails), and requires the *path* to start with the expected
+  prefix. Same bug class as SP-007.
+- **KNOWN REMAINING EXPOSURE — 16 pre-existing sites not yet migrated.** This patch
+  covers only the site introduced by the v1.7.8 merge. The same pattern predates it in:
+  `app/post/routes.py` (8), `app/user/routes.py` (4 others), `app/chat/routes.py` (1),
+  `app/instance/routes.py` (1), `app/domain/routes.py` (1), `app/community/routes.py` (1).
+  **`app/instance/routes.py:264` is the worst** — it echoes `HX-Current-Url` into
+  `HX-Redirect` with *no* check at all. Migrating each is a one-line change to
+  `safe_hx_redirect_url()`; do it as a dedicated pass, not inside a merge.
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.

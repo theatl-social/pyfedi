@@ -293,6 +293,17 @@ The repository includes comprehensive test infrastructure:
   `CSRFProtect`**, so that was the endpoint's only CSRF gate. Kept upstream's
   behavioral fix, validate the token explicitly. Test:
   `tests/security/test_sp022_onboarding_csrf.py`.
+- New security patch **SP-023** (upstream regression, flagged by automated review):
+  upstream's `user_flair_unblock` echoes the client-controlled `HX-Current-Url` header
+  into `HX-Redirect` after only `if "/user/" in curr_url`, which
+  `https://evil.com/user/x` satisfies. Added `safe_hx_redirect_url()` to `app/utils.py`
+  (parses the URL, rejects non-http(s) schemes, requires relative-or-exact-`request.host`,
+  requires the path prefix). Low severity — a cross-origin `fetch` can't set a non-simple
+  header without a CORS preflight this app never grants.
+  **16 pre-existing sites remain unmigrated** across `post/`, `user/`, `chat/`,
+  `instance/`, `domain/`, `community/` routes — `app/instance/routes.py:264` echoes the
+  header with *no* check at all. Migrating each is a one-line change; do it as a
+  dedicated pass, not inside a merge. Tracked in `SECURITY_PATCHES.md`.
 - Fixed an upstream authorization bug while porting: upstream's
   `post_private_message_conversation_report` writes
   `if not (conversation or conversation.is_member(user) or user_access(...))` —

@@ -1627,6 +1627,38 @@ def pop_link(link_snippets: list, text: str, placeholder: str) -> str:
     return text
 
 
+def safe_hx_redirect_url(curr_url: str, path_prefix: str, fallback: str) -> str:
+    """Validate a client-supplied HX-Current-Url before echoing it into HX-Redirect.
+
+    `HX-Current-Url` is set by htmx but is an ordinary request header, so it is
+    client-controlled. Several routes echo it back in `HX-Redirect` after only a
+    substring test such as `if "/user/" in curr_url`, which `https://evil.com/user/x`
+    satisfies — the open-redirect shape SP-007 already covers elsewhere in this
+    codebase.
+
+    Parse instead of substring-matching: require a same-host (or relative) URL whose
+    *path* starts with `path_prefix`, else fall back to a server-computed URL.
+    """
+    if not curr_url:
+        return fallback
+
+    parsed = urlparse(curr_url)
+
+    # Reject anything that isn't plain http(s); blocks javascript:, data:, etc.
+    if parsed.scheme and parsed.scheme not in ("http", "https"):
+        return fallback
+
+    # netloc empty => relative URL, already same-origin. Otherwise it must match
+    # the host this request came in on.
+    if parsed.netloc and parsed.netloc != request.host:
+        return fallback
+
+    if not parsed.path.startswith(path_prefix):
+        return fallback
+
+    return curr_url
+
+
 def domain_from_url(url: str, create=True) -> Domain:
     parsed_url = urlparse(url.lower().replace("www.", ""))
     if parsed_url and parsed_url.hostname:
