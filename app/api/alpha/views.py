@@ -30,6 +30,8 @@ from app.models import (
     Poll,
     Event,
     PollChoice,
+    Conversation,
+    Report,
 )
 from app.post.util import tags_to_string, flair_to_string
 from app.utils import (
@@ -1596,6 +1598,61 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
 
     if variant == 3:
         return v3
+
+
+def conversation_information_view(conversation: int | Conversation, variant=1) -> dict:
+    if isinstance(conversation, int):
+        conversation = Conversation.query.get(conversation)
+
+    members = []
+    for member in conversation.members:
+        members.append(user_view(member, variant=1))
+
+    if variant == 1:
+        # ConversationInfoView schema
+        return {
+            "id": conversation.id,
+            "members": members,
+            "creator_id": conversation.user_id,
+            "published": conversation.created_at.isoformat(timespec="microseconds")
+            + "Z",
+            "updated": conversation.updated_at.isoformat(timespec="microseconds") + "Z",
+        }
+
+
+def conversation_report_view(report: int | Report, variant=1) -> dict:
+    if isinstance(report, int):
+        report = Report.query.get(report)
+
+    if not report.suspect_conversation_id:
+        raise Exception("report is not for a conversation")
+
+    v1 = {
+        "id": report.id,
+        "creator_id": report.reporter_id,
+        "conversation_id": report.suspect_conversation_id,
+        "reason": report.reasons,
+        "description": report.description,
+        "resolved": report.status == REPORT_STATE_RESOLVED,
+        "published": report.created_at.isoformat(timespec="microseconds") + "Z",
+    }
+
+    if variant == 1:
+        # ConversationReport schema
+        return v1
+
+    v2 = {
+        "conversation_report": v1,
+        "conversation_information": conversation_information_view(
+            report.suspect_conversation_id
+        ),
+        "creator": user_view(report.reporter_id, variant=1),
+    }
+
+    if variant == 2:
+        # ConversationReportView schema. The `message_history` key is populated by
+        # the caller, which is the only place the read-privilege check happens.
+        return v2
 
 
 def topic_view(

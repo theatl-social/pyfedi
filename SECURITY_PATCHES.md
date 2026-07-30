@@ -231,6 +231,25 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream as of v1.6.24
 - **Fix summary:** The `translate init` command concatenated the `lang` CLI argument into a string passed to the legacy POSIX shell-call helper. An attacker with CLI access (or a misconfigured automation system) could inject arbitrary shell. Now the call uses `subprocess.run([...])` with list args (no shell) and validates `lang` against `^[a-z]{2,3}(_[A-Z]{2})?$` first.
 
+### SP-022 — CSRF bypass in onboarding topic selection (upstream regression)
+
+- **Introduced:** upstream v1.7.4 commit `ae1859d3` ("fix onboarding - topic selection"), carried in v1.7.8
+- **Files:**
+  - `app/auth/onboarding.py` — `choose_topics()` validates the CSRF token explicitly
+- **Test:** `tests/security/test_sp022_onboarding_csrf.py`
+- **Upstream status:** PRESENT upstream as of v1.7.8
+- **Fix summary:** Topic selection never submitted, because `chosen_topics` is a
+  `MultiCheckboxField` whose `.choices` are never populated (the template renders the
+  checkboxes by hand), so `SelectMultipleField.pre_validate()` always failed and
+  `form.validate_on_submit()` returned False. Upstream fixed it by replacing that call
+  with a bare `request.method == 'POST'` check. This fork registers no global
+  `CSRFProtect`, so `validate_on_submit()` was this endpoint's only CSRF gate; upstream's
+  form leaves a state-changing POST (joining topics and their communities) with no CSRF
+  protection at all. We keep upstream's behavioral fix and call
+  `flask_wtf.csrf.validate_csrf()` on the submitted token, aborting 400 on failure.
+- **Note:** if upstream later adopts a global `CSRFProtect`, this patch becomes redundant
+  and can be reduced back to upstream's form.
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.

@@ -229,6 +229,107 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Merged upstream PieFed release tag `v1.7.8` on 2026-07-30
+- Branch: `20260730/merge-upstream-v178`
+- Upstream tag commit: `9653bed1` (42 commits since `a114efdc`)
+- New version: `1.7.8-peachpie-20260730` / `1.7.8+peachpie.20260730`
+- **Goal was complete feature parity**, so this merge also closed the API drift
+  deliberately deferred on 2026-06-23 — see "API parity" below.
+- Key additions from upstream:
+  - Per-user community-flair blocking: `CommunityFlairBlock` model,
+    `community_membership_manage` route, `EditCommunityMembership` form,
+    `user_flair_unblock`, filters-page listing, `community_membership.html`
+  - `PostBoost` model + `Post.post_boosts` JSON cache (microblog boosts)
+  - `Post.ranking` / `ranking_scaled` Integer → Float
+  - `get_deduped_post_ids(community_sql=...)` — local & popular feeds no longer
+    materialize community ID lists. **Note:** our old `include_following` `noqa`
+    claimed "no user_follower table in this fork"; that was stale, and taking
+    upstream's version wires the follow feed up properly.
+  - Federation tightening: `local_only`/`private` communities no longer federate;
+    follower queries gain `is_inward=True`; Mastodon `Public` addressing drives
+    microblog privacy
+  - Downvotes effective again (a stray `effect = spicy_effect = 0` zeroed them)
+  - Posting-pattern chart on profiles; OpenDyslexic font; `ceb` + `fil` languages
+    (`tl` renamed to `fil`)
+  - New migrations: `c831b9c7eee9` post_boost, `544946659eb7` float post ranking,
+    `e1c6576eaa4b` block community flair
+  - New merge migration: `merge_20260730_v178.py` (merges `merge_20260703_v17x`
+    + `e1c6576eaa4b`)
+  - **No dependency changes** — upstream `requirements.txt` was unchanged
+- Fork customizations preserved:
+  - `Post.generate_ap_id` keeps the federation-safe bare-community-name form.
+    Upstream rewrote it again (v1.7.8: `@{community.ap_domain}`; earlier:
+    `@{SERVER_NAME}`). This has now regressed on **three** consecutive merges, so
+    the resolution carries an inline comment. `tests/test_post_slug.py` guards it.
+    **This conflicted rather than silently auto-merging this time — keep it that way.**
+  - `cached_modlist_for_community` / `cached_modlist_for_user` stay imported from
+    `app.shared.community`. Upstream's `community/routes.py` imports them from
+    `app.api.alpha.views` at module level, which is the exact circular import
+    `tests/test_ci_fixes.py` exists to prevent.
+  - Our `app/community/routes.py` constants import is a **superset** of upstream's
+    (`NOTIF_POST`, `MICROBLOG_APPS`, `NOTIF_NEW_MOD`, `INVITE_*`) — keep ours.
+  - PeachPie footer, `uv run` entrypoints (upstream's `sh`→`bash` shebang taken),
+    `privacy_url`, private registration API.
+- Grafted (closes the 2026-06-23 deferral):
+  - `find_microblogging_community()` into `app/activitypub/util.py` (+ `RsaKeys`
+    added to the existing signature import). Upstream's new home-feed code imports
+    it at **module level**, so without the graft the app fails to start.
+    Note it creates a `microblogs` Community with `user_id=1` on first local-feed
+    load — verify user id 1 exists before deploying.
+- **API parity (closed the standing "DEFERRED" item):** wired all 9 upstream API
+  endpoints that were missing since 2026-06-23 —
+  `/post/report/list`, `/post/report/resolve`, `/comment/report/resolve`,
+  `/user/logout`, `/private_message/report/list`, `/private_message/report/resolve`,
+  `/private_message/conversation/report{,/list,/resolve}`.
+  Ported 6 functions into `utils/private_message.py` and
+  `conversation_report_view` + `conversation_information_view` into `views.py`.
+  Also **removed the fork's `not_yet_implemented` stub routes** for these paths —
+  they sat on the plain `bp` at the same `/api/alpha` prefix as the smorest
+  blueprints and would have shadowed the real routes. Upstream had already
+  deleted them.
+- New security patch **SP-022** (upstream regression, see `SECURITY_PATCHES.md`):
+  upstream `ae1859d3` replaced `form.validate_on_submit()` in `choose_topics()`
+  with a bare `request.method == 'POST'`. This fork registers **no global
+  `CSRFProtect`**, so that was the endpoint's only CSRF gate. Kept upstream's
+  behavioral fix, validate the token explicitly. Test:
+  `tests/security/test_sp022_onboarding_csrf.py`.
+- Fixed an upstream authorization bug while porting: upstream's
+  `post_private_message_conversation_report` writes
+  `if not (conversation or conversation.is_member(user) or user_access(...))` —
+  the leading `conversation or` short-circuits the disjunction to truthy whenever
+  the conversation exists, so the membership check is dead code and any
+  authenticated user can report any conversation. Split existence from
+  authorization. Guarded by `test_merge_v170_integration.py`.
+- Dropped upstream's debug leftover in `process_new_content`:
+  `if user.user_name == 'rimu': pass`.
+- Upstream tests added, **rewritten as real pytest modules**: upstream's
+  `tests/test_signature.py` and `tests/test_interest_parse.py` are bare scripts
+  (module-level asserts, `print('Done')`, no test functions). `test_signature.py`
+  taken verbatim **aborts collection of the entire suite** — every `testing_data/`
+  fixture ends with a trailing newline the stored digests were never computed
+  over, so its asserts fail upstream too.
+- Inherited upstream WIP, noted not fixed: `process_microblog_announce()` is a stub
+  that always returns `None`. Still an improvement — `resolve_remote_post()`
+  dereferences `community.ap_profile_id` and would raise `AttributeError` on a
+  community-less `Announce`.
+- **Remaining divergence from upstream is intentional** (parity inventory went
+  31 → 4): `cached_modlist_*` (our circular-import fix), `process_webfinger_request`
+  (upstream refactor of logic we have inline in `webfinger()`),
+  `allowed_instance_domains` (dead code — zero callers in v1.7.8), `requirements.txt`.
+- Verification:
+  - `uvx ruff check .`
+  - `tests/security/` — 136 passed (131 + 5 new SP-022)
+  - `tests/test_post_slug.py` — 11 passed
+  - `tests/test_ci_fixes.py` — 8 passed
+  - `tests/test_merge_v170_integration.py` — 8 passed
+  - `tests/test_migration_heads.py` — 2 passed, single head
+  - `djlint app/templates --lint` — 295 files, 0 errors
+  - Full sweep vs `main` baseline: **0 new failures** (17 pre-existing SQLite
+    fixture failures on both)
+- **Local test env note:** `CACHE_DIR` defaults to `/dev/shm/pyfedi`, which does not
+  exist on macOS, so tests error with `PermissionError: /dev/shm`. Run with
+  `CACHE_TYPE=NullCache CACHE_REDIS_URL=memory://` as CI does.
+
 - Merged upstream PieFed release branch `v1.7.x` on 2026-07-03
 - Branch: `20260703-merge-upstream-v17x`
 - Upstream branch commit: `a114efdc`
