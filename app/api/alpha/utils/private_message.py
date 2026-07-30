@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-from sqlalchemy import desc, or_, text
+from sqlalchemy import desc, or_, text, Integer
 
 from app import db, current_app
-from app.api.alpha.views import private_message_view
-from app.constants import NOTIF_MESSAGE, NOTIF_REPORT, REPORT_TYPE_MESSAGE
+from app.api.alpha.views import private_message_view, conversation_report_view
+from app.constants import (
+    NOTIF_MESSAGE,
+    NOTIF_REPORT,
+    REPORT_TYPE_MESSAGE,
+    REPORT_STATE_NEW,
+    REPORT_STATE_RESOLVED,
+)
 from app.chat.util import send_message, update_message
 from app.models import ChatMessage, Conversation, User, Notification, Report, Site
-from app.utils import authorise_api_user, markdown_to_html
+from app.utils import authorise_api_user, markdown_to_html, user_access
 from app.shared.tasks import task_selector
 
 
@@ -308,3 +314,215 @@ def post_private_message_report(auth, data):
     db.session.commit()
 
     return private_message_view(private_message, variant=3, report=report)
+
+
+def _get_single_conversation_history(conversation: int | Conversation, limit: int = 5):
+    """
+    Fetch the most recent `limit` messages from a conversation.
+
+    SP-021: performs no authorization of its own. Only call it after the caller
+    has established read privileges on the conversation.
+    """
+    if isinstance(conversation, int):
+        conversation = Conversation.query.get(conversation)
+
+    return (
+        ChatMessage.query.filter(ChatMessage.conversation_id == conversation.id)
+        .order_by(desc(ChatMessage.created_at))
+        .limit(limit)
+        .all()
+    )
+
+
+def post_private_message_conversation_report(auth, data):
+    user = authorise_api_user(auth, return_type="model")
+    conversation_id = data["conversation_id"]
+    reason = data["reason"][:255]
+    conversation = Conversation.query.get(conversation_id)
+
+    # SP-021: upstream v1.7.8 writes this as
+    #   if not (conversation or conversation.is_member(user) or user_access(...)):
+    # where the leading `conversation or` short-circuits the whole disjunction to
+    # truthy whenever the conversation exists, so the membership check never runs
+    # and any authenticated user can report any conversation. Split the existence
+    # check from the authorization check.
+    if not conversation:
+        raise Exception("Conversation not found")
+    if not (
+        conversation.is_member(user) or user_access("administer all users", user.id)
+    ):
+        raise Exception("You are not a part of this conversation")
+
+    targets_data = {
+        "gen": "0",
+        "suspect_conversation_id": conversation_id,
+        "reporter_id": user.id,
+    }
+    report = Report(
+        reasons=reason,
+        description="",
+        type=REPORT_TYPE_MESSAGE,
+        reporter_id=user.id,
+        suspect_conversation_id=conversation_id,
+        source_instance_id=1,
+        targets=targets_data,
+    )
+    db.session.add(report)
+
+    already_notified = set()
+    for admin in Site.admins():
+        if admin.id not in already_notified:
+            notify = Notification(
+                title="Reported conversation with user",
+                url="/admin/reports",
+                user_id=admin.id,
+                author_id=user.id,
+                notif_type=NOTIF_REPORT,
+                subtype="chat_conversation_reported",
+                targets=targets_data,
+            )
+            db.session.add(notify)
+            admin.unread_notifications += 1
+            already_notified.add(admin.id)
+    db.session.commit()
+
+    return conversation_report_view(report, variant=1)
+
+
+def get_private_message_report_list(auth, data):
+    conversation_id = data.get("conversation_id")
+    private_message_id = data.get("private_message_id")
+    limit = int(data.get("limit", 20))
+    page = int(data.get("page", 1))
+    unresolved_only = data.get("unresolved_only", True)
+
+    user = authorise_api_user(auth, return_type="model")
+
+    if not user_access("administer all users", user.id):
+        raise Exception("incorrect login")
+
+    if private_message_id:
+        reports = Report.query.filter(
+            Report.targets.op("->>")("suspect_message_id").cast(Integer)
+            == private_message_id
+        )
+    elif conversation_id:
+        reports = Report.query.filter(
+            Report.suspect_conversation_id == conversation_id,
+            Report.targets.op("->")("suspect_message_id") != None,
+        )
+    else:
+        reports = Report.query.filter(
+            Report.targets.op("->")("suspect_message_id") != None
+        )
+
+    if unresolved_only:
+        reports = reports.filter(Report.status < REPORT_STATE_RESOLVED)
+
+    reports = reports.paginate(page=page, per_page=limit, error_out=False)
+
+    report_list = []
+    for report in reports.items:
+        private_message = ChatMessage.query.get(
+            int(report.targets["suspect_message_id"])
+        )
+        report_list.append(private_message_view(private_message, variant=3, report=report))
+
+    return {
+        "private_message_reports": report_list,
+        "next_page": str(reports.next_num) if reports.next_num else None,
+    }
+
+
+def get_private_message_conversation_report_list(auth, data):
+    conversation_id = data.get("conversation_id")
+    limit = int(data.get("limit", 20))
+    page = int(data.get("page", 1))
+    unresolved_only = data.get("unresolved_only", True)
+    message_history_limit = int(data.get("message_history_limit", 5))
+
+    user = authorise_api_user(auth, return_type="model")
+
+    if not user_access("administer all users", user.id):
+        raise Exception("incorrect login")
+
+    if conversation_id:
+        reports = Report.query.filter(Report.suspect_conversation_id == conversation_id)
+    else:
+        reports = Report.query.filter(Report.suspect_conversation_id != None)
+
+    if unresolved_only:
+        reports = reports.filter(Report.status < REPORT_STATE_RESOLVED)
+
+    reports = reports.paginate(page=page, per_page=limit, error_out=False)
+
+    report_list = []
+    for report in reports.items:
+        # Admin-gated above, which is the read-privilege check
+        # _get_single_conversation_history relies on.
+        message_history = _get_single_conversation_history(
+            report.suspect_conversation_id, limit=message_history_limit
+        )
+        report_json = conversation_report_view(report, variant=2)
+        report_json["message_history"] = [
+            private_message_view(message, variant=1) for message in message_history
+        ]
+        report_list.append(report_json)
+
+    return {
+        "conversation_reports": report_list,
+        "next_page": str(reports.next_num) if reports.next_num else None,
+    }
+
+
+def put_private_message_report_resolve(auth, data):
+    report_id = data["report_id"]
+    resolved = data["resolved"]
+
+    user = authorise_api_user(auth, return_type="model")
+
+    if not user_access("administer all users", user.id):
+        raise Exception("incorrect login")
+
+    report = Report.query.get(report_id)
+    if report is None:
+        raise Exception("report not found")
+
+    if "suspect_message_id" not in report.targets:
+        raise Exception("invalid target of resolution")
+
+    # SP-021: flip status only. The Report row and its targets are preserved so
+    # the moderation trail survives resolution.
+    report.status = REPORT_STATE_RESOLVED if resolved else REPORT_STATE_NEW
+    db.session.commit()
+
+    private_message = ChatMessage.query.get(int(report.targets["suspect_message_id"]))
+
+    return {
+        "private_message_report_view": private_message_view(
+            private_message, variant=3, report=report
+        )
+    }
+
+
+def put_private_message_conversation_report_resolve(auth, data):
+    report_id = data["report_id"]
+    resolved = data["resolved"]
+
+    user = authorise_api_user(auth, return_type="model")
+
+    if not user_access("administer all users", user.id):
+        raise Exception("incorrect login")
+
+    report = Report.query.get(report_id)
+    if report is None:
+        raise Exception("report not found")
+
+    if not report.suspect_conversation_id:
+        raise Exception("invalid target of resolution")
+
+    # SP-021: flip status only, preserve the report record.
+    report.status = REPORT_STATE_RESOLVED if resolved else REPORT_STATE_NEW
+    db.session.commit()
+
+    return {"conversation_report_view": conversation_report_view(report, variant=2)}

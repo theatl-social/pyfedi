@@ -231,6 +231,54 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Upstream status:** NOT FIXED upstream as of v1.6.24
 - **Fix summary:** The `translate init` command concatenated the `lang` CLI argument into a string passed to the legacy POSIX shell-call helper. An attacker with CLI access (or a misconfigured automation system) could inject arbitrary shell. Now the call uses `subprocess.run([...])` with list args (no shell) and validates `lang` against `^[a-z]{2,3}(_[A-Z]{2})?$` first.
 
+### SP-022 — CSRF bypass in onboarding topic selection (upstream regression)
+
+- **Introduced:** upstream v1.7.4 commit `ae1859d3` ("fix onboarding - topic selection"), carried in v1.7.8
+- **Files:**
+  - `app/auth/onboarding.py` — `choose_topics()` validates the CSRF token explicitly
+- **Test:** `tests/security/test_sp022_onboarding_csrf.py`
+- **Upstream status:** PRESENT upstream as of v1.7.8
+- **Fix summary:** Topic selection never submitted, because `chosen_topics` is a
+  `MultiCheckboxField` whose `.choices` are never populated (the template renders the
+  checkboxes by hand), so `SelectMultipleField.pre_validate()` always failed and
+  `form.validate_on_submit()` returned False. Upstream fixed it by replacing that call
+  with a bare `request.method == 'POST'` check. This fork registers no global
+  `CSRFProtect`, so `validate_on_submit()` was this endpoint's only CSRF gate; upstream's
+  form leaves a state-changing POST (joining topics and their communities) with no CSRF
+  protection at all. We keep upstream's behavioral fix and call
+  `flask_wtf.csrf.validate_csrf()` on the submitted token, aborting 400 on failure.
+- **Note:** if upstream later adopts a global `CSRFProtect`, this patch becomes redundant
+  and can be reduced back to upstream's form.
+
+### SP-023 — Open redirect via unvalidated `HX-Current-Url` echoed into `HX-Redirect`
+
+- **Introduced:** upstream v1.7.8 `user_flair_unblock` (this fork's 2026-07-30 merge)
+- **Files:**
+  - `app/utils.py` — new `safe_hx_redirect_url()` validator
+  - `app/user/routes.py` — `user_flair_unblock()` uses it
+- **Test:** `tests/security/test_sp023_hx_redirect_open_redirect.py`
+- **Upstream status:** PRESENT upstream as of v1.7.8
+- **Severity:** Low — defense-in-depth, not directly exploitable through a browser.
+  `HX-Current-Url` is a non-simple header, so a cross-origin `fetch` setting it triggers
+  a CORS preflight, and this app only ever emits `Access-Control-Allow-Origin` (on two
+  ActivityPub endpoints) and never `Access-Control-Allow-Headers`. `HX-Redirect` is then
+  honored by htmx only in the origin that issued the request. Practical abuse requires
+  same-origin script execution, which is already game over.
+- **Fix summary:** `HX-Current-Url` is set by htmx but is an ordinary request header and
+  therefore client-controlled. Upstream echoes it straight back into `HX-Redirect` after
+  only a substring test (`if "/user/" in curr_url`), which `https://evil.com/user/x`
+  satisfies. `safe_hx_redirect_url()` parses instead: rejects non-http(s) schemes
+  (`javascript:`, `data:`), requires a relative URL or an exact `request.host` match
+  (so `localhost.evil.com` fails), and requires the *path* to start with the expected
+  prefix. Same bug class as SP-007.
+- **KNOWN REMAINING EXPOSURE — 16 pre-existing sites not yet migrated.** This patch
+  covers only the site introduced by the v1.7.8 merge. The same pattern predates it in:
+  `app/post/routes.py` (8), `app/user/routes.py` (4 others), `app/chat/routes.py` (1),
+  `app/instance/routes.py` (1), `app/domain/routes.py` (1), `app/community/routes.py` (1).
+  **`app/instance/routes.py:264` is the worst** — it echoes `HX-Current-Url` into
+  `HX-Redirect` with *no* check at all. Migrating each is a one-line change to
+  `safe_hx_redirect_url()`; do it as a dedicated pass, not inside a merge.
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.

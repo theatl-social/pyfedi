@@ -48,10 +48,6 @@ a {
   border: solid var(--border-2) transparent;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  letter-spacing: $h-letterspacing;
-}
-
 tg-spoiler {
   border-style: solid;
   border-color: var(--bs-warning);
@@ -1070,7 +1066,7 @@ time {
 
     .post_reply_count {
       justify-content: left;
-      margin-right: var(--spacing-8);
+      margin-right: var(--spacing-12);
     }
 
     @container (width < 400px) {
@@ -2016,6 +2012,10 @@ a.unread, div.unread {
     margin: 0 auto var(--spacing-12) auto;
     float: none;
   }
+}
+
+.comment_body img {
+  max-height: 40vh;
 }
 
 .skip-link:focus {
@@ -3217,6 +3217,11 @@ form {
 
 /* hide labels on <input class="hide_label"> */
 label:has(+ input.hide_label) {
+    display: none;
+}
+
+/* hide entire fields, not just label */
+div:has(> input.hide_field) {
     display: none;
 }
 

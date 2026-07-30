@@ -1,6 +1,8 @@
 from flask import redirect, url_for, flash, current_app, abort, g, request
 from flask_babel import _
 from flask_login import current_user, login_required
+from flask_wtf.csrf import validate_csrf
+from wtforms.validators import ValidationError
 
 from app import db, cache
 from app.activitypub.signature import send_post_request
@@ -59,7 +61,19 @@ def choose_topics():
         form = ChooseTopicsForm()
         topic_tree, selections = topics_for_form()
 
-        if form.validate_on_submit():
+        # Upstream v1.7.8 (ae1859d3) replaced form.validate_on_submit() here with a bare
+        # request.method check, because topic selection never submitted: chosen_topics is
+        # a MultiCheckboxField whose .choices are never populated (the template renders the
+        # checkboxes by hand), so SelectMultipleField.pre_validate() always failed. Upstream
+        # runs no per-form CSRF gate for this gap, and this fork has no global CSRFProtect,
+        # so taking that verbatim would leave this state-changing POST with no CSRF check at
+        # all. Keep upstream's fix, validate the token explicitly. See SECURITY_PATCHES.md
+        # SP-022.
+        if request.method == 'POST':
+            try:
+                validate_csrf(request.form.get('csrf_token'))
+            except ValidationError:
+                abort(400)
             # Handle form submission - get selected topics from request
             chosen_topic_ids = request.form.getlist('chosen_topics')
             if chosen_topic_ids:

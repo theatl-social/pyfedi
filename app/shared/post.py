@@ -70,6 +70,7 @@ from app.utils import (
     is_video_url,
     sanitize_svg,
     user_ip_banned,
+    ip_address,
 )
 
 
@@ -106,6 +107,8 @@ def vote_for_post(
     if user.banned or user_ip_banned():
         abort(403)
 
+    mark_post_read([post.id], True, user.id)
+
     if votes_cast_today(user.id) > current_app.config["VOTE_QUOTA"]:
         abort(429)
 
@@ -120,8 +123,6 @@ def vote_for_post(
         federate=federate,
         emoji=emoji,
     )
-
-    mark_post_read([post.id], True, user.id)
 
     if src == SRC_API:
         return user.id
@@ -320,6 +321,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     community.last_active = g.site.last_active = utcnow()
     user.post_count += 1
     user.last_seen = utcnow()
+    user.ip_address = ip_address()
 
     post.generate_ap_id(community)
 
@@ -935,7 +937,7 @@ def edit_post(
 
     db.session.commit()
 
-    if post.status < POST_STATUS_PUBLISHED:
+    if post.status < POST_STATUS_PUBLISHED or post.community.local_only or post.community.private:
         federate = False
 
     if from_scratch:

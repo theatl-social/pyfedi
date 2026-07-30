@@ -1981,7 +1981,7 @@ wheels = [
 
 [[package]]
 name = "pyfedi"
-version = "1.7.0+peachpie.20260703"
+version = "1.7.8+peachpie.20260730"
 source = { editable = "." }
 dependencies = [
     { name = "arrow" },
