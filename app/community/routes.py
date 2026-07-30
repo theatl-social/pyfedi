@@ -51,6 +51,7 @@ from app.community.forms import (
     FindAndBanUserCommunityForm,
     CreateEventForm,
     InviteAcceptForm,
+    EditCommunityMembership,
 )
 from app.community.util import (
     search_for_community,
@@ -129,6 +130,7 @@ from app.models import (
     Tag,
     hidden_posts,
     CommunityInvitation,
+    CommunityFlairBlock,
 )
 from app.community import bp
 from app.post.util import tags_to_string
@@ -683,10 +685,21 @@ def show_community(community: Community):
                 posts = posts.filter(Post.user_id.not_in(blocked_accounts))
 
         # Filter by post flair
+        flair_id = None
         if flair:
             flair_id = find_flair_id(flair, community.id)
             if flair_id:
                 posts = posts.join(post_flair).filter(post_flair.c.flair_id == flair_id)
+
+        # Remove posts with flair the user has blocked
+        if current_user.is_authenticated:
+            blocked_flair = CommunityFlairBlock.query.filter(CommunityFlairBlock.user_id == current_user.id,
+                                                             CommunityFlairBlock.community_id == community.id).all()
+            if blocked_flair:
+                blocked_flair_ids = [bf.community_flair_id for bf in blocked_flair if bf.community_flair_id != flair_id]
+                # sub-query - posts that have any blocked flair
+                blocked_post_ids = db.session.query(post_flair.c.post_id).filter(post_flair.c.flair_id.in_(blocked_flair_ids))
+                posts = posts.filter(Post.id.not_in(blocked_post_ids))
 
         # Filter by post tag
         if tag:
@@ -1416,6 +1429,9 @@ def unsubscribe(actor):
                 db.session.query(CommunityJoinRequest).filter_by(
                     user_id=current_user.id, community_id=community.id
                 ).delete()
+                db.session.query(CommunityFlairBlock).filter_by(
+                    user_id=current_user.id, community_id=community.id
+                ).delete()
                 community.subscriptions_count -= 1
                 db.session.commit()
 
@@ -1762,7 +1778,7 @@ def community_report(community_id: int):
     )
 
 
-@bp.route("/community/<int:community_id>/edit", methods=["GET", "POST"])
+@bp.route("/<int:community_id>/edit", methods=["GET", "POST"])
 @login_required
 def community_edit(community_id: int):
     from app.admin.util import topics_for_form
@@ -3502,6 +3518,9 @@ def community_flair_delete(community_id, flair_id):
             text('DELETE FROM "post_flair" WHERE flair_id = :flair_id'),
             {"flair_id": flair_id},
         )
+        db.session.query(CommunityFlairBlock).filter(
+            CommunityFlairBlock.community_flair_id == flair_id
+        ).delete()
         db.session.query(CommunityFlair).filter(CommunityFlair.id == flair_id).delete()
         db.session.commit()
 
@@ -3773,6 +3792,55 @@ def community_changed():
         )
     else:
         return ""
+
+
+@bp.route("/<int:community_id>/membership", methods=["GET", "POST"])
+@login_required
+def community_membership_manage(community_id: int):
+    community = Community.query.get_or_404(community_id)
+    form = EditCommunityMembership()
+
+    flair_choices = []
+    for flair in (
+        CommunityFlair.query.filter_by(community_id=community_id)
+        .order_by(CommunityFlair.flair)
+        .all()
+    ):
+        flair_choices.append((flair.id, flair.flair))
+    form.block_flair.choices = flair_choices
+
+    if form.validate_on_submit():
+        CommunityFlairBlock.query.filter(
+            CommunityFlairBlock.user_id == current_user.id,
+            CommunityFlairBlock.community_id == community_id,
+        ).delete()
+        db.session.commit()
+        for flair_id in form.block_flair.data:
+            db.session.add(
+                CommunityFlairBlock(
+                    user_id=current_user.id,
+                    community_id=community_id,
+                    community_flair_id=flair_id,
+                )
+            )
+        db.session.commit()
+        flash(_("Saved"))
+        return redirect(
+            url_for("activitypub.community_profile", actor=community.link())
+        )
+
+    blocked_flair = CommunityFlairBlock.query.filter(
+        CommunityFlairBlock.user_id == current_user.id
+    ).all()
+    form.block_flair.data = [bf.community_flair_id for bf in blocked_flair]
+
+    return render_template(
+        "community/community_membership.html",
+        title=_("Community membership"),
+        form=form,
+        current_app=current_app,
+        community=community,
+    )
 
 
 @bp.route("/get_sidebar/<int:community_id>")

@@ -114,6 +114,7 @@ from app.models import (
     RevokedToken,
     CommunityFavorite,
     UserFollower,
+    CommunityFlairBlock,
 )
 
 logger = logging.getLogger(__name__)
@@ -3970,40 +3971,43 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
     return post_ids[start:end]
 
 
-def get_deduped_post_ids(
-    result_id: str,
-    community_ids: List[int],
-    sort: str,
-    hashtag: str = "",
-    include_following=False,  # noqa: ARG001 - accepted for caller compatibility (upstream v1.7.0); the follow-feed source is not yet wired (no user_follower table in this fork)
-) -> List[int]:
+def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, hashtag: str = '', include_following=False, community_sql: str = None) -> List[int]:
     from app import redis_client
-
-    if community_ids is None or len(community_ids) == 0:
+    if not community_sql and (community_ids is None or len(community_ids) == 0):
         return []
     if result_id:
         if redis_client.exists(result_id):
             return json.loads(redis_client.get(result_id))
 
-    if (
-        community_ids[0] == -1
-    ):  # A special value meaning to get posts from all communities
-        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
-        post_id_where = ["c.banned is false AND c.show_all is true"]
-        if current_user.is_authenticated and current_user.hide_low_quality:
-            post_id_where.append("c.low_quality is false")
-        params = {}
+    params = {}                 # parameters provided to the SQL query
+    sources = []                # communities and possibly followers as well
+    post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+    if community_sql:
+        sources.append(community_sql)
+    elif community_ids[0] == -1:  # A special value meaning to get posts from all communities
+        sources.append('c.show_all is true')
     else:
-        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
-        post_id_where = ["c.id IN :community_ids AND c.banned is false "]
-        params = {"community_ids": tuple(community_ids)}
-        if hashtag:
-            # Filter by post tag
-            tag_record = Tag.query.filter(Tag.name == hashtag.strip()).first()
-            if tag_record:
-                post_id_sql += 'INNER JOIN "post_tag" as pt ON p.id = pt.post_id'
-                post_id_where.append("pt.tag_id = :tag_record_id")
-                params["tag_record_id"] = tag_record.id
+        sources.append('c.id IN :community_ids')
+        params['community_ids'] = tuple(community_ids)
+    if current_user.is_authenticated and current_user.num_following and include_following:
+        sources.append("""EXISTS (SELECT 1 FROM user_follower uf
+                                  WHERE uf.local_user_id = :local_user_id
+                                  AND uf.remote_user_id = p.user_id AND is_inward is false)""")
+        params['local_user_id'] = current_user.id
+
+    post_id_where = ["(" + " OR ".join(sources) + ")", 'c.banned is false']
+    if current_user.is_authenticated and current_user.hide_low_quality and community_ids[0] == -1:
+        post_id_where.append('c.low_quality is false')
+    if not include_following:
+        post_id_where.append('p.private is false')
+
+    # Filter by post tag
+    if hashtag:
+        tag_record = Tag.query.filter(Tag.name == hashtag.strip()).first()
+        if tag_record:
+            post_id_sql += 'INNER JOIN "post_tag" as pt ON p.id = pt.post_id\n'
+            post_id_where.append('pt.tag_id = :tag_record_id')
+            params['tag_record_id'] = tag_record.id
 
     # filter out posts in communities where the community name is objectionable to them or they blocked the instance
     if current_user.is_authenticated:
@@ -4061,32 +4065,31 @@ def get_deduped_post_ids(
         post_id_where.append("p.deleted is false AND p.status > 0 ")
 
         # filter blocked domains and instances
-        domains_ids = blocked_domains(current_user.id)
-        if domains_ids:
-            post_id_where.append(
-                "(p.domain_id NOT IN :domain_ids OR p.domain_id is null) "
-            )
-            params["domain_ids"] = tuple(domains_ids)
-        instance_ids = blocked_or_banned_instances(current_user.id)
-        if instance_ids:
-            post_id_where.append(
-                "(p.instance_id NOT IN :instance_ids OR p.instance_id is null) "
-            )
-            params["instance_ids"] = tuple(instance_ids)
-        blocked_community_ids = blocked_communities(current_user.id)
-        if blocked_community_ids:
-            post_id_where.append("p.community_id NOT IN :blocked_community_ids ")
-            params["blocked_community_ids"] = tuple(blocked_community_ids)
+        if domains_ids := blocked_domains(current_user.id):
+            post_id_where.append('(p.domain_id NOT IN :domain_ids OR p.domain_id is null) ')
+            params['domain_ids'] = tuple(domains_ids)
+        if instance_ids := blocked_or_banned_instances(current_user.id):
+            post_id_where.append('(p.instance_id NOT IN :instance_ids OR p.instance_id is null) ')
+            params['instance_ids'] = tuple(instance_ids)
+        if blocked_community_ids := blocked_communities(current_user.id):
+            post_id_where.append('p.community_id NOT IN :blocked_community_ids ')
+            params['blocked_community_ids'] = tuple(blocked_community_ids)
         # filter blocked users
-        blocked_accounts = blocked_users(current_user.id)
-        if blocked_accounts:
-            post_id_where.append("p.user_id NOT IN :blocked_accounts ")
-            params["blocked_accounts"] = tuple(blocked_accounts)
+        if blocked_accounts := blocked_users(current_user.id):
+            post_id_where.append('p.user_id NOT IN :blocked_accounts ')
+            params['blocked_accounts'] = tuple(blocked_accounts)
         # filter communities banned from
-        banned_from = communities_banned_from(current_user.id)
-        if banned_from:
-            post_id_where.append("p.community_id NOT IN :banned_from ")
-            params["banned_from"] = tuple(banned_from)
+        if banned_from := communities_banned_from(current_user.id):
+            post_id_where.append('p.community_id NOT IN :banned_from ')
+            params['banned_from'] = tuple(banned_from)
+        if community_ids[0] != -1:
+            blocked_flair = CommunityFlairBlock.query.filter(CommunityFlairBlock.user_id == current_user.id,
+                                                             CommunityFlairBlock.community_id.in_(community_ids)).all()
+            if blocked_flair:
+                blocked_flair_ids = [bf.community_flair_id for bf in blocked_flair]
+                post_id_where.append('p.id NOT IN (SELECT post_id FROM "post_flair" WHERE flair_id IN :blocked_flair_ids) ')
+                params['blocked_flair_ids'] = tuple(blocked_flair_ids)
+
     # sorting
     post_id_sort = ""
     if sort == "" or sort == "hot":

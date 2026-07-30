@@ -67,6 +67,8 @@ from app.activitypub.util import (
     proactively_delete_content,
     process_quote_boost,
     object_has_missing_fields,
+    find_microblogging_community,
+    process_microblog_announce,
 )
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
@@ -1264,9 +1266,16 @@ def process_inbox_request(request_json, store_ap_json):
                                 "Activity about local content which is already present",
                             )
                             return
-                        post = resolve_remote_post(
-                            request_json["object"], community, id, store_ap_json
-                        )
+                        if community is None:
+                            # resolve_remote_post() dereferences community.ap_profile_id,
+                            # so a community-less Announce would raise AttributeError.
+                            post = process_microblog_announce(
+                                request_json, id, store_ap_json
+                            )
+                        else:
+                            post = resolve_remote_post(
+                                request_json["object"], community, id, store_ap_json
+                            )
                         if post:
                             log_incoming_ap(
                                 id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json
@@ -1528,6 +1537,7 @@ def process_inbox_request(request_json, store_ap_json):
                             .filter_by(
                                 local_user_id=local_user.id,
                                 remote_user_id=remote_user.id,
+                                is_inward=True,
                             )
                             .first()
                         )
@@ -3784,6 +3794,9 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                                 community, user, request_json
                             )
                     else:  # The reply was not allowed - send a 'Delete' to remove it from the remote instance
+                        # OR the reply might be a mastodon post - we should retrieve the parent post.
+                        # we need a way to differentiate between rejected replies (because of blocking) or cases where
+                        # a reply is coming in through mastodon.
                         if community.is_local():
                             proactively_delete_content(community, ap_id)
                     return

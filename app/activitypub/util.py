@@ -27,6 +27,7 @@ from app.activitypub.signature import (
     signed_get_request,
     send_post_request,
     default_context,
+    RsaKeys,
 )
 from app.constants import *
 from app.models import (
@@ -4995,6 +4996,71 @@ def process_quote_boost(core_activity: dict, post_ap: str, their_post_ap: str):
                 post.author.private_key,
                 post.author.public_url() + "#main-key",
             )
+
+
+def find_microblogging_community():
+    """Make a special community to put posts without a community into, e.g. microblog posts"""
+    community = (
+        db.session.query(Community)
+        .filter(
+            Community.instance_id == 1,
+            Community.user_id == 1,
+            Community.name == "microblogs",
+        )
+        .first()
+    )
+    if community is None:
+        private_key, public_key = RsaKeys.generate_keypair()
+        server_name = current_app.config["SERVER_NAME"]
+        community = Community(
+            title=_("Microblogs"),
+            name="microblogs",
+            description=_("Microblog posts from around the fediverse."),
+            nsfw=False,
+            private_key=private_key,
+            public_key=public_key,
+            description_html=markdown_to_html(
+                _("Microblog posts from around the fediverse.")
+            ),
+            local_only=False,
+            show_popular=False,
+            show_all=False,
+            ap_profile_id="https://" + server_name + "/c/microblogs",
+            ap_public_url="https://" + server_name + "/c/microblogs",
+            ap_followers_url="https://" + server_name + "/c/microblogs/followers",
+            ap_moderators_url="https://" + server_name + "/c/microblogs/moderators",
+            ap_domain=server_name,
+            subscriptions_count=0,
+            instance_id=1,
+            user_id=1,
+            ai_generated=False,
+            first_federated_at=utcnow(),
+        )
+        db.session.add(community)
+        db.session.commit()
+    return community
+
+
+def process_microblog_announce(request_json, id, store_ap_json):
+    """
+    if post / comment already exists locally
+	    update post announce data
+    else
+        retrieve post
+        if is top-level note
+            create post
+            update post announce data
+        else - it's a reply
+            retrieve context
+            make sure all notes and posts in context exist
+            find comment
+                update comment post announce data
+    """
+    post_data = remote_object_to_json(request_json['object'])
+    if not post_data:
+        return None
+
+
 
 
 def lemmy_site_data():

@@ -81,6 +81,8 @@ from app.models import (
     UserFollower,
     BotChallenge,
     votes_cast_today,
+    CommunityFlair,
+    CommunityFlairBlock,
 )
 from app.shared.site import block_remote_instance
 from app.shared.upload import process_file_delete, process_upload
@@ -117,6 +119,7 @@ from app.user.utils import (
     _get_user_archived_replies,
     _get_user_posts_and_replies,
     _get_user_same_ip,
+    insert_or_update_user_note,
 )
 from app.utils import (
     render_template,
@@ -286,10 +289,31 @@ def show_profile(user):
         else None
     )
 
+    posting_pattern_labels = []
+    posting_pattern_values = []
     if current_user.is_authenticated:
-        vote_quota_used = (
-            votes_cast_today(current_user.get_id()) / current_app.config["VOTE_QUOTA"]
-        )
+        vote_quota_used = votes_cast_today(user.id) / current_app.config["VOTE_QUOTA"]
+
+        # Generate graph of which hours of the day the user posts at. Bots tend to have a distinctive look.
+        sql = """select
+                    h.hour_of_day,
+                    count(p.id) as post_count
+                from generate_series(0, 23) as h(hour_of_day)
+                left join post p
+                    on extract(hour from p.created_at) = h.hour_of_day
+                    and p.created_at >= now() - interval '1 month'
+                    and p.user_id in (
+                        select id
+                        from "user"
+                        where user_name = :user_name
+                    )
+                group by h.hour_of_day
+                order by h.hour_of_day;"""
+        posting_pattern = db.session.execute(
+            text(sql), {"user_name": user.user_name}
+        ).all()
+        posting_pattern_labels = [x for x, y in posting_pattern]
+        posting_pattern_values = [y for x, y in posting_pattern]
     else:
         vote_quota_used = 0
 
@@ -305,6 +329,8 @@ def show_profile(user):
         subscribed=subscribed,
         disable_voting=True,
         user_notes=user_notes(current_user.get_id()),
+        posting_pattern_labels=posting_pattern_labels,
+        posting_pattern_values=posting_pattern_values,
         post_next_url=post_next_url,
         post_prev_url=post_prev_url,
         replies_next_url=replies_next_url,
@@ -729,8 +755,10 @@ def user_settings():
         ("", _l("Auto-detect")),
         ("eu", _l("Basque")),
         ("ca", _l("Catalan")),
+        ("ceb", _l("Cebuano")),
         ("zh", _l("Chinese")),
         ("en", _l("English")),
+        ("fil", _l("Filipino / Tagalog")),
         ("fi", _l("Finnish")),
         ("fr", _l("French")),
         ("de", _l("German")),
@@ -1431,6 +1459,37 @@ def user_community_unblock(community_id):
     return redirect(goto)
 
 
+@bp.route("/user/flair/<int:flair_id>/unblock", methods=["POST"])
+@login_required
+def user_flair_unblock(flair_id):
+    flair = CommunityFlair.query.get_or_404(flair_id)
+    existing_block = CommunityFlairBlock.query.filter_by(
+        user_id=current_user.id, community_flair_id=flair.id
+    ).first()
+    if existing_block:
+        db.session.delete(existing_block)
+        db.session.commit()
+        flash(_("%(flair_name)s has been unblocked.", flair_name=flair.flair))
+
+    if request.headers.get("HX-Request"):
+        resp = make_response()
+        curr_url = request.headers.get("HX-Current-Url")
+
+        if "/user/" in curr_url:
+            resp.headers["HX-Redirect"] = curr_url
+        else:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+
+        return resp
+
+    goto = (
+        request.args.get("redirect")
+        if "redirect" in request.args
+        else url_for("user.user_settings_filters")
+    )
+    return redirect(goto)
+
+
 @bp.route("/delete_account", methods=["GET", "POST"])
 @login_required
 def delete_account():
@@ -1984,6 +2043,15 @@ def user_settings_filters():
         .order_by(Instance.domain)
         .all()
     )
+    blocked_flair = (
+        CommunityFlair.query.join(
+            CommunityFlairBlock,
+            CommunityFlairBlock.community_flair_id == CommunityFlair.id,
+        )
+        .filter(CommunityFlairBlock.user_id == current_user.id)
+        .order_by(CommunityFlair.flair)
+        .all()
+    )
 
     return render_template(
         "user/filters.html",
@@ -1995,6 +2063,7 @@ def user_settings_filters():
         blocked_communities=blocked_communities,
         blocked_domains=blocked_domains,
         blocked_instances=blocked_instances,
+        blocked_flair=blocked_flair,
     )
 
 
@@ -2813,15 +2882,11 @@ def edit_user_note(actor):
     form = UserNoteForm()
     if form.validate_on_submit() and not current_user.banned:
         text = form.note.data.strip()
-        usernote = UserNote.query.filter(
-            UserNote.target_id == user.id, UserNote.user_id == current_user.id
-        ).first()
-        if usernote:
-            usernote.body = text
+        if form.apply_all.data:
+            for u in User.query.filter(User.user_name == user.user_name).all():
+                insert_or_update_user_note(text, u)
         else:
-            usernote = UserNote(target_id=user.id, user_id=current_user.id, body=text)
-            db.session.add(usernote)
-        db.session.commit()
+            insert_or_update_user_note(text, user)
         from app.api.alpha.views import user_view
 
         cache.delete_memoized(user_view)
@@ -2834,6 +2899,8 @@ def edit_user_note(actor):
             return redirect(f"/u/{actor}")
 
     elif request.method == "GET":
+        if User.query.filter(User.user_name == user.user_name).count() == 1:
+            form.apply_all.render_kw = {"class": "hide_field"}
         form.note.data = user.get_note(current_user)
 
     return render_template(

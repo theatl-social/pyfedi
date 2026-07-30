@@ -26,6 +26,7 @@ from app.models import (
     Language,
     File,
     CommunityFlair,
+    CommunityFlairBlock,
     utcnow,
     CommunityInvitation,
     CommunityFavorite,
@@ -102,6 +103,9 @@ def leave_community(community_id: int, src, auth=None, bulk_leave=False):
         task_selector("leave_community", user_id=user_id, community_id=community_id)
 
         db.session.query(CommunityMember).filter_by(
+            user_id=user_id, community_id=community_id
+        ).delete()
+        db.session.query(CommunityFlairBlock).filter_by(
             user_id=user_id, community_id=community_id
         ).delete()
         db.session.commit()

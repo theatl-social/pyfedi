@@ -109,6 +109,7 @@ class SettingsForm(FlaskForm):
     compaction = SelectField(_l('Compact UI'), choices=compact_levels, coerce=str, render_kw={'class': 'form-select'})
     fonts = [('', _l('Theme default - fastest')),
              ('atkinson', _l('Atkinson Hyperlegible - low vision')),
+             ('dyslexic', _l('OpenDyslexic')),
              ('inter', _l('Inter - pretty')),
              ('roboto', _l('Roboto - pretty')),
              ]
@@ -247,6 +248,7 @@ class RemoteFollowForm(FlaskForm):
 
 class UserNoteForm(FlaskForm):
     note = StringField(_l('Note'), validators=[Optional(), Length(max=50)], render_kw={'class': 'hide_label'})
+    apply_all = BooleanField(_l('Apply note to everyone with the same user name'))
     submit = SubmitField(_l('Save note'))
 
 

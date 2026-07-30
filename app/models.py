@@ -898,6 +898,7 @@ class Community(db.Model):
         db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
+        db.session.query(CommunityFlairBlock).filter(CommunityFlairBlock.community_id == self.id).delete()
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(CommunityFavorite).filter(CommunityFavorite.community_id == self.id).delete()
@@ -1455,6 +1456,7 @@ class User(UserMixin, db.Model):
         db.session.query(CommunityFavorite).filter(CommunityFavorite.user_id == self.id).delete()
         db.session.query(CommunityMember).filter(CommunityMember.user_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.user_id == self.id).delete()
+        db.session.query(CommunityFlairBlock).filter(CommunityFlairBlock.user_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.user_id == self.id).delete()
         db.session.query(BotChallenge).filter(BotChallenge.user_id == self.id).delete()
         db.session.query(BotChallenge).filter(BotChallenge.sent_by == self.id).delete()
@@ -1578,10 +1580,11 @@ class User(UserMixin, db.Model):
     # instances that have users which follow this user. (excluding the current instance)
     def following_instances(self, include_dormant=False, software='') -> List[Instance]:
         instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).\
-            join(UserFollower, UserFollower.remote_user_id == User.id).filter(UserFollower.local_user_id == self.id)
+            join(UserFollower, UserFollower.remote_user_id == User.id).filter(UserFollower.local_user_id == self.id,
+                                                                              UserFollower.is_inward == True)
         if not include_dormant:
             instances = instances.filter(Instance.dormant == False)
-        instances = instances.filter(Instance.id != 1, Instance.gone_forever == False, UserFollower.is_inward == True)
+        instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
         if software:
             instances = instances.filter(Instance.software == software)
         return instances.distinct().all()
@@ -1648,8 +1651,8 @@ class Post(db.Model):
     ip = db.Column(db.String(50))
     up_votes = db.Column(db.Integer, default=0)
     down_votes = db.Column(db.Integer, default=0)
-    ranking = db.Column(db.Integer, default=0, index=True)  # used for 'hot' ranking
-    ranking_scaled = db.Column(db.Integer, default=0, index=True)  # used for 'scaled' ranking
+    ranking = db.Column(db.Float, default=0.0, index=True)  # used for 'hot' ranking
+    ranking_scaled = db.Column(db.Float, default=0.0, index=True)  # used for 'scaled' ranking
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)  # how many times this post has been reported. Set to -1 to ignore reports
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
@@ -1658,6 +1661,7 @@ class Post(db.Model):
     repeat = db.Column(db.String(20), default='')  # 'daily', 'weekly', 'monthly'. Empty string = no repeat, just post once.
     stop_repeating = db.Column(db.DateTime, index=True)  # No more repeats after this datetime
     emoji_reactions = db.Column(db.JSON)            # a cache of the emoji reactions a post has received, to avoid joins
+    post_boosts = db.Column(db.JSON)                # a cache of the boosts(retweets) a microblog post has received, to avoid joins
     tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
     timezone = db.Column(db.String(30))
     archived = db.Column(db.String(100))
@@ -1680,6 +1684,7 @@ class Post(db.Model):
     licence = db.relationship('Licence', foreign_keys=[licence_id])
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
     event = db.relationship('Event', uselist=False, backref='post', lazy='select', cascade='all, delete-orphan')
+    boosts = db.relationship('PostBoost', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     gallery = db.relationship('File', secondary=post_file, lazy='dynamic')
     votes = db.relationship('PostVote', lazy='dynamic', backref='post', cascade='all, delete-orphan', passive_deletes=True)
     bookmarks = db.relationship('PostBookmark', backref='post', lazy='dynamic', cascade='all, delete-orphan')
@@ -1778,14 +1783,18 @@ class Post(db.Model):
         microblog = False
         private = False
         if 'name' not in request_json['object']:  # Microblog posts
+            private = True
             if 'content' in request_json['object'] and request_json['object']['content'] is not None:
                 title = ""
                 microblog = True
             else:
                 return None
-            if 'to' in request_json and len(request_json['to']) == 1:
-                if request_json['to'][0].endswith('/followers'):  # Mastodon followers-only posts are private
-                    private = True
+            if 'to' in request_json and len(request_json['to']) >= 1:
+                if 'https://www.w3.org/ns/activitystreams#Public' in request_json['to']:
+                    private = False
+            if 'cc' in request_json and len(request_json['cc']) >= 1:
+                if 'https://www.w3.org/ns/activitystreams#Public' in request_json['cc']:
+                    private = False
         else:
             title = request_json['object']['name'].strip()
         nsfl_in_title = '[NSFL]' in title.upper() or '(NSFL)' in title.upper() or '[COMBAT]' in title.upper()
@@ -2378,6 +2387,10 @@ class Post(db.Model):
             if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
                 slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
                 if slug:
+                    # Fork: keep the bare community name here. Upstream repeatedly rewrites
+                    # these two lines (v1.7.8 -> '@{community.ap_domain}', earlier
+                    # '@{SERVER_NAME}'); both forms have regressed this fork's federation-safe
+                    # AP-ID scheme on past merges. tests/test_post_slug.py guards it.
                     self.ap_id = f'{current_app.config["SERVER_URL"]}/c/{community.name}/p/{self.id}/{slug}'
                     self.slug = f'/c/{community.link()}/p/{self.id}/{slug}'
                 else:
@@ -2627,7 +2640,6 @@ class Post(db.Model):
                         spicy_effect *= current_app.config['SPICY_UNDER_30']
                     elif self.up_votes + self.down_votes <= 60:
                         spicy_effect *= current_app.config['SPICY_UNDER_60']
-                    effect = spicy_effect = 0
                     self.score += spicy_effect  # score + (-1) = score-1
                 vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
                                 effect=effect, emoji=emoji)
@@ -2653,7 +2665,7 @@ class Post(db.Model):
 
             # Calculate new ranking values
             self.ranking = self.post_ranking(self.score + self.reply_count, self.created_at)
-            self.ranking_scaled = int(self.ranking + self.community.scale_by())
+            self.ranking_scaled = self.ranking + self.community.scale_by()
 
             db.session.commit()
 
@@ -4104,6 +4116,13 @@ class CommunityFlair(db.Model):
         return self.ap_id
 
 
+class CommunityFlairBlock(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    community_flair_id = db.Column(db.Integer, db.ForeignKey('community_flair.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+
+
 class UserFlair(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
@@ -4226,6 +4245,13 @@ class BotChallenge(db.Model):
     sent_at = db.Column(db.DateTime, default=utcnow)
     sent_by = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     is_a_bot = db.Column(db.Boolean)        # null means waiting for response
+
+
+class PostBoost(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
+    created_at = db.Column(db.DateTime, default=utcnow, index=True)
 
 
 def _large_community_subscribers() -> float:

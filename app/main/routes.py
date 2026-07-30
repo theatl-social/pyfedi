@@ -13,7 +13,7 @@ from ua_parser import parse as uaparse
 
 from app import db, cache, limiter, plugins
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
-    lemmy_site_data, is_activitypub_request
+    lemmy_site_data, is_activitypub_request, find_microblogging_community
 from app.activitypub.signature import default_context, LDSignature, HttpSignature
 from app.admin.util import topics_for_form
 from app.api.alpha.utils.misc import get_resolve_object
@@ -48,10 +48,10 @@ from app.models import Community, CommunityMember, Post, Site, User, utcnow, Top
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
 
 
-@bp.route('/', methods=['HEAD', 'GET', 'POST'])
-@bp.route('/home', methods=['GET', 'POST'])
-@bp.route('/home/<sort>', methods=['GET', 'POST'])
-@bp.route('/home/<sort>/<view_filter>', methods=['GET', 'POST'])
+@bp.route('/', methods=['HEAD', 'GET'])
+@bp.route('/home', methods=['GET'])
+@bp.route('/home/<sort>', methods=['GET'])
+@bp.route('/home/<sort>/<view_filter>', methods=['GET'])
 @login_required_if_private_instance
 def index(sort=None, view_filter=None):
     if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get(
@@ -112,33 +112,34 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
         private_communities = tuple([0, 0])
     enable_mod_filter = len(modded_communities) > 0
 
+    community_sql = None
     if view_filter == 'subscribed' and current_user.is_authenticated:
         community_ids = db.session.execute(text(
             'SELECT id FROM community as c INNER JOIN community_member as cm ON cm.community_id = c.id WHERE cm.is_banned is false AND cm.user_id = :user_id'),
                                            {'user_id': current_user.id}).scalars()
     elif view_filter == 'local':
+        microblog_community = find_microblogging_community()
         if current_user.is_anonymous:
-            community_ids = db.session.execute(
-                text(f'SELECT id FROM community as c WHERE c.private is false and c.instance_id = 1 {low_quality_filter}')).scalars()
+            community_sql = f'c.private is false and c.instance_id = 1 and c.id != {microblog_community.id} {low_quality_filter}'
         else:
-            community_ids = db.session.execute(
-                text(f'SELECT id FROM community as c WHERE (c.private is false OR c.id IN {private_communities}) AND c.instance_id = 1 {low_quality_filter}')).scalars()
+            community_sql = f'(c.private is false OR c.id IN {private_communities}) and c.id != {microblog_community.id} AND c.instance_id = 1 {low_quality_filter}'
+        community_ids = [0]
     elif view_filter == 'popular':
         if current_user.is_anonymous:
-            community_ids = db.session.execute(
-                text('SELECT id FROM community as c WHERE c.show_popular is true and c.private is false AND c.low_quality is false')).scalars()
+            community_sql = 'c.show_popular is true and c.private is false AND c.low_quality is false'
         else:
-            community_ids = db.session.execute(
-                text(f'SELECT id FROM community as c WHERE (c.private is false OR c.id IN {private_communities}) AND c.show_popular is true {low_quality_filter}')).scalars()
+            community_sql = f'(c.private is false OR c.id IN {private_communities}) AND c.show_popular is true {low_quality_filter}'
+        community_ids = [0]
     elif view_filter == 'all' or current_user.is_anonymous:
         community_ids = [-1]  # Special value to indicate 'All'
     elif view_filter == 'moderating':
         community_ids = modded_communities
-    
+
     community_ids = list(community_ids)
 
     post_ids = get_deduped_post_ids(result_id, community_ids, sort, tag,
-                                    include_following=view_filter == 'subscribed' and current_user.is_authenticated)
+                                    include_following=view_filter == 'subscribed' and current_user.is_authenticated,
+                                    community_sql=community_sql)
     has_next_page = len(post_ids) > page + 1 * page_length
     post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
     posts = post_ids_to_models(post_ids, sort)
