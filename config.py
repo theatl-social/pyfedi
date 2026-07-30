@@ -86,6 +86,26 @@ class Config(object):
     )
     SESSION_COOKIE_SAMESITE = "Lax"
 
+    # SP-024: Flask-Login's remember-me cookie is configured separately from the
+    # session cookie above, and its library defaults are weaker: flask_login/config.py
+    # ships COOKIE_SECURE = False and COOKIE_SAMESITE = None, which login_manager.py
+    # reads via config.get("REMEMBER_COOKIE_*", <default>). Leaving these unset means
+    # the *long-lived* credential (365 days, and app/auth/routes.py calls
+    # login_user(user, remember=True) on every login) has no Secure flag and no explicit
+    # SameSite, while the short-lived session cookie has both. Mirror the session
+    # settings. See SECURITY_PATCHES.md.
+    REMEMBER_COOKIE_SECURE = os.environ.get("REMEMBER_COOKIE_SECURE", "1") in (
+        "1",
+        "true",
+        "True",
+    )
+    REMEMBER_COOKIE_HTTPONLY = os.environ.get("REMEMBER_COOKIE_HTTPONLY", "1") in (
+        "1",
+        "true",
+        "True",
+    )
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+
     CLOUDFLARE_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN") or ""
     CLOUDFLARE_ZONE_ID = os.environ.get("CLOUDFLARE_ZONE_ID") or ""
 
