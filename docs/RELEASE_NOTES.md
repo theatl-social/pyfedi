@@ -8,6 +8,18 @@ tracks an upstream PieFed release plus this fork's own patches. Version strings 
 
 ---
 
+## 1.7.8-peachpie-20260731
+
+Patch release. Fixes a migration that aborted the upgrade on any database still
+carrying the `post_view` materialized view — see
+[the upgrade section below](#1-post-table-rewrite--plan-for-downtime). No other
+changes; everything in `1.7.8-peachpie-20260730` applies unchanged.
+
+If you never deployed `-20260730`, upgrade straight to this one and ignore the
+manual `DROP` workaround.
+
+---
+
 ## 1.7.8-peachpie-20260730
 
 Tracks upstream PieFed **v1.7.8**. 42 upstream commits since our previous release,
@@ -43,6 +55,29 @@ window.
 The other two migrations are cheap — `c831b9c7eee9_post_boost` and
 `e1c6576eaa4b_block_community_flair` create new tables and add one nullable `JSON`
 column to `post` (metadata-only on modern PostgreSQL).
+
+**Fixed in 1.7.8-peachpie-20260731.** As originally shipped, this migration aborted
+on any database still carrying the `post_view` materialized view:
+
+```
+psycopg2.errors.FeatureNotSupported: cannot alter type of a column used by a view or rule
+DETAIL:  rule _RETURN on materialized view post_view depends on column "ranking"
+```
+
+PostgreSQL will not retype a column a view depends on. This fork created
+`post_view` in `e44dfb9a157f` and dropped it in `8457362452d9` when the post list
+moved to an indexes-based approach, but databases that were stamped or restored
+from an older dump still have it. The migration now drops any leftover view first
+(`IF EXISTS`, so it is a no-op otherwise). Nothing queries the view — it is derived
+data — so this loses nothing.
+
+If you are on the `-20260730` image and hit this, the upgrade rolled back cleanly
+(the whole run is one transaction), so your database is untouched. Either pull
+`-20260731` or later, or clear it by hand and restart:
+
+```sql
+DROP MATERIALIZED VIEW IF EXISTS post_view CASCADE;
+```
 
 Migration chain is linear with a single head, `merge_20260730_v178`.
 
