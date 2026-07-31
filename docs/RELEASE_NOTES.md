@@ -8,6 +8,18 @@ tracks an upstream PieFed release plus this fork's own patches. Version strings 
 
 ---
 
+## 1.7.8-peachpie-20260731
+
+Patch release. Fixes a migration that aborted the upgrade on any database still
+carrying the `post_view` materialized view — see
+[the upgrade section below](#1-post-table-rewrite--plan-for-downtime). No other
+changes; everything in `1.7.8-peachpie-20260730` applies unchanged.
+
+If you never deployed `-20260730`, upgrade straight to this one and ignore the
+manual `DROP` workaround.
+
+---
+
 ## 1.7.8-peachpie-20260730
 
 Tracks upstream PieFed **v1.7.8**. 42 upstream commits since our previous release,
