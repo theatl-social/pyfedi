@@ -2064,6 +2064,117 @@ def register(app):
                 session.close()
 
 
+    @app.cli.command("preflight")
+    def preflight():
+        """Pre-deploy checks: alembic head alignment and local-user duplicates.
+
+        Run this against the target database BEFORE deploying a release that
+        adds migrations:
+
+            FLASK_APP=pyfedi.py flask preflight
+
+        Exits non-zero if anything would block `flask db upgrade`.
+        """
+        from alembic.config import Config as AlembicConfig
+        from alembic.script import ScriptDirectory
+        from alembic.runtime.migration import MigrationContext
+        from sqlalchemy import text as sa_text
+
+        problems = []
+
+        # --- 1. alembic: does the code's head match what the database has? ---
+        alembic_cfg = AlembicConfig("migrations/alembic.ini")
+        alembic_cfg.set_main_option("script_location", "migrations")
+        script = ScriptDirectory.from_config(alembic_cfg)
+        code_heads = list(script.get_heads())
+
+        print("Alembic")
+        print(f"  revisions on disk : {len(list(script.walk_revisions()))}")
+        print(f"  head(s) in code   : {', '.join(code_heads) or '(none)'}")
+
+        if len(code_heads) != 1:
+            problems.append(
+                f"{len(code_heads)} alembic heads in code ({', '.join(code_heads)}). "
+                "A merge migration is needed, or one branch is unmerged."
+            )
+
+        with db.engine.connect() as conn:
+            db_rev = MigrationContext.configure(conn).get_current_revision()
+        print(f"  revision in DB    : {db_rev or '(none — never stamped)'}")
+
+        if db_rev is None:
+            problems.append(
+                "The database has no alembic_version row. If this is an existing "
+                "install, stamp it before upgrading; do not run `db upgrade` blind."
+            )
+        elif db_rev in code_heads:
+            print("  status            : up to date")
+        else:
+            try:
+                pending = [
+                    r.revision
+                    for r in script.iterate_revisions(code_heads[0], db_rev)
+                    if r.revision != db_rev
+                ]
+                print(f"  pending           : {len(pending)} migration(s)")
+                for rev in reversed(pending):
+                    print(f"      {rev}  {script.get_revision(rev).doc.splitlines()[0]}")
+            except Exception:
+                problems.append(
+                    f"The DB is at {db_rev}, which is not an ancestor of the code "
+                    f"head {code_heads[0]}. The database is on a different branch "
+                    "than this checkout — do not upgrade until that is reconciled."
+                )
+
+        # --- 2. duplicates that would block the uniqueness migration ---
+        print("\nLocal-user uniqueness (blocks 20260805_local_user_uniq)")
+        if db.engine.dialect.name != "postgresql":
+            print("  skipped — not PostgreSQL")
+        else:
+            checks = (
+                (
+                    "username",
+                    'SELECT lower(user_name) AS v, count(*) AS n FROM "user" '
+                    "WHERE ap_id IS NULL GROUP BY 1 HAVING count(*) > 1 "
+                    "ORDER BY n DESC, v LIMIT 25",
+                ),
+                (
+                    "email",
+                    "SELECT lower(email) AS v, count(*) AS n FROM \"user\" "
+                    "WHERE ap_id IS NULL AND email IS NOT NULL AND email <> '' "
+                    "GROUP BY 1 HAVING count(*) > 1 ORDER BY n DESC, v LIMIT 25",
+                ),
+            )
+            for label, query in checks:
+                rows = db.session.execute(sa_text(query)).fetchall()
+                if not rows:
+                    print(f"  duplicate local {label}s: none")
+                    continue
+                print(f"  duplicate local {label}s: {len(rows)}")
+                for row in rows:
+                    print(f"      {row.v!r} x{row.n}")
+                problems.append(
+                    f"{len(rows)} duplicate local {label}(s) must be reconciled "
+                    "before the uniqueness migration can run."
+                )
+
+        print()
+        if problems:
+            print("BLOCKED:")
+            for problem in problems:
+                print(f"  - {problem}")
+            print(
+                "\nInspect duplicates with:\n"
+                '  SELECT id, user_name, email, created, deleted, banned FROM "user"\n'
+                "  WHERE ap_id IS NULL AND lower(user_name) IN (...)\n"
+                "  ORDER BY lower(user_name), id;\n"
+                "Usually the oldest row is the real account. Do not delete rows "
+                "blindly — they own posts, comments and votes."
+            )
+            exit(1)
+        print("OK — safe to run `flask db upgrade`.")
+
+
 def parse_communities(interests_source, segment):
     lines = interests_source.split("\n")
     include_in_output = False
