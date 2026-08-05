@@ -156,7 +156,27 @@ Check all customizations survived the merge:
   `from app.api.admin import ...` lines at the end of `app/api/alpha/__init__.py`, and
   Flask only registers a route when its decorator actually executes. The file existed
   the whole time. Check behaviour, not artifacts.
-- Entrypoints use `uv run` (`grep "uv run" entrypoint*.sh`)
+- Entrypoints use `uv run` (`grep "uv run" entrypoint*.sh`), and every invocation
+  that follows a privilege drop keeps `--no-sync`:
+  ```bash
+  grep -n "gosu python" entrypoint*.sh   # each must also carry --no-sync
+  ```
+  `/app/.venv` is built by `RUN uv sync` with no `USER` in the Dockerfile, so it is
+  root-owned. Without `--no-sync`, `uv run` re-syncs the editable install at startup
+  and the unprivileged user cannot delete the root-owned `.pth` — the worker
+  crash-loops with `Permission denied (os error 13)`. `entrypoint.sh` masks this
+  because its root-side `flask db upgrade` syncs first, so it is only *incidentally*
+  safe. Guarded by `tests/test_celery_settings.py`.
+- **Route surface is unchanged** (see "Merge hazards" below):
+  ```bash
+  SERVER_NAME=localhost uv run python -c "
+  from app import create_app; from config import Config
+  class C(Config): TESTING=True; CACHE_TYPE='NullCache'
+  app=create_app(C); print(len(list(app.url_map.iter_rules())), 'routes')"
+  ```
+  Compare against the pre-merge count. A drop means routes were lost; a *silent
+  relocation* will not change the count at all, which is why the route tests above
+  assert exact paths.
 - **Security patches still apply (CRITICAL):**
   ```bash
   SERVER_NAME=localhost uv run pytest tests/security/ -v
@@ -187,6 +207,83 @@ gh pr create --title "Merge upstream PieFed vX.Y.Z" ...
 gh pr merge <number> --merge --delete-branch=false
 gh workflow run docker-build-push.yml -f branch=main -f tag=vX.Y.Z -f additional_tags=latest
 ```
+
+## Merge hazards learned the hard way
+
+These are the failure modes that have actually bitten this fork. All of them
+auto-merge cleanly and pass lint — none announce themselves.
+
+### Shared blueprint names silently relocate routes
+
+The fork and upstream can both declare an object with the same name in the same
+file. Conflict resolution keeps one line, and everything mounted on it moves.
+
+Concretely: this fork had
+`ApiBlueprint("Admin", url_prefix="/api/alpha/admin")`. Upstream v1.6.9 added its
+*own* `ApiBlueprint("Admin", url_prefix="/api/alpha")`, spelling `/admin/...` in
+its route decorators instead. The merge kept upstream's line, and because the
+fork's decorators are bare (`"/private_register"`, relying on the prefix to supply
+`/admin`), all 19 endpoints moved to `/api/alpha/private_register` — including
+`PUT`/`DELETE /api/alpha/user/<id>`, landing secret-gated admin routes in the
+frozen public namespace.
+
+**Check:** after merging, diff the blueprint declarations in
+`app/api/alpha/__init__.py` against the pre-merge version. Fork-owned blueprints
+should have fork-specific names (`private_admin_bp`, `"PrivateAdmin"`) precisely
+so upstream cannot collide with them.
+
+### Load-bearing imports look like dead code
+
+A Flask route exists only when its `@route` decorator *executes*, which requires
+the module to be imported. `app/api/admin/routes.py` is imported by exactly one
+line at the bottom of `app/api/alpha/__init__.py` and nothing else. It reads like
+an unused import — ruff does not flag it (`F401` is ignored) and removing it
+breaks nothing at import time.
+
+That line was dropped in the v1.6.9 merge and the entire admin API 404'd in
+production for **five months and six upstream merges**.
+
+**Check:** `tests/test_admin_api_routes_registered.py` asserts the live `url_map`.
+Any similar "import for side effect" needs the same treatment — assert the
+*effect*, not the import.
+
+### Verify behaviour, never artifacts
+
+Every safeguard that failed here was checking a proxy for the thing it cared
+about:
+
+| check | why it passed while broken |
+|---|---|
+| `ls app/api/admin/private_registration.py` | the file existed the whole time |
+| `-not -name` exclusions in `ci-cd.yml` | ~40 tests never ran, including the security suites |
+| `except Exception: pytest.skip(...)` in a fixture | reported "skipped", not "failed" |
+
+**Never add a file to the `-not -name` exclusion list in `.github/workflows/ci-cd.yml`
+to make CI green.** That list may only contain files the workflow runs in a
+separate step. Fix the test, or mark it `skipif` with a stated reason so the skip
+is visible in the run output.
+
+### Regressions that recur every merge
+
+Some fork changes sit exactly where upstream keeps editing, and have regressed
+repeatedly. Each now has a guard test — run them all after every merge:
+
+| what | guard |
+|---|---|
+| `Post.generate_ap_id` federation-safe form (regressed 3x) | `tests/test_post_slug.py` |
+| `cached_modlist_*` circular-import architecture | `tests/test_ci_fixes.py` |
+| vote lock TTLs (upstream reset 30s -> 10s) | `tests/test_vote_lock_timeout.py` |
+| Celery settings + entrypoint privilege drop | `tests/test_celery_settings.py` |
+| admin API routing | `tests/test_admin_api_routes_registered.py` |
+| anoobis stays removed | `tests/test_anoobis_removed.py` |
+
+### Upstream code is not automatically correct
+
+Fix upstream bugs found while merging rather than importing them, and record it
+in the merge commit. Examples from v1.7.10 alone: `os.environ.get("")` (an empty
+env key, so two config values could never be set), and a `raise` immediately
+before `abort(403)` that made the abort dead code and turned a rejection into a
+500 leaking `SERVER_NAME`.
 
 ## Common Issues
 
