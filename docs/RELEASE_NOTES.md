@@ -8,7 +8,7 @@ tracks an upstream PieFed release plus this fork's own patches. Version strings 
 
 ---
 
-## Next fork release
+## 1.7.8-peachpie-20260805
 
 - **Unlimited voting is opt-in.** Set VOTE_QUOTA=0 in the web and worker
   runtime environment, then restart both services. Positive values retain the
@@ -17,6 +17,8 @@ tracks an upstream PieFed release plus this fork's own patches. Version strings 
 - **Profile vote totals are public.** Profiles now show aggregate upvotes and
   downvotes cast to anonymous and signed-in visitors. Individual voter lists
   and existing administrator-only metadata remain restricted.
+
+No database migration is required.
 
 ---
 
