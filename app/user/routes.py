@@ -166,7 +166,6 @@ from app.utils import (
     community_membership_private,
     intlist_to_strlist,
     permission_required,
-    check_anoobis,
 )
 
 
@@ -196,7 +195,6 @@ def show_profile_by_id(user_id):
 
 
 @login_required_if_private_instance
-@check_anoobis
 def show_profile(user):
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)

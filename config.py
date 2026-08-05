@@ -259,13 +259,3 @@ class Config(object):
 
     # Set VOTE_QUOTA=0 to disable the daily quota; absent values default to 240.
     VOTE_QUOTA = int(os.environ.get("VOTE_QUOTA") or 240)
-
-    # Anubis-style proof-of-work challenge for anonymous scrapers.
-    # Upstream v1.7.10 shipped these two reading os.environ.get(""), an empty
-    # key that can never be set, so the values were permanently hardcoded.
-    # Fixed here to read their actual variable names.
-    ANOOBIS = os.environ.get("ANOOBIS") or False
-    ANOOBIS_DIFFICULTY_DESKTOP = int(
-        os.environ.get("ANOOBIS_DIFFICULTY_DESKTOP") or 19
-    )
-    ANOOBIS_DIFFICULTY_MOBILE = int(os.environ.get("ANOOBIS_DIFFICULTY_MOBILE") or 12)

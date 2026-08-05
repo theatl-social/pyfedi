@@ -1659,51 +1659,6 @@ def safe_hx_redirect_url(curr_url: str, path_prefix: str, fallback: str) -> str:
     return curr_url
 
 
-def safe_next_path(candidate) -> str:
-    """Validate a client-supplied `next` before using it as a navigation target.
-
-    SP-024. Upstream v1.7.10's /anoobis route gated `next` with
-    `furl(next)` and `f.host is None or f.host == SERVER_NAME`, then emitted it
-    into `location.href = '{{ next }}'`. furl reports no host for a
-    backslash-prefixed value, but browsers normalise `\\` to `/` during URL
-    parsing, so all of these pass that check and then navigate off-site:
-
-        /\\evil.com      ->  //evil.com   (protocol-relative)
-        /\\/evil.com     ->  //evil.com
-        \\\\evil.com      ->  //evil.com
-        http:/\\evil.com ->  http://evil.com
-
-    That turns a URL on our own domain into a phishing redirector, which is
-    worse than an ordinary off-site link precisely because it looks like ours.
-
-    Rather than enumerate normalisation quirks, allowlist: the value must be a
-    plain, relative, same-origin path. Returns "" when it is not, so callers
-    can reject rather than silently redirect somewhere unintended.
-    """
-    if not candidate or not isinstance(candidate, str):
-        return ""
-
-    # Browsers fold backslashes into forward slashes; never allow them through.
-    if "\\" in candidate:
-        return ""
-
-    # Must be an absolute path on this origin. A leading "//" (or "/\") is
-    # protocol-relative and points at another host.
-    if not candidate.startswith("/") or candidate[1:2] == "/":
-        return ""
-
-    # No scheme or authority may be smuggled in before the first path segment.
-    if ":" in candidate.split("/", 2)[1]:
-        return ""
-
-    # Control characters (incl. NUL, newline, tab) are stripped or ignored by
-    # browsers mid-URL and can be used to hide the payload from this check.
-    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in candidate):
-        return ""
-
-    return candidate
-
-
 def domain_from_url(url: str, create=True) -> Domain:
     parsed_url = urlparse(url.lower().replace("www.", ""))
     if parsed_url and parsed_url.hostname:
@@ -2068,19 +2023,6 @@ def login_required_if_private_instance(func):
             return func(*args, **kwargs)
         else:
             return redirect(url_for("auth.login", next=referrer()))
-
-    return decorated_view
-
-
-def check_anoobis(func):
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        whitelist = ['Mastodon', 'Friendica', 'Synapse', 'PieFed', 'Bridgy', 'Lemmy', 'FlipboardProxy', 'Googlebot', 'Kagibot', 'bingbot']
-        if current_user.is_anonymous and current_app.config['ANOOBIS'] and \
-                request.cookies.get('anoobis') is None and \
-                not any(item in request.user_agent.string for item in whitelist):
-            return redirect(url_for('main.anoobis', next=request.path))
-        return func(*args, **kwargs)
 
     return decorated_view
 
