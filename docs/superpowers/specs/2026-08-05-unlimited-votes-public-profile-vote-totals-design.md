@@ -22,9 +22,9 @@ each profile's aggregate upvote and downvote totals to every visitor.
 
 ### Configuration
 
-`config.py` will preserve an explicit zero rather than treating it as a false
-value and replacing it with the default. The resulting configuration contract
-is:
+`config.py` already preserves an explicit zero because environment values are
+strings: `"0"` is truthy before it is converted to an integer. This change
+documents and implements the following configuration contract:
 
 | `VOTE_QUOTA` environment value | Effective behavior |
 | --- | --- |
@@ -71,12 +71,11 @@ inbound ActivityPub activities are ignored once over threshold. With
 
 Add focused pytest coverage that exercises:
 
-1. configuration with unset, positive, and zero quota values;
-2. public profile rendering for an anonymous visitor, asserting aggregate
+1. public profile rendering for an anonymous visitor, asserting aggregate
    vote totals are present and admin-only metadata remains absent;
-3. post and reply vote handling under a zero quota when the Redis counter is
+2. post and reply vote handling under a zero quota when the Redis counter is
    already above the former limit; and
-4. inbound ActivityPub Like and Dislike processing under the same zero-quota
+3. inbound ActivityPub Like and Dislike processing under the same zero-quota
    condition.
 
 Run the new focused tests and the repository's field-consistency test using
