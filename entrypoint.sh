@@ -26,15 +26,19 @@ fi
 # python3 -m flask populate_community_search
 
 # 3. Drop privileges and run the main application as the 'python' user
+# --no-sync: /app/.venv is root-owned (see entrypoint_celery.sh). This path
+# happens to work without it because the root `flask db upgrade` above already
+# re-synced -- but that step is skipped for SQLite, which would leave the
+# python user to do the sync and fail. Be explicit rather than incidentally correct.
 if [ "${FLASK_DEBUG:-}" = "1" ] && [ "${FLASK_ENV:-}" = "development" ]; then
   export FLASK_RUN_EXTRA_FILES=$(find app/templates app/static -type f | tr '\n' ':')
   echo "Starting flask development server as user 'python'..."
   # Use 'exec' to replace the shell process with the Flask process
   # Use 'gosu' to switch from root to the 'python' user
-  exec gosu python uv run flask run -h 0.0.0.0 -p 5000
+  exec gosu python uv run --no-sync flask run -h 0.0.0.0 -p 5000
 else
   echo "Starting Gunicorn as user 'python'..."
   # Use 'exec' to replace the shell process with the Gunicorn process
   # Use 'gosu' to switch from root to the 'python' user
-  exec gosu python uv run gunicorn --config gunicorn.conf.py pyfedi:app
+  exec gosu python uv run --no-sync gunicorn --config gunicorn.conf.py pyfedi:app
 fi
