@@ -160,8 +160,8 @@
             {% if vote_quota_used -%}
             {{ _('Vote quota used') }} <progress value="{{ vote_quota_used | round(precision=2) }}"></progress><br />
             {% endif -%}
+            {% include "user/_profile_vote_totals.html" %}
             {% if current_user.is_authenticated and current_user.get_id() in admin_ids -%}
-                {{ _('Votes') }}: {{ user.get_num_upvotes() }} / {{ user.get_num_downvotes() }}<br />
                 {% if user.referrer %}{{ _('Referer') }}: <span title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ user.referrer }}</span><br />{% endif %}
                 {% if user.ip_address %}{{ _('IP and country code') }}: <span title="{{ _('IP address of last interaction.') }}">{{ user.ip_address }} ({{ user.ip_address_country if user.ip_address_country }})</span><br />{% endif %}
                 {% if user.last_seen %}{{ _('Active') }}: {{ localize_datetime(user.last_seen, locale) }}<br />{% endif %}
