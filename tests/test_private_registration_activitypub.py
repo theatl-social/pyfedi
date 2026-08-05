@@ -3,22 +3,21 @@ Test that private registration properly sets up ActivityPub for new users
 """
 
 import unittest
-from unittest.mock import patch, MagicMock, call
-import os
-import pytest
+from unittest.mock import patch, MagicMock
 
 
 class TestPrivateRegistrationActivityPubSetup(unittest.TestCase):
     def setUp(self):
         """Set up test Flask app context"""
-        os.environ["SERVER_NAME"] = "test.localhost"
-        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-        os.environ["CACHE_TYPE"] = "NullCache"
-        os.environ["TESTING"] = "true"
-
+        # Do NOT set os.environ here and call the bare create_app(): the
+        # Config class attributes are evaluated at *import* time, so mutating
+        # the environment in setUp() is too late. DATABASE_URL then resolves to
+        # Config's fallback, `sqlite:///<repo>/app.db` -- a git-tracked file
+        # these tests were silently writing to. Pass an explicit config instead.
         from app import create_app
+        from tests.conftest import TestConfig
 
-        self.app = create_app()
+        self.app = create_app(TestConfig)
         self.app_context = self.app.app_context()
         self.app_context.push()
 
@@ -157,21 +156,29 @@ class TestPrivateRegistrationActivityPubSetup(unittest.TestCase):
         self.assertEqual(result["activation_required"], True)
 
 
-@pytest.mark.skipif(
-    "sqlite" in os.environ.get("DATABASE_URL", "sqlite"),
-    reason="Finalize user setup tests require PostgreSQL (SQLAlchemy mock incompatibility with SQLite)"
-)
+# NOTE: this class used to carry
+#     @pytest.mark.skipif("sqlite" in os.environ.get("DATABASE_URL", "sqlite"),
+#                         reason="... require PostgreSQL ...")
+# The reason was factually wrong: finalize_user_setup() is called here with
+# app.utils.db fully mocked, so no database of any flavour is ever touched. The
+# marker was also inert in the documented local invocation (DATABASE_URL= sets
+# an empty string, and "sqlite" is not in ""), while it *did* fire under CI's
+# DATABASE_URL=sqlite... -- so these two tests silently never ran where it
+# mattered. What actually broke them is fixed below: they patched
+# app.utils.Notification, and finalize_user_setup() hands that name straight to
+# sqlalchemy.update(), which needs a real mapped class, not a MagicMock.
 class TestFinalizeUserSetupBehavior(unittest.TestCase):
     def setUp(self):
         """Set up test Flask app context"""
-        os.environ["SERVER_NAME"] = "test.localhost"
-        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-        os.environ["CACHE_TYPE"] = "NullCache"
-        os.environ["TESTING"] = "true"
-
+        # Do NOT set os.environ here and call the bare create_app(): the
+        # Config class attributes are evaluated at *import* time, so mutating
+        # the environment in setUp() is too late. DATABASE_URL then resolves to
+        # Config's fallback, `sqlite:///<repo>/app.db` -- a git-tracked file
+        # these tests were silently writing to. Pass an explicit config instead.
         from app import create_app
+        from tests.conftest import TestConfig
 
-        self.app = create_app()
+        self.app = create_app(TestConfig)
         self.app_context = self.app.app_context()
         self.app_context.push()
 
@@ -184,10 +191,9 @@ class TestFinalizeUserSetupBehavior(unittest.TestCase):
     @patch("app.utils.plugins")
     @patch("app.utils.db")
     @patch("app.utils.current_app")
-    @patch("app.utils.Notification")
     @patch("app.activitypub.signature.RsaKeys")
     def test_finalize_user_setup_sets_activitypub_fields(
-        self, mock_rsa, mock_notification, mock_app, mock_db, mock_plugins
+        self, mock_rsa, mock_app, mock_db, mock_plugins
     ):
         """Test that finalize_user_setup generates keypair and sets ActivityPub URLs"""
         from app.utils import finalize_user_setup
@@ -209,8 +215,13 @@ class TestFinalizeUserSetupBehavior(unittest.TestCase):
         mock_user.ap_profile_id = None
         mock_user.id = 100
 
-        # Mock notification query
-        mock_notification.query.filter_by.return_value = []
+        # finalize_user_setup() clears the user's registration notifications
+        # with `db.session.scalars(update(Notification)...).all()`. Only the
+        # session is mocked (app.utils.db); the Notification *class* must stay
+        # real, because sqlalchemy.update() rejects anything that is not a
+        # mapped class ("subject table for an INSERT, UPDATE or DELETE
+        # expected"). Return no rows so the follow-up UPDATE on User is a no-op.
+        mock_db.session.scalars.return_value.all.return_value = []
 
         # Call finalize_user_setup
         finalize_user_setup(mock_user)
@@ -236,9 +247,8 @@ class TestFinalizeUserSetupBehavior(unittest.TestCase):
     @patch("app.utils.plugins")
     @patch("app.utils.db")
     @patch("app.utils.current_app")
-    @patch("app.utils.Notification")
     def test_finalize_user_setup_preserves_existing_keys(
-        self, mock_notification, mock_app, mock_db, mock_plugins
+        self, mock_app, mock_db, mock_plugins
     ):
         """Test that finalize_user_setup doesn't overwrite existing keys"""
         from app.utils import finalize_user_setup
@@ -255,8 +265,9 @@ class TestFinalizeUserSetupBehavior(unittest.TestCase):
         mock_user.ap_profile_id = "https://example.com/u/testuser"
         mock_user.id = 101
 
-        # Mock notification query
-        mock_notification.query.filter_by.return_value = []
+        # See the sibling test: app.utils.Notification must stay the real
+        # mapped class for sqlalchemy.update() to accept it.
+        mock_db.session.scalars.return_value.all.return_value = []
 
         # Call finalize_user_setup
         finalize_user_setup(mock_user)

@@ -15,14 +15,16 @@ class TestSecurityFunctions(unittest.TestCase):
 
     def setUp(self):
         """Set up test Flask app context"""
-        os.environ["SERVER_NAME"] = "test.localhost"
-        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-        os.environ["CACHE_TYPE"] = "NullCache"
-        os.environ["TESTING"] = "true"
-
+        # Do NOT set os.environ here and call the bare create_app(): Config's
+        # class attributes are evaluated at *import* time, so mutating the
+        # environment in setUp() is too late. DATABASE_URL then falls back to
+        # `sqlite:///<repo>/app.db` -- a git-tracked file these tests were
+        # silently writing to (it grew from 12KB to 1.5MB during a full run).
+        # Pass an explicit config instead.
         from app import create_app, db
+        from tests.conftest import TestConfig
 
-        self.app = create_app()
+        self.app = create_app(TestConfig)
         self.app_context = self.app.app_context()
         self.app_context.push()
 
@@ -120,14 +122,16 @@ class TestPrivateRegistrationLogic(unittest.TestCase):
 
     def setUp(self):
         """Set up test Flask app context"""
-        os.environ["SERVER_NAME"] = "test.localhost"
-        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-        os.environ["CACHE_TYPE"] = "NullCache"
-        os.environ["TESTING"] = "true"
-
+        # Do NOT set os.environ here and call the bare create_app(): Config's
+        # class attributes are evaluated at *import* time, so mutating the
+        # environment in setUp() is too late. DATABASE_URL then falls back to
+        # `sqlite:///<repo>/app.db` -- a git-tracked file these tests were
+        # silently writing to (it grew from 12KB to 1.5MB during a full run).
+        # Pass an explicit config instead.
         from app import create_app, db
+        from tests.conftest import TestConfig
 
-        self.app = create_app()
+        self.app = create_app(TestConfig)
         self.app_context = self.app.app_context()
         self.app_context.push()
 

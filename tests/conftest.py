@@ -143,6 +143,23 @@ def _clear_ddl_events(target):
         getattr(dispatch, event_name).for_modify(dispatch).clear()
 
 
+@pytest.fixture(autouse=True)
+def _isolate_fallback_rate_limits():
+    """Clear the admin API's process-local rate-limit buckets between tests.
+
+    `AdvancedRateLimiter._check_rate_limit_fallback()` keeps its window in a
+    module-level dict, because the previous `flask.g` storage was per-request
+    and therefore inert under gunicorn — the "fallback" limiter allowed
+    everything. Process-local is correct for production but shared across a
+    pytest session, so one test's requests would count against another's quota.
+    """
+    from app.api.admin.monitoring import reset_fallback_rate_limits
+
+    reset_fallback_rate_limits()
+    yield
+    reset_fallback_rate_limits()
+
+
 @pytest.fixture
 def test_app():
     """Create and configure a test application instance"""
