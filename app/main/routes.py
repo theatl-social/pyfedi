@@ -43,7 +43,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, \
     num_topics, referrer, block_honey_pot, user_pronouns, get_instance_stickies, \
-    community_membership_private, favorite_communities, mimetype_from_url, check_anoobis
+    community_membership_private, favorite_communities, mimetype_from_url, check_anoobis, safe_next_path
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage, BannedInstances, BotChallenge
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
@@ -1370,14 +1370,20 @@ def content_warning():
 
 @bp.route('/anoobis')
 def anoobis():
-    next = request.args.get('next')
-    f = furl(next)
-    if next and (f.host is None or f.host == current_app.config['SERVER_NAME']) and (f.scheme is None or f.scheme.startswith('http')):
-        return render_template('anoobis.html', next=next, diff_desktop=current_app.config['ANOOBIS_DIFFICULTY_DESKTOP'],
-                               diff_mobile=current_app.config['ANOOBIS_DIFFICULTY_MOBILE'])
-    else:
-        raise Exception(f'Anoobis error: {f.host} != {current_app.config["SERVER_NAME"]}')
+    # SP-024: upstream gated `next` with furl(next).host, which reports no host
+    # for backslash-prefixed values such as '/\\evil.com'. Browsers normalise
+    # those to '//evil.com', so the check passed and anoobis.html then ran
+    # `location.href = '<attacker url>'` -- an open redirect on our own domain.
+    # Require a plain relative same-origin path instead.
+    next = safe_next_path(request.args.get('next'))
+    if not next:
+        # Upstream raised here, which made the abort() below dead code, returned
+        # 500 instead of 403, and echoed the configured SERVER_NAME into the
+        # error. Just refuse.
         abort(403)
+    return render_template('anoobis.html', next=next,
+                           diff_desktop=current_app.config['ANOOBIS_DIFFICULTY_DESKTOP'],
+                           diff_mobile=current_app.config['ANOOBIS_DIFFICULTY_MOBILE'])
 
 
 @bp.route('/bot_challenge/<uuid>')

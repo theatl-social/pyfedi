@@ -257,6 +257,29 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Note:** if upstream later adopts a global `CSRFProtect`, this patch becomes redundant
   and can be reduced back to upstream's form.
 
+### SP-024 — Open redirect in the anoobis challenge `next` parameter
+
+- **Introduced:** upstream v1.7.10 (`ba42e38e` / `c63350f5`, the "anoobis" proof-of-work challenge), adopted in this fork's 2026-08-05 merge
+- **Files:**
+  - `app/main/routes.py` — `anoobis()` now validates `next` via `safe_next_path()` and `abort(403)`s instead of raising
+  - `app/utils.py` — new `safe_next_path()` helper
+  - `app/templates/anoobis.html` — redirect target emitted with `| tojson`
+- **Test:** `tests/security/test_sp024_anoobis_open_redirect.py`
+- **Upstream status:** Not addressed upstream as of v1.7.10.
+- **Fix summary:** `/anoobis` accepted a client-supplied `next` and validated it with `furl(next)`, requiring `f.host is None or f.host == SERVER_NAME`. `anoobis.html` then executed `location.href = '{{ next }}'` once the challenge solved. furl reports **no host** for backslash-prefixed values, but browsers normalise `\` to `/` while parsing URLs, so the check passed and navigation went off-origin. Confirmed bypasses (verified against the exact upstream condition):
+
+  | `next` | upstream check | browser navigates to |
+  |---|---|---|
+  | `/\evil.com` | passes | `//evil.com` |
+  | `/\/evil.com` | passes | `//evil.com` |
+  | `\\evil.com` | passes | `//evil.com` |
+  | `http:/\evil.com` | passes | `http://evil.com` |
+
+  Rather than enumerate normalisation quirks, `safe_next_path()` allowlists: the value must be a plain relative same-origin path — no backslashes, no leading `//`, no scheme or authority before the first path segment, no control characters (browsers strip those mid-URL, so the validated string and the navigated string would otherwise differ).
+- **Why this is worse than an ordinary off-site link:** the attacker distributes a URL on *our* domain. The victim inspects the origin, sees our instance, gets our challenge page, and is then landed on a phishing page. Anoobis is served to anonymous users on any decorated route, so the entry point is broadly reachable.
+- **Also fixed:** upstream's rejection branch was `raise Exception(f'Anoobis error: {f.host} != {SERVER_NAME}')` immediately followed by `abort(403)`. The raise made the abort dead code, converted a rejection into a 500, and echoed the configured `SERVER_NAME` plus the attacker-supplied host into the error path.
+- **Defense in depth:** the template now uses `{{ next | tojson }}`. `location.href = '...'` is a JavaScript string context, where Jinja's HTML autoescaping is the wrong escaper; `tojson` emits a correctly quoted and escaped JS literal.
+
 ### SP-023 — Open redirect via unvalidated `HX-Current-Url` echoed into `HX-Redirect`
 
 - **Introduced:** upstream v1.7.8 `user_flair_unblock` (this fork's 2026-07-30 merge)

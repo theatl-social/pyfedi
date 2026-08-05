@@ -117,7 +117,11 @@
             setTimeout(function () {
                 solveProofOfWork(difficulty);
                 setCookie('anoobis', 'ok', 1000);
-                location.href = '{{ next }}';
+                {# tojson, not '{{ }}': this is a JS string context, where Jinja's
+                   HTML autoescaping is the wrong escaper. tojson emits a properly
+                   quoted and escaped JS literal. `next` is also server-validated
+                   by safe_next_path() (SP-024). #}
+                location.href = {{ next | tojson }};
             }, 50);
         });
     </script>
