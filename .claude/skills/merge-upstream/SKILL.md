@@ -146,7 +146,16 @@ Update version in both places:
 Check all customizations survived the merge:
 - `privacy_url` in models.py (Site model, after `tos_url`), admin/forms.py, admin/routes.py
 - PeachPie footer in base.html (`grep theatl app/templates/base.html`)
-- Private registration API (`ls app/api/admin/private_registration.py`)
+- Private registration API — **verify the routes are registered, not that the file exists**:
+  ```bash
+  SERVER_NAME=localhost uv run pytest tests/test_admin_api_routes_registered.py -v
+  ```
+  This checklist used to say `ls app/api/admin/private_registration.py`. That check
+  passed continuously from 2026-03-06 to 2026-08-05 while the entire admin API was
+  **unrouted and 404ing in production**: the v1.6.9 merge (`4c611576`) dropped the two
+  `from app.api.admin import ...` lines at the end of `app/api/alpha/__init__.py`, and
+  Flask only registers a route when its decorator actually executes. The file existed
+  the whole time. Check behaviour, not artifacts.
 - Entrypoints use `uv run` (`grep "uv run" entrypoint*.sh`)
 - **Security patches still apply (CRITICAL):**
   ```bash

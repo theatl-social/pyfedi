@@ -123,3 +123,23 @@ for blueprint in blueprints:
     blueprint.errorhandler(Exception)(shared_error_handler)
 
 from app.api.alpha import routes
+
+# These two imports are load-bearing, not decorative. Flask only registers a
+# route when its @admin_bp.route decorator actually executes, which requires the
+# module to be imported — nothing else in the tree imports either of these.
+#
+# They were dropped during conflict resolution in 4c611576 ("Merge upstream
+# PieFed v1.6.9", 2026-03-06) and stayed missing for five months and six
+# upstream merges. The whole private-registration admin API (19 endpoints) was
+# live code that 404'd. It went unnoticed because CLAUDE.md's post-merge
+# checklist verified `ls app/api/admin/private_registration.py` — the file
+# existed the entire time — and because the tests that would have caught it were
+# in the CI exclusion list.
+#
+# The endpoints are gated in depth (app/api/admin/security.py:74): the
+# PRIVATE_REGISTRATION_ENABLED feature flag defaults to false, then an IP
+# allowlist, then the X-PieFed-Secret header, then a rate limit.
+#
+# tests/test_admin_api_routes_registered.py asserts these routes exist.
+from app.api.admin import routes as admin_routes  # noqa: E402, F401
+from app.api.admin import monitoring_routes  # noqa: E402, F401
