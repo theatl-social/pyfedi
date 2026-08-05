@@ -229,6 +229,56 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-08-05 — anoobis removed, and a five-month production outage found**
+- On the `v1.7.10` merge branch (below), upstream's new **anoobis** proof-of-work
+  gate was removed entirely rather than merged. Its proof of work was never
+  verified: `anoobis.html` discarded `solveProofOfWork()`'s return value and set
+  the cookie unconditionally, nothing was sent to the server, and
+  `check_anoobis` only tested `request.cookies.get('anoobis') is None`. The real
+  gate was "present any cookie named anoobis", which `curl -b anoobis=x`
+  satisfies. It also shipped an open redirect (`furl` reports no host for
+  `/\evil.com`; browsers normalise it to `//evil.com`). Guarded by
+  `tests/test_anoobis_removed.py`.
+- **The private-registration admin API had been dead in production since
+  2026-03-06.** The v1.6.9 merge (`4c611576`) broke it two ways at once:
+  1. The `from app.api.admin import routes ...` lines at the end of
+     `app/api/alpha/__init__.py` were dropped. Flask registers a route only when
+     its decorator executes, and nothing else imports those modules — so all 19
+     endpoints 404'd for five months and six upstream merges.
+  2. `admin_bp`'s `url_prefix` collapsed from `/api/alpha/admin` to `/api/alpha`.
+     Upstream had independently added its *own* blueprint with the same name
+     `"Admin"`; the merge kept upstream's line, and the fork's bare decorators
+     (`"/private_register"`) silently relocated.
+  Fixed with a dedicated `private_admin_bp`, so upstream can rename or re-prefix
+  its own blueprint without moving ours. **Guarded by
+  `tests/test_admin_api_routes_registered.py`, which asserts the live `url_map`.**
+- **Why it hid for so long — three checks that measured a proxy, not behaviour:**
+  the merge checklist verified this feature with
+  `ls app/api/admin/private_registration.py` (the file was present throughout);
+  `.github/workflows/ci-cd.yml` excluded 13 test files by name, quarantining ~40
+  tests including the SQL-injection and private-registration security suites; and
+  `test_private_registration_endpoints.py` wraps its fixture in
+  `except Exception: pytest.skip(...)`, reporting "skipped" instead of "failed".
+  All three now fixed. **Do not add exclusions to `ci-cd.yml` to make CI green.**
+- Other genuine bugs the un-quarantined tests exposed, all fixed:
+  - the IP allowlist was **inert** — it read only a `settings` row nothing ever
+    writes, so `is_ip_whitelisted()` always returned `True`, while the docs told
+    operators to set env vars nothing read;
+  - rate limiting **failed open** on any Redis exception, and its in-memory
+    fallback stored state in `flask.g` (per-request under gunicorn), so it was
+    inert too — now a bounded process-local dict;
+  - `get_private_registration_rate_limit()` didn't exist but was imported and
+    called, so `/api/alpha/admin/health` always 400'd on `ImportError`;
+  - `parse_rate_limit("5")` silently returned the default, *widening* any limit
+    configured in the bare-integer form the tooling actually uses;
+  - f-string SQL had regressed into `app/main/routes.py` across merges, undoing
+    `d3b170f2`; now parameterized.
+- Test suite: **17 failed / 496 passed / 27 errors → 1 failed / 884 passed / 0
+  errors.** The remaining failure is `test_connection_pool_thread_safety.py`'s
+  macOS-only `PicklingError` (spawn vs fork); it passes on Linux CI.
+  `tests/conftest.py` now makes `db.create_all()` complete on SQLite — see its
+  module docstring.
+
 - Merged upstream PieFed release tag `v1.7.10` on 2026-08-05
 - Branch: `20260805/merge-upstream-v1710`
 - Upstream tag commit: `6e3edda1` (24 commits since `9653bed1` = `v1.7.8`; clean linear ancestry)
