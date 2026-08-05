@@ -38,9 +38,9 @@ from app.models import (
     Instance,
     Event,
     Community,
-    votes_cast_today,
 )
 from app.shared.tasks import task_selector
+from app.shared.voting import vote_quota_exceeded
 from app.utils import (
     render_template,
     authorise_api_user,
@@ -109,7 +109,7 @@ def vote_for_post(
 
     mark_post_read([post.id], True, user.id)
 
-    if votes_cast_today(user.id) > current_app.config["VOTE_QUOTA"]:
+    if vote_quota_exceeded(user.id):
         abort(429)
 
     undo = post.vote(user, vote_direction, emoji)

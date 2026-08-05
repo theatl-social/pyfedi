@@ -103,10 +103,10 @@ from app.models import (
     ActivityBatch,
     InstanceBan,
     UserFollowRequest,
-    votes_cast_today,
 )
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
+from app.shared.voting import vote_quota_exceeded
 from app.user.routes import show_profile
 from app.utils import (
     gibberish,
@@ -3851,7 +3851,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
     if can_upvote(user, liked.community) and not instance_banned(user.instance.domain):
         if isinstance(liked, (Post, PostReply)) and user.id not in blocked_users(
             liked.author.id
-        ) and votes_cast_today(user.id) <= current_app.config["VOTE_QUOTA"]:
+        ) and not vote_quota_exceeded(user.id):
             liked.vote(user, "upvote", emoji)
             log_incoming_ap(id, APLOG_LIKE, APLOG_SUCCESS, saved_json)
             if not announced:
@@ -3881,7 +3881,7 @@ def process_downvote(user, store_ap_json, request_json, announced):
     ):
         if isinstance(liked, (Post, PostReply)) and user.id not in blocked_users(
             liked.author.id
-        ) and votes_cast_today(user.id) <= current_app.config["VOTE_QUOTA"]:
+        ) and not vote_quota_exceeded(user.id):
             liked.vote(user, "downvote", None)
             log_incoming_ap(id, APLOG_DISLIKE, APLOG_SUCCESS, saved_json)
             if not announced:

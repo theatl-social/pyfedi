@@ -169,6 +169,13 @@ from app.utils import (
 )
 
 
+def profile_vote_quota_used(user_id: int) -> float:
+    quota = current_app.config["VOTE_QUOTA"]
+    if quota == 0:
+        return 0
+    return votes_cast_today(user_id) / quota
+
+
 @bp.route("/people", methods=["GET", "POST"])
 @login_required
 def show_people():
@@ -293,7 +300,7 @@ def show_profile(user):
     posting_pattern_labels = []
     posting_pattern_values = []
     if current_user.is_authenticated:
-        vote_quota_used = votes_cast_today(user.id) / current_app.config["VOTE_QUOTA"]
+        vote_quota_used = profile_vote_quota_used(user.id)
 
         # Generate graph of which hours of the day the user posts at. Bots tend to have a distinctive look.
         sql = """select

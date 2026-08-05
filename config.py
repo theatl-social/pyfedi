@@ -251,4 +251,5 @@ class Config(object):
 
     REDIS_MEMORY_LIMIT = int(os.environ.get("REDIS_MEMORY_LIMIT") or 200000000)
 
+    # Set VOTE_QUOTA=0 to disable the daily quota; absent values default to 240.
     VOTE_QUOTA = int(os.environ.get("VOTE_QUOTA") or 240)
