@@ -58,6 +58,30 @@ upload_bp = ApiBlueprint("Upload", __name__, url_prefix="/api/alpha", descriptio
 
 admin_bp = ApiBlueprint("Admin", __name__, url_prefix="/api/alpha", description="")
 
+# The fork's private-registration admin API gets its OWN blueprint rather than
+# sharing upstream's `admin_bp`. That sharing is what broke it:
+#
+# This fork defined `admin_bp` with url_prefix="/api/alpha/admin". Upstream
+# v1.6.9 independently added its own blueprint, same name "Admin", with the
+# generic url_prefix="/api/alpha" — its two registration-application routes
+# spell "/admin/..." in their decorators instead. Conflict resolution in
+# 4c611576 kept upstream's line, and every fork route (whose decorators are
+# bare, e.g. "/private_register", on the assumption the prefix supplies
+# "/admin") silently moved from /api/alpha/admin/private_register to
+# /api/alpha/private_register. Combined with the dropped imports in the same
+# commit, the API 404'd in production for five months.
+#
+# A separate blueprint makes that class of collision impossible: upstream can
+# rename or re-prefix `admin_bp` freely without moving the fork's endpoints,
+# and the fork's own route decorators stay untouched. Upstream's
+# /api/alpha/admin/registration_application/* paths are unaffected.
+private_admin_bp = ApiBlueprint(
+    "PrivateAdmin",
+    __name__,
+    url_prefix="/api/alpha/admin",
+    description="Administrative endpoints for user management and private registration",
+)
+
 
 def shared_error_handler(e):
     """Shared error handler for all API blueprints"""
@@ -118,6 +142,7 @@ blueprints = [
     private_message_bp,
     upload_bp,
     admin_bp,
+    private_admin_bp,
 ]
 for blueprint in blueprints:
     blueprint.errorhandler(Exception)(shared_error_handler)

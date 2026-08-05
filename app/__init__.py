@@ -405,6 +405,7 @@ def create_app(config_class=Config):
         upload_bp,
         private_message_bp,
         admin_bp,
+        private_admin_bp,
     )
 
     rest_api.register_blueprint(site_bp)
@@ -418,6 +419,7 @@ def create_app(config_class=Config):
     rest_api.register_blueprint(upload_bp)
     rest_api.register_blueprint(private_message_bp)
     rest_api.register_blueprint(admin_bp)
+    rest_api.register_blueprint(private_admin_bp)
 
     # send error reports via email
     if app.config["MAIL_SERVER"] and app.config["ERRORS_TO"]:

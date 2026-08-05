@@ -9,7 +9,10 @@ from flask import current_app
 from app import redis_client
 from app.api.admin.monitoring import admin_monitor, rate_limiter, track_admin_request
 from app.api.admin.security import require_private_registration_auth
-from app.api.alpha import admin_bp
+# The fork's admin API mounts on its own blueprint (url_prefix
+# /api/alpha/admin), aliased so the route decorators below keep their
+# bare paths. See the comment on private_admin_bp in app/api/alpha/__init__.py.
+from app.api.alpha import private_admin_bp as admin_bp
 from app.models import utcnow
 
 

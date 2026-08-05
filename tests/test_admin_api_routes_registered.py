@@ -2,16 +2,34 @@
 
 ## Why this file exists
 
-`app/api/admin/routes.py` and `app/api/admin/monitoring_routes.py` define 18
-endpoints with `@admin_bp.route(...)`. A Flask route only exists if that
-decorator executes, which only happens if the module is imported — and nothing
-else in the tree imports either module. The two import lines that did so live at
-the bottom of `app/api/alpha/__init__.py`.
+`app/api/admin/routes.py` and `app/api/admin/monitoring_routes.py` define 19
+endpoints for private account provisioning, user management and monitoring.
+A single merge — `4c611576` ("Merge upstream PieFed v1.6.9", 2026-03-06) —
+broke them in **two independent ways** at once, and they stayed broken for five
+months and six upstream merges. Every endpoint 404'd in production the whole
+time, on this fork's live instance.
 
-They were dropped during conflict resolution in `4c611576` ("Merge upstream
-PieFed v1.6.9", 2026-03-06) and stayed missing for five months and six upstream
-merges. Every one of these endpoints returned 404 in production the whole time,
-including on this fork's live instance.
+1. **The imports vanished.** A Flask route only exists if its
+   `@route(...)` decorator executes, which requires the module to be imported.
+   Nothing else in the tree imports either module; the two lines that did so
+   sat at the bottom of `app/api/alpha/__init__.py` and were dropped in
+   conflict resolution.
+
+2. **The URL prefix collapsed.** The fork's blueprint was
+   `ApiBlueprint("Admin", url_prefix="/api/alpha/admin")`. Upstream v1.6.9
+   independently added its *own* blueprint — same name `"Admin"` — with the
+   generic `url_prefix="/api/alpha"`, spelling `/admin/...` in its two route
+   decorators instead. The merge kept upstream's line. Because the fork's
+   decorators are bare (`"/private_register"`), on the assumption the prefix
+   supplies `/admin`, every endpoint silently moved to
+   `/api/alpha/private_register`. Fixing only the imports would have left them
+   registered at the wrong paths — and put secret-gated admin endpoints like
+   `PUT`/`DELETE /api/alpha/user/<id>` directly into the frozen public
+   namespace.
+
+The fix for (2) is a dedicated `private_admin_bp`, so upstream can never move
+these endpoints by editing its own blueprint again. That is why the endpoint
+names below are `PrivateAdmin.*`.
 
 Two things let it hide for that long, and both are the same anti-pattern —
 checking for a *proxy* instead of the *behaviour*:
@@ -78,25 +96,25 @@ def app_with_db():
 # Endpoint names are asserted alongside rules because a rule can be satisfied by
 # an unrelated blueprint, which would make a rule-only check pass vacuously.
 REQUIRED_ADMIN_ENDPOINTS = [
-    ("Admin.create_private_user_endpoint", "/api/alpha/private_register"),
-    ("Admin.validate_user_endpoint", "/api/alpha/user/validate"),
-    ("Admin.list_users_endpoint", "/api/alpha/users"),
-    ("Admin.lookup_user_endpoint", "/api/alpha/user/lookup"),
-    ("Admin.health_check_endpoint", "/api/alpha/health"),
-    ("Admin.update_user_endpoint", "/api/alpha/user/<int:user_id>"),
-    ("Admin.delete_user_endpoint", "/api/alpha/user/<int:user_id>"),
-    ("Admin.disable_user_endpoint", "/api/alpha/user/<int:user_id>/disable"),
-    ("Admin.enable_user_endpoint", "/api/alpha/user/<int:user_id>/enable"),
-    ("Admin.ban_user_endpoint", "/api/alpha/user/<int:user_id>/ban"),
-    ("Admin.unban_user_endpoint", "/api/alpha/user/<int:user_id>/unban"),
-    ("Admin.bulk_user_operations_endpoint", "/api/alpha/users/bulk"),
-    ("Admin.export_users_endpoint", "/api/alpha/users/export"),
-    ("Admin.user_statistics_endpoint", "/api/alpha/stats/users"),
-    ("Admin.registration_statistics_endpoint", "/api/alpha/stats/registrations"),
-    ("Admin.get_metrics", "/api/alpha/metrics"),
-    ("Admin.comprehensive_health_check", "/api/alpha/monitoring/health"),
-    ("Admin.get_audit_trail", "/api/alpha/monitoring/audit"),
-    ("Admin.get_rate_limit_status", "/api/alpha/monitoring/rate-limits"),
+    ("PrivateAdmin.create_private_user_endpoint", "/api/alpha/admin/private_register"),
+    ("PrivateAdmin.validate_user_endpoint", "/api/alpha/admin/user/validate"),
+    ("PrivateAdmin.list_users_endpoint", "/api/alpha/admin/users"),
+    ("PrivateAdmin.lookup_user_endpoint", "/api/alpha/admin/user/lookup"),
+    ("PrivateAdmin.health_check_endpoint", "/api/alpha/admin/health"),
+    ("PrivateAdmin.update_user_endpoint", "/api/alpha/admin/user/<int:user_id>"),
+    ("PrivateAdmin.delete_user_endpoint", "/api/alpha/admin/user/<int:user_id>"),
+    ("PrivateAdmin.disable_user_endpoint", "/api/alpha/admin/user/<int:user_id>/disable"),
+    ("PrivateAdmin.enable_user_endpoint", "/api/alpha/admin/user/<int:user_id>/enable"),
+    ("PrivateAdmin.ban_user_endpoint", "/api/alpha/admin/user/<int:user_id>/ban"),
+    ("PrivateAdmin.unban_user_endpoint", "/api/alpha/admin/user/<int:user_id>/unban"),
+    ("PrivateAdmin.bulk_user_operations_endpoint", "/api/alpha/admin/users/bulk"),
+    ("PrivateAdmin.export_users_endpoint", "/api/alpha/admin/users/export"),
+    ("PrivateAdmin.user_statistics_endpoint", "/api/alpha/admin/stats/users"),
+    ("PrivateAdmin.registration_statistics_endpoint", "/api/alpha/admin/stats/registrations"),
+    ("PrivateAdmin.get_metrics", "/api/alpha/admin/metrics"),
+    ("PrivateAdmin.comprehensive_health_check", "/api/alpha/admin/monitoring/health"),
+    ("PrivateAdmin.get_audit_trail", "/api/alpha/admin/monitoring/audit"),
+    ("PrivateAdmin.get_rate_limit_status", "/api/alpha/admin/monitoring/rate-limits"),
 ]
 
 
@@ -106,13 +124,15 @@ REQUIRED_ADMIN_ENDPOINTS = [
 def test_admin_api_endpoint_is_registered(app, endpoint, rule):
     registered = {(r.endpoint, str(r)) for r in app.url_map.iter_rules()}
     assert (endpoint, rule) in registered, (
-        f"REGRESSION: {endpoint} ({rule}) is not registered. The fork's "
-        "private-registration admin API is defined but unrouted, so this "
-        "endpoint 404s. Check that app/api/alpha/__init__.py still ends with "
-        "`from app.api.admin import routes as admin_routes` and "
-        "`from app.api.admin import monitoring_routes` — those imports were "
-        "silently dropped once before, in the v1.6.9 merge (4c611576), and "
-        "stayed missing for five months."
+        f"REGRESSION: {endpoint} ({rule}) is not registered, so it 404s. "
+        "Two things to check in app/api/alpha/__init__.py, both of which broke "
+        "together in the v1.6.9 merge (4c611576) and stayed broken for five "
+        "months: (a) the file must still end with `from app.api.admin import "
+        "routes as admin_routes` and `from app.api.admin import "
+        "monitoring_routes` — a route needs its decorator to execute; and "
+        "(b) `private_admin_bp` must still carry url_prefix=\"/api/alpha/admin\". "
+        "If the endpoint exists but at /api/alpha/<name> without the /admin "
+        "segment, it is (b)."
     )
 
 
@@ -145,10 +165,12 @@ def test_alpha_init_imports_the_admin_route_modules():
 def test_no_route_collisions_on_the_frozen_alpha_surface(app):
     """`/api/alpha/*` is frozen (see CLAUDE.md). Nothing may shadow it.
 
-    The fork's admin endpoints sit on generic paths (`/api/alpha/users`,
-    `/api/alpha/user/<id>`), so re-registering them could in principle shadow a
-    Lemmy-compatible route and silently change API behaviour. Assert that every
-    (rule, method) pair resolves to exactly one endpoint.
+    The fork's admin endpoints use bare route paths (`/users`, `/user/<id>`)
+    and rely on their blueprint prefix to place them under `/api/alpha/admin`.
+    If that prefix is ever lost again they land directly on `/api/alpha/users`
+    and `/api/alpha/user/<id>`, where they can shadow Lemmy-compatible routes
+    and silently change public API behaviour. Assert that every (rule, method)
+    pair resolves to exactly one endpoint.
     """
     from collections import defaultdict
 
@@ -181,11 +203,11 @@ def test_admin_endpoints_are_auth_gated(app_with_db):
     # mean 400 is not evidence of authorization, so those are exercised with
     # valid-shaped input here.)
     for path in (
-        "/api/alpha/users",
-        "/api/alpha/user/lookup?username=someone",
-        "/api/alpha/stats/users",
-        "/api/alpha/health",
-        "/api/alpha/metrics",
+        "/api/alpha/admin/users",
+        "/api/alpha/admin/user/lookup?username=someone",
+        "/api/alpha/admin/stats/users",
+        "/api/alpha/admin/health",
+        "/api/alpha/admin/metrics",
     ):
         resp = client.get(path)
         assert resp.status_code in (401, 403, 429), (
