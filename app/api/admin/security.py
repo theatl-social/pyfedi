@@ -85,9 +85,19 @@ def validate_private_registration_request():
         raise Forbidden("Private registration is disabled")
 
     # 2. IP whitelist validation
-    client_ip = request.environ.get("HTTP_X_FORWARDED_FOR", request.remote_addr)
-    if client_ip and "," in client_ip:
-        client_ip = client_ip.split(",")[0].strip()
+    #
+    # Use request.remote_addr, which ProxyFix(x_for=1) has already resolved from
+    # the *rightmost* X-Forwarded-For entry — the hop our own reverse proxy
+    # appended, and the only one a client cannot forge.
+    #
+    # This previously read the raw HTTP_X_FORWARDED_FOR header and took the
+    # LEFTMOST entry, which is entirely client-supplied: anyone could send
+    # `X-Forwarded-For: <an allowed ip>` and satisfy the allowlist. That was
+    # latent while the allowlist was inert (it read a settings row nothing ever
+    # wrote, so it always returned True); now that the allowlist actually
+    # enforces, trusting the leftmost hop would make it worse than useless —
+    # it would look like an access control while granting anyone entry.
+    client_ip = request.remote_addr
 
     if not is_ip_whitelisted(client_ip):
         current_app.logger.warning(
