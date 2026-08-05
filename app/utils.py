@@ -2027,6 +2027,19 @@ def login_required_if_private_instance(func):
     return decorated_view
 
 
+def check_anoobis(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        whitelist = ['Mastodon', 'Friendica', 'Synapse', 'PieFed', 'Bridgy', 'Lemmy', 'FlipboardProxy', 'Googlebot', 'Kagibot', 'bingbot']
+        if current_user.is_anonymous and current_app.config['ANOOBIS'] and \
+                request.cookies.get('anoobis') is None and \
+                not any(item in request.user_agent.string for item in whitelist):
+            return redirect(url_for('main.anoobis', next=request.path))
+        return func(*args, **kwargs)
+
+    return decorated_view
+
+
 def permission_required(permission):
     def decorator(func):
         @wraps(func)
@@ -2818,12 +2831,10 @@ def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
     )
 
 
-@cache.memoize(timeout=30)
 def num_topics() -> int:
     return db.session.execute(text('SELECT COUNT(*) as c FROM "topic"')).scalar_one()
 
 
-@cache.memoize(timeout=30)
 def num_feeds() -> int:
     return db.session.execute(text('SELECT COUNT(*) as c FROM "feed"')).scalar_one()
 
@@ -2927,7 +2938,15 @@ def url_to_thumbnail_file(filename) -> File:
             # serve a malicious SVG and we persist it as a thumbnail rendered
             # inline elsewhere.
             if "svg" in content_type:
-                response_content = sanitize_svg_bytes(response_content)
+                # sanitize_svg_bytes is fail-closed as of v1.7.10 (it raises
+                # rather than returning the original bytes). Drop the thumbnail
+                # instead of letting the exception escape into the caller, and
+                # never fall back to the unsanitized content.
+                try:
+                    response_content = sanitize_svg_bytes(response_content)
+                except Exception as e:
+                    current_app.logger.error(f"Error sanitizing remote SVG: {e}")
+                    return None
                 file_extension = final_ext = ".svg"
             else:
                 # Generate file extension from mime type
@@ -2952,7 +2971,11 @@ def url_to_thumbnail_file(filename) -> File:
             if file_extension == ".svg" and (
                 content_type is None or "svg" not in content_type
             ):
-                response_content = sanitize_svg_bytes(response_content)
+                try:
+                    response_content = sanitize_svg_bytes(response_content)
+                except Exception as e:
+                    current_app.logger.error(f"Error sanitizing remote SVG: {e}")
+                    return None
 
             new_filename = gibberish(15)
             if store_files_in_s3():
@@ -5654,15 +5677,39 @@ def is_invalid_get_request_uri(uri):
 # embedding HTML, etc.). py-svg-hush strips all of these via an allowlist
 # parser. Adopted from upstream v1.6.27 (commit dc215422); see SECURITY_PATCHES.md.
 def sanitize_svg_bytes(svg_bytes: bytes) -> bytes:
-    try:
-        # Allow common image MIME types in data URLs (e.g. <image href="data:image/png;...">)
-        keep_data_url_mime_types = {
-            "image": ["jpeg", "png", "gif", "webp", "avif"],
-        }
-        return filter_svg(svg_bytes, keep_data_url_mime_types)
-    except Exception as e:
-        current_app.logger.error(f"Error sanitizing SVG: {e}")
-        return svg_bytes
+    # SP-017: took upstream v1.7.10's hardened version. It is strictly stronger
+    # than the previous fork/upstream implementation in two ways:
+    #   * it strips XML declarations and processing instructions, closing XXE
+    #     and billion-laughs vectors that filter_svg alone does not address;
+    #   * it is fail-CLOSED. The old body wrapped everything in
+    #     `except Exception: return svg_bytes`, i.e. a malformed or hostile SVG
+    #     that crashed the sanitizer was persisted verbatim. That is the exact
+    #     input an attacker controls, so failing open there was backwards.
+    # Callers must therefore handle exceptions. sanitize_svg() already does;
+    # url_to_thumbnail_file() has been updated to skip the thumbnail rather
+    # than persist unsanitized bytes.
+    max_svg_size = 10 * 1024 * 1024  # 10 MB
+    if len(svg_bytes) > max_svg_size:
+        raise ValueError(
+            f"SVG file too large: {len(svg_bytes)} bytes (max {max_svg_size})"
+        )
+
+    # Strip all XML declarations (<!...) to prevent XXE/billion laughs attacks
+    svg_bytes = re.sub(rb"<\!.*?>", rb"", svg_bytes, flags=re.DOTALL)
+
+    # Strip all XML processing instructions (<?...?>) as they can also be attack vectors
+    svg_bytes = re.sub(rb"<\?.*?\?>", rb"", svg_bytes, flags=re.DOTALL)
+
+    # Additional cleanup
+    svg_bytes = re.sub(rb"\[>", rb"", svg_bytes)
+    svg_bytes = re.sub(rb"\]>", rb"", svg_bytes)
+
+    # Allow common image MIME types in data URLs (e.g. <image href="data:image/png;...">)
+    keep_data_url_mime_types = {
+        "image": ["jpeg", "png", "gif", "webp", "avif"],
+    }
+
+    return filter_svg(svg_bytes, keep_data_url_mime_types)
 
 
 def sanitize_svg(filepath: str) -> bool:
@@ -5677,3 +5724,13 @@ def sanitize_svg(filepath: str) -> bool:
     except Exception as e:
         current_app.logger.error(f"Error sanitizing SVG: {e}")
         return False
+
+
+def requestor_domain():
+    requesting_domain = ''
+    if user_agent := str(request.user_agent):
+        if '+' in user_agent:
+            parts = user_agent.split('+')
+            requesting_domain = parts[-1].replace(')', '')
+            requesting_domain = furl(requesting_domain).host
+    return requesting_domain

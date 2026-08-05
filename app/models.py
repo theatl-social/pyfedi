@@ -1412,7 +1412,13 @@ class User(UserMixin, db.Model):
         return self.created and self.created > utcnow() - timedelta(days=1)
 
     def has_blocked_instance(self, instance_id: int):
+        if instance_id is None:
+            return False
         instance_block = db.session.query(InstanceBlock).filter_by(user_id=self.id, instance_id=instance_id).first()
+        return instance_block is not None
+
+    def has_blocked_instances(self):
+        instance_block = db.session.query(InstanceBlock).filter_by(user_id=self.id).first()
         return instance_block is not None
 
     def has_blocked_user(self, user_id: int):
@@ -2751,6 +2757,7 @@ class PostReply(db.Model):
     reports = db.Column(db.Integer, default=0)  # how many times this post has been reported. Set to -1 to ignore reports
     answer = db.Column(db.Boolean, default=False)   # this comment was designated as the best answer to a question
     emoji_reactions = db.Column(db.JSON)            # a cache of the emoji reactions a post has received, to avoid joins
+    collapsible = db.Column(db.Boolean, default=True)
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
@@ -2825,7 +2832,7 @@ class PostReply(db.Model):
                           body_html=body_html, body_html_safe=True,
                           from_bot=user.bot or user.bot_override, nsfw=post.nsfw,
                           notify_author=notify_author, instance_id=user.instance_id,
-                          language_id=language_id,
+                          language_id=language_id, collapsible=user.id != post.user_id,
                           distinguished=distinguished, answer=answer, private=private, indexable=user.indexable,
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
@@ -2856,7 +2863,6 @@ class PostReply(db.Model):
             site = Site()
 
         if reply_is_just_link_to_gif_reaction(reply.body) and site.enable_gif_reply_rep_decrease:
-            user.reputation -= 1
             raise PostReplyValidationError(_('Gif comment ignored'))
 
         if reply_is_low_effort(reply.body) and site.enable_this_comment_filter:

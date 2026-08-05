@@ -229,6 +229,89 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Merged upstream PieFed release tag `v1.7.10` on 2026-08-05
+- Branch: `20260805/merge-upstream-v1710`
+- Upstream tag commit: `6e3edda1` (24 commits since `9653bed1` = `v1.7.8`; clean linear ancestry)
+- New version: `1.7.10-peachpie-20260805` / `1.7.10+peachpie.20260805`
+- **Branched off `20260805/celery-modern-settings`, not `main`**, so this merge
+  carries the celery worker-stability work (PR #81) as well. Upstream does not
+  touch the vote locks, and its `app/__init__.py` change (flask-compress)
+  conflicted only against our new celery block — both were kept.
+- **Note on upstream tags vs `main`:** `v1.7.10` is a release-branch tag; upstream
+  `main` is 72 commits ahead of it on a separate line (`1a357b40` at merge time).
+  We merged the **tag**, consistent with the v1.7.0/v1.7.8 merges. The `main`
+  line carries the same anoobis/reputation work plus more.
+- Key additions from upstream:
+  - **Response compression** — `flask-compress`; `compress.init_app(app)` in
+    `create_app()`, `COMPRESS_ALGORITHM='gzip'` (one variant only, so nginx's
+    `proxy_cache` doesn't fragment), level 6, 4 KB minimum. `pyfedi.py`'s
+    `after_request` switched from `headers.setdefault('Vary', ...)` to
+    `response.vary.update(...)` so it merges with Flask-Compress's
+    `Accept-Encoding` instead of clobbering it. Verified working: 20 KB → 54 B.
+  - **"Anoobis"** proof-of-work challenge for anonymous scrapers —
+    `check_anoobis` decorator in `app/utils.py`, `/anoobis` route,
+    `app/templates/anoobis.html`, `ANOOBIS*` config. Applied to feed, community
+    and user routes. Note the whitelist is `any(item in request.user_agent.string
+    for item in [...])`, i.e. trivially bypassable by claiming to be Googlebot —
+    it is a cost-imposition measure, not an access control.
+  - **Author-level instance blocking on federated fetches** — `post_ap`/`comment_ap`
+    return 401 when the author has blocked the requesting instance, and switch to
+    `Vary: Accept, User-Agent` when the author blocks anyone. `requestor_domain()`
+    derives the domain from the User-Agent, which is client-controlled, so this is
+    exposure reduction, not authentication. `find_instance_id()` gained a null
+    guard and `has_blocked_instance()` an `instance_id is None` guard.
+  - `attributionDomains` on actor JSON (FEP-2345); `collapsible` column on
+    `PostReply` + `set_collapse_post_reply()` + moderator toggle; comment-pattern
+    chart on profiles; reputation system simplified (gif-reply no longer decrements
+    `user.reputation`); streamlined 404/429 error pages; `(content in post body)`
+    placeholder no longer rendered as a post title.
+  - New migration: `8ed167b06fd7` override comment collapse
+  - New merge migration: `merge_20260805_v1710.py` (merges `merge_20260730_v178`
+    + `8ed167b06fd7`) — single head verified
+  - New dependency: `flask-compress~=1.24` (pulls brotli/brotlicffi/backports-zstd)
+- **SP-017 strengthened by upstream** (see `SECURITY_PATCHES.md`): upstream's
+  `sanitize_svg_bytes` adds a 10 MB cap, strips DOCTYPE/processing instructions
+  (XXE, billion laughs), and — most importantly — **removes the blanket
+  `except Exception: return svg_bytes`**. Taking upstream here means the sanitizer
+  now *raises* instead of returning attacker-chosen bytes unsanitized. Both
+  `url_to_thumbnail_file()` call sites were updated to log and `return None`
+  (drop the thumbnail) rather than fall back. The old regression test asserted
+  the fail-open contract ("never raise") and was rewritten for the fail-closed
+  one, plus new tests for the size cap, DOCTYPE/PI stripping, XXE rejection, and
+  an AST check that the call sites don't silently reintroduce a fallback.
+- Fork customizations preserved: `Post.generate_ap_id` federation-safe form
+  (`tests/test_post_slug.py` green — it did **not** regress this time, the
+  `models.py` auto-merge left it alone), `cached_modlist_*` function-level import
+  from `app.shared.community` (circular-import fix), `privacy_url`, PeachPie
+  footer, private registration API, `uv run` + `gosu` entrypoints, SP-023
+  `safe_hx_redirect_url`, the `VOTE_QUOTA=0` disable comment.
+- Upstream bug fixed while merging: `config.py` shipped
+  `ANOOBIS_DIFFICULTY_DESKTOP = os.environ.get('') or 19` and the same for
+  `_MOBILE` — an **empty env-var key**, so neither could ever be configured.
+  Corrected to read their real names (and coerced to `int`).
+- Gap closed while merging: our `webfinger()` was missing upstream's
+  `ALLOWLIST_INTENSE` gate entirely (it had never been adopted, not deliberately
+  removed). Adopted using `requestor_domain()`.
+- Conflicts: 16 files. Most were the fork's double-quote/black reformatting vs
+  upstream's single quotes with no semantic delta — `ruff.toml` selects only
+  `E4/E7/E9/F` (not quote style), so keeping our formatting stays lint-clean.
+  `requirements.txt` deleted per policy (we use `pyproject.toml`).
+- Templates: `_post_full.html` kept the fork's structure (upstream's
+  `is_microblog`/`microblog_header` wrapper remains deliberately deferred, see
+  `ad426216`) while adopting upstream's `(content in post body)` title guard,
+  matching the pattern already in `post_teaser/_macros.html`.
+- Verification:
+  - `uvx ruff check .` — All checks passed
+  - `djlint app/templates --lint` — 297 files, 0 errors
+  - `tests/security/` — 164 passed
+  - `tests/test_post_slug.py` + `test_ci_fixes.py` + `test_migration_heads.py`
+    + `test_vote_lock_timeout.py` + `test_celery_settings.py` — 41 passed
+  - `create_app()` smoke test — boots, `/anoobis` routed, gzip active,
+    `celery.conf['deprecated_settings']` is now an **empty set**
+  - Full sweep: **17 failed / 520 passed / 27 errors**, failure list byte-identical
+    to the pre-merge baseline (17 failed / 516 passed / 27 errors) — **zero new
+    failures**; the +4 are the new SP-017 tests
+
 - Merged upstream PieFed release tag `v1.7.8` on 2026-07-30
 - Branch: `20260730/merge-upstream-v178`
 - Upstream tag commit: `9653bed1` (42 commits since `a114efdc`)

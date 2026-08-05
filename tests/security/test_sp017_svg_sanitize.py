@@ -110,14 +110,106 @@ def test_sanitize_svg_file_rewrites_on_disk(app):
             pathlib.Path(tmp_path).unlink(missing_ok=True)
 
 
-def test_sanitize_handles_invalid_input_gracefully(app):
-    """Garbage in: returns original bytes, logs error, does not raise."""
+def test_sanitize_never_returns_unsanitized_input(app):
+    """Garbage in: sanitized bytes out, or an exception. Never the input.
+
+    Contract change, 2026-08-05 (upstream v1.7.10): sanitize_svg_bytes is now
+    fail-CLOSED. It previously wrapped its whole body in
+    `except Exception: return svg_bytes`, so an SVG crafted to crash the
+    sanitizer was persisted verbatim — the attacker chose the input, so
+    failing open was exactly backwards. It may now raise, and every caller is
+    responsible for dropping the file rather than falling back.
+    """
     with app.app_context():
         garbage = b"not actually svg content at all \x00\xff"
-        # Should not raise; either strips to safe form or returns as-is.
-        # The contract is "do no harm" — never raise on weird input.
-        result = sanitize_svg_bytes(garbage)
+        try:
+            result = sanitize_svg_bytes(garbage)
+        except Exception:
+            return  # fail-closed is the acceptable outcome
         assert isinstance(result, bytes)
+        assert result != garbage, (
+            "SP-017 REGRESSION: sanitize_svg_bytes returned its input "
+            "unchanged. Returning unsanitized attacker-controlled bytes is "
+            "the fail-open behaviour this patch exists to prevent."
+        )
+
+
+def test_sanitize_rejects_oversized_svg(app):
+    """A decompression/parser bomb must be rejected before parsing."""
+    with app.app_context():
+        with pytest.raises(ValueError, match="too large"):
+            sanitize_svg_bytes(b"<svg>" + b"a" * (10 * 1024 * 1024 + 1))
+
+
+def test_sanitize_strips_doctype_and_processing_instructions(app):
+    """XXE / billion-laughs vectors live in DOCTYPE and <?...?> nodes.
+
+    Uses a benign external DTD reference so the document is still well-formed
+    once those nodes are stripped, isolating the stripping behaviour itself.
+    """
+    with app.app_context():
+        payload = (
+            b'<?xml version="1.0" encoding="UTF-8"?>'
+            b'<?xml-stylesheet type="text/xsl" href="https://evil.example/x.xsl"?>'
+            b'<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" '
+            b'"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">'
+            b'<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>'
+        )
+        result = sanitize_svg_bytes(payload)
+        assert b"<!DOCTYPE" not in result
+        assert b"svg11.dtd" not in result, "external DTD reference survived"
+        # Note: filter_svg re-serializes and emits its own <?xml ...?> header,
+        # so assert on the attacker-supplied PI content rather than on "<?xml".
+        assert b"evil.example" not in result, "attacker processing instruction survived"
+        assert b"xml-stylesheet" not in result
+        assert b"<rect" in result, "stripping must not destroy the actual image"
+
+
+def test_sanitize_rejects_xxe_entity_expansion(app):
+    """An entity-expansion XXE payload must not survive as usable output.
+
+    Stripping the DOCTYPE removes the &xxe; definition, so the reference no
+    longer resolves and the parser rejects the document. Failing closed here
+    is the point: under the pre-v1.7.10 fail-open body this raise was caught
+    and the original bytes — DOCTYPE, ENTITY and all — were returned.
+    """
+    with app.app_context():
+        hostile = (
+            b'<?xml version="1.0"?>'
+            b'<!DOCTYPE svg [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+            b'<svg xmlns="http://www.w3.org/2000/svg"><text>&xxe;</text></svg>'
+        )
+        with pytest.raises(Exception):
+            sanitize_svg_bytes(hostile)
+
+
+def test_url_to_thumbnail_does_not_fall_back_to_unsanitized_svg():
+    """The remote-fetch caller must drop the thumbnail, not keep raw bytes.
+
+    sanitize_svg_bytes can now raise. If url_to_thumbnail_file caught that and
+    carried on with `response_content` untouched, the fail-closed sanitizer
+    would be silently converted back into a fail-open one at the call site.
+    """
+    src = _function_source(UTILS, "url_to_thumbnail_file")
+    assert "sanitize_svg_bytes" in src, (
+        "SP-017 REGRESSION: url_to_thumbnail_file no longer sanitizes SVG."
+    )
+    # Every except-block guarding a sanitize call must bail out, not continue.
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        body_src = ast.dump(node)
+        if "sanitize_svg_bytes" not in body_src:
+            continue
+        for handler in node.handlers:
+            assert any(
+                isinstance(stmt, ast.Return) for stmt in ast.walk(handler)
+            ), (
+                "SP-017 REGRESSION: an exception from sanitize_svg_bytes in "
+                "url_to_thumbnail_file is swallowed without returning. The "
+                "unsanitized bytes would then be persisted as a thumbnail."
+            )
 
 
 # --- Structural tests: call sites are wired up -------------------------------

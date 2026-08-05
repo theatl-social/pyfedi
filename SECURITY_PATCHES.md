@@ -220,7 +220,13 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 - **Test:** `tests/security/test_sp017_svg_sanitize.py`
 - **Upstream status:** FIXED upstream in v1.6.27. We adopted the same library and approach.
 - **Fix summary:** SVG is `image/svg+xml` and renders inline. An attacker uploading an SVG with `<script>`, event handlers (`onload`, `onclick`), or `javascript:` URLs in `xlink:href` achieves persistent XSS for any user who views the SVG (community icon, user avatar, post image, og:image preview). `py-svg-hush` parses the SVG against an allowlist and strips dangerous nodes/attributes.
-- **Notes:** The sanitizer is fail-closed on the *upload* path (errors return False without writing) but fail-open on `sanitize_svg_bytes` (errors return original bytes after logging). The latter is intentional for the thumbnail-fetch path so a malformed remote SVG doesn't break the whole link-preview pipeline — but it does mean the persistence path is the load-bearing one.
+- **Notes:** The sanitizer is fail-closed on the *upload* path (errors return False without writing). `sanitize_svg_bytes` used to be fail-*open* — errors returned the original bytes after logging — which was justified at the time so a malformed remote SVG wouldn't break the link-preview pipeline.
+- **2026-08-05 update (upstream v1.7.10, commit `5462c4ff`):** adopted upstream's hardened `sanitize_svg_bytes`. It is strictly stronger than the version we carried:
+  - rejects inputs over 10 MB before parsing (parser/decompression bombs);
+  - strips XML declarations (`<!...>`) and processing instructions (`<?...?>`) prior to `filter_svg`, closing XXE and billion-laughs vectors that `filter_svg` alone does not address;
+  - **is now fail-CLOSED** — the blanket `except Exception: return svg_bytes` is gone. Returning attacker-chosen bytes unsanitized when the sanitizer crashed was backwards: crashing the sanitizer was itself an attack.
+  Callers must therefore handle exceptions. `sanitize_svg()` already did. `url_to_thumbnail_file()` was updated at both of its call sites to log and `return None` — the thumbnail is dropped rather than persisted unsanitized. Regression tests assert the fail-closed contract *and* that the call sites do not silently reintroduce a fallback (`tests/security/test_sp017_svg_sanitize.py`).
+  Note `filter_svg` re-serializes and emits its own `<?xml ...?>` declaration, so tests assert on attacker-supplied PI content rather than the absence of `<?xml`.
 
 ### SP-004 — Shell-call command injection in CLI translate command
 

@@ -196,6 +196,9 @@ from app.utils import (
     show_reason_why_no_federation,
     can_upload_video,
     banned_instances,
+    is_invalid_get_request_uri,
+    user_ip_banned,
+    check_anoobis,
 )
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
@@ -473,6 +476,7 @@ def _make_community_results_datalist_html(community_name):
 
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
 @login_required_if_private_instance
+@check_anoobis
 def show_community(community: Community):
     if community.banned:
         abort(404)

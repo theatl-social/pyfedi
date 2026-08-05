@@ -107,6 +107,7 @@ from app.utils import (
     user_pronouns,
     mimetype_from_url,
     community_membership_private,
+    check_anoobis,
 )
 
 
@@ -564,6 +565,7 @@ def feed_list():
 
 # @bp.route('/f/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
 @login_required_if_private_instance
+@check_anoobis
 def show_feed(feed):
     block_honey_pot()
     # if the feed is private abort, unless the logged in user is the owner of the feed

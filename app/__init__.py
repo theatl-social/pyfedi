@@ -12,6 +12,7 @@ from flask_bootstrap import Bootstrap5
 from flask_mail import Mail
 from flask_babel import Babel, lazy_gettext as _l
 from flask_caching import Cache
+from flask_compress import Compress
 from flask_limiter import Limiter
 from flask_smorest import Api
 from flask_bcrypt import Bcrypt
@@ -66,6 +67,7 @@ mail = Mail()
 bootstrap = Bootstrap5()
 babel = Babel(locale_selector=get_locale)
 cache = Cache()
+compress = Compress()
 limiter = Limiter(
     get_ip_address,
     storage_uri="redis+" + Config.CACHE_REDIS_URL
@@ -235,6 +237,7 @@ def create_app(config_class=Config):
     bootstrap.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)
+    compress.init_app(app)   # registered before the after_request in pyfedi.py, so it runs after it
     limiter.init_app(app)
     app_bcrypt.init_app(app)
     # Celery configuration.
