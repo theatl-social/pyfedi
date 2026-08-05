@@ -8,6 +8,18 @@ tracks an upstream PieFed release plus this fork's own patches. Version strings 
 
 ---
 
+## Next fork release
+
+- **Unlimited voting is opt-in.** Set VOTE_QUOTA=0 in the web and worker
+  runtime environment, then restart both services. Positive values retain the
+  daily limit; an unset value remains 240. This applies to local, API, and
+  inbound federated votes.
+- **Profile vote totals are public.** Profiles now show aggregate upvotes and
+  downvotes cast to anonymous and signed-in visitors. Individual voter lists
+  and existing administrator-only metadata remain restricted.
+
+---
+
 ## 1.7.8-peachpie-20260731
 
 Patch release. Fixes a migration that aborted the upgrade on any database still
