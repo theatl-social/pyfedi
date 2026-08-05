@@ -70,17 +70,18 @@ def test_post_and_reply_votes_continue_when_quota_is_disabled(app):
         patch("app.shared.post.authorise_api_user", return_value=user),
         patch("app.shared.post.can_upvote", return_value=True),
         patch("app.shared.post.db.session.query") as post_query,
+        patch("app.shared.post.user_ip_banned", return_value=False),
         patch("app.shared.post.mark_post_read"),
         patch("app.shared.post.vote_quota_exceeded", return_value=False),
         patch("app.shared.post.task_selector"),
         patch("app.shared.reply.authorise_api_user", return_value=user),
         patch("app.shared.reply.can_upvote", return_value=True),
-        patch("app.shared.reply.db.session.query") as reply_query,
+        patch("app.shared.reply.user_ip_banned", return_value=False),
         patch("app.shared.reply.vote_quota_exceeded", return_value=False),
         patch("app.shared.reply.task_selector"),
     ):
         post_query.return_value.get.return_value = post
-        reply_query.return_value.filter_by.return_value.one.return_value = reply
+        post_query.return_value.filter_by.return_value.one.return_value = reply
         vote_for_post(1, "upvote", False, None, SRC_API, auth="token")
         vote_for_reply(2, "upvote", False, None, SRC_API, auth="token")
 
@@ -102,17 +103,18 @@ def test_post_and_reply_votes_stop_when_quota_is_exceeded(app):
         patch("app.shared.post.authorise_api_user", return_value=user),
         patch("app.shared.post.can_upvote", return_value=True),
         patch("app.shared.post.db.session.query") as post_query,
+        patch("app.shared.post.user_ip_banned", return_value=False),
         patch("app.shared.post.mark_post_read"),
         patch("app.shared.post.vote_quota_exceeded", return_value=True),
         patch("app.shared.post.task_selector"),
         patch("app.shared.reply.authorise_api_user", return_value=user),
         patch("app.shared.reply.can_upvote", return_value=True),
-        patch("app.shared.reply.db.session.query") as reply_query,
+        patch("app.shared.reply.user_ip_banned", return_value=False),
         patch("app.shared.reply.vote_quota_exceeded", return_value=True),
         patch("app.shared.reply.task_selector"),
     ):
         post_query.return_value.get.return_value = post
-        reply_query.return_value.filter_by.return_value.one.return_value = reply
+        post_query.return_value.filter_by.return_value.one.return_value = reply
         with pytest.raises(TooManyRequests):
             vote_for_post(1, "upvote", False, None, SRC_API, auth="token")
         with pytest.raises(TooManyRequests):
