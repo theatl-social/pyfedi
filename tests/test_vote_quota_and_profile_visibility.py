@@ -204,6 +204,120 @@ def test_inbound_votes_stop_when_quota_is_exceeded(
     liked.vote.assert_not_called()
 
 
+def test_anonymous_profile_shows_vote_totals_without_sensitive_metadata(
+    app, monkeypatch
+):
+    from datetime import datetime, timezone
+
+    from flask import render_template
+
+    class ProfileUser:
+        id = 42
+        instance_id = 1
+        user_name = "public-user"
+        ap_id = None
+        ap_profile_id = "https://test.localhost/u/public-user"
+        ap_domain = "test.localhost"
+        indexable = True
+        searchable = True
+        banned = False
+        bot = False
+        bot_override = False
+        accept_private_messages = False
+        matrix_user_id = None
+        attitude = None
+        reputation = "REPUTATION-SHOULD-STAY-PRIVATE"
+        referrer = "REFERRER-SHOULD-STAY-PRIVATE"
+        ip_address = "IP-SHOULD-STAY-PRIVATE"
+        ip_address_country = "COUNTRY-SHOULD-STAY-PRIVATE"
+        last_seen = "ACTIVE-TIME-SHOULD-STAY-PRIVATE"
+        stripe_subscription_id = "DONOR-SHOULD-STAY-PRIVATE"
+        post_count = 0
+        post_reply_count = 0
+        extra_fields = []
+        about_html = ""
+        created = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        avatar = SimpleNamespace(source_url=None)
+
+        def avatar_image(self):
+            return ""
+
+        def cover_image(self):
+            return ""
+
+        def display_name(self):
+            return "Public User"
+
+        def get_id(self):
+            return self.id
+
+        def instance_domain(self):
+            return "test.localhost"
+
+        def is_instance_admin(self):
+            return False
+
+        def is_local(self):
+            return True
+
+        def is_staff(self):
+            return False
+
+        def link(self):
+            return self.user_name
+
+        def get_num_upvotes(self):
+            return 7
+
+        def get_num_downvotes(self):
+            return 3
+
+    user = ProfileUser()
+    monkeypatch.setitem(app.jinja_env.filters, "shorten", lambda value: value)
+    with app.test_request_context("/"):
+        context = {
+            "user": user,
+            "posts": [],
+            "post_replies": [],
+            "moderates": [],
+            "canonical": None,
+            "subscribed": [],
+            "user_notes": [],
+            "posting_pattern_labels": [],
+            "posting_pattern_values": [],
+            "post_next_url": None,
+            "post_prev_url": None,
+            "replies_next_url": None,
+            "replies_prev_url": None,
+            "overview_items": [],
+            "overview_next_url": None,
+            "overview_prev_url": None,
+            "same_ip_address": [],
+            "archived_post_replies": [],
+            "followers": [],
+            "following": [],
+            "bot_challenge": None,
+            "vote_quota_used": 0,
+            "user_has_public_feeds": False,
+            "user_public_feeds": [],
+            "admin_ids": [],
+            "locale": "en",
+            "low_bandwidth": True,
+            "localize_datetime": lambda _value, _locale: "DATE",
+        }
+        app.update_template_context(context)
+        template = app.jinja_env.get_template("user/show_profile.html")
+        html = "".join(template.blocks["app_content"](template.new_context(context)))
+
+    assert "7 / 3" in html
+    assert "REFERRER-SHOULD-STAY-PRIVATE" not in html
+    assert "IP-SHOULD-STAY-PRIVATE" not in html
+    assert "COUNTRY-SHOULD-STAY-PRIVATE" not in html
+    assert "ACTIVE-TIME-SHOULD-STAY-PRIVATE" not in html
+    assert "DONOR-SHOULD-STAY-PRIVATE" not in html
+    assert "REPUTATION-SHOULD-STAY-PRIVATE" not in html
+
+
 def test_profile_vote_totals_partial_needs_no_authenticated_viewer(app):
     from flask import render_template
 
