@@ -2,11 +2,15 @@
 Admin API routes with full OpenAPI documentation
 """
 
-from datetime import datetime
-
 from flask import current_app
 from marshmallow import ValidationError
-from werkzeug.exceptions import BadRequest, Forbidden, TooManyRequests, Unauthorized
+from werkzeug.exceptions import (
+    BadRequest,
+    Forbidden,
+    TooManyRequests,
+    Unauthorized,
+    UnprocessableEntity,
+)
 
 from app.api.admin.monitoring import check_advanced_rate_limit, track_admin_request
 from app.api.admin.private_registration import (
@@ -24,7 +28,10 @@ from app.api.admin.user_management import (
     perform_user_action,
     update_user,
 )
-from app.api.alpha import admin_bp
+# The fork's admin API mounts on its own blueprint (url_prefix
+# /api/alpha/admin), aliased so the route decorators below keep their
+# bare paths. See the comment on private_admin_bp in app/api/alpha/__init__.py.
+from app.api.alpha import private_admin_bp as admin_bp
 from app.api.alpha.schema import (  # Phase 2 schemas
     AdminBulkUserRequest,
     AdminBulkUserResponse,
@@ -48,6 +55,7 @@ from app.api.alpha.schema import (  # Phase 2 schemas
     AdminUserValidationRequest,
     AdminUserValidationResponse,
 )
+from app.models import utcnow
 from app.utils import is_private_registration_enabled
 
 
@@ -257,7 +265,16 @@ def health_check_endpoint():
             },
         },
         "database": "healthy",  # TODO: Add actual DB health check
-        "timestamp": datetime.utcnow().isoformat(),
+        # A datetime, NOT a pre-formatted string: AdminHealthResponse declares
+        # `timestamp = fields.DateTime(format="iso")`, and marshmallow's
+        # DateTime._serialize calls the unbound `datetime.isoformat`
+        # descriptor on whatever it is handed. Passing the already-formatted
+        # str raised `TypeError: descriptor 'isoformat' for
+        # 'datetime.datetime' objects doesn't apply to a 'str' object` during
+        # the response dump, which the blueprint's shared_error_handler turned
+        # into a 400 — so /api/alpha/admin/health could never return 200.
+        # The serialized wire format is unchanged (still an ISO-8601 string).
+        "timestamp": utcnow(),
     }
 
     return health_info, 200
@@ -301,6 +318,38 @@ def handle_bad_request(error):
         "error": "bad_request",
         "message": "Invalid request format",
         "details": {},
+    }, 400
+
+
+@admin_bp.errorhandler(UnprocessableEntity)
+def handle_validation_error(error):
+    """Report schema-level validation failures in the documented error shape.
+
+    Every admin endpoint declares `alt_response(400,
+    schema=AdminPrivateRegistrationError)`, and that schema's `error` field
+    carries an explicit enum containing "validation_failed"; the view bodies
+    return exactly that shape for their own marshmallow ValidationError. But
+    flask-smorest's @arguments decorator rejects a bad request *body* by
+    aborting with 422 UnprocessableEntity before the view ever runs, and
+    UnprocessableEntity is not a subclass of BadRequest — so it missed
+    handle_bad_request() above and fell through to the blueprint-wide
+    shared_error_handler, which emits the unrelated {code, message, status}
+    shape. Clients written against this API's own OpenAPI document got a body
+    with no "error" key whenever a field was too long or malformed.
+
+    The status stays 400 (what shared_error_handler already returned and what
+    the endpoints document); only the body shape is corrected.
+    """
+    messages = {}
+    data = getattr(error, "data", None)
+    if isinstance(data, dict):
+        messages = data.get("messages", {}) or {}
+
+    return {
+        "success": False,
+        "error": "validation_failed",
+        "message": "Request validation failed",
+        "details": {"field_errors": messages},
     }, 400
 
 

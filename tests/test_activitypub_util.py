@@ -2,10 +2,16 @@ import pytest
 import json
 import base64
 
-from app import create_app, cache
+from sqlalchemy import event
+from sqlalchemy.orm import configure_mappers
+
+from app import create_app, cache, db
 from app.activitypub.util import find_actor_or_create, find_actor_or_create_cached
 from app.activitypub.signature import HttpSignature, RsaKeys
+from app.models import Community, Instance, User, utcnow
 from config import Config
+
+from tests.conftest import create_all_for_tests
 
 
 class TestConfig(Config):
@@ -15,13 +21,132 @@ class TestConfig(Config):
     WTF_CSRF_ENABLED = False
     # Disable real email sending during tests
     MAIL_SUPPRESS_SEND = True
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_ENGINE_OPTIONS = {}  # SQLite doesn't support pool settings
+
+
+def _prepare_sqlite_schema(db):
+    """create_all_for_tests(), but first strip the per-*table* after_create /
+    after_drop DDL listeners that sqlalchemy_searchable's
+    SearchManager.attach_ddl_listeners() attaches for every tsvector column
+    (e.g. "CREATE TRIGGER ... BEFORE UPDATE OR INSERT ...", "DROP FUNCTION
+    ..." - both PostgreSQL-only syntax that SQLite's parser rejects).
+
+    create_all_for_tests() in conftest.py already clears
+    `db.metadata.dispatch.before_create` for the separate `parse_websearch()`
+    function DDL, but that dispatch lives on the MetaData object; these
+    listeners live on the individual Table objects instead, and are attached
+    lazily via a `mapper "after_configured"` event the first time SQLAlchemy
+    configures its mappers - which may already have happened by the time this
+    runs (e.g. from a previous test in the same process) or may not have.
+    Forcing configuration and stripping unconditionally makes create_all()/
+    drop_all() behave the same regardless of what ran before. This only ever
+    mattered for real PostgreSQL, so removing it is safe.
+    """
+    if db.engine.dialect.name != "sqlite":
+        create_all_for_tests(db)
+        return
+
+    configure_mappers()
+    for table in db.metadata.tables.values():
+        for event_name in ("after_create", "after_drop"):
+            for listener in list(getattr(table.dispatch, event_name)):
+                event.remove(table, event_name, listener)
+    create_all_for_tests(db)
 
 
 @pytest.fixture
 def app():
     """Create and configure a Flask app for testing using the app factory"""
     app = create_app(TestConfig)
-    return app
+    with app.app_context():
+        _prepare_sqlite_schema(db)
+
+        # This test resolves "rimuadmin" as a *local* user, i.e. one that
+        # lives on app.config['SERVER_NAME']. Seed exactly that.
+        instance = Instance(id=1, domain=app.config["SERVER_NAME"], software="piefed")
+        db.session.add(instance)
+        # Pre-seed the remote instance these tests reference (piefed.social).
+        # Otherwise find_instance_id() hits its "unknown instance" branch,
+        # which spawns a background task via Celery's real (non-eager)
+        # apply_async() - there is no broker in this test environment, so
+        # that call blocks retrying against Redis for ~40s and then fails.
+        remote_instance = Instance(id=2, domain="piefed.social", software="piefed")
+        db.session.add(remote_instance)
+        db.session.flush()
+
+        user = User(
+            user_name="rimuadmin",
+            alt_user_name="rimuadmin",
+            ap_profile_id=f"https://{app.config['SERVER_NAME']}/u/rimuadmin",
+            email="rimuadmin@test.localhost",
+            verified=True,
+            instance_id=1,
+        )
+        user.set_password("password")
+        db.session.add(user)
+
+        # The original test fetched this community live from piefed.social
+        # over HTTPS and let the app create it from the response. Two things
+        # make that unworkable in an isolated/offline test run:
+        #  1. It depends on a real, reachable, unchanging remote server.
+        #  2. `actor_json_to_model()` (app/activitypub/util.py ~line 1784)
+        #     assigns `activity_json["published"]` - a raw ISO-8601 *string*
+        #     from the remote JSON-LD - directly to a `db.DateTime` column
+        #     without parsing it into a `datetime`. That only works against
+        #     PostgreSQL because psycopg2 lets the server implicitly cast
+        #     text to timestamp; SQLite's DBAPI driver enforces the column
+        #     type in Python and raises `TypeError: SQLite DateTime type
+        #     only accepts Python datetime and date objects`. This looks
+        #     like a genuine (if harmless-on-Postgres) latent bug, but
+        #     fixing app code is out of scope here - see the report.
+        # Pre-seeding the community locally exercises the same "already
+        # known" lookup path (find_remote_actor) as a real fetch would once
+        # the object exists, without going through actor_json_to_model.
+        remote_community = Community(
+            name="piefed_meta",
+            title="piefed_meta",
+            ap_id="piefed_meta@piefed.social",
+            ap_profile_id="https://piefed.social/c/piefed_meta",
+            ap_public_url="https://piefed.social/c/piefed_meta",
+            ap_domain="piefed.social",
+            instance_id=remote_instance.id,
+            banned=False,
+            # Recent ap_fetched_at so schedule_actor_refresh() (called on
+            # every successful find) sees the community as already fresh and
+            # doesn't try to schedule an actual network refresh.
+            ap_fetched_at=utcnow(),
+        )
+        db.session.add(remote_community)
+
+        # The final assertion in each test resolves "user@server" through
+        # webfinger (app/activitypub/actor.py:fetch_actor_from_webfinger),
+        # which always makes a real HTTPS GET to
+        # https://{server}/.well-known/webfinger - including for our own
+        # local SERVER_NAME. There is no HTTPS listener at that name in this
+        # test environment, so that call cannot succeed here regardless of
+        # DB setup. Pre-seed a row that satisfies find_actor_by_url()'s
+        # exact "@" lookup (`User.ap_id == "user@server"`) so the assertion
+        # is satisfied via the DB-lookup branch instead, without touching
+        # app code or the network. is_local() is true here (ap_profile_id
+        # starts with SERVER_URL) so schedule_actor_refresh() doesn't try to
+        # refresh it either. A distinct ap_profile_id is required: the
+        # column is unique, and the primary "rimuadmin" row above already
+        # owns the canonical .../u/rimuadmin one.
+        webfinger_shadow = User(
+            user_name="rimuadmin",
+            ap_id=f"rimuadmin@{app.config['SERVER_NAME']}",
+            ap_profile_id=f"https://{app.config['SERVER_NAME']}/u/rimuadmin-webfinger-shadow",
+            instance_id=1,
+            verified=True,
+        )
+        db.session.add(webfinger_shadow)
+
+        db.session.commit()
+
+        yield app
+        db.session.remove()
+        db.drop_all()
 
 
 def test_find_actor_or_create(app):

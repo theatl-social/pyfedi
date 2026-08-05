@@ -1,6 +1,6 @@
 [project]
 name = "pyfedi"
-version = "1.7.8+peachpie.20260805"
+version = "1.7.10+peachpie.20260805"
 description = "PieFed - A federated discussion and link aggregation platform"
 readme = "README.md"
 license = { text = "AGPL-3.0" }
@@ -31,6 +31,7 @@ dependencies = [
     "markdown2==2.5.3",
     "beautifulsoup4==4.12.2",
     "flask-caching~=2.3.0",
+    "flask-compress~=1.24",
     "Pillow",
     "pillow-heif",
     "pillow-avif-plugin>=1.5.5",

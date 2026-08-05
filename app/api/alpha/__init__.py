@@ -58,6 +58,30 @@ upload_bp = ApiBlueprint("Upload", __name__, url_prefix="/api/alpha", descriptio
 
 admin_bp = ApiBlueprint("Admin", __name__, url_prefix="/api/alpha", description="")
 
+# The fork's private-registration admin API gets its OWN blueprint rather than
+# sharing upstream's `admin_bp`. That sharing is what broke it:
+#
+# This fork defined `admin_bp` with url_prefix="/api/alpha/admin". Upstream
+# v1.6.9 independently added its own blueprint, same name "Admin", with the
+# generic url_prefix="/api/alpha" — its two registration-application routes
+# spell "/admin/..." in their decorators instead. Conflict resolution in
+# 4c611576 kept upstream's line, and every fork route (whose decorators are
+# bare, e.g. "/private_register", on the assumption the prefix supplies
+# "/admin") silently moved from /api/alpha/admin/private_register to
+# /api/alpha/private_register. Combined with the dropped imports in the same
+# commit, the API 404'd in production for five months.
+#
+# A separate blueprint makes that class of collision impossible: upstream can
+# rename or re-prefix `admin_bp` freely without moving the fork's endpoints,
+# and the fork's own route decorators stay untouched. Upstream's
+# /api/alpha/admin/registration_application/* paths are unaffected.
+private_admin_bp = ApiBlueprint(
+    "PrivateAdmin",
+    __name__,
+    url_prefix="/api/alpha/admin",
+    description="Administrative endpoints for user management and private registration",
+)
+
 
 def shared_error_handler(e):
     """Shared error handler for all API blueprints"""
@@ -118,8 +142,29 @@ blueprints = [
     private_message_bp,
     upload_bp,
     admin_bp,
+    private_admin_bp,
 ]
 for blueprint in blueprints:
     blueprint.errorhandler(Exception)(shared_error_handler)
 
 from app.api.alpha import routes
+
+# These two imports are load-bearing, not decorative. Flask only registers a
+# route when its @admin_bp.route decorator actually executes, which requires the
+# module to be imported — nothing else in the tree imports either of these.
+#
+# They were dropped during conflict resolution in 4c611576 ("Merge upstream
+# PieFed v1.6.9", 2026-03-06) and stayed missing for five months and six
+# upstream merges. The whole private-registration admin API (19 endpoints) was
+# live code that 404'd. It went unnoticed because CLAUDE.md's post-merge
+# checklist verified `ls app/api/admin/private_registration.py` — the file
+# existed the entire time — and because the tests that would have caught it were
+# in the CI exclusion list.
+#
+# The endpoints are gated in depth (app/api/admin/security.py:74): the
+# PRIVATE_REGISTRATION_ENABLED feature flag defaults to false, then an IP
+# allowlist, then the X-PieFed-Secret header, then a rate limit.
+#
+# tests/test_admin_api_routes_registered.py asserts these routes exist.
+from app.api.admin import routes as admin_routes  # noqa: E402, F401
+from app.api.admin import monitoring_routes  # noqa: E402, F401

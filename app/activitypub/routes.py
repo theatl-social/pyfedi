@@ -138,6 +138,8 @@ from app.utils import (
     publish_sse_event,
     blocked_users,
     block_honey_pot,
+    instance_allowed,
+    requestor_domain,
 )
 
 
@@ -155,6 +157,17 @@ def testredis_get():
 @bp.route("/.well-known/webfinger")
 @cache.cached(timeout=60, query_string=True)
 def webfinger():
+    # Adopted from upstream v1.7.10: under ALLOWLIST_INTENSE, only answer
+    # webfinger for instances on the allowlist. requestor_domain() derives the
+    # domain from the User-Agent, which is client-controlled, so this is a
+    # politeness/exposure-reduction gate, not an authentication control.
+    if requesting_domain := requestor_domain():
+        if not hasattr(g, "site"):
+            g.site = db.session.query(Site).get(1)
+        if get_setting("use_allowlist") and g.site.allowlist_mode == ALLOWLIST_INTENSE:
+            if not instance_allowed(requesting_domain):
+                abort(403)
+
     if request.args.get("resource"):
         feed = False
         query = request.args.get("resource", "")  # acct:alice@tada.club
@@ -550,6 +563,7 @@ def user_profile(actor):
                     "sharedInbox": f"{current_app.config['SERVER_URL']}/inbox"
                 },
                 "published": ap_datetime(user.created),
+                "attributionDomains": [current_app.config["SERVER_NAME"]],
             }
 
             if user.avatar_id is not None:
@@ -3469,10 +3483,15 @@ def comment_ap(comment_id):
     if is_activitypub_request():
         if reply.community.local_only or reply.community.private:
             abort(403)
+        if reply.author.has_blocked_instance(find_instance_id(requestor_domain())):
+            return make_response(f"Author has blocked {requestor_domain()}"), 401
         reply_data = comment_model_to_json(reply) if request.method == "GET" else []
         resp = jsonify(reply_data)
         resp.content_type = "application/activity+json"
-        resp.headers.set("Vary", "Accept")
+        if reply.author.has_blocked_instances():
+            resp.headers.set("Vary", "Accept, User-Agent")
+        else:
+            resp.headers.set("Vary", "Accept")
         resp.headers.set("Cache-Control", "public, max-age=120")
         resp.headers.set(
             "Link",
@@ -3501,6 +3520,8 @@ def post_ap(post_id):
                 or post.status < POST_STATUS_PUBLISHED
             ):
                 abort(403)
+            if post.author.has_blocked_instance(find_instance_id(requestor_domain())):
+                return make_response(f"Author has blocked {requestor_domain()}"), 401
             if request.method == "GET":
                 post_data = post_to_page(post)
                 post_data["@context"] = default_context()
@@ -3509,7 +3530,10 @@ def post_ap(post_id):
             resp = jsonify(post_data)
             resp.content_type = "application/activity+json"
             resp.headers.set("Cache-Control", "public, max-age=120")
-            resp.headers.set("Vary", "Accept")
+            if post.author.has_blocked_instances():
+                resp.headers.set("Vary", "Accept, User-Agent")
+            else:
+                resp.headers.set("Vary", "Accept")
             if post.slug:
                 resp.headers.set(
                     "Link",

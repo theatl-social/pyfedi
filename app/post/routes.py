@@ -45,7 +45,8 @@ from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, re
     vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post, \
     vote_for_poll, hide_post, move_post
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
-    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply, choose_answer, unchoose_answer
+    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply, choose_answer, unchoose_answer, \
+    set_collapse_post_reply
 from app.shared.site import block_remote_instance
 from app.shared.community import get_comm_flair_list
 from app.shared.tasks import task_selector
@@ -239,6 +240,12 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
             recently_downvoted_replies = []
             reply_collapse_threshold = -10
 
+        # fep-2345 - fediverse:creator tag
+        if post.type == POST_TYPE_ARTICLE or post.type == POST_TYPE_LINK or post.type == POST_TYPE_POLL or post.type == POST_TYPE_EVENT or post.is_microblog():
+            creator = '@' + post.author.lemmy_link()
+        else:
+            creator = None
+
         # Polls
         poll_results = False
         poll_choices = []
@@ -307,7 +314,7 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                                    breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                                    has_voted=has_voted, poll_results=poll_results, poll_data=poll_data,
                                    poll_choices=poll_choices, poll_total_votes=poll_total_votes,
-                                   event=event,
+                                   event=event, creator=creator,
                                    canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
                                    user_flair=user_flair, lazy_load_replies=lazy_load_replies,
                                    THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
@@ -1650,6 +1657,13 @@ def post_lock(post_id: int, mode):
 @login_required
 def post_reply_lock(post_id: int, post_reply_id: int, mode):
     lock_post_reply(post_reply_id, mode == 'yes', SRC_WEB)
+    return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{post_reply_id}')))
+
+
+@bp.route('/post/<int:post_id>/<int:post_reply_id>/collapse/<mode>', methods=['POST'])
+@login_required
+def post_reply_collapse(post_id: int, post_reply_id: int, mode):
+    set_collapse_post_reply(post_reply_id, mode == 'yes', SRC_WEB)
     return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{post_reply_id}')))
 
 

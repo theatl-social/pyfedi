@@ -14,33 +14,34 @@ import json
 import os
 from unittest.mock import patch
 
+from tests.conftest import TestConfig as _BaseTestConfig
 
-class PrivateRegSecurityTestConfig:
-    """Minimal test config focused on security"""
+# sqlalchemy_searchable attaches its per-table `DROP FUNCTION ...` teardown hook
+# lazily -- the first time any ORM query triggers SQLAlchemy's configure_mappers()
+# -- which can happen *after* create_all_for_tests() has already run its
+# hook-stripping pass. If a test in this file is the first ORM query of the
+# whole pytest session, the hook reappears afterward and this file's own
+# security_app fixture teardown (`db.drop_all()`) fails with
+# `near "FUNCTION": syntax error` on `DROP FUNCTION IF EXISTS
+# post_search_vector_update()`. Configuring mappers here, at import time (i.e.
+# before any fixture runs), ensures the hook already exists when
+# create_all_for_tests() strips it. This does not touch tests/conftest.py.
+from sqlalchemy.orm import configure_mappers as _configure_mappers
 
-    TESTING = True
-    WTF_CSRF_ENABLED = False
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
-    SQLALCHEMY_ENGINE_OPTIONS = {}
-    SERVER_NAME = "localhost"
-    SECRET_KEY = "test-security-key"
+_configure_mappers()
+
+
+class PrivateRegSecurityTestConfig(_BaseTestConfig):
+    """Test config focused on security.
+
+    Inherits tests.conftest.TestConfig (which inherits Config) so every key
+    create_app() reads is present -- a bare, non-inheriting class here
+    previously raised `KeyError: 'HTTP_PROTOCOL'` before reaching anything
+    worth testing, and its 17-char SECRET_KEY tripped the SP-003 boot guard
+    (which correctly refuses to start with a SECRET_KEY under 32 chars).
+    """
+
     CACHE_TYPE = "null"
-    MAIL_SUPPRESS_SEND = True
-    CELERY_ALWAYS_EAGER = True
-
-    # Required config values to prevent KeyError
-    SENTRY_DSN = ""
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    RATELIMIT_ENABLED = False
-    SERVE_API_DOCS = False
-    CACHE_REDIS_URL = "memory://"
-    GOOGLE_OAUTH_CLIENT_ID = ""
-    GOOGLE_OAUTH_CLIENT_SECRET = ""
-    MASTODON_OAUTH_CLIENT_ID = ""
-    MASTODON_OAUTH_CLIENT_SECRET = ""
-    DISCORD_OAUTH_CLIENT_ID = ""
-    DISCORD_OAUTH_CLIENT_SECRET = ""
-    MAIL_SERVER = ""
 
 
 @pytest.fixture
@@ -55,19 +56,12 @@ def security_app():
 
     with patch.dict(os.environ, test_env):
         from app import create_app, db
+        from tests.conftest import create_all_for_tests
 
         app = create_app(PrivateRegSecurityTestConfig)
 
         with app.app_context():
-            # Create database tables (skip PostgreSQL-specific DDL errors on SQLite)
-            try:
-                db.create_all()
-            except Exception as e:
-                # Skip PostgreSQL function creation errors on SQLite
-                if "parse_websearch" not in str(e) and "CREATE OR REPLACE" not in str(
-                    e
-                ):
-                    raise
+            create_all_for_tests(db)
             yield app
             db.session.remove()
             db.drop_all()

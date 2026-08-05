@@ -12,7 +12,7 @@
             </div>
         {% endif -%}
         <h1 class="mt-2 post_title" lang="{{ post.language_code() }}">
-            {{ post.title }}
+            {{ post.title if post.title != '(content in post body)' else '' }}
             {% if post.nsfw -%}
                 <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">
                     {{ _('nsfw') }}

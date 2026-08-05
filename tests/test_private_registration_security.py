@@ -15,6 +15,21 @@ import json
 from unittest.mock import patch
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# sqlalchemy_searchable attaches its per-table `DROP FUNCTION ...` teardown hook
+# lazily -- the first time any ORM query triggers SQLAlchemy's configure_mappers()
+# -- which can happen *after* tests/conftest.py's create_all_for_tests() has
+# already run its hook-stripping pass. If a test in this file is the first ORM
+# query of the whole pytest session, the hook reappears afterward and the
+# test_app fixture's teardown `db.drop_all()` fails with
+# `near "FUNCTION": syntax error` on `DROP FUNCTION IF EXISTS
+# post_search_vector_update()`. Configuring mappers here, at import time (i.e.
+# before any fixture runs), ensures the hook already exists when
+# create_all_for_tests() strips it. This does not touch tests/conftest.py.
+import app as _app  # noqa: F401,E402
+from sqlalchemy.orm import configure_mappers as _configure_mappers  # noqa: E402
+
+_configure_mappers()
+
 
 class TestRateLimiting:
     """Test rate limiting functionality"""
@@ -71,8 +86,37 @@ class TestRateLimiting:
         assert data["success"] is False
         assert data["error"] == "rate_limited"
 
-    def test_rate_limit_per_ip(self, test_app):
-        """Test that rate limiting is applied per IP address"""
+    @patch.dict(
+        "os.environ",
+        {
+            "PRIVATE_REGISTRATION_RATE_LIMIT": "3",
+            "PRIVATE_REGISTRATION_ENABLED": "true",
+            "PRIVATE_REGISTRATION_SECRET": "test-rate-limit-secret",
+        },
+    )
+    def test_rate_limit_not_bypassable_by_changing_client_ip(self, test_app):
+        """Rate limiting buckets by caller identity, not by client IP.
+
+        This test was previously named `test_rate_limit_per_ip` and asserted the
+        opposite: that exhausting the quota from 127.0.0.1 left 10.0.0.1 free to
+        keep registering. The application does not work that way and must not.
+
+        AdvancedRateLimiter.get_client_identifier()
+        (app/api/admin/monitoring.py) keys the bucket on a hash of the
+        X-PieFed-Secret header and only falls back to the client IP when no
+        secret was sent. On these endpoints the secret is always present:
+        @require_private_registration_auth rejects the request before
+        check_advanced_rate_limit() ever runs, so the IP branch is unreachable
+        here. One secret therefore means one bucket, which is the stricter
+        behaviour -- and the only safe one, because the "IP" in question comes
+        from X-Forwarded-For, a header the caller sets. Bucketing per IP would
+        let anyone holding the secret reset their own account-creation quota at
+        will by editing a request header.
+
+        The original expectation was also unreachable for a second reason: it
+        configured no PRIVATE_REGISTRATION_RATE_LIMIT at all, so the limit was
+        the 10/hour default and four requests could never trip it.
+        """
         client = test_app.test_client()
 
         headers_ip1 = {
@@ -87,7 +131,7 @@ class TestRateLimiting:
             "X-Forwarded-For": "10.0.0.1",
         }
 
-        # Use up rate limit for IP1
+        # Use up the quota from IP1
         for i in range(3):
             user_data = {
                 "username": f"ip1test{i}",
@@ -103,7 +147,7 @@ class TestRateLimiting:
 
             assert response.status_code == 201
 
-        # IP1 should be rate limited
+        # IP1 is now rate limited
         response = client.post(
             "/api/alpha/admin/private_register",
             headers=headers_ip1,
@@ -112,14 +156,20 @@ class TestRateLimiting:
             ),
         )
         assert response.status_code == 429
+        assert response.get_json()["error"] == "rate_limited"
 
-        # IP2 should still work
+        # Presenting a different X-Forwarded-For with the same secret must NOT
+        # hand back a fresh quota.
         response = client.post(
             "/api/alpha/admin/private_register",
             headers=headers_ip2,
             data=json.dumps({"username": "ip2test", "email": "ip2test@example.com"}),
         )
-        assert response.status_code == 201
+        assert response.status_code == 429, (
+            "Changing X-Forwarded-For reset the rate limit bucket; "
+            "the quota must follow the secret, not the client-supplied IP"
+        )
+        assert response.get_json()["error"] == "rate_limited"
 
 
 class TestIPSecurity:
@@ -173,6 +223,13 @@ class TestIPSecurity:
                 data = response.get_json()
                 assert data["error"] == "ip_unauthorized"
 
+    @patch.dict(
+        "os.environ",
+        {
+            "PRIVATE_REGISTRATION_ENABLED": "true",
+            "PRIVATE_REGISTRATION_SECRET": "test-ip-security-secret",
+        },
+    )
     def test_x_forwarded_for_parsing(self, test_app):
         """Test proper parsing of X-Forwarded-For header with multiple IPs"""
         client = test_app.test_client()
@@ -233,12 +290,79 @@ class TestIPSecurity:
             assert response.status_code == 201
 
 
+@pytest.fixture
+def threaded_app(tmp_path):
+    """An app whose request handling is thread-safe, unlike the `test_app` one.
+
+    conftest's `test_app` cannot serve genuinely concurrent requests, for two
+    independent reasons, and neither is a property of the application:
+
+    1. Connection. Its SQLALCHEMY_DATABASE_URI is "sqlite:///:memory:", and
+       Flask-SQLAlchemy special-cases in-memory SQLite onto `StaticPool` with
+       `check_same_thread=False` (flask_sqlalchemy/extension.py:610-616) --
+       it has to, since a second connection would open a second, empty
+       database. Every worker thread therefore drives the *same* sqlite3
+       connection object at once, which surfaces as
+       `sqlite3.InterfaceError: bad parameter or other API misuse`, on plain
+       SELECTs as readily as on writes.
+
+    2. Session. `test_app` yields from inside `with app.app_context():`, and
+       Flask's RequestContext.push() reuses an already-pushed app context for
+       the same app rather than creating one. So every test-client request in
+       that fixture shares one app context, and `db.session` -- scoped to the
+       app context -- is one SQLAlchemy Session shared by all threads. Sessions
+       are documented as not thread-safe; one thread's rollback discards
+       another's pending INSERT, which is where the
+       "UPDATE statement on table 'user' expected to update 1 row(s); 0 were
+       matched" errors come from.
+
+    Under gunicorn neither holds: each request gets its own app context and its
+    own session, and PostgreSQL hands out a connection per checkout. This
+    fixture reproduces that -- a file-backed SQLite database (normal pooling,
+    one connection per thread) and no ambient app context, so each request
+    pushes its own. Measured across five runs: 5/5 registrations succeed every
+    time here, versus 0-3/5 with `test_app`.
+    """
+    from app import create_app, db
+    from tests.conftest import TestConfig, create_all_for_tests
+
+    class _ThreadedTestConfig(TestConfig):
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{tmp_path / 'concurrent.sqlite'}"
+        # Give a blocked writer time to acquire the lock instead of failing
+        # immediately with "database is locked".
+        SQLALCHEMY_ENGINE_OPTIONS = {"connect_args": {"timeout": 30}}
+
+    app = create_app(_ThreadedTestConfig)
+
+    # Push a context only for the schema work, then pop it, so that the
+    # requests below each get their own.
+    with app.app_context():
+        create_all_for_tests(db)
+
+    yield app
+
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
+
+
 class TestConcurrentRequests:
     """Test handling of concurrent requests"""
 
-    def test_concurrent_registrations(self, test_app):
+    @patch.dict(
+        "os.environ",
+        {
+            "PRIVATE_REGISTRATION_ENABLED": "true",
+            "PRIVATE_REGISTRATION_SECRET": "test-concurrent-secret",
+            # The limiter buckets by secret hash, so all five requests share one
+            # bucket; the default is 10/hour but pin it so the test cannot start
+            # failing for rate-limit reasons if that default is retuned.
+            "PRIVATE_REGISTRATION_RATE_LIMIT": "100",
+        },
+    )
+    def test_concurrent_registrations(self, threaded_app):
         """Test multiple concurrent registration requests"""
-        client = test_app.test_client()
+        client = threaded_app.test_client()
 
         headers = {
             "X-PieFed-Secret": "test-concurrent-secret",
@@ -273,9 +397,24 @@ class TestConcurrentRequests:
             success_count == 5
         ), f"Expected 5 successful registrations, got {success_count}"
 
-    def test_concurrent_duplicate_registrations(self, test_app):
-        """Test concurrent attempts to register the same user"""
-        client = test_app.test_client()
+    @patch.dict(
+        "os.environ",
+        {
+            "PRIVATE_REGISTRATION_ENABLED": "true",
+            "PRIVATE_REGISTRATION_SECRET": "test-concurrent-dup-secret",
+            "PRIVATE_REGISTRATION_RATE_LIMIT": "100",
+        },
+    )
+    def test_concurrent_duplicate_registrations(self, threaded_app):
+        """Test concurrent attempts to register the same user
+
+        Uses `threaded_app` for the reasons documented on that fixture. On
+        conftest's `test_app` this failed roughly one run in ten with
+        "Expected 1 successful registration, got 0" -- all three requests
+        losing to the shared in-memory SQLite connection rather than to each
+        other.
+        """
+        client = threaded_app.test_client()
 
         headers = {
             "X-PieFed-Secret": "test-concurrent-dup-secret",
@@ -319,6 +458,13 @@ class TestConcurrentRequests:
 class TestAttackScenarios:
     """Test various attack scenarios"""
 
+    @patch.dict(
+        "os.environ",
+        {
+            "PRIVATE_REGISTRATION_ENABLED": "true",
+            "PRIVATE_REGISTRATION_SECRET": "correct-secret-not-sent-by-this-test",
+        },
+    )
     def test_secret_brute_force_protection(self, test_app):
         """Test protection against secret brute force attempts"""
         client = test_app.test_client()

@@ -4,6 +4,7 @@ Advanced monitoring and rate limiting for admin API Phase 3
 
 import hashlib
 import json
+import threading
 import time
 from collections import defaultdict
 from datetime import datetime
@@ -157,6 +158,28 @@ class AdminAPIMonitor:
             return {"redis_available": False, "error": str(e)}
 
 
+# Process-local buckets for the no-Redis / Redis-down path.
+#
+# This used to live in `flask.g`, which is per-request: under gunicorn every
+# request gets a fresh `g`, so the window was always empty and the "fallback"
+# limiter allowed everything. It only appeared to work in tests, where a fixture
+# holds one ambient app context across requests.
+#
+# Process-local means the effective limit is (workers x configured limit) rather
+# than the configured limit. That is a real bound and vastly better than none;
+# Redis remains the shared, accurate store. Bounded so a flood of distinct
+# identifiers cannot grow it without limit.
+_FALLBACK_LOCK = threading.Lock()
+_FALLBACK_BUCKETS = {}
+_FALLBACK_MAX_KEYS = 10000
+
+
+def reset_fallback_rate_limits():
+    """Clear the process-local buckets (tests)."""
+    with _FALLBACK_LOCK:
+        _FALLBACK_BUCKETS.clear()
+
+
 class AdvancedRateLimiter:
     """Advanced rate limiting with Redis backend"""
 
@@ -169,14 +192,52 @@ class AdvancedRateLimiter:
             "statistics": "60/hour",
         }
 
+    def _configured_limit(self, limit_type):
+        """Resolve a limit, honouring PRIVATE_REGISTRATION_RATE_LIMIT.
+
+        That variable is documented in ADMIN_API.md and in the original feature
+        commit, but nothing read it — `default_limits` was hardcoded, so the
+        documented knob did nothing.
+
+        Resolved lazily rather than in __init__: this class is instantiated at
+        module import time (`rate_limiter = AdvancedRateLimiter()` at the bottom
+        of this file), long before an application context exists, and the
+        setting lookup needs a database session.
+        """
+        if limit_type == "private_registration":
+            from app.utils import get_private_registration_rate_limit
+
+            try:
+                configured = get_private_registration_rate_limit()
+            except Exception:
+                configured = ""  # no app context / no DB yet
+            if configured:
+                return configured
+        return self.default_limits.get(limit_type, "10/hour")
+
     def get_rate_limit_key(self, limit_type, identifier):
         """Generate rate limit key"""
         return f"piefed:ratelimit:{limit_type}:{identifier}"
 
     def parse_rate_limit(self, limit_str):
-        """Parse rate limit string like '10/hour' or '100/minute'"""
+        """Parse a rate limit such as '10/hour', '100/minute' or a bare '10'.
+
+        The bare-integer form is the one actually used by the operator-facing
+        documentation and tooling (docs/PRIVATE_REGISTRATION_TESTING.md:194 and
+        scripts/test-private-registration.sh both export
+        PRIVATE_REGISTRATION_RATE_LIMIT="5"), while ADMIN_API.md shows
+        "10/hour". Only the second form parsed: `"5".split("/")` raises
+        ValueError on unpacking, which the except clause below silently turned
+        into the 10/hour default. An operator who configured 5 requests/hour
+        therefore got 10 — the limit was quietly *widened*, never narrowed, on
+        endpoints that create, ban and delete accounts. A bare count is treated
+        as "per hour", matching the default period.
+        """
         try:
-            count, period = limit_str.split("/")
+            if "/" in limit_str:
+                count, period = limit_str.split("/")
+            else:
+                count, period = limit_str, "hour"
             count = int(count)
 
             if period == "second":
@@ -210,7 +271,7 @@ class AdvancedRateLimiter:
             # Fallback to in-memory tracking (less accurate)
             return self._check_rate_limit_fallback(limit_type, identifier)
 
-        limit_str = custom_limit or self.default_limits.get(limit_type, "10/hour")
+        limit_str = custom_limit or self._configured_limit(limit_type)
         max_requests, window_seconds = self.parse_rate_limit(limit_str)
 
         rate_key = self.get_rate_limit_key(limit_type, identifier)
@@ -254,53 +315,60 @@ class AdvancedRateLimiter:
             }
 
         except Exception as e:
-            current_app.logger.warning(f"Redis rate limit check failed: {e}")
-            # Allow request if Redis fails
-            return {
-                "allowed": True,
-                "limit": max_requests,
-                "remaining": max_requests - 1,
-                "reset_time": current_time + window_seconds,
-                "retry_after": 0,
-                "fallback": True,
-            }
+            # Degrade to the in-memory limiter rather than allowing the request.
+            #
+            # This branch used to return {"allowed": True}, i.e. the rate limiter
+            # switched itself off whenever Redis was unreachable — on endpoints
+            # that create, ban and delete accounts, and where the limiter is one
+            # of only four gates. Anyone able to disrupt Redis (or simply catch
+            # it during a restart) got unlimited attempts at the secret.
+            #
+            # _check_rate_limit_fallback() already existed for the
+            # no-redis-configured case; it was just unreachable when Redis was
+            # configured but broken, which is the more common failure.
+            current_app.logger.warning(
+                f"Redis rate limit check failed, falling back to in-memory: {e}"
+            )
+            result = self._check_rate_limit_fallback(limit_type, identifier)
+            result["fallback"] = True
+            return result
 
     def _check_rate_limit_fallback(self, limit_type, identifier):
-        """Fallback rate limiting without Redis"""
-        # Simple in-memory fallback (not persistent across restarts)
-        if not hasattr(g, "rate_limit_cache"):
-            g.rate_limit_cache = {}
-
-        limit_str = self.default_limits.get(limit_type, "10/hour")
+        """Fallback rate limiting without Redis (process-local, see above)."""
+        limit_str = self._configured_limit(limit_type)
         max_requests, window_seconds = self.parse_rate_limit(limit_str)
 
         current_time = int(time.time())
         cache_key = f"{limit_type}:{identifier}"
 
-        if cache_key not in g.rate_limit_cache:
-            g.rate_limit_cache[cache_key] = []
+        with _FALLBACK_LOCK:
+            window = [
+                req_time
+                for req_time in _FALLBACK_BUCKETS.get(cache_key, [])
+                if req_time > current_time - window_seconds
+            ]
 
-        # Remove old requests
-        g.rate_limit_cache[cache_key] = [
-            req_time
-            for req_time in g.rate_limit_cache[cache_key]
-            if req_time > current_time - window_seconds
-        ]
+            if len(window) >= max_requests:
+                _FALLBACK_BUCKETS[cache_key] = window
+                return {
+                    "allowed": False,
+                    "limit": max_requests,
+                    "remaining": 0,
+                    "reset_time": current_time + window_seconds,
+                    "retry_after": window_seconds,
+                    "fallback": True,
+                }
 
-        current_count = len(g.rate_limit_cache[cache_key])
-
-        if current_count >= max_requests:
-            return {
-                "allowed": False,
-                "limit": max_requests,
-                "remaining": 0,
-                "reset_time": current_time + window_seconds,
-                "retry_after": window_seconds,
-                "fallback": True,
-            }
-
-        # Add current request
-        g.rate_limit_cache[cache_key].append(current_time)
+            window.append(current_time)
+            if (
+                cache_key not in _FALLBACK_BUCKETS
+                and len(_FALLBACK_BUCKETS) >= _FALLBACK_MAX_KEYS
+            ):
+                # Bounded: drop the bucket whose newest entry is oldest.
+                oldest = min(_FALLBACK_BUCKETS, key=lambda k: max(_FALLBACK_BUCKETS[k]))
+                del _FALLBACK_BUCKETS[oldest]
+            _FALLBACK_BUCKETS[cache_key] = window
+            current_count = len(window) - 1
 
         return {
             "allowed": True,

@@ -20,10 +20,28 @@ from app.models import User, Post, Community, PostReply
 from config import Config
 
 
-# Skip all tests in this module if using SQLite
+# Run only against a real PostgreSQL database.
+#
+# The previous guard was `DATABASE_URL.startswith("sqlite")`, which is False for
+# the *empty* DATABASE_URL the local/CI test env exports. The module then ran
+# anyway and every test errored at fixture setup with
+# `ArgumentError: Could not parse SQLAlchemy URL from given URL string`,
+# because `os.environ.get("DATABASE_URL", "postgresql://...")` returns "" when
+# the variable is set-but-empty (the default only applies to a missing key).
+#
+# Inverting the condition — require an explicitly PostgreSQL URL — is the honest
+# form: this module inspects a live schema to prove every model column really
+# exists, which is meaningless against the SQLite shim in tests/conftest.py
+# (that shim maps TSVECTOR/ARRAY/BIT to text and integer columns purely so the
+# DDL compiles). Point DATABASE_URL at PostgreSQL to actually run these.
+_DATABASE_URL = os.environ.get("DATABASE_URL") or ""
+
 pytestmark = pytest.mark.skipif(
-    os.environ.get("DATABASE_URL", "").startswith("sqlite"),
-    reason="These tests require PostgreSQL (TSVector columns not supported in SQLite)",
+    not _DATABASE_URL.startswith(("postgresql", "postgres://")),
+    reason=(
+        "requires a PostgreSQL DATABASE_URL; these tests verify model columns "
+        "against a live schema, which SQLite cannot represent (TSVECTOR/ARRAY/BIT)"
+    ),
 )
 
 
@@ -31,10 +49,8 @@ class TestConfig(Config):
     """Test configuration - requires PostgreSQL"""
 
     TESTING = True
-    # Use environment DATABASE_URL or skip tests
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", "postgresql://localhost/test"
-    )
+    # `or` rather than a dict default: DATABASE_URL is often set-but-empty.
+    SQLALCHEMY_DATABASE_URI = _DATABASE_URL or "postgresql://localhost/test"
     WTF_CSRF_ENABLED = False
 
 

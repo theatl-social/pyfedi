@@ -12,28 +12,99 @@ from flask import Flask
 from app import create_app, db
 from app.models import User, Conversation, ChatMessage, Notification
 from app.constants import POST_STATUS_REVIEWING
+from tests.conftest import TestConfig as _BaseTestConfig, create_all_for_tests
 
 
-class TestConfig:
-    """Test configuration to avoid dependencies"""
+class TestConfig(_BaseTestConfig):
+    """Test configuration for this file, inheriting the working base config.
 
-    TESTING = True
-    WTF_CSRF_ENABLED = False
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
-    CACHE_TYPE = "simple"
-    SERVER_NAME = "localhost"
+    The base TestConfig in conftest.py inherits the real app Config so every
+    key create_app() reads is present, and its CACHE_TYPE/CACHE_REDIS_URL are
+    set for NullCache. This file previously defined its own bare TestConfig
+    (not inheriting Config), which raised KeyError('HTTP_PROTOCOL') during
+    create_app(), and it called plain db.create_all() which aborts partway on
+    SQLite because sqlalchemy_searchable's before_create hook emits
+    PostgreSQL-only DDL.
+    """
+
+    CACHE_TYPE = "NullCache"
 
 
 @pytest.fixture
 def app():
     """Create test Flask application"""
-    app = create_app()
-    app.config.from_object(TestConfig)
+    from sqlalchemy import event
+    from sqlalchemy_searchable import sql_expressions
+
+    from tests.explore_test_support import (
+        _restore_ddl_listeners,
+        _strip_sqlite_ddl_listeners,
+    )
+
+    app = create_app(TestConfig)
 
     with app.app_context():
-        db.create_all()
+        # create_all_for_tests() strips the metadata-level before_create hook
+        # that emits `CREATE OR REPLACE FUNCTION parse_websearch(...)`
+        # (PostgreSQL-only), which is what makes db.create_all() proceed past
+        # step 1 on SQLite. But sqlalchemy_searchable *also* attaches a
+        # per-table after_create hook (CreateSearchTriggerSQL) to every table
+        # with a TSVectorType column -- User, Community, Post, PostReply,
+        # Feed -- that emits `CREATE TRIGGER ... BEFORE UPDATE OR INSERT ...
+        # EXECUTE PROCEDURE tsvector_update_trigger(...)`, also PostgreSQL-only
+        # syntax SQLite rejects. This file creates a User row, so it needs
+        # those detached too. Detach only for the duration of table creation
+        # on SQLite, and reattach afterwards so the process-wide
+        # sqlalchemy_searchable singleton doesn't leak a changed state into
+        # other test files running later in the same session.
+        #
+        # Uses the low-level, idempotent event.remove()/event.listen() helpers
+        # in tests/explore_test_support.py rather than
+        # `sqlalchemy_searchable.search_manager.remove_listeners()/
+        # attach_ddl_listeners()`: that API keeps its own bookkeeping of what
+        # it attached and raises InvalidRequestError if asked to remove a
+        # listener some other test file already stripped directly (see
+        # tests/test_activitypub_util.py's _prepare_sqlite_schema, which does
+        # exactly that without going through search_manager).
+        sqlite = db.engine.dialect.name == "sqlite"
+        removed = _strip_sqlite_ddl_listeners(db) if sqlite else []
+        try:
+            create_all_for_tests(db)
+        finally:
+            if sqlite:
+                _restore_ddl_listeners(removed)
+            # create_all_for_tests() clears *every* before_create listener on
+            # db.metadata (`db.metadata.dispatch.before_create.clear()`), not
+            # just the one it means to silence. db.metadata is one process-
+            # wide MetaData object shared by every Flask app built via
+            # create_app() in this test run, so that clear() permanently
+            # removes sqlalchemy_searchable's metadata-level hook for every
+            # test file that runs afterwards in the same process -- including
+            # ones with an old-style `try: db.create_all() / except: tolerate
+            # "parse_websearch"/"CREATE OR REPLACE"` fixture (e.g.
+            # tests/test_upload_quota_and_grafts.py), which depends on that
+            # exact hook firing *first* and aborting create_all() before any
+            # table is touched. Without restoring it here, that file's
+            # fixture proceeds past the point it expects to be stopped at and
+            # hits the (still-present, PostgreSQL-only) per-table search
+            # trigger DDL instead, with an error message its except clause
+            # doesn't recognize. Put it back so this file leaves no lasting
+            # mutation on shared state. See tests/conftest.py's
+            # create_all_for_tests() docstring for the rest of the story.
+            if sqlite and not event.contains(
+                db.metadata, "before_create", sql_expressions
+            ):
+                event.listen(db.metadata, "before_create", sql_expressions)
         yield app
-        db.drop_all()
+        db.session.remove()
+        # drop_all() fires the mirror-image after_drop hooks (DROP FUNCTION /
+        # DROP TRIGGER), so detach for teardown too.
+        removed = _strip_sqlite_ddl_listeners(db) if sqlite else []
+        try:
+            db.drop_all()
+        finally:
+            if sqlite:
+                _restore_ddl_listeners(removed)
 
 
 @pytest.fixture
@@ -219,20 +290,28 @@ class TestSQLInjectionSecurityRegression:
     """Regression tests to ensure SQL injection vulnerabilities don't return"""
 
     def test_no_f_strings_in_sql_queries(self, app):
-        """Test that no f-strings are used directly in SQL queries"""
+        """Static analysis: no attacker-shaped interpolation into SQL text.
+
+        Commit d3b170f2 ("Fix critical SQL injection vulnerabilities",
+        2025-09-12) removed this pattern from app/main/routes.py. Later upstream
+        merges reintroduced it while adding `private_communities`, and this test
+        did not catch it because the file was in the CI exclusion list. Both the
+        queries and this detector have now been fixed.
+        """
         import os
         import re
 
-        # This is a static analysis test to catch regressions
+        # An f-string only counts as SQL if it carries BOTH a statement keyword
+        # and a matching clause keyword. The original patterns matched any
+        # f-string containing "delete" (case-insensitively), which flagged
+        # `f"deleted_{user.id}@deleted.com"` and an `/activities/delete/` URL.
+        # A detector that cries wolf gets ignored -- which is how this file's
+        # own invariant survived being broken for months.
         sql_injection_patterns = [
-            r'f".*SELECT.*{.*}',  # f"SELECT ... {var}"
-            r"f'.*SELECT.*{.*}",  # f'SELECT ... {var}'
-            r'f".*UPDATE.*{.*}',  # f"UPDATE ... {var}"
-            r"f'.*UPDATE.*{.*}",  # f'UPDATE ... {var}'
-            r'f".*INSERT.*{.*}',  # f"INSERT ... {var}"
-            r"f'.*INSERT.*{.*}",  # f'INSERT ... {var}'
-            r'f".*DELETE.*{.*}',  # f"DELETE ... {var}"
-            r"f'.*DELETE.*{.*}",  # f'DELETE ... {var}'
+            r"f['\"][^'\"]*\bSELECT\b[^'\"]*\bFROM\b[^'\"]*\{",
+            r"f['\"][^'\"]*\bUPDATE\b[^'\"]*\bSET\b[^'\"]*\{",
+            r"f['\"][^'\"]*\bINSERT\s+INTO\b[^'\"]*\{",
+            r"f['\"][^'\"]*\bDELETE\s+FROM\b[^'\"]*\{",
         ]
 
         # Files we've fixed
@@ -242,6 +321,20 @@ class TestSQLInjectionSecurityRegression:
             "app/utils.py",
             "app/main/routes.py",
         ]
+
+        # Sites that interpolate, but where the value is provably constrained at
+        # the call site. Each entry names the guard, and the guard is asserted
+        # below -- if it disappears, this test fails instead of silently passing.
+        # Do NOT add entries to silence a finding; parameterize the query.
+        guarded_interpolations = {
+            # hash_matches_blocked_image() builds a PostgreSQL bit literal
+            # (B'...'), which has no bind-parameter form without a cast whose
+            # operator resolution (bit # bit varying) needs verifying against a
+            # real PostgreSQL server -- not possible in this SQLite-backed
+            # suite. The input is restricted to ^[01]+$ immediately before use.
+            # Converting to CAST(:hash AS bit varying) is a tracked follow-up.
+            "app/utils.py": ("BINARY_RE.match", "hash_matches_blocked_image"),
+        }
 
         base_path = os.path.dirname(os.path.dirname(__file__))
         violations = []
@@ -258,10 +351,24 @@ class TestSQLInjectionSecurityRegression:
                                     f"{file_path}:{line_num}: {line.strip()}"
                                 )
 
-        # Should find no violations in our fixed files
-        assert (
-            len(violations) == 0
-        ), f"Found SQL injection patterns in fixed files: {violations}"
+        # Every exemption must still carry the guard that justifies it.
+        for file_path, (guard, func_name) in guarded_interpolations.items():
+            with open(os.path.join(base_path, file_path)) as f:
+                src = f.read()
+            assert func_name in src, (
+                f"{file_path}: {func_name}() no longer exists -- remove its "
+                "guarded_interpolations entry."
+            )
+            assert guard in src, (
+                f"SECURITY REGRESSION: {file_path} no longer contains "
+                f"{guard!r}, which is the only thing making {func_name}()'s "
+                "interpolated SQL safe. Restore the guard or parameterize."
+            )
+            violations = [v for v in violations if not v.startswith(file_path)]
+
+        assert len(violations) == 0, (
+            f"Found SQL injection patterns in fixed files: {violations}"
+        )
 
     def test_parameterized_queries_used(self, app):
         """Test that parameterized queries are properly used"""

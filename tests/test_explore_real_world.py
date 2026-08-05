@@ -7,242 +7,203 @@ with actual content visible to users.
 """
 
 import os
-import tempfile
+
 import pytest
 from bs4 import BeautifulSoup
-from unittest.mock import patch, MagicMock
 
-# Set test environment before importing app
-os.environ["TESTING"] = "true"
-os.environ["SERVER_NAME"] = "test.localhost"
-os.environ["SECRET_KEY"] = "test-secret-key-real-world-padding-xxxxxxxx"
-os.environ["CACHE_TYPE"] = "NullCache"
-os.environ["CACHE_REDIS_URL"] = "memory://"
-os.environ["CELERY_BROKER_URL"] = "memory://localhost/"
-os.environ["MAIL_SERVER"] = ""  # Disable mail in tests
+# Set test environment before importing app. These use setdefault (not a
+# hard `os.environ[...] = ...` assignment) so a value already present in the
+# environment -- e.g. from the test-runner's env block, or set earlier by
+# another test module executing first in the same pytest process -- wins.
+# CELERY_BROKER_URL in particular used to be hard-set here unconditionally,
+# which leaked "memory://localhost/" into every other test running later in
+# the same process regardless of what they expected, causing an
+# order-dependent failure elsewhere in the suite.
+os.environ.setdefault("TESTING", "true")
+os.environ.setdefault("SERVER_NAME", "test.localhost")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-real-world-padding-xxxxxxxx")
+os.environ.setdefault("CACHE_TYPE", "NullCache")
+os.environ.setdefault("CACHE_REDIS_URL", "memory://")
+os.environ.setdefault("CELERY_BROKER_URL", "memory://localhost/")
+os.environ.setdefault("MAIL_SERVER", "")  # Disable mail in tests
 
-# Use a temporary SQLite database for tests
-test_db_fd, test_db_path = tempfile.mkstemp()
-os.environ["DATABASE_URL"] = f"sqlite:///{test_db_path}"
+from tests.explore_test_support import build_wired_app, make  # noqa: E402
 
 
 @pytest.fixture(scope="module")
 def app():
-    """Create a fully configured test application with database."""
-    from app import create_app, db
-    from app.models import Site, Instance, User, Topic, Community
+    """Create a fully configured test application with database.
 
-    # Patch PostgreSQL-specific functions that don't work in SQLite
-    with patch("app.models.db.engine.execute") as mock_execute:
-        # Mock the PostgreSQL function creation that fails in SQLite
-        mock_execute.return_value = MagicMock()
+    Uses build_wired_app() (see explore_test_support.py) rather than a bare
+    `create_app()`: create_app() alone doesn't register the jinja globals
+    (theme(), file_exists(), ...) or the before_request that populates
+    g.site, both of which every real template needs (explore.html extends
+    base.html). It also guarantees an in-memory SQLite database instead of
+    this repo's default fallback of a real, git-tracked app.db file on disk.
+    """
+    from app import db
+    from app.models import Community, Instance, Site, Topic, User
 
-        app = create_app()
-        app.config["TESTING"] = True
-        app.config["WTF_CSRF_ENABLED"] = False
-        app.config["PRIVATE_INSTANCE"] = False
+    application = build_wired_app()
 
-        with app.app_context():
-            # Create tables (skip the PostgreSQL-specific functions)
-            with patch("sqlalchemy.schema.DDL") as mock_ddl:
-                mock_ddl.return_value = MagicMock()
+    with application.app_context():
+        # Create essential records
+        site = make(
+            Site,
+            id=1,
+            name="Test Site",
+            description="Test site for real-world testing",
+            private_instance=False,
+            enable_downvotes=True,
+            application_question="Test question",
+            allowlist="",
+            blocklist="",
+            allow_or_block_list="neither",
+            enable_nsfl=True,
+            enable_nsfw=True,
+            registration_mode="Open",
+        )
+        db.session.add(site)
+        db.session.flush()
 
-                # Create core tables only
-                db.metadata.create_all(
-                    db.engine,
-                    tables=[
-                        db.metadata.tables.get("site"),
-                        db.metadata.tables.get("instance"),
-                        db.metadata.tables.get("user"),
-                        db.metadata.tables.get("topic"),
-                        db.metadata.tables.get("community"),
-                        db.metadata.tables.get("community_member"),
-                        db.metadata.tables.get("post"),
-                        db.metadata.tables.get("file"),
-                        db.metadata.tables.get("actor"),
-                        db.metadata.tables.get("domain"),
-                        db.metadata.tables.get("domain_ban"),
-                    ],
-                    checkfirst=True,
-                )
+        # Create local instance
+        instance = make(
+            Instance,
+            domain="test.localhost",
+            software="pyfedi",
+            version="1.2.0",
+            dormant=False,
+            trusted=True,
+        )
+        db.session.add(instance)
+        db.session.flush()
 
-            # Create essential records
-            site = Site(
-                name="Test Site",
-                description="Test site for real-world testing",
-                private_instance=False,
-                enable_downvotes=True,
-                show_nsfw_content=True,
-                application_question="Test question",
-                allowlist="",
-                blocklist="",
-                allow_or_block_list="neither",
-                enable_nsfl_content=True,
-                show_communities_above_posts=True,
-                federation=False,  # Disable federation for tests
-                google_site_verification="",
-                msvalidate="",
-                yandex_verification="",
-                searchable=True,
-                enable_login=True,
-                enable_guest_login=False,
-                legal_page_id=None,
-                privacy_page_id=None,
-                csp_text="",
-            )
-            db.session.add(site)
-            db.session.flush()
+        # Create test user
+        user = make(
+            User,
+            user_name="testuser",
+            email="test@test.localhost",
+            password_hash="dummy",
+            verified=True,
+            banned=False,
+            deleted=False,
+            bot=False,
+            reputation=100,
+            instance_id=instance.id,
+            ap_id="https://test.localhost/u/testuser",
+            ap_public_url="https://test.localhost/u/testuser",
+            ap_profile_id="https://test.localhost/u/testuser",
+            ap_inbox_url="https://test.localhost/u/testuser/inbox",
+            ap_preferred_username="testuser",
+            ap_domain="test.localhost",
+        )
+        db.session.add(user)
+        db.session.flush()
 
-            # Create local instance
-            instance = Instance(
-                domain="test.localhost",
-                software="pyfedi",
-                version="1.2.0",
-                online=True,
-                indexed=True,
-                dormant=False,
-                trusted=True,
-            )
-            db.session.add(instance)
-            db.session.flush()
+        # Create topics - this is what should appear on explore page
+        tech_topic = make(
+            Topic,
+            name="Technology",
+            machine_name="technology",
+            num_communities=2,
+        )
 
-            # Create test user
-            user = User(
-                user_name="testuser",
-                email="test@test.localhost",
-                password_hash="dummy",
-                verified=True,
-                banned=False,
-                deleted=False,
-                bot=False,
-                reputation=100,
-                instance_id=instance.id,
-                ap_id="https://test.localhost/u/testuser",
-                ap_public_url="https://test.localhost/u/testuser",
-                ap_profile_id="https://test.localhost/u/testuser",
-                ap_inbox_url="https://test.localhost/u/testuser/inbox",
-                ap_preferred_username="testuser",
-                ap_domain="test.localhost",
-            )
-            db.session.add(user)
-            db.session.flush()
+        science_topic = make(
+            Topic,
+            name="Science",
+            machine_name="science",
+            num_communities=1,
+        )
 
-            # Create topics - this is what should appear on explore page
-            tech_topic = Topic(
-                name="Technology",
-                machine_name="technology",
-                ap_id="https://test.localhost/t/technology",
-                num_communities=2,
-            )
+        gaming_topic = make(
+            Topic,
+            name="Gaming",
+            machine_name="gaming",
+            parent_id=None,  # This will be updated after flush
+            num_communities=1,
+        )
 
-            science_topic = Topic(
-                name="Science",
-                machine_name="science",
-                ap_id="https://test.localhost/t/science",
-                num_communities=1,
-            )
+        db.session.add_all([tech_topic, science_topic, gaming_topic])
+        db.session.flush()
 
-            gaming_topic = Topic(
-                name="Gaming",
-                machine_name="gaming",
-                ap_id="https://test.localhost/t/gaming",
-                parent_id=None,  # This will be updated after flush
-                num_communities=1,
-            )
+        # Create sub-topic
+        pc_gaming_topic = make(
+            Topic,
+            name="PC Gaming",
+            machine_name="pc-gaming",
+            parent_id=gaming_topic.id,
+            num_communities=1,
+        )
+        db.session.add(pc_gaming_topic)
+        db.session.flush()
 
-            db.session.add_all([tech_topic, science_topic, gaming_topic])
-            db.session.flush()
+        # Create communities linked to topics
+        programming_community = make(
+            Community,
+            name="programming",
+            title="Programming Discussion",
+            description="A community for programmers",
+            rules="Be nice",
+            topic_id=tech_topic.id,
+            instance_id=instance.id,
+            ap_id="https://test.localhost/c/programming",
+            ap_public_url="https://test.localhost/c/programming",
+            ap_profile_id="https://test.localhost/c/programming",
+            ap_inbox_url="https://test.localhost/c/programming/inbox",
+            ap_domain="test.localhost",
+            show_all=True,
+            show_popular=True,
+            public_key="dummy_key",
+            private_key="dummy_key",
+        )
 
-            # Create sub-topic
-            pc_gaming_topic = Topic(
-                name="PC Gaming",
-                machine_name="pc-gaming",
-                ap_id="https://test.localhost/t/pc-gaming",
-                parent_id=gaming_topic.id,
-                num_communities=1,
-            )
-            db.session.add(pc_gaming_topic)
-            db.session.flush()
+        physics_community = make(
+            Community,
+            name="physics",
+            title="Physics Forum",
+            description="Discuss physics topics",
+            rules="Keep it scientific",
+            topic_id=science_topic.id,
+            instance_id=instance.id,
+            ap_id="https://test.localhost/c/physics",
+            ap_public_url="https://test.localhost/c/physics",
+            ap_profile_id="https://test.localhost/c/physics",
+            ap_inbox_url="https://test.localhost/c/physics/inbox",
+            ap_domain="test.localhost",
+            show_all=True,
+            show_popular=True,
+            public_key="dummy_key",
+            private_key="dummy_key",
+        )
 
-            # Create communities linked to topics
-            programming_community = Community(
-                name="programming",
-                title="Programming Discussion",
-                description="A community for programmers",
-                rules="Be nice",
-                topic_id=tech_topic.id,
-                instance_id=instance.id,
-                created_by=user.id,
-                ap_id="https://test.localhost/c/programming",
-                ap_public_url="https://test.localhost/c/programming",
-                ap_profile_id="https://test.localhost/c/programming",
-                ap_inbox_url="https://test.localhost/c/programming/inbox",
-                ap_domain="test.localhost",
-                show_all=True,
-                show_popular=True,
-                public_key="dummy_key",
-                private_key="dummy_key",
-            )
+        webdev_community = make(
+            Community,
+            name="webdev",
+            title="Web Development",
+            description="Web development discussion",
+            rules="Be helpful",
+            topic_id=tech_topic.id,
+            instance_id=instance.id,
+            ap_id="https://test.localhost/c/webdev",
+            ap_public_url="https://test.localhost/c/webdev",
+            ap_profile_id="https://test.localhost/c/webdev",
+            ap_inbox_url="https://test.localhost/c/webdev/inbox",
+            ap_domain="test.localhost",
+            show_all=True,
+            show_popular=True,
+            public_key="dummy_key",
+            private_key="dummy_key",
+        )
 
-            physics_community = Community(
-                name="physics",
-                title="Physics Forum",
-                description="Discuss physics topics",
-                rules="Keep it scientific",
-                topic_id=science_topic.id,
-                instance_id=instance.id,
-                created_by=user.id,
-                ap_id="https://test.localhost/c/physics",
-                ap_public_url="https://test.localhost/c/physics",
-                ap_profile_id="https://test.localhost/c/physics",
-                ap_inbox_url="https://test.localhost/c/physics/inbox",
-                ap_domain="test.localhost",
-                show_all=True,
-                show_popular=True,
-                public_key="dummy_key",
-                private_key="dummy_key",
-            )
+        db.session.add_all(
+            [programming_community, physics_community, webdev_community]
+        )
+        db.session.commit()
 
-            webdev_community = Community(
-                name="webdev",
-                title="Web Development",
-                description="Web development discussion",
-                rules="Be helpful",
-                topic_id=tech_topic.id,
-                instance_id=instance.id,
-                created_by=user.id,
-                ap_id="https://test.localhost/c/webdev",
-                ap_public_url="https://test.localhost/c/webdev",
-                ap_profile_id="https://test.localhost/c/webdev",
-                ap_inbox_url="https://test.localhost/c/webdev/inbox",
-                ap_domain="test.localhost",
-                show_all=True,
-                show_popular=True,
-                public_key="dummy_key",
-                private_key="dummy_key",
-            )
+    yield application
 
-            db.session.add_all(
-                [programming_community, physics_community, webdev_community]
-            )
-            db.session.commit()
-
-            # Store site in g-like object for request context
-            @app.before_request
-            def load_site():
-                from flask import g
-
-                g.site = site
-
-        yield app
-
-        # Cleanup
-        with app.app_context():
-            db.drop_all()
-
-    # Clean up temp database
-    os.close(test_db_fd)
-    os.unlink(test_db_path)
+    with application.app_context():
+        db.session.remove()
 
 
 @pytest.fixture
@@ -321,10 +282,6 @@ def test_explore_page_shows_topics_and_communities(client, app):
         )
         assert more_button is not None, "More communities button not found"
 
-        print("✅ Real-world test passed: Explore page displays topics correctly!")
-        print(f"   Found {len(topic_names)} topics displayed")
-        print(f"   Topics: {', '.join(topic_names)}")
-
 
 def test_explore_page_empty_database(app):
     """
@@ -333,7 +290,7 @@ def test_explore_page_empty_database(app):
     This verifies the empty state is handled gracefully.
     """
     from app import db
-    from app.models import Topic, Community
+    from app.models import Community, Topic
 
     with app.app_context():
         # Clear all topics and communities
@@ -363,10 +320,6 @@ def test_explore_page_empty_database(app):
                     len(topic_links) == 0
                 ), f"Found topic links when database is empty: {topic_links}"
 
-            print(
-                "✅ Empty state test passed: Shows appropriate message when no topics exist"
-            )
-
 
 def test_explore_template_syntax_not_exposed(client, app):
     """
@@ -394,56 +347,3 @@ def test_explore_template_syntax_not_exposed(client, app):
             assert (
                 forbidden not in html
             ), f"Found forbidden string in output: {forbidden}"
-
-        print("✅ Template security test passed: No raw template syntax exposed")
-
-
-if __name__ == "__main__":
-    """Run tests standalone with detailed output."""
-    import sys
-    import traceback
-
-    # Create test app and client
-    try:
-        from app import create_app
-
-        print("🧪 Running real-world explore page tests...\n")
-
-        # Run each test
-        for test_func in [
-            test_explore_page_shows_topics_and_communities,
-            test_explore_page_empty_database,
-            test_explore_template_syntax_not_exposed,
-        ]:
-            # Create fresh app for each test
-            app_fixture = app()
-            test_app = next(app_fixture)
-
-            with test_app.test_client() as test_client:
-                try:
-                    if (
-                        test_func.__name__
-                        == "test_explore_page_shows_topics_and_communities"
-                    ):
-                        test_func(test_client, test_app)
-                    elif test_func.__name__ == "test_explore_page_empty_database":
-                        test_func(test_app)
-                    else:
-                        test_func(test_client, test_app)
-
-                except AssertionError as e:
-                    print(f"❌ {test_func.__name__} failed: {e}")
-                    traceback.print_exc()
-                    sys.exit(1)
-                except Exception as e:
-                    print(f"❌ {test_func.__name__} error: {e}")
-                    traceback.print_exc()
-                    sys.exit(1)
-
-        print("\n🎉 All real-world tests passed!")
-        print("The explore page is working correctly with actual data.")
-
-    except Exception as e:
-        print(f"❌ Test setup failed: {e}")
-        traceback.print_exc()
-        sys.exit(1)

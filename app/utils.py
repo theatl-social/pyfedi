@@ -2818,12 +2818,10 @@ def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
     )
 
 
-@cache.memoize(timeout=30)
 def num_topics() -> int:
     return db.session.execute(text('SELECT COUNT(*) as c FROM "topic"')).scalar_one()
 
 
-@cache.memoize(timeout=30)
 def num_feeds() -> int:
     return db.session.execute(text('SELECT COUNT(*) as c FROM "feed"')).scalar_one()
 
@@ -2927,7 +2925,15 @@ def url_to_thumbnail_file(filename) -> File:
             # serve a malicious SVG and we persist it as a thumbnail rendered
             # inline elsewhere.
             if "svg" in content_type:
-                response_content = sanitize_svg_bytes(response_content)
+                # sanitize_svg_bytes is fail-closed as of v1.7.10 (it raises
+                # rather than returning the original bytes). Drop the thumbnail
+                # instead of letting the exception escape into the caller, and
+                # never fall back to the unsanitized content.
+                try:
+                    response_content = sanitize_svg_bytes(response_content)
+                except Exception as e:
+                    current_app.logger.error(f"Error sanitizing remote SVG: {e}")
+                    return None
                 file_extension = final_ext = ".svg"
             else:
                 # Generate file extension from mime type
@@ -2952,7 +2958,11 @@ def url_to_thumbnail_file(filename) -> File:
             if file_extension == ".svg" and (
                 content_type is None or "svg" not in content_type
             ):
-                response_content = sanitize_svg_bytes(response_content)
+                try:
+                    response_content = sanitize_svg_bytes(response_content)
+                except Exception as e:
+                    current_app.logger.error(f"Error sanitizing remote SVG: {e}")
+                    return None
 
             new_filename = gibberish(15)
             if store_files_in_s3():
@@ -5555,11 +5565,50 @@ def get_private_registration_secret():
 
 
 def get_private_registration_allowed_ips():
-    """Get list of allowed IP ranges for private registration"""
-    ips = get_setting("PRIVATE_REGISTRATION_IPS", "")
+    """Get list of allowed IP ranges for private registration.
+
+    Reads the environment first, then the DB setting — matching
+    is_private_registration_enabled() above. It previously read *only*
+    get_setting("PRIVATE_REGISTRATION_IPS"), a row in the `settings` table that
+    nothing in this codebase ever writes: no CLI command, no admin route, no
+    startup sync. So the list was always empty, and because is_ip_whitelisted()
+    treats an empty list as "no restriction configured" and returns True, the
+    IP allowlist — one of the four gates in front of this admin API — was inert.
+
+    Operators had no way to know: docs/PRIVATE_REGISTRATION_TESTING.md tells
+    them to `export PRIVATE_REGISTRATION_ALLOWED_IPS=...` and ADMIN_API.md says
+    `PRIVATE_REGISTRATION_IPS=...`, and neither variable was read by anything.
+    Both spellings are accepted here so either doc now works.
+
+    NOTE: setting either variable now actually enforces the allowlist. That is
+    the documented intent, but it is a behaviour change for anyone who had one
+    set and was silently unrestricted.
+    """
+    ips = (
+        os.environ.get("PRIVATE_REGISTRATION_IPS")
+        or os.environ.get("PRIVATE_REGISTRATION_ALLOWED_IPS")
+        or get_setting("PRIVATE_REGISTRATION_IPS", "")
+    )
     if not ips:
         return []
     return [ip.strip() for ip in ips.split(",") if ip.strip()]
+
+
+def get_private_registration_rate_limit():
+    """Get the configured rate limit for private registration, or "" if unset.
+
+    app/api/admin/routes.py has imported and called this since the feature
+    landed, but it was never defined — so /api/alpha/admin/health raised
+    ImportError on every request and the blueprint's generic handler turned it
+    into a 400. That endpoint has never worked.
+
+    Returns a limit string such as "10/hour". An empty return means "not
+    configured", and AdvancedRateLimiter falls back to its own default.
+    """
+    return (
+        os.environ.get("PRIVATE_REGISTRATION_RATE_LIMIT")
+        or get_setting("PRIVATE_REGISTRATION_RATE_LIMIT", "")
+    )
 
 
 def log_cron_task_to_db(task_name: str):
@@ -5654,15 +5703,39 @@ def is_invalid_get_request_uri(uri):
 # embedding HTML, etc.). py-svg-hush strips all of these via an allowlist
 # parser. Adopted from upstream v1.6.27 (commit dc215422); see SECURITY_PATCHES.md.
 def sanitize_svg_bytes(svg_bytes: bytes) -> bytes:
-    try:
-        # Allow common image MIME types in data URLs (e.g. <image href="data:image/png;...">)
-        keep_data_url_mime_types = {
-            "image": ["jpeg", "png", "gif", "webp", "avif"],
-        }
-        return filter_svg(svg_bytes, keep_data_url_mime_types)
-    except Exception as e:
-        current_app.logger.error(f"Error sanitizing SVG: {e}")
-        return svg_bytes
+    # SP-017: took upstream v1.7.10's hardened version. It is strictly stronger
+    # than the previous fork/upstream implementation in two ways:
+    #   * it strips XML declarations and processing instructions, closing XXE
+    #     and billion-laughs vectors that filter_svg alone does not address;
+    #   * it is fail-CLOSED. The old body wrapped everything in
+    #     `except Exception: return svg_bytes`, i.e. a malformed or hostile SVG
+    #     that crashed the sanitizer was persisted verbatim. That is the exact
+    #     input an attacker controls, so failing open there was backwards.
+    # Callers must therefore handle exceptions. sanitize_svg() already does;
+    # url_to_thumbnail_file() has been updated to skip the thumbnail rather
+    # than persist unsanitized bytes.
+    max_svg_size = 10 * 1024 * 1024  # 10 MB
+    if len(svg_bytes) > max_svg_size:
+        raise ValueError(
+            f"SVG file too large: {len(svg_bytes)} bytes (max {max_svg_size})"
+        )
+
+    # Strip all XML declarations (<!...) to prevent XXE/billion laughs attacks
+    svg_bytes = re.sub(rb"<\!.*?>", rb"", svg_bytes, flags=re.DOTALL)
+
+    # Strip all XML processing instructions (<?...?>) as they can also be attack vectors
+    svg_bytes = re.sub(rb"<\?.*?\?>", rb"", svg_bytes, flags=re.DOTALL)
+
+    # Additional cleanup
+    svg_bytes = re.sub(rb"\[>", rb"", svg_bytes)
+    svg_bytes = re.sub(rb"\]>", rb"", svg_bytes)
+
+    # Allow common image MIME types in data URLs (e.g. <image href="data:image/png;...">)
+    keep_data_url_mime_types = {
+        "image": ["jpeg", "png", "gif", "webp", "avif"],
+    }
+
+    return filter_svg(svg_bytes, keep_data_url_mime_types)
 
 
 def sanitize_svg(filepath: str) -> bool:
@@ -5677,3 +5750,13 @@ def sanitize_svg(filepath: str) -> bool:
     except Exception as e:
         current_app.logger.error(f"Error sanitizing SVG: {e}")
         return False
+
+
+def requestor_domain():
+    requesting_domain = ''
+    if user_agent := str(request.user_agent):
+        if '+' in user_agent:
+            parts = user_agent.split('+')
+            requesting_domain = parts[-1].replace(')', '')
+            requesting_domain = furl(requesting_domain).host
+    return requesting_domain

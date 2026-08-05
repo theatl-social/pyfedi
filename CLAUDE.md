@@ -229,6 +229,139 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-08-05 — anoobis removed, and a five-month production outage found**
+- On the `v1.7.10` merge branch (below), upstream's new **anoobis** proof-of-work
+  gate was removed entirely rather than merged. Its proof of work was never
+  verified: `anoobis.html` discarded `solveProofOfWork()`'s return value and set
+  the cookie unconditionally, nothing was sent to the server, and
+  `check_anoobis` only tested `request.cookies.get('anoobis') is None`. The real
+  gate was "present any cookie named anoobis", which `curl -b anoobis=x`
+  satisfies. It also shipped an open redirect (`furl` reports no host for
+  `/\evil.com`; browsers normalise it to `//evil.com`). Guarded by
+  `tests/test_anoobis_removed.py`.
+- **The private-registration admin API had been dead in production since
+  2026-03-06.** The v1.6.9 merge (`4c611576`) broke it two ways at once:
+  1. The `from app.api.admin import routes ...` lines at the end of
+     `app/api/alpha/__init__.py` were dropped. Flask registers a route only when
+     its decorator executes, and nothing else imports those modules — so all 19
+     endpoints 404'd for five months and six upstream merges.
+  2. `admin_bp`'s `url_prefix` collapsed from `/api/alpha/admin` to `/api/alpha`.
+     Upstream had independently added its *own* blueprint with the same name
+     `"Admin"`; the merge kept upstream's line, and the fork's bare decorators
+     (`"/private_register"`) silently relocated.
+  Fixed with a dedicated `private_admin_bp`, so upstream can rename or re-prefix
+  its own blueprint without moving ours. **Guarded by
+  `tests/test_admin_api_routes_registered.py`, which asserts the live `url_map`.**
+- **Why it hid for so long — three checks that measured a proxy, not behaviour:**
+  the merge checklist verified this feature with
+  `ls app/api/admin/private_registration.py` (the file was present throughout);
+  `.github/workflows/ci-cd.yml` excluded 13 test files by name, quarantining ~40
+  tests including the SQL-injection and private-registration security suites; and
+  `test_private_registration_endpoints.py` wraps its fixture in
+  `except Exception: pytest.skip(...)`, reporting "skipped" instead of "failed".
+  All three now fixed. **Do not add exclusions to `ci-cd.yml` to make CI green.**
+- Other genuine bugs the un-quarantined tests exposed, all fixed:
+  - the IP allowlist was **inert** — it read only a `settings` row nothing ever
+    writes, so `is_ip_whitelisted()` always returned `True`, while the docs told
+    operators to set env vars nothing read;
+  - rate limiting **failed open** on any Redis exception, and its in-memory
+    fallback stored state in `flask.g` (per-request under gunicorn), so it was
+    inert too — now a bounded process-local dict;
+  - `get_private_registration_rate_limit()` didn't exist but was imported and
+    called, so `/api/alpha/admin/health` always 400'd on `ImportError`;
+  - `parse_rate_limit("5")` silently returned the default, *widening* any limit
+    configured in the bare-integer form the tooling actually uses;
+  - f-string SQL had regressed into `app/main/routes.py` across merges, undoing
+    `d3b170f2`; now parameterized.
+- Test suite: **17 failed / 496 passed / 27 errors → 1 failed / 884 passed / 0
+  errors.** The remaining failure is `test_connection_pool_thread_safety.py`'s
+  macOS-only `PicklingError` (spawn vs fork); it passes on Linux CI.
+  `tests/conftest.py` now makes `db.create_all()` complete on SQLite — see its
+  module docstring.
+
+- Merged upstream PieFed release tag `v1.7.10` on 2026-08-05
+- Branch: `20260805/merge-upstream-v1710`
+- Upstream tag commit: `6e3edda1` (24 commits since `9653bed1` = `v1.7.8`; clean linear ancestry)
+- New version: `1.7.10-peachpie-20260805` / `1.7.10+peachpie.20260805`
+- **Branched off `20260805/celery-modern-settings`, not `main`**, so this merge
+  carries the celery worker-stability work (PR #81) as well. Upstream does not
+  touch the vote locks, and its `app/__init__.py` change (flask-compress)
+  conflicted only against our new celery block — both were kept.
+- **Note on upstream tags vs `main`:** `v1.7.10` is a release-branch tag; upstream
+  `main` is 72 commits ahead of it on a separate line (`1a357b40` at merge time).
+  We merged the **tag**, consistent with the v1.7.0/v1.7.8 merges. The `main`
+  line carries the same anoobis/reputation work plus more.
+- Key additions from upstream:
+  - **Response compression** — `flask-compress`; `compress.init_app(app)` in
+    `create_app()`, `COMPRESS_ALGORITHM='gzip'` (one variant only, so nginx's
+    `proxy_cache` doesn't fragment), level 6, 4 KB minimum. `pyfedi.py`'s
+    `after_request` switched from `headers.setdefault('Vary', ...)` to
+    `response.vary.update(...)` so it merges with Flask-Compress's
+    `Accept-Encoding` instead of clobbering it. Verified working: 20 KB → 54 B.
+  - **"Anoobis"** proof-of-work challenge for anonymous scrapers —
+    `check_anoobis` decorator in `app/utils.py`, `/anoobis` route,
+    `app/templates/anoobis.html`, `ANOOBIS*` config. Applied to feed, community
+    and user routes. Note the whitelist is `any(item in request.user_agent.string
+    for item in [...])`, i.e. trivially bypassable by claiming to be Googlebot —
+    it is a cost-imposition measure, not an access control.
+  - **Author-level instance blocking on federated fetches** — `post_ap`/`comment_ap`
+    return 401 when the author has blocked the requesting instance, and switch to
+    `Vary: Accept, User-Agent` when the author blocks anyone. `requestor_domain()`
+    derives the domain from the User-Agent, which is client-controlled, so this is
+    exposure reduction, not authentication. `find_instance_id()` gained a null
+    guard and `has_blocked_instance()` an `instance_id is None` guard.
+  - `attributionDomains` on actor JSON (FEP-2345); `collapsible` column on
+    `PostReply` + `set_collapse_post_reply()` + moderator toggle; comment-pattern
+    chart on profiles; reputation system simplified (gif-reply no longer decrements
+    `user.reputation`); streamlined 404/429 error pages; `(content in post body)`
+    placeholder no longer rendered as a post title.
+  - New migration: `8ed167b06fd7` override comment collapse
+  - New merge migration: `merge_20260805_v1710.py` (merges `merge_20260730_v178`
+    + `8ed167b06fd7`) — single head verified
+  - New dependency: `flask-compress~=1.24` (pulls brotli/brotlicffi/backports-zstd)
+- **SP-017 strengthened by upstream** (see `SECURITY_PATCHES.md`): upstream's
+  `sanitize_svg_bytes` adds a 10 MB cap, strips DOCTYPE/processing instructions
+  (XXE, billion laughs), and — most importantly — **removes the blanket
+  `except Exception: return svg_bytes`**. Taking upstream here means the sanitizer
+  now *raises* instead of returning attacker-chosen bytes unsanitized. Both
+  `url_to_thumbnail_file()` call sites were updated to log and `return None`
+  (drop the thumbnail) rather than fall back. The old regression test asserted
+  the fail-open contract ("never raise") and was rewritten for the fail-closed
+  one, plus new tests for the size cap, DOCTYPE/PI stripping, XXE rejection, and
+  an AST check that the call sites don't silently reintroduce a fallback.
+- Fork customizations preserved: `Post.generate_ap_id` federation-safe form
+  (`tests/test_post_slug.py` green — it did **not** regress this time, the
+  `models.py` auto-merge left it alone), `cached_modlist_*` function-level import
+  from `app.shared.community` (circular-import fix), `privacy_url`, PeachPie
+  footer, private registration API, `uv run` + `gosu` entrypoints, SP-023
+  `safe_hx_redirect_url`, the `VOTE_QUOTA=0` disable comment.
+- Upstream bug fixed while merging: `config.py` shipped
+  `ANOOBIS_DIFFICULTY_DESKTOP = os.environ.get('') or 19` and the same for
+  `_MOBILE` — an **empty env-var key**, so neither could ever be configured.
+  Corrected to read their real names (and coerced to `int`).
+- Gap closed while merging: our `webfinger()` was missing upstream's
+  `ALLOWLIST_INTENSE` gate entirely (it had never been adopted, not deliberately
+  removed). Adopted using `requestor_domain()`.
+- Conflicts: 16 files. Most were the fork's double-quote/black reformatting vs
+  upstream's single quotes with no semantic delta — `ruff.toml` selects only
+  `E4/E7/E9/F` (not quote style), so keeping our formatting stays lint-clean.
+  `requirements.txt` deleted per policy (we use `pyproject.toml`).
+- Templates: `_post_full.html` kept the fork's structure (upstream's
+  `is_microblog`/`microblog_header` wrapper remains deliberately deferred, see
+  `ad426216`) while adopting upstream's `(content in post body)` title guard,
+  matching the pattern already in `post_teaser/_macros.html`.
+- Verification:
+  - `uvx ruff check .` — All checks passed
+  - `djlint app/templates --lint` — 297 files, 0 errors
+  - `tests/security/` — 164 passed
+  - `tests/test_post_slug.py` + `test_ci_fixes.py` + `test_migration_heads.py`
+    + `test_vote_lock_timeout.py` + `test_celery_settings.py` — 41 passed
+  - `create_app()` smoke test — boots, `/anoobis` routed, gzip active,
+    `celery.conf['deprecated_settings']` is now an **empty set**
+  - Full sweep: **17 failed / 520 passed / 27 errors**, failure list byte-identical
+    to the pre-merge baseline (17 failed / 516 passed / 27 errors) — **zero new
+    failures**; the +4 are the new SP-017 tests
+
 - Merged upstream PieFed release tag `v1.7.8` on 2026-07-30
 - Branch: `20260730/merge-upstream-v178`
 - Upstream tag commit: `9653bed1` (42 commits since `a114efdc`)
