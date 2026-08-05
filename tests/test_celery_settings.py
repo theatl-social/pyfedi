@@ -29,6 +29,7 @@ from app import celery, create_app
 from config import Config
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+ENTRYPOINT_WEB = REPO_ROOT / "entrypoint.sh"
 ENTRYPOINT_CELERY = REPO_ROOT / "entrypoint_celery.sh"
 
 EXPECTED_TASK_ROUTES = {
@@ -229,6 +230,38 @@ def test_celery_entrypoint_drops_privileges():
         "entrypoint_celery.sh must drop root privileges with "
         "'exec gosu python', matching entrypoint.sh"
     )
+
+
+def test_entrypoints_do_not_sync_the_venv_after_dropping_privileges():
+    """`uv run` must not try to re-sync /app/.venv as the python user.
+
+    The Dockerfile builds /app/.venv with `RUN uv sync` and declares no USER, so
+    the venv -- including `_editable_impl_pyfedi.pth` -- is owned by root.
+    Without --no-sync, `uv run` re-syncs the editable install at startup and
+    tries to delete that file, which the unprivileged user cannot do:
+
+        error: failed to remove file
+        `/app/.venv/lib/python3.13/site-packages/_editable_impl_pyfedi.pth`:
+        Permission denied (os error 13)
+
+    This crash-looped the celery worker in production when it was switched from
+    root to gosu. entrypoint.sh masked the same hazard because its root-side
+    `uv run flask db upgrade` performs the sync first -- but that step is
+    skipped for SQLite, so it is only incidentally safe.
+    """
+    for path in (ENTRYPOINT_CELERY, ENTRYPOINT_WEB):
+        for line in path.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#") or "gosu python" not in stripped:
+                continue
+            if "uv run" not in stripped:
+                continue
+            assert "--no-sync" in stripped, (
+                f"{path.name}: `{stripped}` drops privileges and then runs "
+                "`uv run` without --no-sync. It will try to rewrite the "
+                "root-owned /app/.venv as the python user and exit 2 with "
+                "'Permission denied'."
+            )
 
 
 def test_celery_entrypoint_keeps_worker_arguments():
