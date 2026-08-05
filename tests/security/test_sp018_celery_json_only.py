@@ -1,12 +1,16 @@
 """SP-018 regression: Celery must only accept JSON-serialized task messages
 and produce JSON-serialized results.
 
-Celery 5.x defaults to JSON, but two things make this a real concern:
+Celery 5.x defaults to JSON, but relying on that default is not enough:
+defaults can shift on major-version upgrades, and the pin is what makes the
+guarantee auditable.
 
-1. `app/__init__.py` merges Flask config into Celery config via
-   `celery.conf.update(app.config)`. If anyone ever set the env var
-   CELERY_TASK_SERIALIZER to anything unsafe, Celery would honor it silently.
-2. Defaults can shift on major-version upgrades.
+Historical note: `app/__init__.py` used to bulk-merge Flask config into Celery
+config via `celery.conf.update(app.config)`, so a CELERY_TASK_SERIALIZER env
+var would have been honored silently. That merge is gone — Celery now receives
+only an explicit lowercase allowlist of settings — which closes that particular
+door, but the explicit pin below remains the assertion that must survive
+refactors.
 
 Unsafe legacy serializers (the p-word, yaml's default Loader) execute
 arbitrary code on deserialization. Against broker messages that is remote

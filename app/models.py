@@ -2558,7 +2558,12 @@ class Post(db.Model):
         if vote_direction == 'downvote':
             if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
                 return None
-        with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=6):
+        # NOTE: timeout=30 (not 10) is deliberate. This outer lock wraps a vote
+        # transaction that can nest a second lock (lock:vote:/lock:user:) and,
+        # under load, take longer than 10s end to end -- a shorter timeout lets
+        # the lock expire before release, causing redis LockNotOwnedError. Fixed
+        # in commit 2610bf33; an upstream merge previously reverted this to 10.
+        with redis_client.lock(f"lock:post:{self.id}", timeout=30, blocking_timeout=6):
             existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
             if vote_direction == 'reversal':
                 if existing_vote:  # api receives '1' for upvote, '-1' for downvote, and '0' for reversal
@@ -3125,7 +3130,12 @@ class PostReply(db.Model):
     def vote(self, user: User, vote_direction: str, emoji: str):
         from app import redis_client
         from app.utils import wilson_confidence_lower_bound
-        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
+        # NOTE: timeout=30 (not 10) is deliberate. This outer lock wraps a vote
+        # transaction that can nest a second lock (lock:vote:/lock:user:) and,
+        # under load, take longer than 10s end to end -- a shorter timeout lets
+        # the lock expire before release, causing redis LockNotOwnedError. Fixed
+        # in commit 2610bf33; an upstream merge previously reverted this to 10.
+        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=30, blocking_timeout=6):
             existing_vote = db.session.query(PostReplyVote).filter_by(user_id=user.id, post_reply_id=self.id).first()
             if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
                 if existing_vote.effect == 1:

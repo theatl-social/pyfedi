@@ -11,12 +11,8 @@ if not app.debug:
 
 app.app_context().push()
 
-# Configure Celery worker memory management
-# Uses old-style setting names to match existing CELERY_BROKER_URL format in config.py
-celery.conf.update(
-    CELERYD_MAX_TASKS_PER_CHILD=1000,  # Restart worker after 1000 tasks to prevent memory leaks
-    CELERYD_MAX_MEMORY_PER_CHILD=512000,  # Restart worker if memory exceeds 512MB (in KB)
-)
+# Worker memory management (worker_max_tasks_per_child /
+# worker_max_memory_per_child) is configured by create_app() above.
 
 from app.shared.tasks import maintenance
 from app.shared.tasks import (

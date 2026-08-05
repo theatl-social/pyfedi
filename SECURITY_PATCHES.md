@@ -201,10 +201,11 @@ Any failure means a patch has regressed and must be re-applied before the merge 
 
 - **Disclosure:** 2026-05 (round-4 audit, Celery surface)
 - **Files:**
-  - `app/__init__.py` — `create_app()` celery.conf.update block now explicitly sets `CELERY_TASK_SERIALIZER`, `CELERY_RESULT_SERIALIZER`, `CELERY_ACCEPT_CONTENT` to JSON-only.
-- **Test:** `tests/security/test_sp018_celery_json_only.py`
+  - `app/__init__.py` — `create_app()` celery.conf.update block explicitly sets `task_serializer`, `result_serializer`, `accept_content` to JSON-only.
+- **Test:** `tests/security/test_sp018_celery_json_only.py`, `tests/test_celery_settings.py`
 - **Upstream status:** Not addressed upstream (Celery 5.x defaults to JSON, so neither side has an active vuln). This patch is defense-in-depth.
-- **Fix summary:** Celery accepts a configurable serializer for broker messages. Unsafe legacy serializers (the p-word, yaml's default Loader) execute arbitrary code on deserialization, which against broker messages is remote code execution on every worker process. Celery 5.x defaults to JSON, but two paths could silently flip the default: a future major-version upgrade changing defaults, or the existing `celery.conf.update(app.config)` bulk-merge honoring a `CELERY_TASK_SERIALIZER=<unsafe>` env var. Explicit allowlist eliminates both paths.
+- **Fix summary:** Celery accepts a configurable serializer for broker messages. Unsafe legacy serializers (the p-word, yaml's default Loader) execute arbitrary code on deserialization, which against broker messages is remote code execution on every worker process. Celery 5.x defaults to JSON, but two paths could silently flip the default: a future major-version upgrade changing defaults, or the `celery.conf.update(app.config)` bulk-merge honoring a `CELERY_TASK_SERIALIZER=<unsafe>` env var. Explicit allowlist eliminates both paths.
+- **2026-08-05 update:** the settings moved from the deprecated uppercase names (`CELERY_TASK_SERIALIZER`, ...) to Celery's modern lowercase names (`task_serializer`, ...), and the `celery.conf.update(app.config)` bulk-merge was removed entirely in favour of an explicit lowercase allowlist. That removal independently closes the env-var path described above — Flask config no longer reaches Celery at all — but the explicit pin is retained as the assertion that survives future refactors. See `docs/superpowers/specs/2026-08-05-celery-worker-stability-design.md`.
 - **Why this matters even though no vuln is currently active:** the regression test asserts the allowlist on every test run, so any future drift fails the build loudly.
 
 ### SP-017 — SVG XSS sanitization on uploads and remote og:image fetches
