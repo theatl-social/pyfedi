@@ -26,7 +26,7 @@ from app.main import bp
 from flask import g, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file, abort
 from flask_login import current_user
 from flask_babel import _
-from sqlalchemy import desc, text
+from sqlalchemy import bindparam, desc, text
 
 from app.main.forms import ShareLinkForm
 from app.main.util import sidebar_active_communities, sidebar_new_instances, sidebar_upcoming_events, \
@@ -47,6 +47,26 @@ from app.utils import render_template, get_setting, request_etag_matches, return
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage, BannedInstances, BotChallenge
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
+
+# The only non-empty value `low_quality_filter` is ever allowed to take.
+LOW_QUALITY_CLAUSE = "AND c.low_quality is false"
+
+
+def _with_low_quality_filter(base_sql: str, low_quality_filter: str) -> str:
+    """Append the low-quality clause to a static SQL string.
+
+    `low_quality_filter` is one of exactly two hardcoded literals -- either
+    "AND c.low_quality is false" or "" -- chosen from a boolean user
+    preference. Concatenating it is safe, but it is asserted here rather than
+    assumed: this used to be an f-string, and `tests/test_sql_injection_fixes.py`
+    exists because commit d3b170f2 removed that pattern once already and later
+    upstream merges reintroduced it.
+    """
+    if low_quality_filter not in ("", LOW_QUALITY_CLAUSE):
+        raise ValueError(
+            f"refusing to build SQL with an unexpected filter: {low_quality_filter!r}"
+        )
+    return base_sql if not low_quality_filter else f"{base_sql} {low_quality_filter}"
 
 
 @bp.route('/', methods=['HEAD', 'GET'])
@@ -1236,17 +1256,25 @@ def index_rss(feed_type=None):
     elif feed_type == 'local' or not current_user_is_authenticated:
         if not current_user_is_authenticated:
             community_ids = db.session.execute(
-                text(f'SELECT id FROM community as c WHERE c.private is false and c.instance_id = 1 {low_quality_filter}')).scalars()
+                text(_with_low_quality_filter(
+                    'SELECT id FROM community as c WHERE c.private is false and c.instance_id = 1',
+                    low_quality_filter))).scalars()
         else:
             community_ids = db.session.execute(
-                text(f'SELECT id FROM community as c WHERE (c.private is false OR c.id IN {private_communities}) AND c.instance_id = 1 {low_quality_filter}')).scalars()
+                text(_with_low_quality_filter(
+                    'SELECT id FROM community as c WHERE (c.private is false OR c.id IN :private_community_ids) AND c.instance_id = 1',
+                    low_quality_filter)).bindparams(bindparam('private_community_ids', expanding=True)),
+                {'private_community_ids': list(private_communities)}).scalars()
     elif feed_type == 'popular':
         if not current_user_is_authenticated:
             community_ids = db.session.execute(
                 text('SELECT id FROM community as c WHERE c.show_popular is true and c.private is false AND c.low_quality is false')).scalars()
         else:
             community_ids = db.session.execute(
-                text(f'SELECT id FROM community as c WHERE (c.private is false OR c.id IN {private_communities}) AND c.show_popular is true {low_quality_filter}')).scalars()
+                text(_with_low_quality_filter(
+                    'SELECT id FROM community as c WHERE (c.private is false OR c.id IN :private_community_ids) AND c.show_popular is true',
+                    low_quality_filter)).bindparams(bindparam('private_community_ids', expanding=True)),
+                {'private_community_ids': list(private_communities)}).scalars()
     elif feed_type == 'all':
         community_ids = [-1]  # Special value to indicate 'All'
 

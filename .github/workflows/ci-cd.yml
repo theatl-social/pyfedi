@@ -153,26 +153,24 @@ jobs:
       - name: Run additional core tests
         run: |
           echo "Running additional core logic tests"
-          # Collect all test files (excluding ones run separately and tests needing proper fixtures)
+          # Collect all test files. The ONLY exclusions permitted here are files
+          # this workflow runs in a separate step above -- excluding them avoids
+          # running them twice, nothing more.
+          #
+          # This list used to also exclude 13 files "needing proper fixtures".
+          # That quarantined ~40 tests, including the SQL-injection regression
+          # suite and 18 private-registration security tests, while CI stayed
+          # green. It is how the private-registration admin API went five months
+          # and six upstream merges completely unrouted in production without
+          # anything failing. Do not add exclusions here to make CI green: fix
+          # the test, or mark it skipif with a stated reason so the skip is
+          # visible in the run output.
           TEST_FILES=$(find tests/ -name "test_*.py" \
             -not -name "test_startup_validation.py" \
             -not -name "test_field_consistency_simple.py" \
             -not -name "test_allowlist_html.py" \
             -not -name "test_migration_heads.py" \
-            -not -name "test_explore_ci_real_world.py" \
-            -not -name "test_api_*_subscriptions.py" \
-            -not -name "test_api_*_bookmarks.py" \
-            -not -name "test_api_get_*.py" \
-            -not -name "test_api_instance_blocks.py" \
-            -not -name "test_activitypub_util.py" \
-            -not -name "test_explore_template_render.py" \
-            -not -name "test_explore_page_integration.py" \
-            -not -name "test_api_blueprint_registration.py" \
-            -not -name "test_sql_injection_fixes.py" \
-            -not -name "test_private_registration.py" \
-            -not -name "test_explore_real_world.py" \
-            -not -name "test_private_registration_security.py" \
-            -not -name "test_private_registration_security_focused.py")
+            -not -name "test_explore_ci_real_world.py")
 
           # Run all tests in a single pytest command so failures propagate properly
           if [ -n "$TEST_FILES" ]; then

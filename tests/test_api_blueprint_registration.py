@@ -29,14 +29,16 @@ def test_all_api_blueprints_registered():
         "Admin",  # admin_bp (special case with different prefix)
     }
 
-    # Get all registered blueprints from the Flask-Smorest API
+    # Get all registered blueprints. flask-smorest's `Blueprint` is a subclass
+    # of Flask's own `Blueprint`, so every API namespace shows up directly on
+    # `app.blueprints` (keyed by blueprint name) alongside the regular web
+    # blueprints - no need to reach into flask-smorest's internal `Api`
+    # object (whose `app.extensions["flask-smorest"]` entry is just a plain
+    # config dict, not the `Api` instance, and has no `_app` attribute).
     registered_blueprints = set()
-    if hasattr(app.extensions, "smorest"):
-        api = app.extensions.get("smorest")
-        if api and hasattr(api, "_app"):
-            for bp in api._app.blueprints.values():
-                if hasattr(bp, "name") and bp.name != "api_alpha":
-                    registered_blueprints.add(bp.name)
+    for name, bp in app.blueprints.items():
+        if hasattr(bp, "name") and bp.name != "api_alpha":
+            registered_blueprints.add(bp.name)
 
     # Check if all expected blueprints are registered
     missing_blueprints = expected_api_blueprints - registered_blueprints

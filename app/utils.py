@@ -5565,11 +5565,50 @@ def get_private_registration_secret():
 
 
 def get_private_registration_allowed_ips():
-    """Get list of allowed IP ranges for private registration"""
-    ips = get_setting("PRIVATE_REGISTRATION_IPS", "")
+    """Get list of allowed IP ranges for private registration.
+
+    Reads the environment first, then the DB setting — matching
+    is_private_registration_enabled() above. It previously read *only*
+    get_setting("PRIVATE_REGISTRATION_IPS"), a row in the `settings` table that
+    nothing in this codebase ever writes: no CLI command, no admin route, no
+    startup sync. So the list was always empty, and because is_ip_whitelisted()
+    treats an empty list as "no restriction configured" and returns True, the
+    IP allowlist — one of the four gates in front of this admin API — was inert.
+
+    Operators had no way to know: docs/PRIVATE_REGISTRATION_TESTING.md tells
+    them to `export PRIVATE_REGISTRATION_ALLOWED_IPS=...` and ADMIN_API.md says
+    `PRIVATE_REGISTRATION_IPS=...`, and neither variable was read by anything.
+    Both spellings are accepted here so either doc now works.
+
+    NOTE: setting either variable now actually enforces the allowlist. That is
+    the documented intent, but it is a behaviour change for anyone who had one
+    set and was silently unrestricted.
+    """
+    ips = (
+        os.environ.get("PRIVATE_REGISTRATION_IPS")
+        or os.environ.get("PRIVATE_REGISTRATION_ALLOWED_IPS")
+        or get_setting("PRIVATE_REGISTRATION_IPS", "")
+    )
     if not ips:
         return []
     return [ip.strip() for ip in ips.split(",") if ip.strip()]
+
+
+def get_private_registration_rate_limit():
+    """Get the configured rate limit for private registration, or "" if unset.
+
+    app/api/admin/routes.py has imported and called this since the feature
+    landed, but it was never defined — so /api/alpha/admin/health raised
+    ImportError on every request and the blueprint's generic handler turned it
+    into a 400. That endpoint has never worked.
+
+    Returns a limit string such as "10/hour". An empty return means "not
+    configured", and AdvancedRateLimiter falls back to its own default.
+    """
+    return (
+        os.environ.get("PRIVATE_REGISTRATION_RATE_LIMIT")
+        or get_setting("PRIVATE_REGISTRATION_RATE_LIMIT", "")
+    )
 
 
 def log_cron_task_to_db(task_name: str):

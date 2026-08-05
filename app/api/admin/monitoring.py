@@ -169,6 +169,29 @@ class AdvancedRateLimiter:
             "statistics": "60/hour",
         }
 
+    def _configured_limit(self, limit_type):
+        """Resolve a limit, honouring PRIVATE_REGISTRATION_RATE_LIMIT.
+
+        That variable is documented in ADMIN_API.md and in the original feature
+        commit, but nothing read it — `default_limits` was hardcoded, so the
+        documented knob did nothing.
+
+        Resolved lazily rather than in __init__: this class is instantiated at
+        module import time (`rate_limiter = AdvancedRateLimiter()` at the bottom
+        of this file), long before an application context exists, and the
+        setting lookup needs a database session.
+        """
+        if limit_type == "private_registration":
+            from app.utils import get_private_registration_rate_limit
+
+            try:
+                configured = get_private_registration_rate_limit()
+            except Exception:
+                configured = ""  # no app context / no DB yet
+            if configured:
+                return configured
+        return self.default_limits.get(limit_type, "10/hour")
+
     def get_rate_limit_key(self, limit_type, identifier):
         """Generate rate limit key"""
         return f"piefed:ratelimit:{limit_type}:{identifier}"
@@ -210,7 +233,7 @@ class AdvancedRateLimiter:
             # Fallback to in-memory tracking (less accurate)
             return self._check_rate_limit_fallback(limit_type, identifier)
 
-        limit_str = custom_limit or self.default_limits.get(limit_type, "10/hour")
+        limit_str = custom_limit or self._configured_limit(limit_type)
         max_requests, window_seconds = self.parse_rate_limit(limit_str)
 
         rate_key = self.get_rate_limit_key(limit_type, identifier)
@@ -254,16 +277,23 @@ class AdvancedRateLimiter:
             }
 
         except Exception as e:
-            current_app.logger.warning(f"Redis rate limit check failed: {e}")
-            # Allow request if Redis fails
-            return {
-                "allowed": True,
-                "limit": max_requests,
-                "remaining": max_requests - 1,
-                "reset_time": current_time + window_seconds,
-                "retry_after": 0,
-                "fallback": True,
-            }
+            # Degrade to the in-memory limiter rather than allowing the request.
+            #
+            # This branch used to return {"allowed": True}, i.e. the rate limiter
+            # switched itself off whenever Redis was unreachable — on endpoints
+            # that create, ban and delete accounts, and where the limiter is one
+            # of only four gates. Anyone able to disrupt Redis (or simply catch
+            # it during a restart) got unlimited attempts at the secret.
+            #
+            # _check_rate_limit_fallback() already existed for the
+            # no-redis-configured case; it was just unreachable when Redis was
+            # configured but broken, which is the more common failure.
+            current_app.logger.warning(
+                f"Redis rate limit check failed, falling back to in-memory: {e}"
+            )
+            result = self._check_rate_limit_fallback(limit_type, identifier)
+            result["fallback"] = True
+            return result
 
     def _check_rate_limit_fallback(self, limit_type, identifier):
         """Fallback rate limiting without Redis"""
@@ -271,7 +301,7 @@ class AdvancedRateLimiter:
         if not hasattr(g, "rate_limit_cache"):
             g.rate_limit_cache = {}
 
-        limit_str = self.default_limits.get(limit_type, "10/hour")
+        limit_str = self._configured_limit(limit_type)
         max_requests, window_seconds = self.parse_rate_limit(limit_str)
 
         current_time = int(time.time())

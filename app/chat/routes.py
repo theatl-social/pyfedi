@@ -90,8 +90,20 @@ def chat_home(conversation_id=None):
             else:
                 alone = False
 
-            sql = f"UPDATE notification SET read = true WHERE url LIKE '/chat/{conversation_id}%' AND user_id = {current_user.id}"
-            db.session.execute(text(sql))
+            # Bind parameters rather than interpolate. Both values happen to be
+            # integers today (conversation_id comes through the <int:...> route
+            # converter), but that is an accident of the caller, not a property
+            # of this statement.
+            db.session.execute(
+                text(
+                    "UPDATE notification SET read = true "
+                    "WHERE url LIKE :url_prefix AND user_id = :user_id"
+                ),
+                {
+                    "url_prefix": f"/chat/{conversation_id}%",
+                    "user_id": current_user.id,
+                },
+            )
             db.session.commit()
             current_user.unread_notifications = Notification.query.filter_by(
                 user_id=current_user.id, read=False

@@ -1,88 +1,114 @@
 """
 Integration test for the explore page that tests actual rendering behavior.
 
-This test creates a minimal Flask app instance and tests the explore route
-to verify it doesn't crash and returns content.
+This test creates a real Flask app instance (in-memory SQLite) and tests the
+explore route to verify it doesn't crash and returns content.
 """
 
 import os
 
-# Set environment variables before importing Flask app
+# Set environment variables before importing Flask app. These use setdefault
+# so a value already present in the environment (e.g. the SERVER_NAME/
+# SECRET_KEY/CACHE_* set by the test-runner's env block) wins; only fill gaps.
 os.environ.setdefault("SERVER_NAME", "test.localhost")
-os.environ.setdefault("SECRET_KEY", "test-secret-for-explore-test")
+os.environ.setdefault("SECRET_KEY", "test-secret-for-explore-test-padding-32c")
 os.environ.setdefault("DATABASE_URL", "sqlite:///memory:test.db")
 os.environ.setdefault("CACHE_TYPE", "NullCache")
 os.environ.setdefault("CACHE_REDIS_URL", "memory://")
 os.environ.setdefault("CELERY_BROKER_URL", "memory://localhost/")
 os.environ.setdefault("TESTING", "true")
+os.environ.setdefault("MAIL_SERVER", "")
 
 import pytest
 from unittest.mock import patch
-from flask import url_for
+
+from tests.explore_test_support import build_wired_app, make
 
 
-def test_explore_route_responds():
+@pytest.fixture(scope="module")
+def app():
+    """A fully-wired Flask app (same jinja globals / before_request / context
+    processor as the real WSGI entrypoint, see explore_test_support.py) with
+    an in-memory SQLite database and a Site row with id=1 -- required because
+    the explore route's @login_required_if_private_instance decorator reads
+    g.site, and every template extending base.html needs the jinja globals
+    (theme(), file_exists(), etc.) that only get registered by pyfedi.py, not
+    by app.create_app() alone.
+    """
+    application = build_wired_app()
+
+    from app import db
+    from app.models import Site
+
+    with application.app_context():
+        site = make(
+            Site,
+            id=1,
+            name="Test Site",
+            private_instance=False,
+            registration_mode="Open",
+        )
+        db.session.add(site)
+        db.session.commit()
+
+    yield application
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+
+def test_explore_route_responds(client):
     """Test that the explore route responds without crashing."""
-    from app import create_app
+    # Mock the topic_tree function to return empty list (simulating no topics)
+    with patch("app.main.routes.topic_tree") as mock_topic_tree:
+        mock_topic_tree.return_value = []
 
-    app = create_app()
-    app.config["TESTING"] = True
-    app.config["WTF_CSRF_ENABLED"] = False
+        # Mock the menu functions to return empty lists
+        with (
+            patch("app.main.routes.menu_instance_feeds") as mock_instance_feeds,
+            patch("app.main.routes.menu_my_feeds") as mock_my_feeds,
+            patch("app.main.routes.menu_subscribed_feeds") as mock_subscribed_feeds,
+        ):
+            mock_instance_feeds.return_value = []
+            mock_my_feeds.return_value = []
+            mock_subscribed_feeds.return_value = []
 
-    with app.test_client() as client:
-        # Mock the topic_tree function to return empty list (simulating no topics)
-        with patch("app.main.routes.topic_tree") as mock_topic_tree:
-            mock_topic_tree.return_value = []
+            response = client.get("/explore")
 
-            # Mock the menu functions to return empty lists
-            with (
-                patch("app.main.routes.menu_instance_feeds") as mock_instance_feeds,
-                patch("app.main.routes.menu_my_feeds") as mock_my_feeds,
-                patch("app.main.routes.menu_subscribed_feeds") as mock_subscribed_feeds,
-            ):
-                mock_instance_feeds.return_value = []
-                mock_my_feeds.return_value = []
-                mock_subscribed_feeds.return_value = []
+            # Should not crash - this was the original bug
+            assert response.status_code == 200
 
-                response = client.get("/explore")
+            # Should return HTML content
+            assert response.content_type.startswith("text/html")
 
-                # Should not crash - this was the original bug
-                assert response.status_code == 200
+            # Get the content
+            html_content = response.get_data(as_text=True)
 
-                # Should return HTML content
-                assert response.content_type.startswith("text/html")
+            # Should not contain template errors
+            template_errors = [
+                "TemplateSyntaxError",
+                "UndefinedError",
+                "No filter named",
+                "len(topics)",  # The original bug
+                "len(communities)",
+            ]
 
-                # Get the content
-                html_content = response.get_data(as_text=True)
+            for error in template_errors:
+                assert error not in html_content, f"Template error found: {error}"
 
-                # Should not contain template errors
-                template_errors = [
-                    "TemplateSyntaxError",
-                    "UndefinedError",
-                    "No filter named",
-                    "len(topics)",  # The original bug
-                    "len(communities)",
-                ]
+            # Should contain the basic page structure (indicating it rendered successfully)
+            assert "<html" in html_content or "<!DOCTYPE" in html_content
+            assert "Topics" in html_content  # Should have the Topics tab
+            assert "Feeds" in html_content  # Should have the Feeds tab
 
-                for error in template_errors:
-                    assert error not in html_content, f"Template error found: {error}"
-
-                # Should contain the basic page structure (indicating it rendered successfully)
-                assert "<html" in html_content or "<!DOCTYPE" in html_content
-                assert "Topics" in html_content  # Should have the Topics tab
-                assert "Feeds" in html_content  # Should have the Feeds tab
-
-                # Should show the empty state message when no topics
-                assert "There are no communities yet." in html_content
+            # Should show the empty state message when no topics
+            assert "There are no communities yet." in html_content
 
 
-def test_explore_route_with_mock_topics():
+def test_explore_route_with_mock_topics(client):
     """Test that the explore route works when topics exist."""
-    from app import create_app
-
-    app = create_app()
-    app.config["TESTING"] = True
-    app.config["WTF_CSRF_ENABLED"] = False
 
     # Mock topic object
     class MockTopic:
@@ -103,36 +129,35 @@ def test_explore_route_with_mock_topics():
         {"topic": MockTopic("Science"), "children": []},
     ]
 
-    with app.test_client() as client:
-        with patch("app.main.routes.topic_tree") as mock_topic_tree:
-            mock_topic_tree.return_value = mock_topics
+    with patch("app.main.routes.topic_tree") as mock_topic_tree:
+        mock_topic_tree.return_value = mock_topics
 
-            # Mock the menu functions
-            with (
-                patch("app.main.routes.menu_instance_feeds") as mock_instance_feeds,
-                patch("app.main.routes.menu_my_feeds") as mock_my_feeds,
-                patch("app.main.routes.menu_subscribed_feeds") as mock_subscribed_feeds,
-            ):
-                mock_instance_feeds.return_value = []
-                mock_my_feeds.return_value = []
-                mock_subscribed_feeds.return_value = []
+        # Mock the menu functions
+        with (
+            patch("app.main.routes.menu_instance_feeds") as mock_instance_feeds,
+            patch("app.main.routes.menu_my_feeds") as mock_my_feeds,
+            patch("app.main.routes.menu_subscribed_feeds") as mock_subscribed_feeds,
+        ):
+            mock_instance_feeds.return_value = []
+            mock_my_feeds.return_value = []
+            mock_subscribed_feeds.return_value = []
 
-                response = client.get("/explore")
+            response = client.get("/explore")
 
-                assert response.status_code == 200
-                html_content = response.get_data(as_text=True)
+            assert response.status_code == 200
+            html_content = response.get_data(as_text=True)
 
-                # Should contain the topic names
-                assert "Technology" in html_content
-                assert "Science" in html_content
-                assert "Programming" in html_content
+            # Should contain the topic names
+            assert "Technology" in html_content
+            assert "Science" in html_content
+            assert "Programming" in html_content
 
-                # Should NOT show the empty state message
-                assert "There are no communities yet." not in html_content
+            # Should NOT show the empty state message
+            assert "There are no communities yet." not in html_content
 
-                # Should not contain template errors
-                assert "len(topics)" not in html_content
-                assert "TemplateSyntaxError" not in html_content
+            # Should not contain template errors
+            assert "len(topics)" not in html_content
+            assert "TemplateSyntaxError" not in html_content
 
 
 def test_explore_template_jinja_syntax():

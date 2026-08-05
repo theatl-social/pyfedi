@@ -1,83 +1,87 @@
 """
-Test the explore template rendering in isolation.
+Test the explore template rendering with different data scenarios.
 
-This test verifies that the explore template renders correctly with different
-data scenarios without requiring full application context.
+Originally this rendered explore.html through a bare `jinja2.Environment`
+with hand-mocked globals, explicitly to avoid needing a full application
+context. That doesn't work against the real template: explore.html's first
+line is `{% from 'bootstrap5/form.html' import render_form -%}`, which comes
+from Flask-Bootstrap's own template loader -- only registered onto
+`app.jinja_loader` by `bootstrap.init_app(app)` inside `create_app()`. A bare
+`jinja2.Environment(loader=FileSystemLoader(...))` never sees it and raises
+`TemplateNotFound: 'bootstrap5/form.html'` before rendering anything, so
+these two tests could never actually have passed. base.html (which
+explore.html extends) also needs `g.site` and the jinja globals/context
+processor that only pyfedi.py registers on top of `create_app()` -- see
+tests/explore_test_support.py for why a full, correctly-wired Flask app is
+required and how it's built safely (in-memory SQLite, not the real app.db).
+
+The topics/menu data is still passed explicitly to render_template(), same
+as before, so what each test actually exercises (empty-state vs.
+topics-rendered) is unchanged.
 """
 
 import os
+
 import pytest
-from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
+from flask import render_template
+
+from tests.explore_test_support import build_wired_app, make
 
 
-def test_explore_template_renders_with_empty_topics():
-    """Test that explore template renders when topics list is empty."""
-    templates_dir = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "app", "templates"
-    )
+@pytest.fixture(scope="module")
+def app():
+    application = build_wired_app()
 
-    if not os.path.exists(templates_dir):
-        pytest.skip("Templates directory not found")
+    from app import db
+    from app.models import Site
 
-    # Create Jinja2 environment
-    env = Environment(loader=FileSystemLoader(templates_dir))
+    with application.app_context():
+        site = make(
+            Site,
+            id=1,
+            name="Test Site",
+            private_instance=False,
+            registration_mode="Open",
+        )
+        db.session.add(site)
+        db.session.commit()
 
-    # Mock the custom functions and filters
-    def mock_theme():
-        return "piefed"
+    yield application
 
-    def mock_file_exists(path):
-        return False
 
-    def mock_translate(text):
-        return text
-
-    # Add functions to globals (not filters)
-    env.globals["theme"] = mock_theme
-    env.globals["file_exists"] = mock_file_exists
-    env.globals["_"] = mock_translate
-    env.globals["current_user"] = type(
-        "MockUser",
-        (),
-        {"is_authenticated": False, "is_anonymous": True, "link": lambda: "testuser"},
-    )()
-
-    try:
-        template = env.get_template("explore.html")
-
-        # Test with empty topics
-        rendered = template.render(
-            topics=[],
+def _render(app, **context):
+    """Render explore.html inside a real request context so before_request
+    (which sets g.site/g.nonce/g.locale) and the app's context processor run
+    exactly as they would for a real /explore request."""
+    with app.test_request_context("/explore"):
+        app.preprocess_request()
+        return render_template(
+            "explore.html",
             menu_instance_feeds=[],
             menu_my_feeds=None,
             menu_subscribed_feeds=None,
+            **context,
         )
 
-        # Should render without errors
-        assert rendered is not None
-        assert len(rendered) > 0
 
-        # Should contain the empty state message
-        assert "There are no communities yet." in rendered
+def test_explore_template_renders_with_empty_topics(app):
+    """Test that explore template renders when topics list is empty."""
+    rendered = _render(app, topics=[])
 
-        # Should contain basic structure
-        assert "Topics" in rendered
-        assert "Feeds" in rendered
+    # Should render without errors
+    assert rendered is not None
+    assert len(rendered) > 0
 
-        print("✅ Empty topics test passed")
+    # Should contain the empty state message
+    assert "There are no communities yet." in rendered
 
-    except TemplateSyntaxError as e:
-        raise AssertionError(f"Template syntax error: {e}")
+    # Should contain basic structure
+    assert "Topics" in rendered
+    assert "Feeds" in rendered
 
 
-def test_explore_template_renders_with_topics():
+def test_explore_template_renders_with_topics(app):
     """Test that explore template renders when topics exist."""
-    templates_dir = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "app", "templates"
-    )
-
-    if not os.path.exists(templates_dir):
-        pytest.skip("Templates directory not found")
 
     # Mock topic object
     class MockTopic:
@@ -96,46 +100,19 @@ def test_explore_template_renders_with_topics():
         {"topic": MockTopic("Science"), "children": []},
     ]
 
-    # Create Jinja2 environment
-    env = Environment(loader=FileSystemLoader(templates_dir))
+    rendered = _render(app, topics=mock_topics)
 
-    # Mock the custom functions and globals
-    env.globals["theme"] = lambda: "piefed"
-    env.globals["file_exists"] = lambda path: False
-    env.globals["_"] = lambda text: text
-    env.globals["current_user"] = type(
-        "MockUser",
-        (),
-        {"is_authenticated": False, "is_anonymous": True, "link": lambda: "testuser"},
-    )()
+    # Should render without errors
+    assert rendered is not None
+    assert len(rendered) > 0
 
-    try:
-        template = env.get_template("explore.html")
+    # Should contain topic names
+    assert "Technology" in rendered
+    assert "Science" in rendered
+    assert "Programming" in rendered
 
-        # Test with topics
-        rendered = template.render(
-            topics=mock_topics,
-            menu_instance_feeds=[],
-            menu_my_feeds=None,
-            menu_subscribed_feeds=None,
-        )
-
-        # Should render without errors
-        assert rendered is not None
-        assert len(rendered) > 0
-
-        # Should contain topic names
-        assert "Technology" in rendered
-        assert "Science" in rendered
-        assert "Programming" in rendered
-
-        # Should NOT contain empty state message
-        assert "There are no communities yet." not in rendered
-
-        print("✅ With topics test passed")
-
-    except TemplateSyntaxError as e:
-        raise AssertionError(f"Template syntax error: {e}")
+    # Should NOT contain empty state message
+    assert "There are no communities yet." not in rendered
 
 
 def test_explore_template_length_filter_usage():
@@ -159,24 +136,3 @@ def test_explore_template_length_filter_usage():
     assert (
         "len(topics)" not in template_content
     ), "Template should not use Python len() function"
-
-    print("✅ Length filter usage test passed")
-
-
-if __name__ == "__main__":
-    """Run tests standalone."""
-    import sys
-
-    try:
-        test_explore_template_length_filter_usage()
-        test_explore_template_renders_with_empty_topics()
-        test_explore_template_renders_with_topics()
-
-        print("\n🎉 All explore template tests passed!")
-        print(
-            "The template syntax bug has been fixed and the template renders correctly."
-        )
-
-    except Exception as e:
-        print(f"\n❌ Test failed: {e}")
-        sys.exit(1)
