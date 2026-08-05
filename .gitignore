@@ -173,3 +173,4 @@ logs/
 tmp/
 app/plugins/piefed_onboarding/
 app/static/styles.css.map
+.worktrees/
