@@ -237,24 +237,34 @@ def create_app(config_class=Config):
     cache.init_app(app)
     limiter.init_app(app)
     app_bcrypt.init_app(app)
-    celery.conf.update(app.config)
-
-    # SP-018: explicitly pin Celery to JSON serialization for broker messages
-    # and task results. Celery 5.x defaults to JSON, but defaults can change
-    # with major versions, and the bulk app.config merge above would silently
-    # honor a CELERY_TASK_SERIALIZER env var if one were ever set. Unsafe
-    # legacy serializers (the p-word and yaml's default Loader) execute
-    # arbitrary code on deserialization, which against broker messages is
-    # remote code execution on every worker. Explicit allowlist > default.
-    # Old-style setting names to match the surrounding CELERY_ROUTES style.
+    # Celery configuration.
+    #
+    # This deliberately does NOT do `celery.conf.update(app.config)`. That bulk
+    # merge pushed every uppercase Flask setting (S3_REGION, S3_BUCKET,
+    # CACHE_DIR, BOUNCE_PASSWORD, ...) into Celery, where Celery's legacy-name
+    # compatibility layer reads uppercase keys as pre-4.0 Celery options and
+    # warns about them ahead of Celery 6. None of those settings mean anything
+    # to Celery. Only the options below are Celery's business, and each uses
+    # the modern lowercase name.
+    #
+    # SP-018: task_serializer / result_serializer / accept_content pin Celery to
+    # JSON for both broker messages and task results. Celery 5.x already
+    # defaults to JSON, but defaults can shift across major versions, so the
+    # allowlist is stated explicitly rather than inherited. Unsafe legacy
+    # serializers (the p-word, and yaml's default Loader) execute arbitrary
+    # code on deserialization; against attacker-influenced broker messages that
+    # is remote code execution on every worker process. Note that dropping the
+    # bulk app.config merge also closes a second door: a CELERY_TASK_SERIALIZER
+    # environment variable can no longer reach Celery at all, because Flask
+    # config is no longer forwarded. Keep this explicit pin anyway — it is the
+    # assertion that survives future refactors. See SECURITY_PATCHES.md.
     celery.conf.update(
-        CELERY_TASK_SERIALIZER="json",
-        CELERY_RESULT_SERIALIZER="json",
-        CELERY_ACCEPT_CONTENT=["json"],
-    )
-
-    celery.conf.update(
-        CELERY_ROUTES={
+        broker_url=app.config["CELERY_BROKER_URL"],
+        result_backend=app.config["RESULT_BACKEND"],
+        task_serializer="json",
+        result_serializer="json",
+        accept_content=["json"],
+        task_routes={
             "app.shared.tasks.users.check_user_application": {"queue": "background"},
             "app.user.utils.purge_user_then_delete_task": {"queue": "background"},
             "app.community.util.retrieve_mods_and_backfill": {"queue": "background"},
@@ -264,7 +274,12 @@ def create_app(config_class=Config):
             "app.shared.tasks.maintenance.*": {"queue": "background"},
             "app.admin.routes.*": {"queue": "background"},
             "app.admin.util.*": {"queue": "background"},
-        }
+        },
+        # Recycle worker children to bound leaked memory: after 1000 tasks, or
+        # when RSS exceeds 512MB (value is in KB).
+        worker_max_tasks_per_child=1000,
+        worker_max_memory_per_child=512000,
+        broker_connection_retry_on_startup=True,
     )
 
     # Initialize redis_client
