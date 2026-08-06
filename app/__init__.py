@@ -237,7 +237,9 @@ def create_app(config_class=Config):
     bootstrap.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)
-    compress.init_app(app)   # registered before the after_request in pyfedi.py, so it runs after it
+    compress.init_app(
+        app
+    )  # registered before the after_request in pyfedi.py, so it runs after it
     limiter.init_app(app)
     app_bcrypt.init_app(app)
     # Celery configuration.
@@ -449,7 +451,7 @@ def create_app(config_class=Config):
     )
     file_handler.setFormatter(
         logging.Formatter(
-            "%(asctime)s %(levelname)s: %(message)s " "[in %(pathname)s:%(lineno)d]"
+            "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
         )
     )
     file_handler.setLevel(logging.INFO)
