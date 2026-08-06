@@ -322,6 +322,89 @@ Any failure means a patch has regressed and must be re-applied before the merge 
   `authorise_api_user` reads solely the `Authorization` header, with no cookie fallback —
   and the 9 ActivityPub inboxes are HTTP-signature verified under SP-001.)
 
+### SP-025 — Admin API IP allowlist was inert (read a settings row nothing ever wrote)
+
+- **Origin:** pre-existing in this fork; the private-registration admin API's IP
+  allowlist never functioned as documented
+- **Files:**
+  - `app/utils.py` — `get_private_registration_allowed_ips()` now reads
+    `PRIVATE_REGISTRATION_IPS` / `PRIVATE_REGISTRATION_ALLOWED_IPS` from the
+    environment first, falling back to the settings row
+- **Test:** `tests/security/test_admin_ip_allowlist.py`
+- **Upstream status:** N/A — fork-only feature (private registration admin
+  API), no upstream equivalent
+- **Severity:** the allowlist is one of four gates in front of an
+  account-provisioning API (alongside the shared secret,
+  `PRIVATE_REGISTRATION_ENABLED`, and rate limiting — see SP-027); with this
+  gate inert, an attacker holding the shared secret faced three, not four.
+- **Fix summary:** `get_private_registration_allowed_ips()` read only
+  `get_setting("PRIVATE_REGISTRATION_IPS")` — a row in the `settings` table
+  that no CLI command, admin route, or startup path ever wrote. The list was
+  therefore always empty, and `is_ip_whitelisted()` treats an empty list as "no
+  restriction configured," returning `True` for every address — while
+  `docs/PRIVATE_REGISTRATION_TESTING.md` and `ADMIN_API.md` told operators to
+  configure it through environment variables nothing read.
+
+### SP-026 — Forgeable `X-Forwarded-For` trusted for client-IP resolution
+
+- **Origin:** pre-existing in this fork and upstream for the app-wide
+  `get_ip_address()` / `ip_address()`; the admin-API instance was introduced
+  with the private registration feature
+- **Files:**
+  - `app/api/admin/security.py` — `validate_private_registration_request()`
+    now reads `request.remote_addr`
+  - `app/__init__.py` — `get_ip_address()`, the Flask-Limiter key function
+  - `app/utils.py` — `ip_address()` — IP bans, country blocking, and the IP
+    recorded on users/posts/instances
+- **Test:** `tests/security/test_admin_ip_allowlist.py`,
+  `tests/security/test_sp026_ip_address_forgery.py`
+- **Upstream status:** PRESENT upstream — `app/utils.py`'s `ip_address()` is
+  unchanged from upstream as of v1.7.10
+- **Severity:** the admin-API instance was High (defeats an access-control
+  gate outright — see SP-025). The app-wide instance was Medium and
+  conditional: reachable only if `CF-Connecting-IP` were ever absent, which,
+  given this deployment's Cloudflare-only origin, means never in practice —
+  but nothing in the code enforced that assumption.
+- **Fix summary:** both functions read `request.headers.get("X-Forwarded-For")`
+  as a fallback and took the *leftmost* entry — the client's own, unverified
+  claim about who they are, prepended before any proxy sees the request.
+  `X-Forwarded-For` is append-only, so only the *rightmost* entries are
+  trustworthy (added by infrastructure you control). Fixed by dropping the
+  raw-header fallback in favor of `request.remote_addr`, which
+  `ProxyFix(x_for=1)` already resolves from the rightmost hop. Confirmed
+  topology (`client -> Cloudflare -> haproxy -> app`, one hop) makes
+  `x_for=1` correct; see `docs/TRUSTED_CLIENT_IP.md`.
+- **Note:** `get_ip_address()` is the Flask-Limiter key function for all 13
+  `@limiter.limit` endpoints (login, register, password reset, search) — the
+  forgeable fallback would have let a client vary the header per request to
+  dodge its own rate limit, not just impersonate an allowed source.
+
+### SP-027 — Admin rate limiter failed open on any Redis exception
+
+- **Origin:** pre-existing in this fork; introduced with the private
+  registration admin API's monitoring/rate-limiting module
+- **Files:**
+  - `app/api/admin/monitoring.py` — `check_rate_limit()`'s exception branch;
+    `_check_rate_limit_fallback()`'s process-local bucket
+- **Test:** `tests/security/test_sp027_ratelimit_fail_open.py`
+- **Upstream status:** N/A — fork-only feature, no upstream equivalent
+- **Severity:** the rate limiter is one of four gates in front of an
+  account-provisioning API (see SP-025); this bug meant any Redis
+  disruption — deliberate or incidental — removed the gate entirely rather
+  than degrading it.
+- **Fix summary:** `check_rate_limit()`'s `except Exception` branch used to
+  return `{"allowed": True}` — Redis being unreachable didn't just lose
+  accuracy, it switched the limiter off, on endpoints that create, ban, and
+  delete accounts. It now degrades to `_check_rate_limit_fallback()`, which
+  still enforces a real bound. The fallback itself was also inert: it stored
+  counts in `flask.g`, which is per-request under gunicorn, so every fallback
+  check saw a fresh empty bucket and always allowed. It now uses a
+  module-level dict guarded by a `threading.Lock`.
+- **Known limitation:** under multiple gunicorn workers, the fallback bound is
+  per-worker, not global — the effective limit while Redis is down is
+  `workers × configured`, not `configured`. A real bound, deliberately chosen
+  over failing open; Redis remains the accurate, shared enforcement point.
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.

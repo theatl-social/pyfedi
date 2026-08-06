@@ -196,12 +196,12 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
     )  # Washington Post is really slow on og:image for some reason
     if headers is None:
         headers = {
-            "User-Agent": f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
+            "User-Agent": f"PieFed/{current_app.config['VERSION']}; +https://{current_app.config['SERVER_NAME']}"
         }
     else:
         headers.update(
             {
-                "User-Agent": f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
+                "User-Agent": f"PieFed/{current_app.config['VERSION']}; +https://{current_app.config['SERVER_NAME']}"
             }
         )
     if params and "/webfinger" in uri:
@@ -284,12 +284,12 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
 
     if headers is None:
         headers = {
-            "User-Agent": f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
+            "User-Agent": f"PieFed/{current_app.config['VERSION']}; +https://{current_app.config['SERVER_NAME']}"
         }
     else:
         headers.update(
             {
-                "User-Agent": f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
+                "User-Agent": f"PieFed/{current_app.config['VERSION']}; +https://{current_app.config['SERVER_NAME']}"
             }
         )
     allow_http = bool(current_app.config.get("SSRF_GUARD_ALLOW_HTTP"))
@@ -360,7 +360,7 @@ def gibberish(length: int = 10) -> str:
 # used by @cache.cached() for home page and post caching
 def make_cache_key(sort=None, post_id=None, view_filter=None):
     if current_user.is_anonymous:
-        return f'{request.url}_{sort}_{post_id}_anon_{request.headers.get("Accept")}_{request.headers.get("Accept-Language")}'  # The Accept header differentiates between activitypub requests and everything else
+        return f"{request.url}_{sort}_{post_id}_anon_{request.headers.get('Accept')}_{request.headers.get('Accept-Language')}"  # The Accept header differentiates between activitypub requests and everything else
     else:
         return f"{request.url}_{sort}_{post_id}_user_{current_user.id}"
 
@@ -2136,11 +2136,10 @@ class MultiCheckboxField(SelectMultipleField):
 
 
 def ip_address() -> str:
-    ip = (
-        request.headers.get("CF-Connecting-IP")
-        or request.headers.get("X-Forwarded-For")
-        or request.remote_addr
-    )
+    # See app.get_ip_address() -- same fix, same reasoning
+    # (docs/TRUSTED_CLIENT_IP.md). This copy feeds IP bans, country blocking,
+    # and the IP recorded on users/posts/instances.
+    ip = request.headers.get("CF-Connecting-IP") or request.remote_addr
     if "," in ip:  # Remove all but first ip addresses
         ip = ip[: ip.index(",")].strip()
     return ip
@@ -4013,43 +4012,61 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
     return post_ids[start:end]
 
 
-def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, hashtag: str = '', include_following=False, community_sql: str = None) -> List[int]:
+def get_deduped_post_ids(
+    result_id: str,
+    community_ids: List[int],
+    sort: str,
+    hashtag: str = "",
+    include_following=False,
+    community_sql: str = None,
+) -> List[int]:
     from app import redis_client
+
     if not community_sql and (community_ids is None or len(community_ids) == 0):
         return []
     if result_id:
         if redis_client.exists(result_id):
             return json.loads(redis_client.get(result_id))
 
-    params = {}                 # parameters provided to the SQL query
-    sources = []                # communities and possibly followers as well
+    params = {}  # parameters provided to the SQL query
+    sources = []  # communities and possibly followers as well
     post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
     if community_sql:
         sources.append(community_sql)
-    elif community_ids[0] == -1:  # A special value meaning to get posts from all communities
-        sources.append('c.show_all is true')
+    elif (
+        community_ids[0] == -1
+    ):  # A special value meaning to get posts from all communities
+        sources.append("c.show_all is true")
     else:
-        sources.append('c.id IN :community_ids')
-        params['community_ids'] = tuple(community_ids)
-    if current_user.is_authenticated and current_user.num_following and include_following:
+        sources.append("c.id IN :community_ids")
+        params["community_ids"] = tuple(community_ids)
+    if (
+        current_user.is_authenticated
+        and current_user.num_following
+        and include_following
+    ):
         sources.append("""EXISTS (SELECT 1 FROM user_follower uf
                                   WHERE uf.local_user_id = :local_user_id
                                   AND uf.remote_user_id = p.user_id AND is_inward is false)""")
-        params['local_user_id'] = current_user.id
+        params["local_user_id"] = current_user.id
 
-    post_id_where = ["(" + " OR ".join(sources) + ")", 'c.banned is false']
-    if current_user.is_authenticated and current_user.hide_low_quality and community_ids[0] == -1:
-        post_id_where.append('c.low_quality is false')
+    post_id_where = ["(" + " OR ".join(sources) + ")", "c.banned is false"]
+    if (
+        current_user.is_authenticated
+        and current_user.hide_low_quality
+        and community_ids[0] == -1
+    ):
+        post_id_where.append("c.low_quality is false")
     if not include_following:
-        post_id_where.append('p.private is false')
+        post_id_where.append("p.private is false")
 
     # Filter by post tag
     if hashtag:
         tag_record = Tag.query.filter(Tag.name == hashtag.strip()).first()
         if tag_record:
             post_id_sql += 'INNER JOIN "post_tag" as pt ON p.id = pt.post_id\n'
-            post_id_where.append('pt.tag_id = :tag_record_id')
-            params['tag_record_id'] = tag_record.id
+            post_id_where.append("pt.tag_id = :tag_record_id")
+            params["tag_record_id"] = tag_record.id
 
     # filter out posts in communities where the community name is objectionable to them or they blocked the instance
     if current_user.is_authenticated:
@@ -4108,29 +4125,37 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
 
         # filter blocked domains and instances
         if domains_ids := blocked_domains(current_user.id):
-            post_id_where.append('(p.domain_id NOT IN :domain_ids OR p.domain_id is null) ')
-            params['domain_ids'] = tuple(domains_ids)
+            post_id_where.append(
+                "(p.domain_id NOT IN :domain_ids OR p.domain_id is null) "
+            )
+            params["domain_ids"] = tuple(domains_ids)
         if instance_ids := blocked_or_banned_instances(current_user.id):
-            post_id_where.append('(p.instance_id NOT IN :instance_ids OR p.instance_id is null) ')
-            params['instance_ids'] = tuple(instance_ids)
+            post_id_where.append(
+                "(p.instance_id NOT IN :instance_ids OR p.instance_id is null) "
+            )
+            params["instance_ids"] = tuple(instance_ids)
         if blocked_community_ids := blocked_communities(current_user.id):
-            post_id_where.append('p.community_id NOT IN :blocked_community_ids ')
-            params['blocked_community_ids'] = tuple(blocked_community_ids)
+            post_id_where.append("p.community_id NOT IN :blocked_community_ids ")
+            params["blocked_community_ids"] = tuple(blocked_community_ids)
         # filter blocked users
         if blocked_accounts := blocked_users(current_user.id):
-            post_id_where.append('p.user_id NOT IN :blocked_accounts ')
-            params['blocked_accounts'] = tuple(blocked_accounts)
+            post_id_where.append("p.user_id NOT IN :blocked_accounts ")
+            params["blocked_accounts"] = tuple(blocked_accounts)
         # filter communities banned from
         if banned_from := communities_banned_from(current_user.id):
-            post_id_where.append('p.community_id NOT IN :banned_from ')
-            params['banned_from'] = tuple(banned_from)
+            post_id_where.append("p.community_id NOT IN :banned_from ")
+            params["banned_from"] = tuple(banned_from)
         if community_ids[0] != -1:
-            blocked_flair = CommunityFlairBlock.query.filter(CommunityFlairBlock.user_id == current_user.id,
-                                                             CommunityFlairBlock.community_id.in_(community_ids)).all()
+            blocked_flair = CommunityFlairBlock.query.filter(
+                CommunityFlairBlock.user_id == current_user.id,
+                CommunityFlairBlock.community_id.in_(community_ids),
+            ).all()
             if blocked_flair:
                 blocked_flair_ids = [bf.community_flair_id for bf in blocked_flair]
-                post_id_where.append('p.id NOT IN (SELECT post_id FROM "post_flair" WHERE flair_id IN :blocked_flair_ids) ')
-                params['blocked_flair_ids'] = tuple(blocked_flair_ids)
+                post_id_where.append(
+                    'p.id NOT IN (SELECT post_id FROM "post_flair" WHERE flair_id IN :blocked_flair_ids) '
+                )
+                params["blocked_flair_ids"] = tuple(blocked_flair_ids)
 
     # sorting
     post_id_sort = ""
@@ -4600,7 +4625,11 @@ def reported_posts(user_id: int, is_admin: bool) -> List[int]:
     if user_id is None:
         return []
     if is_admin:
-        post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0')).scalars())
+        post_ids = list(
+            db.session.execute(
+                text('SELECT id FROM "post" WHERE reports > 0')
+            ).scalars()
+        )
     else:
         community_ids = moderating_communities_ids(user_id)
         if len(community_ids) > 0:
@@ -5000,7 +5029,7 @@ def archive_post(post_id: int, s3_connection=None):  # noqa: ARG001 - s3_connect
                             elif (
                                 store_files_in_s3()
                                 and image_file.thumbnail_path.startswith(
-                                    f'https://{current_app.config["S3_PUBLIC_URL"]}'
+                                    f"https://{current_app.config['S3_PUBLIC_URL']}"
                                 )
                             ):
                                 # S3 file deletion
@@ -5027,7 +5056,7 @@ def archive_post(post_id: int, s3_connection=None):  # noqa: ARG001 - s3_connect
                             elif (
                                 store_files_in_s3()
                                 and image_file.file_path.startswith(
-                                    f'https://{current_app.config["S3_PUBLIC_URL"]}'
+                                    f"https://{current_app.config['S3_PUBLIC_URL']}"
                                 )
                             ):
                                 # S3 file deletion
@@ -5384,7 +5413,7 @@ def following_user_ids(user_id):
         .where(
             User.banned == False,
             UserFollower.local_user_id == user_id,
-            UserFollower.is_inward == False
+            UserFollower.is_inward == False,
         )
     )
 
@@ -5605,9 +5634,8 @@ def get_private_registration_rate_limit():
     Returns a limit string such as "10/hour". An empty return means "not
     configured", and AdvancedRateLimiter falls back to its own default.
     """
-    return (
-        os.environ.get("PRIVATE_REGISTRATION_RATE_LIMIT")
-        or get_setting("PRIVATE_REGISTRATION_RATE_LIMIT", "")
+    return os.environ.get("PRIVATE_REGISTRATION_RATE_LIMIT") or get_setting(
+        "PRIVATE_REGISTRATION_RATE_LIMIT", ""
     )
 
 
@@ -5753,10 +5781,10 @@ def sanitize_svg(filepath: str) -> bool:
 
 
 def requestor_domain():
-    requesting_domain = ''
+    requesting_domain = ""
     if user_agent := str(request.user_agent):
-        if '+' in user_agent:
-            parts = user_agent.split('+')
-            requesting_domain = parts[-1].replace(')', '')
+        if "+" in user_agent:
+            parts = user_agent.split("+")
+            requesting_domain = parts[-1].replace(")", "")
             requesting_domain = furl(requesting_domain).host
     return requesting_domain

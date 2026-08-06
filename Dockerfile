@@ -46,10 +46,10 @@ RUN chmod u+x ./entrypoint_async.sh
 EXPOSE 5000
 ENV CRON="false"
 
-LABEL org.opencontainers.image.authors="rimu"
-LABEL org.opencontainers.image.source="https://codeberg.org/rimu/pyfedi"
+LABEL org.opencontainers.image.authors="PeachPie"
+LABEL org.opencontainers.image.source="https://github.com/theatl-social/pyfedi"
 LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
-LABEL org.opencontainers.image.description="A Lemmy/Mbin alternative written in Python with Flask."
+LABEL org.opencontainers.image.description="A Lemmy/Mbin alternative written in Python with Flask. PeachPie is a fork of PieFed (https://codeberg.org/rimu/pyfedi)."
 
 HEALTHCHECK --interval=60s --retries=2 --timeout=10s CMD curl -ILfSs http://localhost:5000/health >/dev/null || exit 1
 
