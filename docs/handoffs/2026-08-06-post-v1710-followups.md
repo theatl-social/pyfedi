@@ -1,10 +1,15 @@
 # Handover: follow-ups after the v1.7.10 release
 
-Written 2026-08-06. Everything below is **optional** — none of it blocks the
-release. `main` is at `bad8dbee`, CI green, and the deployable image is
-`mikehdev/peachpie-compiled:v1.7.10-peachpie-20260805-hotfix2`
+Written 2026-08-06. Everything below was **optional** — none of it blocked the
+release. `main` was at `bad8dbee` when this was written, CI green, and the
+deployable image is `mikehdev/peachpie-compiled:v1.7.10-peachpie-20260805-hotfix2`
 (digest `sha256:cfdad8473bbdf1307e7d48ee19bfc2bbadde1a61678b654c1851c40b8edc50a0`,
-built from `main@3f9486eb`).
+built from `main@3f9486eb`). **That image is unaffected by anything below** —
+none of it touches deploy-critical code.
+
+**Update 2026-08-06: all five tasks resolved**, PR `20260806/post-v1710-followups`.
+Per-task status noted inline below. Confirmed proxy topology (needed for Task 3):
+`client → Cloudflare → haproxy → app`, one hop, matching `ProxyFix(x_for=1)`.
 
 Read `docs/DEPLOY.md` before touching anything deployment-related, and
 `.claude/skills/merge-upstream/SKILL.md` ("Merge hazards learned the hard way")
@@ -14,7 +19,8 @@ before any upstream merge.
 
 ## Task 1 — `compose.yaml` cannot build (confirmed defect)
 
-**Status:** diagnosed, not fixed. Small and self-contained; good first task.
+**Status: FIXED 2026-08-06.** `target: runtime` → `target: builder` in all
+three services. Verified with `docker compose -f compose.yaml build web`.
 
 ```
 $ docker compose -f compose.yaml build web
@@ -54,16 +60,15 @@ plus a build, since Docker Build Validation demonstrably does not cover this.
 
 ## Task 2 — `SP-###` entries for three security fixes
 
-**Status:** fixes are shipped and have regression tests; only the
-`SECURITY_PATCHES.md` bookkeeping is missing.
+**Status: FIXED 2026-08-06.** Added SP-025, SP-026, SP-027.
 
-| fix | test |
-|---|---|
-| IP allowlist was inert (read a `settings` row nothing ever wrote, so `is_ip_whitelisted()` always returned `True`) | `tests/security/test_admin_ip_allowlist.py` |
-| `X-Forwarded-For` leftmost entry trusted, making the allowlist forgeable | same file |
-| `check_rate_limit()` failed open on any Redis exception; its `flask.g` fallback was per-request and therefore inert | `tests/test_celery_settings.py` covers config; behaviour verified manually |
+| fix | SP | test |
+|---|---|---|
+| IP allowlist was inert (read a `settings` row nothing ever wrote, so `is_ip_whitelisted()` always returned `True`) | SP-025 | `tests/security/test_admin_ip_allowlist.py` |
+| `X-Forwarded-For` leftmost entry trusted (admin API, and app-wide `get_ip_address()`/`ip_address()`) | SP-026 | `tests/security/test_admin_ip_allowlist.py`, new `tests/security/test_sp026_ip_address_forgery.py` |
+| `check_rate_limit()` failed open on any Redis exception; its `flask.g` fallback was per-request and therefore inert | SP-027 | new `tests/security/test_sp027_ratelimit_fail_open.py` — none existed before; the old claim of "behaviour verified manually" is now an automated regression test |
 
-**Next free number is SP-025.** Check before assigning:
+Historical note, no longer actionable — the next free number **was** SP-025:
 ```bash
 grep -n "^### SP-0" SECURITY_PATCHES.md | sort -t- -k2 -n | tail -3
 ```
@@ -77,10 +82,14 @@ the entries to protect against. Worth doing for completeness, not urgency.
 
 ---
 
-## Task 3 — optional `get_ip_address()` hardening (needs a decision first)
+## Task 3 — optional `get_ip_address()` hardening (needed a decision first)
 
-**Status:** deliberately not done. Documented as an accepted risk in
-`docs/TRUSTED_CLIENT_IP.md` — read that file before touching this.
+**Status: FIXED 2026-08-06.** Repo owner confirmed the topology
+(`client → Cloudflare → haproxy → app`, one hop), which matches
+`ProxyFix(x_for=1)` and made the hardening safe rather than a blind no-op.
+`docs/TRUSTED_CLIENT_IP.md` is updated to describe the fixed state — read that
+file for the current picture, the section below is the original pre-fix
+reasoning, kept for context.
 
 `app/__init__.py:45` and `app/utils.py:2138` read the **leftmost**
 `X-Forwarded-For` entry, which is client-supplied. They feed the Flask-Limiter
@@ -105,7 +114,12 @@ way to cause harm here.
 
 ## Task 4 — worktree cleanup (housekeeping)
 
-Four worktrees remain on disk; all their branches are merged.
+**Status: DONE 2026-08-06.** Removed the 3 worktrees confirmed merged into
+`main` (`20260805-celery-modern-settings`,
+`20260805-release-unlimited-votes`, `20260805-unlimited-votes-public-profile-totals`).
+Branches themselves left intact, only the worktree checkouts removed.
+
+Original notes below, for reference:
 
 ```bash
 git worktree list
@@ -118,7 +132,12 @@ Confirm merged first: `git branch --merged main`.
 
 ## Task 5 — `app.db` still occasionally shows modified (minor)
 
-**Status:** mostly fixed, one intermittent path remains.
+**Status: not done, still optional.** Repo owner asked what this even was
+(reasonable — it's a pre-existing quirk, not something introduced by this
+cycle's work) and did not request the durable fix pending below. Full-suite
+runs during this cycle's Task 1–4/6 work left `app.db` clean each time, so
+there's nothing newly broken; the intermittent path described below is
+unconfirmed as still live, just not yet disproven either.
 
 `app.db` is a **git-tracked SQLite file** at the repo root. `Config` falls back to
 `sqlite:///<repo>/app.db` whenever `DATABASE_URL` is unset or empty, so any test
@@ -164,9 +183,8 @@ Do **not** "fix" these; each was investigated and consciously left.
 |---|---|
 | `test_connection_pool_thread_safety.py::test_forked_workers_with_engine_recreation_safe` fails locally | macOS-only. `multiprocessing` uses `spawn` on macOS and `fork` on Linux, so the test's local function cannot pickle. Passes in CI. The repo owner explicitly scoped it out. |
 | 3 skipped API tests (`test_api_instance_blocks`, `test_api_post_bookmarks`, `test_api_post_subscriptions`) | `communities_banned_from_all_users()` / `moderating_communities_ids_all_users()` use PostgreSQL `ARRAY_AGG` with no SQLite equivalent. Skips name the reason. |
-| admin limiter's per-worker fallback is imprecise | When Redis is down the effective limit is workers x configured. A real bound, deliberately chosen over failing open. Redis remains the accurate shared store. |
+| admin limiter's per-worker fallback is imprecise | When Redis is down the effective limit is workers x configured. A real bound, deliberately chosen over failing open. Redis remains the accurate shared store. Now documented as SP-027's known limitation. |
 | `User.user_name`/`email` TOCTOU | **Fixed** — `20260805_local_user_uniq` ships in this release. |
-| Dockerfile labels say `authors="rimu"`, `source=codeberg.org/rimu/pyfedi` | Inherited from upstream. Cosmetic; only affects `docker inspect` provenance. |
 
 ---
 
@@ -203,7 +221,8 @@ Do **not** "fix" these; each was investigated and consciously left.
 ```bash
 DATABASE_URL= SERVER_NAME=localhost SECRET_KEY=test-secret-key-xxxxxxxxxxxxxxxxxxxxxxxx \
   CACHE_TYPE=NullCache CACHE_REDIS_URL=memory:// uv run pytest tests/ -q
-# expected: 1 failed, 891 passed, 95 skipped   (verified on main@bad8dbee)
+# expected: 1 failed, 897 passed, 95 skipped   (verified on 20260806/post-v1710-followups)
+# the +6 vs. the earlier 891 are the SP-026/SP-027 regression tests added in this cycle
 # the 1 failure is the macOS-only PicklingError above
 
 uvx ruff check .                      # All checks passed

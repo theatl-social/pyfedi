@@ -48,9 +48,10 @@ Both were fixed together, which matters: fixing only the allowlist would have
 produced a control that *looked* like it restricted access while admitting
 everyone. Guarded by `tests/security/test_admin_ip_allowlist.py`.
 
-### Known and accepted: `get_ip_address()` / `ip_address()`
+### Fixed: `get_ip_address()` / `ip_address()`
 
-`app/__init__.py:45` and `app/utils.py:2138` are identical:
+`app/__init__.py:45` and `app/utils.py:2138` used to be identical and
+forgeable:
 
 ```python
 ip = (request.headers.get("CF-Connecting-IP")
@@ -68,34 +69,28 @@ What they feed:
 | `get_country()` | country blocking bypassable |
 | `current_user.ip_address`, post IPs | forged moderation data |
 
-**Why this is currently accepted:** `CF-Connecting-IP` is checked first and
-Cloudflare overwrites it, so for all real traffic the value is trustworthy. The
-forgeable `X-Forwarded-For` fallback is only reached when `CF-Connecting-IP` is
-absent — which, given a CF-only origin, means never.
-
-**The dependency is load-bearing and implicit.** The safety of app-wide rate
-limiting, IP bans and geoblocking rests entirely on the origin being
-unreachable except through Cloudflare. Nothing in the code says so, and nothing
-tests it.
-
-### Recommended hardening
-
-Change the fallback from the raw header to `request.remote_addr`:
+**Fixed 2026-08-06 (SP-026).** Confirmed topology is
+`client → Cloudflare → haproxy → app` — exactly one reverse-proxy hop between
+Cloudflare and the app, matching `ProxyFix(x_for=1)`. The forgeable
+`X-Forwarded-For` fallback is gone:
 
 ```python
 ip = request.headers.get("CF-Connecting-IP") or request.remote_addr
 ```
 
-In the current topology this is a **no-op** — `CF-Connecting-IP` is always
-present, so the fallback never runs. Its value is removing the implicit
-dependency: if the origin is ever exposed directly, misconfigured, or moved off
-Cloudflare, the code degrades to a trustworthy source instead of a forgeable one.
+`CF-Connecting-IP` is set by Cloudflare on every proxied request and a client
+cannot preserve their own value through it. `request.remote_addr` is what
+`ProxyFix` resolved from the rightmost `X-Forwarded-For` hop — the one haproxy
+appended — so both branches are now trustworthy, and neither depends on
+"Cloudflare happens to always send `CF-Connecting-IP`" as an implicit,
+untested assumption.
 
-Do **not** apply it blindly. `ProxyFix` is configured `x_for=1`, i.e. trust
-exactly one proxy hop. If the hop count between Cloudflare and the app ever
-changes, `remote_addr` resolves to the wrong entry — and because it is the
-rate-limiter key, every user could collapse into a single shared bucket, which
-is an outage rather than a vulnerability. Verify the hop count first:
+**If the hop count between Cloudflare and the app ever changes** (haproxy
+removed, another proxy added in front of it, etc.), update `x_for=` in
+`ProxyFix` accordingly — otherwise `remote_addr` resolves to the wrong entry
+and, because it is the rate-limiter key, every user could collapse into a
+single shared bucket. That is an outage, not a vulnerability, and is the more
+likely way to cause harm here. Verify with:
 
 ```bash
 # what the app actually sees for a real request

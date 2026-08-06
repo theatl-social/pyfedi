@@ -2136,11 +2136,10 @@ class MultiCheckboxField(SelectMultipleField):
 
 
 def ip_address() -> str:
-    ip = (
-        request.headers.get("CF-Connecting-IP")
-        or request.headers.get("X-Forwarded-For")
-        or request.remote_addr
-    )
+    # See app.get_ip_address() -- same fix, same reasoning
+    # (docs/TRUSTED_CLIENT_IP.md). This copy feeds IP bans, country blocking,
+    # and the IP recorded on users/posts/instances.
+    ip = request.headers.get("CF-Connecting-IP") or request.remote_addr
     if "," in ip:  # Remove all but first ip addresses
         ip = ip[: ip.index(",")].strip()
     return ip

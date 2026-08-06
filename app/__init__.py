@@ -43,11 +43,14 @@ def get_locale():
 
 
 def get_ip_address() -> str:
-    ip = (
-        request.headers.get("CF-Connecting-IP")
-        or request.headers.get("X-Forwarded-For")
-        or request.remote_addr
-    )
+    # CF-Connecting-IP is set by Cloudflare on every proxied request and cannot
+    # be forged by the client. request.remote_addr is resolved by
+    # ProxyFix(x_for=1) from the rightmost X-Forwarded-For hop -- the one our
+    # own reverse proxy appended -- so it is trustworthy too. The raw
+    # X-Forwarded-For header is not: its leftmost entry is client-supplied, and
+    # this is the Flask-Limiter key function, so trusting it let a client pick
+    # its own rate-limit bucket. See docs/TRUSTED_CLIENT_IP.md.
+    ip = request.headers.get("CF-Connecting-IP") or request.remote_addr
     if "," in ip:  # Remove all but first ip addresses
         ip = ip[: ip.index(",")].strip()
     return ip
