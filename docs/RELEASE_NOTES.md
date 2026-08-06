@@ -8,6 +8,40 @@ tracks an upstream PieFed release plus this fork's own patches. Version strings 
 
 ---
 
+## 1.7.10-peachpie-20260806
+
+Follow-ups after yesterday's `1.7.10-peachpie-20260805` release (the upstream
+v1.7.10 merge plus celery worker stability work, deployed as
+`-hotfix2` — that build predates this notes file catching up; see
+[SECURITY_PATCHES.md](../SECURITY_PATCHES.md) and `CLAUDE.md`'s merge history
+for its full contents).
+
+- **Client-IP resolution hardened.** `get_ip_address()` (the rate-limiter key
+  function) and `ip_address()` (IP bans, country blocking, IP recorded on
+  users/posts/instances) no longer fall back to a client-supplied
+  `X-Forwarded-For` header. See
+  [docs/TRUSTED_CLIENT_IP.md](TRUSTED_CLIENT_IP.md).
+- **Admin-API security bookkeeping caught up.** SP-025/026/027 document the
+  inert IP allowlist, forgeable XFF trust, and rate-limiter fail-open fixes
+  that shipped in the v1.7.10 cycle but were missing from
+  [SECURITY_PATCHES.md](../SECURITY_PATCHES.md); SP-027 also gained the
+  automated regression test it was missing.
+- **CI fix (operator-invisible):** the `production-mirror-tests` job had been
+  reporting false-positive successes since at least commit `457e990c` — its
+  test runner tried to run pytest from an image built without dev
+  dependencies, and the failure was swallowed by a trailing `echo`. Fixed;
+  doesn't affect the running application.
+- **`compose.yaml` (non-production Docker Compose file) fixed** to build
+  again — it referenced a Dockerfile stage this fork's single-stage image
+  doesn't have. Production containers are unaffected.
+- Dockerfile OCI labels now identify this as the PeachPie fork rather than
+  upstream.
+
+No database migration is required — `20260805_local_user_uniq` from
+yesterday's release still applies unchanged.
+
+---
+
 ## 1.7.8-peachpie-20260805
 
 - **Unlimited voting is opt-in.** Set VOTE_QUOTA=0 in the web and worker
