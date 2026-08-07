@@ -36,9 +36,24 @@ for its full contents).
   doesn't have. Production containers are unaffected.
 - Dockerfile OCI labels now identify this as the PeachPie fork rather than
   upstream.
+- **Fixed a Dockerfile bug that could silently produce a wrong-architecture
+  image.** `FROM --platform=$BUILDPLATFORM ...` pinned the (single-stage)
+  build to whatever machine builds it, ignoring the platform actually
+  requested. Invisible on GitHub's amd64 runners, where BUILDPLATFORM always
+  equals TARGETPLATFORM — surfaced only when building on non-amd64 hardware,
+  producing an image whose manifest claimed `linux/amd64` while its binaries
+  were actually ARM. `exec format error` on a real amd64 host. The
+  `mikehdev/peachpie-compiled:v1.7.10-peachpie-20260806` and `:latest` tags
+  were rebuilt from GitHub Actions after this fix and verified
+  architecture-correct before this release was cut.
 
-No database migration is required — `20260805_local_user_uniq` from
-yesterday's release still applies unchanged.
+No new database migration in this release. The 2026-08-05 release's
+`20260805_local_user_uniq` migration enforces DB-level uniqueness on local
+usernames/emails; if it blocks on pre-existing duplicate data, `flask
+preflight` reports exactly which rows collide and how to inspect them. This
+is expected on instances with legacy duplicate accounts, not a new
+regression — reconcile by renaming (never deleting) the inactive/deleted row,
+then re-run preflight before upgrading.
 
 ---
 
