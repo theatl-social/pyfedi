@@ -229,6 +229,113 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-08-06/07 — post-v1.7.10 follow-ups, a Dockerfile arch bug, a production
+  incident, and a public-repo security audit**
+- PRs #87–91, all merged. Not an upstream merge — a cleanup/hardening pass plus
+  incident response, done partly during a ~5-hour GitHub Actions platform outage
+  (2026-08-06, ~15:22–20:00 UTC), which forced local verification (full test
+  suite, ruff, djlint, real Docker builds) in place of CI for two of the merges.
+  Confirm `gh pr checks` / `git log --oneline -5` before repeating that pattern —
+  it should be the exception, not habit.
+- **PR #87**: `get_ip_address()`/`ip_address()` (`app/__init__.py`, `app/utils.py`)
+  dropped the forgeable `X-Forwarded-For` fallback — confirmed topology is
+  `client → Cloudflare → haproxy → app` (one hop, matches `ProxyFix(x_for=1)`),
+  making this a real fix, not a no-op. SP-025/026/027 added to
+  `SECURITY_PATCHES.md` for three fixes that shipped in the v1.7.10 cycle but
+  had no bookkeeping (inert admin-API IP allowlist, forgeable-XFF admin-API
+  trust, rate-limiter fail-open on Redis exception) — SP-027 also gained the
+  regression test it never had. `compose.yaml` (local-dev only) fixed to build.
+  3 merged worktrees removed.
+- **PR #88**: `production-mirror-tests` (real Postgres 17 + Redis + Celery + web,
+  required on every PR) had been reporting false-positive success since at
+  least commit `457e990c` — its test-runner used bare `python -m pytest`
+  against an image built `--no-dev` (no pytest installed), and the failure was
+  swallowed by a trailing `echo` with no `set -e`. Fixed to `uv run pytest` +
+  `set -e`. Found by actually running the script during the Actions outage
+  rather than trusting the checkmark — same "measures a proxy, not behavior"
+  class as the CI-exclusion-list and `pytest.skip`-swallowing bugs from
+  2026-08-05.
+- **PR #90 — the important one for anyone building this image locally.**
+  `Dockerfile` had `FROM --platform=$BUILDPLATFORM python:3.13-slim-trixie`.
+  `$BUILDPLATFORM` is the architecture doing the build, not the target; on a
+  single-stage Dockerfile this clause does nothing useful and is actively
+  wrong. Invisible on GitHub's amd64 runners (`BUILDPLATFORM == TARGETPLATFORM`
+  there) for this fork's entire history. Building locally on Apple Silicon with
+  `docker buildx build --platform linux/amd64` produced an image whose manifest
+  claimed `linux/amd64` while every binary inside was actually ARM aarch64 —
+  `docker image inspect --format '{{.Architecture}}'` reported the requested
+  platform correctly (it reflects what was *asked for*, not what's actually
+  inside), so it looked fine locally. Only caught by extracting a binary
+  (`docker cp` a container's `/usr/local/bin/python3.13`) and reading its ELF
+  header directly with `file` — which doesn't execute anything, so it works
+  across architectures. Silently pushed a broken image to `mikehdev/peachpie-compiled:latest`
+  and `:v1.7.10-peachpie-20260806` for a window before this was caught;
+  `exec format error` on the real (amd64) production host is what surfaced it.
+  **If you ever build this image locally instead of via
+  `docker-build-push.yml`, verify the actual architecture by extracting and
+  `file`-ing a binary — never trust `docker image inspect`'s platform label
+  alone when `$BUILDPLATFORM` might differ from your target.**
+- **Production incident, resolved operationally (not a code change):** after
+  deploying the corrected image, `/inbox` POSTs failed with
+  `redis.exceptions.ConnectionError: Error 111 connecting to localhost:6379`.
+  Root cause: `RESULT_BACKEND` (`config.py`) is a **separate env var from
+  `CELERY_BROKER_URL`**, required since `e170198c` (2026-05-15), defaulting to
+  `redis://localhost:6379/0` if unset — and it was unset in production's real
+  env file. Fixed by adding `RESULT_BACKEND` matching `CELERY_BROKER_URL`'s
+  value and recreating the `pyfed`/`celery` containers. Not caused by anything
+  in this session; just never surfaced until this code path was exercised.
+  Worth revisiting: should `RESULT_BACKEND` default to `CELERY_BROKER_URL`
+  instead of a hardcoded localhost fallback, so a missing env var degrades
+  loudly (broker unreachable, worker won't start) instead of silently routing
+  the result backend to nothing? Not done this session — flagging for a future
+  pass, not urgent.
+- **Production topology, confirmed directly (not derivable from this repo —
+  the tracked `compose.yaml`/`compose.test.yml` are dev/test only and use
+  different names)**: env file is `.env.pyfed` (not `.env.docker`), services
+  are named `pyfed` and `celery`, Redis is `redis-pyfed`, containers are
+  `pyfed-web`/`pyfed-celery` (compose project prefix `debian`, per
+  `docker-compose.yml` living in `debian@theatl-services:~`). **Do not
+  reconstruct production ops commands from the tracked compose files** — ask
+  for the actual service/file names first. Got this wrong once this session
+  (assumed `.env.docker`/`web`/`pf_network` from the repo's dev compose file)
+  before being corrected.
+- Also resolved: a legacy duplicate local username (`DecaturNature` /
+  `decaturnature`, ids 5115/44956) blocking `20260805_local_user_uniq` on this
+  instance — id 5115 was already `deleted=true, banned=true` with an
+  anonymized email (`deleted_<id>@deleted.com`), so it was renamed
+  (`DecaturNature_deleted_5115`) rather than the live account touched;
+  `User.display_name()` returns `'[deleted]'` for any `deleted=True` row
+  regardless of `user_name`, so the rename has zero UI impact. This is a
+  reconciliation pattern any instance with legacy accounts may hit — see the
+  migration's own error output for the inspection query.
+- **Security audit for public/private repo visibility, requested and
+  completed.** Full git history (not just HEAD) scanned for credentials, key
+  material, and credential-shaped files — clean, nothing ever committed. CI/CD
+  checked for the actual dangerous pattern (`pull_request_target`, which runs
+  with secrets against untrusted fork code) — absent; the only
+  secrets-touching workflow (`docker-build-push.yml`) is `workflow_dispatch`
+  only. **One real finding, left unresolved by user's choice, assessed as low
+  severity and not blocking**: `SECURITY_PATCHES.md`'s SP-023 entry names 16
+  (actually 15 — one of the counted `post.py` sites doesn't echo
+  `HX-Current-Url` into a redirect header at all, just an unrelated display
+  flag) specific unpatched call sites for the same open-redirect pattern SP-023
+  fixed at one site, naming `app/instance/routes.py:264` as having "no check at
+  all." Publishing the exact file:line is a disclosure-risk argument, not an
+  active-exploit one — the CORS-preflight reasoning in SP-023's own severity
+  assessment is a property of this app's config as a whole and likely extends
+  to all 15. If asked to fix these: ~10 are one-line swaps to
+  `safe_hx_redirect_url()` matching the reference at `app/user/routes.py:1509`;
+  ~4 (mostly `post.py`) need the helper extended to accept multiple
+  `path_prefix` values (currently takes one string); 1
+  (`post_reply_block_instance`) has redirect-safety logic entangled with
+  unrelated business logic and needs per-site judgment, not a mechanical
+  replace.
+- New GitHub release: `v1.7.10-peachpie-20260806` (first release since
+  `v1.7.8-peachpie-20260731`; no release had ever been cut for the v1.7.10
+  line). Deployable image on Docker Hub, rebuilt via `docker-build-push.yml`
+  after the PR #90 fix and verified architecture-correct (ELF header, not just
+  manifest label) before this entry was written.
+
 - **2026-08-05 — anoobis removed, and a five-month production outage found**
 - On the `v1.7.10` merge branch (below), upstream's new **anoobis** proof-of-work
   gate was removed entirely rather than merged. Its proof of work was never
