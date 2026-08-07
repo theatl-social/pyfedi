@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM --platform=$BUILDPLATFORM python:3.13-slim-trixie AS builder
+FROM python:3.13-slim-trixie AS builder
 
 # Create python user
 RUN useradd -m -s /bin/bash python
