@@ -324,17 +324,39 @@ The repository includes comprehensive test infrastructure:
     literals, loopback, RFC1918, non-https schemes and each redirect hop are
     all rejected. **Keeping our `get_request()` on every merge is load-bearing,
     not cosmetic.**
+  - **SP-030** — `user.ap_manually_approves_followers` is nullable with no
+    server default, so pre-column / non-ORM rows are NULL. v1.7.11's inbox
+    handler reads it as `... is False`, making NULL mean "approve manually",
+    while `follow_user()` reads `... is True` and the profile UI uses a plain
+    truthiness test — three readings of one column, disagreeing only on NULL.
+    A NULL user's local follows auto-accept while their remote follows queue
+    invisibly in a page they never enabled. Inbox now reads `is not True`;
+    migration `20260817_manual_approve_backfill` clears the NULLs for local
+    users only (for remote actors NULL means "no value seen in their actor
+    JSON", which is not False). Test:
+    `tests/security/test_sp030_manual_approve_null.py`.
   - Lesson worth keeping: the files that need the most scrutiny after a merge
     are not the ones that conflicted. Conflicts force you to read the code;
     clean auto-merges of brand-new upstream features do not.
-- **Known-broken upstream code taken as-is, deliberately:** `flask lemmy-import`
-  references `row.instance_id` on `post` and `comment` rows whose `SELECT`
-  statements do not select that column (`AttributeError` on first row). Fixing
-  it properly needs a live Lemmy database to verify against and knowledge of
-  which Lemmy schema version is targeted, so it was taken unchanged apart from
-  one unambiguous fix (`row.instance.id` -> `row.instance_id` for users, where
-  the query *does* select `instance_id`). **Do not run this command without
-  fixing the post/comment queries first.**
+  - Second lesson, learned twice this session: **source-level guard tests match
+    substrings, so a comment that names the thing it warns about trips its own
+    guard.** It happened with `ANOOBIS` in `config.py` and again with
+    `row.instance.id` in `app/cli.py`. Reword the comment; do not weaken the
+    guard.
+- **`flask lemmy-import` repaired** (was initially taken as-is, then fixed —
+  see issue tracker). Upstream reads `row.instance_id` in the post and comment
+  loops, but Lemmy's `post` and `comment` tables have no such column and the
+  queries do not select one, so the command raised `AttributeError` on the
+  first post — *after* having already committed the users and communities it
+  imported. A post's originating instance is its author's, so a
+  `person_to_instance_map` is now built during the users pass (where
+  `p.instance_id` *is* selected) and used for both posts and comments.
+  Upstream's `row.instance.id` on the user branch (no such relationship
+  attribute) is fixed too. Guarded by `tests/test_lemmy_import_queries.py`,
+  which parses every `SELECT` in the function and asserts each `row.<attr>`
+  read is backed by one — catching the whole class, not just these instances.
+  **Still never executed end-to-end** (needs a live Lemmy database), so treat
+  it as reviewed-but-unexercised.
 - Upstream's new `tests/test_api_post_list.py` is a smoke test against a
   populated database (it reads user id 1 and a remote community with posts), not
   a unit test; it fails on CI's SQLite with `no such table: user`. Given

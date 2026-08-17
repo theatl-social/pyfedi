@@ -538,6 +538,12 @@ def register(app):
 
                 users_imported = 0
                 person_to_user_map = {}
+                # Lemmy's post/comment tables carry no instance_id (and the
+                # queries below do not select one). Upstream reads
+                # row.instance_id there anyway, which is an AttributeError on
+                # the first row. A post's originating instance is its author's,
+                # so record that here while we have it.
+                person_to_instance_map = {}
                 
                 for row in result:
                     # Check if user exists, update or create
@@ -551,7 +557,10 @@ def register(app):
                         existing_user.public_key = row.public_key
                         existing_user.matrix_user_id = row.matrix_user_id
                         existing_user.bot = row.bot_account if row.bot_account else False
-                        existing_user.instance_id = row.instance_id  # upstream had row.instance.id; the query selects instance_id
+                        # Upstream dereferenced a nonexistent `instance`
+                        # relationship attribute here; the query selects the
+                        # scalar column, so read that.
+                        existing_user.instance_id = row.instance_id
                         existing_user.ap_id = actor_id_to_ap_id(row.actor_id)
                         existing_user.ap_profile_id = row.actor_id
                         existing_user.ap_public_url = row.actor_id
@@ -571,6 +580,7 @@ def register(app):
                                     existing_user.roles.append(admin_role)
                         
                         person_to_user_map[row.person_id] = existing_user.id
+                        person_to_instance_map[row.person_id] = row.instance_id
                     else:
                         # Create new user - for remote users, password will be null
                         user = User(
@@ -596,6 +606,7 @@ def register(app):
                         db.session.add(user)
                         db.session.flush()
                         person_to_user_map[row.person_id] = user.id
+                        person_to_instance_map[row.person_id] = row.instance_id
                         
                         # Assign admin role for local users
                         if row.email and row.admin and admin_role and user.id != 1:
@@ -777,6 +788,10 @@ def register(app):
                     else:
                         post_type = POST_TYPE_ARTICLE
 
+                    # See person_to_instance_map above: Lemmy's post table has
+                    # no instance_id column, so use the author's.
+                    post_instance_id = person_to_instance_map.get(row.creator_id, 1)
+
                     existing_post = Post.query.get(row.id)
                     
                     if existing_post:
@@ -794,7 +809,7 @@ def register(app):
                         existing_post.ap_id = row.ap_id
                         existing_post.language_id = row.language_id if row.language_id else 2
                         existing_post.status = POST_STATUS_PUBLISHED
-                        existing_post.instance_id = row.instance_id
+                        existing_post.instance_id = post_instance_id
                         
                         lemmy_to_piefed_post[row.id] = existing_post.id
                     else:
@@ -814,7 +829,7 @@ def register(app):
                             ap_id=row.ap_id,
                             language_id=row.language_id if row.language_id else 2,
                             status=POST_STATUS_PUBLISHED,
-                            instance_id=row.instance_id
+                            instance_id=post_instance_id
                         )
                         db.session.add(post)
                         db.session.flush()
@@ -884,6 +899,9 @@ def register(app):
                     else:
                         root_id = None
 
+                    # Lemmy's comment table has no instance_id column either.
+                    comment_instance_id = person_to_instance_map.get(row.creator_id, 1)
+
                     existing_comment = PostReply.query.get(row.id)
                     
                     if existing_comment:
@@ -901,7 +919,7 @@ def register(app):
                         existing_comment.distinguished = row.distinguished if row.distinguished else False
                         existing_comment.ap_id = row.ap_id
                         existing_comment.language_id = row.language_id if row.language_id else 2
-                        existing_comment.instance_id = row.instance_id
+                        existing_comment.instance_id = comment_instance_id
                         existing_comment.domain_id = None
                         
                         lemmy_to_piefed_comment[row.id] = existing_comment.id
@@ -922,7 +940,7 @@ def register(app):
                             distinguished=row.distinguished if row.distinguished else False,
                             ap_id=row.ap_id,
                             language_id=row.language_id if row.language_id else 2,
-                            instance_id=row.instance_id,
+                            instance_id=comment_instance_id,
                             domain_id=None
                         )
                         db.session.add(comment)

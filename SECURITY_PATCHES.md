@@ -464,6 +464,35 @@ Any failure means a patch has regressed and must be re-applied before the merge 
   `RssFeed.query.get(feed_id)` to `get_or_404`: upstream's `.get()` returned
   `None` for an unknown id and then assigned attributes to it (a 500).
 
+### SP-030 — NULL `ap_manually_approves_followers` read as "approve manually" (upstream regression)
+
+- **Origin:** upstream PieFed v1.7.11 (`0755f27f`), in the follow-request
+  feature; found while auditing the merge, before deploy
+- **Files:**
+  - `app/activitypub/routes.py` — the inbox `Follow` handler's `auto_accept`
+  - `migrations/versions/20260817_manual_approve_backfill.py` — data backfill
+- **Test:** `tests/security/test_sp030_manual_approve_null.py`
+- **Upstream status:** unpatched as of v1.7.11
+- **Severity:** Low, and availability/correctness rather than confidentiality —
+  it fails *closed*, so nothing is over-shared. Listed here because it is a
+  silent, unlogged divergence in an access-control decision, which is exactly
+  the kind of thing that is invisible until someone asks why their follower
+  count stopped moving.
+- **Fix summary:** `user.ap_manually_approves_followers` is `nullable=True`
+  with **no server default**; the model's `default=False` applies on ORM
+  insert only, so rows predating the column or created outside the ORM are
+  NULL. v1.7.11's inbox handler reads it as `... is False`, making NULL mean
+  "approve manually" — while `shared.user.follow_user()` reads `... is True`
+  and the profile UI uses a plain truthiness test, both of which make NULL mean
+  auto-accept. Three readings of one column, disagreeing only on NULL. The
+  practical effect for a NULL row: local follows are accepted immediately, but
+  remote follows queue in `/user/follow_requests`, a page the user has no
+  reason to visit because they never enabled the feature. The inbox now reads
+  `is not True`, the exact complement of `follow_user()`. A companion data
+  migration backfills NULL to `false` for local users only — for remote actors
+  NULL means "no `manuallyApprovesFollowers` seen in their actor JSON", which
+  is not the same as False.
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.

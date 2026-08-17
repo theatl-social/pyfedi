@@ -1575,11 +1575,17 @@ def process_inbox_request(request_json, store_ap_json):
                             .first()
                         )
                         if not existing_follower:
-                            # `is False` rather than `not ...`: is_accepted is now
-                            # tri-state (None = awaiting approval), so a NULL
-                            # ap_manually_approves_followers must not auto-accept.
+                            # `is not True`, matching shared.user.follow_user()'s
+                            # `is True` test. ap_manually_approves_followers is
+                            # nullable with no server default, so NULL means the
+                            # user never expressed a preference -- i.e. the
+                            # column default, False, i.e. auto-accept. Upstream
+                            # v1.7.11 wrote `is False` here, which silently
+                            # routes those users' remote followers into a
+                            # pending queue they have no reason to visit, while
+                            # local follows still auto-accept. See SP-030.
                             auto_accept = (
-                                local_user.ap_manually_approves_followers is False
+                                local_user.ap_manually_approves_followers is not True
                             )
                             new_follower = UserFollower(
                                 local_user_id=local_user.id,
