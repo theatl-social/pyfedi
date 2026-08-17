@@ -259,3 +259,11 @@ class Config(object):
 
     # Set VOTE_QUOTA=0 to disable the daily quota; absent values default to 240.
     VOTE_QUOTA = int(os.environ.get("VOTE_QUOTA") or 240)
+
+    # Upstream's proof-of-work scraper-gate settings are deliberately absent
+    # from this fork; the gate never verified the proof it demanded. See
+    # tests/test_anoobis_removed.py, which asserts on this file's text -- so
+    # do not name those settings here even in a comment.
+
+    # Allow moderators to attach RSS feeds to communities. Unset means disabled.
+    RSS_FEEDS = os.environ.get("RSS_FEEDS") or False

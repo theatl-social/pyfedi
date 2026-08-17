@@ -229,6 +229,180 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Merged upstream PieFed release tag `v1.7.11` on 2026-08-17
+- Branch: `20260817/merge-upstream-v1711`
+- Upstream tag commit: `0755f27f` (15 commits since `6e3edda1` = `v1.7.10`; clean
+  linear ancestry, verified with `git merge-base --is-ancestor`)
+- New version: `1.7.11-peachpie-20260817` / `1.7.11+peachpie.20260817`
+- Key additions from upstream:
+  - **Community RSS feeds** — `RssFeed` / `RssFeedItem` models, three
+    moderator routes under `/community/`, `CommunityRssFeedEdit` /
+    `DeleteCommunityRssFeedForm`, an `rss_feeds()` pass in the `cron_often`
+    job that authors posts as an auto-created `feed_bot` user, and
+    `RSS_FEEDS` config (**off unless set** — note any non-empty value counts as
+    on, including `RSS_FEEDS=0`; documented in `env.sample`).
+    New dependency `fastfeedparser~=0.6.0`. Migration `46b2b16d498b`.
+  - **Follow requests** — `UserFollower.is_accepted` becomes tri-state
+    (`None` = awaiting approval), `NOTIF_FOLLOW_REQUEST = 14`,
+    `/user/follow_requests` + accept/reject routes, `user/notifs/14.html`,
+    inbound Follows now rejected outright when the target has blocked the
+    actor or their instance, and `/u/<name>/followers` only lists accepted
+    followers.
+  - Per-user language filtering on `/api/alpha/post/list`
+    (`user_filters_languages`, cache-busted when `read_language_ids` changes);
+    unread-comment counts in `post_view` variant 2 with `get_post_unread_counts`
+    / `get_post_interacted_at` prefetch to avoid N+1.
+  - People-browsing pages (`/instance/all|local/people`,
+    `/instance/people/interesting`, `/instance/add_people` with Mastodon CSV
+    import via a `bulk_follow` celery task in the new `app/instance/util.py`),
+    reachable from the explore menu and the `people` search scope.
+  - `flask lemmy-import` CLI command (~460 lines); blogspot.com link ban
+    removed; `/post/<id>/set_read`; event edit form now shows times in the
+    event's own timezone; instance-chooser search covers `elevator_pitch`;
+    `'software': 'piefed'` added to the instance-chooser API payload.
+  - New merge migration: `merge_20260817_v1711.py` (merges
+    `20260805_local_user_uniq` + `46b2b16d498b`) — single head verified
+- **Pre-existing fork gap closed while resolving `app/activitypub/routes.py`:**
+  upstream renamed `user` -> `requestor_user` in the inbox `Accept`/`Reject`
+  handlers back in June 2026 (`1c65524e`, shipped in v1.7.8) precisely so the
+  outer `user` was no longer shadowed and an `elif user:` branch could complete
+  **outbound user follows**. Our v1.7.8 merge kept `--ours` on that region, so
+  the fork kept the old name and silently dropped the branch — a local user
+  following a remote user never had the remote `Accept` applied, and the follow
+  stayed pending forever. The tell was `UserFollowRequest` sitting in the import
+  list of `app/activitypub/routes.py` with **zero uses**. Both handlers are now
+  ported. Watch this pattern: an import with no uses is evidence a branch was
+  dropped, not evidence of dead code.
+- **Upstream bugs fixed rather than imported** (all would have shipped as-is):
+  - `post_view()` assigns `unread_comments` only inside `if user_id:` but reads
+    it unconditionally in the variant-2 payload — `UnboundLocalError`, i.e. a
+    500 on **every anonymous `/api/alpha/post/list`**. Bound to
+    `post.reply_count` on the anonymous branch (no reader, so nothing is read —
+    which is also the pre-v1.7.11 value).
+  - `edit_post()`'s new `flair_id` branch tests `"flair_id" in input`, but the
+    RSS cron always passes the key and `RssFeed.flair_id` is nullable, so the
+    default (no flair) reaches `CommunityFlair.id.in_(None)` and raises.
+    Switched to a truthiness test.
+  - `rss_feeds()` assigns a *string* to `RssFeed.last_error`, a `DateTime`
+    column. Now logs the status code and stores a timestamp.
+  - The `Accept` handler's a.gup.pe branch assigns `user` instead of
+    `requestor_user`, so it both clobbers the Accept sender and always bails at
+    `if not requestor_user`. The `Reject` handler's `elif user:` branch
+    dereferences `join_request` without the `if join_request:` guard its
+    `Accept` twin has. Both fixed.
+  - `instance_banned(remote_user.instance.domain)` in the new follow-block check
+    dereferences a nullable `instance` on an untrusted inbox path — guarded.
+  - `app/templates/instance/people.html` uses Python `len()` in a Jinja
+    expression; this fork does not expose `len` as a Jinja global, so it would
+    raise at render. Replaced with `|length`
+    (`tests/test_explore_page.py::test_all_templates_use_correct_length_syntax`
+    catches this class).
+- **Two new security patches, both upstream regressions in v1.7.11's own new
+  features** (flagged by automated review after the merge commit, fixed before
+  the PR merged — see `SECURITY_PATCHES.md`). Both were in files that
+  *auto-merged*, which is why the conflict-resolution pass never read them:
+  - **SP-028** — `user_follow_request_reject()` set `is_accepted = True`, a copy
+    of the accept route, so rejecting a follow request **granted** it locally
+    while sending a `Reject` to the remote server. Independently,
+    `follow_requests.html` pointed the Reject button's `hx-post` at the
+    *accept* endpoint. Together there was no code path by which a user could
+    refuse a follower — `ap_manually_approves_followers` was a no-op that
+    failed open. Test: `tests/security/test_sp028_follow_request_reject.py`.
+  - **SP-029** — `community_rss_feed_edit()` / `community_rss_feed_delete()`
+    authorize on `community_id` but load `RssFeed` by a globally-scoped
+    `feed_id` with no ownership check, so a moderator of *any* community could
+    retarget or delete another community's feed —
+    `RssFeed.delete_dependencies()` also deletes every post the feed created.
+    Prospective rather than historical exposure: `RSS_FEEDS` is off unless set
+    and this fork has never enabled it. Test:
+    `tests/security/test_sp029_rss_feed_idor.py`.
+  - A third finding (SSRF via the moderator-supplied RSS feed URL) was
+    **verified as already mitigated** rather than patched: the fetch goes
+    through `get_request()`, and this merge deliberately kept the fork's
+    SP-002 `safe_httpx_get` version over upstream's weaker
+    `is_invalid_get_request_uri`. Confirmed empirically — cloud-metadata
+    literals, loopback, RFC1918, non-https schemes and each redirect hop are
+    all rejected. **Keeping our `get_request()` on every merge is load-bearing,
+    not cosmetic.**
+  - **SP-030** — `user.ap_manually_approves_followers` is nullable with no
+    server default, so pre-column / non-ORM rows are NULL. v1.7.11's inbox
+    handler reads it as `... is False`, making NULL mean "approve manually",
+    while `follow_user()` reads `... is True` and the profile UI uses a plain
+    truthiness test — three readings of one column, disagreeing only on NULL.
+    A NULL user's local follows auto-accept while their remote follows queue
+    invisibly in a page they never enabled. Inbox now reads `is not True`;
+    migration `20260817_manual_approve_backfill` clears the NULLs for local
+    users only (for remote actors NULL means "no value seen in their actor
+    JSON", which is not False). Test:
+    `tests/security/test_sp030_manual_approve_null.py`.
+  - Lesson worth keeping: the files that need the most scrutiny after a merge
+    are not the ones that conflicted. Conflicts force you to read the code;
+    clean auto-merges of brand-new upstream features do not.
+  - Second lesson, learned twice this session: **source-level guard tests match
+    substrings, so a comment that names the thing it warns about trips its own
+    guard.** It happened with `ANOOBIS` in `config.py` and again with
+    `row.instance.id` in `app/cli.py`. Reword the comment; do not weaken the
+    guard.
+- **`flask lemmy-import` repaired** (was initially taken as-is, then fixed —
+  see issue tracker). Upstream reads `row.instance_id` in the post and comment
+  loops, but Lemmy's `post` and `comment` tables have no such column and the
+  queries do not select one, so the command raised `AttributeError` on the
+  first post — *after* having already committed the users and communities it
+  imported. A post's originating instance is its author's, so a
+  `person_to_instance_map` is now built during the users pass (where
+  `p.instance_id` *is* selected) and used for both posts and comments.
+  Upstream's `row.instance.id` on the user branch (no such relationship
+  attribute) is fixed too. Guarded by `tests/test_lemmy_import_queries.py`,
+  which parses every `SELECT` in the function and asserts each `row.<attr>`
+  read is backed by one — catching the whole class, not just these instances.
+  **Still never executed end-to-end** (needs a live Lemmy database), so treat
+  it as reviewed-but-unexercised.
+- Upstream's new `tests/test_api_post_list.py` is a smoke test against a
+  populated database (it reads user id 1 and a remote community with posts), not
+  a unit test; it fails on CI's SQLite with `no such table: user`. Given
+  a `pytest.mark.skipif` with a stated reason so the skip is **visible in the
+  run output** — deliberately *not* added to the `-not -name` exclusion list in
+  `ci-cd.yml`, per the standing rule in this file.
+- The fork's new blocks in `app/cli.py` (`lemmy_import`, `rss_feeds`) were taken
+  **byte-identical to upstream**, single quotes and all, rather than reformatted.
+  The repo is not actually `black`-clean (`uv run black --check` reformats
+  untouched files such as `app/models.py`), so reformatting brand-new upstream
+  code buys nothing and guarantees a conflict next merge. Quote style is not
+  linted — `ruff.toml` selects only `E4/E7/E9/F`.
+- Fork customizations preserved: hardened `ip_address()` (upstream re-added the
+  forgeable `X-Forwarded-For` fallback in v1.7.11 — **not taken**; upstream's
+  outside-request-context guard *was* taken, narrowed from a bare `except:` to
+  `except RuntimeError`), SP-002 SSRF-guarded `get_request()`, `cached_modlist_*`
+  imported from `app.shared.community` (upstream's module-level
+  `from app.api.alpha.views import ...` is the exact circular import
+  `tests/test_ci_fixes.py` exists to prevent), anoobis removal, `privacy_url`,
+  PeachPie footer, private registration API, `uv run --no-sync` entrypoints,
+  `Post.generate_ap_id` (upstream did not touch it this time),
+  `app/shared/voting.py`'s `VOTE_QUOTA=0`-disables helper (so `votes_cast_today`
+  is deliberately *not* imported into `app/shared/post.py`).
+- Conflicts: 15 files. `requirements.txt` deleted per policy; no `.po` conflicts.
+- Verification:
+  - `uvx ruff check .` — All checks passed
+  - `uv run djlint app/templates --lint` — 301 files, 0 errors
+  - `tests/security/` — **176 passed**
+  - Regression guards (`test_post_slug`, `test_ci_fixes`, `test_vote_lock_timeout`,
+    `test_celery_settings`, `test_admin_api_routes_registered`,
+    `test_anoobis_removed`, `test_migration_heads`) — **369 passed**
+  - Migration heads — **single head** (`merge_20260817_v1711`)
+  - Route surface: **611 -> 622, 11 added, 0 removed** (diffed rule-by-rule
+    against a pre-merge capture, not just counted)
+  - Every new/changed template compiles against the real Jinja env from
+    `pyfedi.py` (not a bare `create_app`, which lacks the custom filters) and
+    every `url_for` endpoint in them resolves
+  - Full sweep: **1 failed / 902 passed / 96 skipped**, against a pre-merge
+    baseline of **1 failed / 897 passed / 95 skipped** — failure list identical,
+    the one failure being the known macOS-only `PicklingError` in
+    `test_connection_pool_thread_safety.py` (passes on Linux CI). **Zero new
+    failures.**
+- Not verified locally: the RSS cron itself (`RSS_FEEDS` is off by default and
+  exercising it needs a real feed plus Postgres) and `flask lemmy-import` (see
+  above).
+
 - **2026-08-06/07 — post-v1.7.10 follow-ups, a Dockerfile arch bug, a production
   incident, and a public-repo security audit**
 - PRs #87–91, all merged. Not an upstream merge — a cleanup/hardening pass plus

@@ -52,6 +52,8 @@ from app.community.forms import (
     CreateEventForm,
     InviteAcceptForm,
     EditCommunityMembership,
+    CommunityRssFeedEdit,
+    DeleteCommunityRssFeedForm,
 )
 from app.community.util import (
     search_for_community,
@@ -131,6 +133,7 @@ from app.models import (
     hidden_posts,
     CommunityInvitation,
     CommunityFlairBlock,
+    RssFeed,
 )
 from app.community import bp
 from app.post.util import tags_to_string
@@ -2598,6 +2601,133 @@ def community_moderate(actor):
         abort(404)
 
 
+@bp.route("/<actor>/rss_feeds", methods=["GET"])
+@login_required
+def community_rss_feeds(actor):
+    if current_user.banned:
+        return show_ban_message()
+    community = actor_to_community(actor)
+
+    if community is not None:
+        if community.is_moderator() or current_user.is_admin():
+            rss_feeds = (
+                RssFeed.query.filter(RssFeed.community_id == community.id)
+                .order_by(RssFeed.title)
+                .all()
+            )
+            return render_template(
+                "community/community_rss_feeds.html",
+                title=_("RSS feeds for %(community)s", community=community.display_name()),
+                community=community,
+                rss_feeds=rss_feeds,
+                current="rss_feeds",
+                can_add_rss=current_app.config["RSS_FEEDS"],
+                inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                if g.site.show_inoculation_block
+                else None,
+            )
+
+
+@bp.route("/community/<int:community_id>/feed/<int:feed_id>", methods=["GET", "POST"])
+@bp.route("/community/<int:community_id>/feed/new", methods=["GET", "POST"])
+@login_required
+def community_rss_feed_edit(community_id, feed_id=None):
+    if current_user.banned:
+        return show_ban_message()
+    community = Community.query.get_or_404(community_id)
+
+    if community is not None:
+        if (
+            community.is_moderator() or current_user.is_admin()
+        ) and current_app.config["RSS_FEEDS"]:
+            # SP-029: feed_id is attacker-controlled and independent of
+            # community_id, which is the only thing the moderator check above
+            # covers. Without this, a moderator of any community can retarget
+            # another community's feed at a URL of their choosing.
+            rss_feed = RssFeed.query.get_or_404(feed_id) if feed_id else None
+            if rss_feed is not None and rss_feed.community_id != community.id:
+                abort(404)
+            form = CommunityRssFeedEdit()
+            form.flair.choices = [(-1, _("None"))] + flair_for_form(community_id)
+            if form.validate_on_submit():
+                if feed_id:
+                    rss_feed.title = form.name.data
+                    rss_feed.url = form.url.data
+                    rss_feed.check_frequency = int(form.check_frequency.data)
+                    rss_feed.flair_id = (
+                        int(form.flair.data) if form.flair.data != "-1" else None
+                    )
+                    # reset to 0 to make it possible to revive a previously-broken feed
+                    rss_feed.error_count = 0
+                else:
+                    rss_feed = RssFeed(
+                        title=form.name.data,
+                        url=form.url.data,
+                        community_id=community.id,
+                        check_frequency=form.check_frequency.data,
+                        flair_id=int(form.flair.data)
+                        if form.flair.data != "-1"
+                        else None,
+                    )
+                    db.session.add(rss_feed)
+                db.session.commit()
+                return redirect(
+                    url_for("community.community_rss_feeds", actor=community.link())
+                )
+
+            if rss_feed:
+                form.name.data = rss_feed.title
+                form.url.data = rss_feed.url
+                form.check_frequency.data = rss_feed.check_frequency
+                if rss_feed.flair_id:
+                    form.flair.data = str(rss_feed.flair_id)
+
+            return render_template(
+                "community/community_rss_feed_edit.html",
+                form=form,
+                title=_("Edit rss feed %(name)s", name=rss_feed.title)
+                if feed_id
+                else _("Add RSS feed"),
+                current="rss_feeds",
+            )
+        else:
+            abort(403)
+
+
+@bp.route(
+    "/community/<int:community_id>/feed/<int:feed_id>/delete", methods=["GET", "POST"]
+)
+@login_required
+def community_rss_feed_delete(community_id, feed_id):
+    if current_user.banned:
+        return show_ban_message()
+    community = Community.query.get_or_404(community_id)
+
+    if community.is_moderator() or current_user.is_admin():
+        rss_feed = RssFeed.query.get_or_404(feed_id)
+        # SP-029: as in community_rss_feed_edit -- the moderator check above is
+        # on community_id only. delete_dependencies() also deletes every post
+        # the feed created, so an unowned feed_id here destroys another
+        # community's content.
+        if rss_feed.community_id != community.id:
+            abort(404)
+        form = DeleteCommunityRssFeedForm()
+        if form.validate_on_submit():
+            rss_feed.delete_dependencies()
+            db.session.delete(rss_feed)
+            db.session.commit()
+            return redirect(
+                url_for("community.community_rss_feeds", actor=community.link())
+            )
+
+        return render_template(
+            "generic_form.html",
+            form=form,
+            title=_("Are you sure?"),
+            message=_("Deleting this feed will also delete any posts created from it."),
+        )
+
+
 @bp.route("/<actor>/moderate/subscribers", methods=["GET", "POST"])
 @login_required
 def community_moderate_subscribers(actor):
@@ -3518,6 +3648,10 @@ def community_flair_delete(community_id, flair_id):
     if community.is_moderator() or current_user.is_admin():
         db.session.execute(
             text('DELETE FROM "post_flair" WHERE flair_id = :flair_id'),
+            {"flair_id": flair_id},
+        )
+        db.session.execute(
+            text('UPDATE "rss_feed" SET flair_id=null WHERE flair_id = :flair_id'),
             {"flair_id": flair_id},
         )
         db.session.query(CommunityFlairBlock).filter(

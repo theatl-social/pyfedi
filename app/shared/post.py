@@ -38,6 +38,7 @@ from app.models import (
     Instance,
     Event,
     Community,
+    CommunityFlair,
 )
 from app.shared.tasks import task_selector
 from app.shared.voting import vote_quota_exceeded
@@ -382,6 +383,20 @@ def edit_post(
             tags = []
         if "flair" in input:
             flair = flairs_from_string(input["flair"], post.community_id)
+        elif input.get("flair_id"):
+            # Handle single flair_id for RSS feeds and other API calls.
+            # Truthiness rather than `"flair_id" in input`: RssFeed.flair_id is
+            # nullable and the cron passes it through unconditionally, so
+            # upstream's membership test reaches `.in_(None)` and raises for
+            # every feed that has no flair configured -- i.e. the default.
+            flair_id = input["flair_id"]
+            if isinstance(flair_id, int):
+                flair = [CommunityFlair.query.get(flair_id)]
+            else:
+                flair = CommunityFlair.query.filter(
+                    CommunityFlair.id.in_(flair_id)
+                ).all()
+            flair = [f for f in flair if f is not None]
         else:
             flair = []
         scheduled_for = None
@@ -508,7 +523,7 @@ def edit_post(
         or user.is_admin()
     ):
         post.sticky = False if src == SRC_API else input.sticky.data
-    post.nsfw = nsfw
+    post.nsfw = nsfw or post.community.nsfw
     post.nsfl = False if src == SRC_API else input.nsfl.data
     post.ai_generated = ai_generated
     post.notify_author = notify_author
