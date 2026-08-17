@@ -2,26 +2,25 @@
 
 Written 2026-08-17 during the `v1.7.11` merge (upstream tag `0755f27f`).
 
-These were going to be filed as GitHub issues, but GitHub was in a major
-partial system outage at the time (issue creation returning HTTP 503 on both
-the GraphQL and REST endpoints) so they are recorded here instead. **Each
-section below is self-contained and can be pasted into a new issue as-is.**
-
 All of them originate upstream, all are fixed in this fork, and none has been
 reported to upstream — that was a deliberate call, so expect every one of these
 hunks to conflict on the next merge. The regression tests are the safety net;
 run them after any upstream merge.
 
-Suggested labels: `bug`, `upstream-bug` (plus `security` on #2, #3, #5).
+Each is tracked as a GitHub issue on this repo. This file is the narrative
+record; the issues are the tracker entries, and the two say the same thing.
 
-| # | Title | Severity | Fixed in | Test |
+| Issue | Title | Severity | Fixed in | Test |
 |---|---|---|---|---|
-| 1 | Anonymous `/api/alpha/post/list` returns 500 | High | `f4b57992` | — (covered by route smoke) |
-| 2 | "Reject" on a follow request accepts it (SP-028) | High | `2bc4cbd2` | `tests/security/test_sp028_follow_request_reject.py` |
-| 3 | IDOR on community RSS feed edit/delete (SP-029) | High | `2bc4cbd2` | `tests/security/test_sp029_rss_feed_idor.py` |
-| 4 | `flask lemmy-import` reads unselected columns | Medium | this branch | `tests/test_lemmy_import_queries.py` |
-| 5 | NULL `ap_manually_approves_followers` misread (SP-030) | Low | this branch | `tests/security/test_sp030_manual_approve_null.py` |
-| 6 | Six smaller defects (consolidated) | Low–Medium | `f4b57992` | various |
+| [#94](https://github.com/theatl-social/pyfedi/issues/94) | Anonymous `/api/alpha/post/list` returns 500 | High | `f4b57992` | — (any anonymous variant-2 render) |
+| [#95](https://github.com/theatl-social/pyfedi/issues/95) | "Reject" on a follow request accepts it (SP-028) | High | `2bc4cbd2` | `tests/security/test_sp028_follow_request_reject.py` |
+| [#96](https://github.com/theatl-social/pyfedi/issues/96) | IDOR on community RSS feed edit/delete (SP-029) | High | `2bc4cbd2` | `tests/security/test_sp029_rss_feed_idor.py` |
+| [#97](https://github.com/theatl-social/pyfedi/issues/97) | `flask lemmy-import` reads unselected columns | Medium | `4cea2018` | `tests/test_lemmy_import_queries.py` |
+| [#98](https://github.com/theatl-social/pyfedi/issues/98) | NULL `ap_manually_approves_followers` misread (SP-030) | Low | `4cea2018` | `tests/security/test_sp030_manual_approve_null.py` |
+| [#99](https://github.com/theatl-social/pyfedi/issues/99) | Six smaller defects (consolidated) | Low–Medium | `f4b57992` | various |
+
+Each section below is self-contained, which is what made it straightforward to
+turn into an issue while GitHub's API was returning 503s.
 
 ---
 
