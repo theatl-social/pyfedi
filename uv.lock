@@ -857,6 +857,19 @@ wheels = [
 ]
 
 [[package]]
+name = "fastfeedparser"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lxml" },
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5d/80/bef88e335fc9f373c501d36466014cb7179ad3bcb93e3a98985d6cfb7b80/fastfeedparser-0.6.1.tar.gz", hash = "sha256:0a429b5b364447577e48339297ad1d5875889a145c9ed4cc6a4236fc13a246be", size = 30665, upload-time = "2026-08-04T03:59:08.285Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/46/22/69aa3e7077a69f25ba1a91588a31110af9202032b85e11c34d5c667f3098/fastfeedparser-0.6.1-py3-none-any.whl", hash = "sha256:81f636a3eafb6bd6f443345a50d8b6675cdfce668b481bf16d233a232b0ba70a", size = 23832, upload-time = "2026-08-04T03:59:07.152Z" },
+]
+
+[[package]]
 name = "feedgen"
 version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2075,7 +2088,7 @@ wheels = [
 
 [[package]]
 name = "pyfedi"
-version = "1.7.10+peachpie.20260806"
+version = "1.7.11+peachpie.20260817"
 source = { editable = "." }
 dependencies = [
     { name = "arrow" },
@@ -2090,6 +2103,7 @@ dependencies = [
     { name = "dateparser" },
     { name = "email-validator" },
     { name = "fastapi" },
+    { name = "fastfeedparser" },
     { name = "feedgen" },
     { name = "flask" },
     { name = "flask-babel" },
@@ -2183,6 +2197,7 @@ requires-dist = [
     { name = "djlint", marker = "extra == 'dev'", specifier = "==1.36.1" },
     { name = "email-validator", specifier = "==2.0.0" },
     { name = "fastapi", specifier = "~=0.118.0" },
+    { name = "fastfeedparser", specifier = "~=0.6.0" },
     { name = "feedgen", specifier = "==0.9.0" },
     { name = "flask", specifier = "==3.1.3" },
     { name = "flask-babel", specifier = "~=4.0.0" },

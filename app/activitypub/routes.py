@@ -1546,6 +1546,25 @@ def process_inbox_request(request_json, store_ap_json):
                                 "Follow request for remote user received",
                             )
                             return
+                        # remote_user.instance can be None; upstream v1.7.11
+                        # dereferences it unguarded, which would 500 this inbox
+                        # path on untrusted input.
+                        if (
+                            local_user.has_blocked_user(remote_user.id)
+                            or local_user.has_blocked_instance(remote_user.instance_id)
+                            or (
+                                remote_user.instance is not None
+                                and instance_banned(remote_user.instance.domain)
+                            )
+                        ):
+                            log_incoming_ap(
+                                id,
+                                APLOG_FOLLOW,
+                                APLOG_FAILURE,
+                                saved_json,
+                                "Attempt to follow denied due to block",
+                            )
+                            return
                         existing_follower = (
                             session.query(UserFollower)
                             .filter_by(
@@ -1556,11 +1575,17 @@ def process_inbox_request(request_json, store_ap_json):
                             .first()
                         )
                         if not existing_follower:
-                            auto_accept = not local_user.ap_manually_approves_followers
+                            # `is False` rather than `not ...`: is_accepted is now
+                            # tri-state (None = awaiting approval), so a NULL
+                            # ap_manually_approves_followers must not auto-accept.
+                            auto_accept = (
+                                local_user.ap_manually_approves_followers is False
+                            )
                             new_follower = UserFollower(
                                 local_user_id=local_user.id,
                                 remote_user_id=remote_user.id,
-                                is_accepted=auto_accept,
+                                is_accepted=True if auto_accept else None,
+                                is_inward=True,
                             )
                             if not local_user.ap_followers_url:
                                 local_user.ap_followers_url = (
@@ -1568,27 +1593,6 @@ def process_inbox_request(request_json, store_ap_json):
                                 )
                             session.add(new_follower)
                             session.commit()
-                            accept = {
-                                "@context": default_context(),
-                                "actor": local_user.public_url(),
-                                "to": [remote_user.public_url()],
-                                "object": {
-                                    "actor": remote_user.public_url(),
-                                    "to": None,
-                                    "object": local_user.public_url(),
-                                    "type": "Follow",
-                                    "id": follow_id,
-                                },
-                                "type": "Accept",
-                                "id": f"{current_app.config['SERVER_URL']}/activities/accept/"
-                                + gibberish(32),
-                            }
-                            send_post_request(
-                                remote_user.ap_inbox_url,
-                                accept,
-                                local_user.private_key,
-                                f"{local_user.public_url()}#main-key",
-                            )
                             targets_data = {
                                 "gen": "0",
                                 "author_id": remote_user.id,
@@ -1596,15 +1600,47 @@ def process_inbox_request(request_json, store_ap_json):
                                 if remote_user.ap_id
                                 else remote_user.user_name,
                             }
-                            new_notification = Notification(
-                                title=_("You have a new follower"),
-                                url=f"/user/{remote_user.id}",
-                                user_id=local_user.id,
-                                author_id=remote_user.id,
-                                notif_type=NOTIF_FOLLOW,
-                                subtype="new_follower",
-                                targets=targets_data,
-                            )
+                            if auto_accept:
+                                accept = {
+                                    "@context": default_context(),
+                                    "actor": local_user.public_url(),
+                                    "to": [remote_user.public_url()],
+                                    "object": {
+                                        "actor": remote_user.public_url(),
+                                        "to": None,
+                                        "object": local_user.public_url(),
+                                        "type": "Follow",
+                                        "id": follow_id,
+                                    },
+                                    "type": "Accept",
+                                    "id": f"{current_app.config['SERVER_URL']}/activities/accept/"
+                                    + gibberish(32),
+                                }
+                                send_post_request(
+                                    remote_user.ap_inbox_url,
+                                    accept,
+                                    local_user.private_key,
+                                    f"{local_user.public_url()}#main-key",
+                                )
+                                new_notification = Notification(
+                                    title=_("You have a new follower"),
+                                    url=f"/user/{remote_user.id}",
+                                    user_id=local_user.id,
+                                    author_id=remote_user.id,
+                                    notif_type=NOTIF_FOLLOW,
+                                    subtype="new_follower",
+                                    targets=targets_data,
+                                )
+                            else:
+                                new_notification = Notification(
+                                    title=_("Someone is requesting to follow you"),
+                                    url="/user/follow_requests",
+                                    user_id=local_user.id,
+                                    author_id=remote_user.id,
+                                    notif_type=NOTIF_FOLLOW_REQUEST,
+                                    subtype="new_follower",
+                                    targets=targets_data,
+                                )
                             session.add(new_notification)
                             local_user.unread_notifications += 1
                             session.commit()
@@ -1613,7 +1649,9 @@ def process_inbox_request(request_json, store_ap_json):
 
                 # Accept: remote server is accepting our previous follow request
                 if core_activity["type"] == "Accept":
-                    user = None
+                    # NB two user variables are in play: requestor_user made the
+                    # original follow request, user is whoever sent the Accept.
+                    requestor_user = None
                     if isinstance(
                         core_activity["object"], str
                     ):  # a.gup.pe accepts using a string with the ID of the follow request
@@ -1630,21 +1668,28 @@ def process_inbox_request(request_json, store_ap_json):
                                 join_request_parts[-1]
                             )
                         if join_request:
-                            user = session.query(User).get(join_request.user_id)
+                            # Upstream v1.7.11 assigns `user` here, which both
+                            # clobbers the Accept sender and leaves
+                            # requestor_user None -- so every a.gup.pe Accept
+                            # bails out at the check below. Assign the variable
+                            # the rest of this branch actually reads.
+                            requestor_user = session.query(User).get(
+                                join_request.user_id
+                            )
                     elif core_activity["object"]["type"] == "Follow":
-                        user = find_actor_or_create_cached(
+                        requestor_user = find_actor_or_create_cached(
                             core_activity["object"]["actor"]
                         )
-                        if user and user.banned:
+                        if requestor_user and requestor_user.banned:
                             log_incoming_ap(
                                 id,
                                 APLOG_ACCEPT,
                                 APLOG_FAILURE,
                                 saved_json,
-                                f"{user.ap_id} is banned",
+                                f"{requestor_user.ap_id} is banned",
                             )
                             return
-                    if not user:
+                    if not requestor_user:
                         log_incoming_ap(
                             id,
                             APLOG_ACCEPT,
@@ -1657,7 +1702,9 @@ def process_inbox_request(request_json, store_ap_json):
                     if community:
                         join_request = (
                             session.query(CommunityJoinRequest)
-                            .filter_by(user_id=user.id, community_id=community.id)
+                            .filter_by(
+                                user_id=requestor_user.id, community_id=community.id
+                            )
                             .first()
                         )
                         if join_request:
@@ -1687,7 +1734,7 @@ def process_inbox_request(request_json, store_ap_json):
                                     community.last_active = utcnow()
                                     session.commit()
                                     cache.delete_memoized(
-                                        community_membership, user, community
+                                        community_membership, requestor_user, community
                                     )
                                 log_incoming_ap(
                                     id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json
@@ -1705,7 +1752,7 @@ def process_inbox_request(request_json, store_ap_json):
                     elif feed:
                         join_request = (
                             session.query(FeedJoinRequest)
-                            .filter_by(user_id=user.id, feed_id=feed.id)
+                            .filter_by(user_id=requestor_user.id, feed_id=feed.id)
                             .first()
                         )
                         if join_request:
@@ -1725,17 +1772,48 @@ def process_inbox_request(request_json, store_ap_json):
                                 session.add(member)
                                 feed.subscriptions_count += 1
                                 session.commit()
-                                cache.delete_memoized(feed_membership, user, feed)
+                                cache.delete_memoized(
+                                    feed_membership, requestor_user, feed
+                                )
+                            log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                    elif user:
+                        join_request = (
+                            session.query(UserFollowRequest)
+                            .filter_by(user_id=requestor_user.id, follow_id=user.id)
+                            .first()
+                        )
+                        if join_request:
+                            existing_follow = (
+                                session.query(UserFollower)
+                                .filter_by(
+                                    local_user_id=join_request.user_id,
+                                    remote_user_id=join_request.follow_id,
+                                    is_inward=False,
+                                )
+                                .first()
+                            )
+                            if not existing_follow:
+                                member = UserFollower(
+                                    local_user_id=join_request.user_id,
+                                    remote_user_id=join_request.follow_id,
+                                    is_inward=False,
+                                    is_accepted=True,
+                                )
+                                session.add(member)
+                            else:
+                                existing_follow.is_accepted = True
+                            requestor_user.num_following += 1
+                            session.commit()
                             log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
                     return
 
                 # Reject: remote server is rejecting our previous follow request
                 if core_activity["type"] == "Reject":
                     if core_activity["object"]["type"] == "Follow":
-                        user = find_actor_or_create_cached(
+                        requestor_user = find_actor_or_create_cached(
                             core_activity["object"]["actor"]
                         )
-                        if not user:
+                        if not requestor_user:
                             log_incoming_ap(
                                 id,
                                 APLOG_ACCEPT,
@@ -1748,41 +1826,73 @@ def process_inbox_request(request_json, store_ap_json):
                         if community:
                             join_request = (
                                 session.query(CommunityJoinRequest)
-                                .filter_by(user_id=user.id, community_id=community.id)
+                                .filter_by(
+                                    user_id=requestor_user.id, community_id=community.id
+                                )
                                 .first()
                             )
                             if join_request:
                                 session.delete(join_request)
                             existing_membership = (
                                 session.query(CommunityMember)
-                                .filter_by(user_id=user.id, community_id=community.id)
+                                .filter_by(
+                                    user_id=requestor_user.id, community_id=community.id
+                                )
                                 .first()
                             )
                             if existing_membership:
                                 session.delete(existing_membership)
                                 cache.delete_memoized(
-                                    community_membership, user, community
+                                    community_membership, requestor_user, community
                                 )
                             session.commit()
                             log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
                         elif feed:
                             join_request = (
                                 session.query(FeedJoinRequest)
-                                .filter_by(user_id=user.id, feed_id=feed.id)
+                                .filter_by(user_id=requestor_user.id, feed_id=feed.id)
                                 .first()
                             )
                             if join_request:
                                 session.delete(join_request)
                             existing_membership = (
                                 session.query(FeedMember)
-                                .filter_by(user_id=user.id, feed_id=feed.id)
+                                .filter_by(user_id=requestor_user.id, feed_id=feed.id)
                                 .first()
                             )
                             if existing_membership:
                                 session.delete(existing_membership)
-                                cache.delete_memoized(feed_membership, user, feed)
+                                cache.delete_memoized(
+                                    feed_membership, requestor_user, feed
+                                )
                             session.commit()
                             log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                        elif user:
+                            join_request = (
+                                session.query(UserFollowRequest)
+                                .filter_by(user_id=requestor_user.id, follow_id=user.id)
+                                .first()
+                            )
+                            # Upstream dereferences join_request unguarded here,
+                            # which 500s on a Reject with no matching request.
+                            if join_request:
+                                existing_follow = (
+                                    session.query(UserFollower)
+                                    .filter_by(
+                                        local_user_id=join_request.user_id,
+                                        remote_user_id=join_request.follow_id,
+                                        is_inward=False,
+                                    )
+                                    .first()
+                                )
+                                if existing_follow:
+                                    existing_follow.is_accepted = False
+                                if requestor_user.num_following > 0:
+                                    requestor_user.num_following -= 1
+                                session.commit()
+                                log_incoming_ap(
+                                    id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json
+                                )
                     return
 
                 # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
@@ -3455,6 +3565,7 @@ def user_followers(actor):
                 & (UserFollower.local_user_id == UserBlock.blocked_id),
             )
             .filter((UserFollower.local_user_id == user.id) & (UserBlock.id == None))
+            .filter(UserFollower.is_accepted == True)
             .all()
         )
 

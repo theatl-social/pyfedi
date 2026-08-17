@@ -1,6 +1,6 @@
 [project]
 name = "pyfedi"
-version = "1.7.10+peachpie.20260806"
+version = "1.7.11+peachpie.20260817"
 description = "PieFed - A federated discussion and link aggregation platform"
 readme = "README.md"
 license = { text = "AGPL-3.0" }
@@ -65,6 +65,7 @@ dependencies = [
     "tatsu==5.13.2",
     "pendulum~=3.2.0",
     "py-svg-hush~=0.3.0",
+    "fastfeedparser~=0.6.0",
 ]
 
 [project.optional-dependencies]

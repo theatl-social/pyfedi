@@ -2138,8 +2138,18 @@ class MultiCheckboxField(SelectMultipleField):
 def ip_address() -> str:
     # See app.get_ip_address() -- same fix, same reasoning
     # (docs/TRUSTED_CLIENT_IP.md). This copy feeds IP bans, country blocking,
-    # and the IP recorded on users/posts/instances.
-    ip = request.headers.get("CF-Connecting-IP") or request.remote_addr
+    # and the IP recorded on users/posts/instances. Upstream v1.7.11 also reads
+    # the raw X-Forwarded-For header here; we deliberately do not, because its
+    # leftmost entry is client-supplied and forgeable.
+    #
+    # The guard below is upstream's (v1.7.11): this is called from code that can
+    # run outside a request context (celery tasks), where touching `request`
+    # raises. Narrowed from upstream's bare `except:` to the error Flask
+    # actually raises, so unrelated bugs are not swallowed.
+    try:
+        ip = request.headers.get("CF-Connecting-IP") or request.remote_addr or ""
+    except RuntimeError:  # working outside of request context
+        ip = ""
     if "," in ip:  # Remove all but first ip addresses
         ip = ip[: ip.index(",")].strip()
     return ip
@@ -2566,6 +2576,15 @@ def user_filters_replies(user_id):
         else:
             result["-1"].update(keywords)
     return result
+
+
+@cache.memoize(timeout=300)
+def user_filters_languages(user_id):
+    user = User.query.get(user_id)
+    if user.read_language_ids and len(user.read_language_ids) > 0:
+        return user.read_language_ids
+    else:
+        return None
 
 
 @cache.memoize(timeout=300)
@@ -5393,7 +5412,10 @@ def rewrite_href(url: str) -> str:
 def user_pronouns() -> defaultdict:
     result = defaultdict(str)
     pronouns = db.session.query(UserExtraField).filter(
-        func.lower(UserExtraField.label) == "pronouns"
+        or_(
+            func.lower(UserExtraField.label) == "pronouns",
+            func.lower(UserExtraField.label) == "species",
+        )
     )
     for pronoun in pronouns:
         if len(pronoun.text) <= 22:
@@ -5788,3 +5810,13 @@ def requestor_domain():
             requesting_domain = parts[-1].replace(")", "")
             requesting_domain = furl(requesting_domain).host
     return requesting_domain
+
+
+EMAIL_RE = re.compile(
+    r'^[A-Za-z0-9.!#$%&\'*+/=?^_`{|}~-]+@'
+    r'[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$'
+)
+
+
+def validate_email(value):
+    return bool(EMAIL_RE.fullmatch(value.strip()))

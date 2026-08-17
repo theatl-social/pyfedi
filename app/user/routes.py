@@ -237,7 +237,7 @@ def show_profile(user):
     following = User.query.filter(User.banned == False).join(UserFollower, UserFollower.remote_user_id == User.id).\
         filter(UserFollower.local_user_id == user.id, UserFollower.is_inward == False).all()
     followers = User.query.filter(User.banned == False).join(UserFollower, UserFollower.remote_user_id == User.id). \
-        filter(UserFollower.local_user_id == user.id, UserFollower.is_inward == True).all()
+        filter(UserFollower.local_user_id == user.id, UserFollower.is_inward == True, UserFollower.is_accepted == True).all()
 
     bot_challenge = BotChallenge.query.filter(BotChallenge.user_id == user.id).first()
 
@@ -361,6 +361,7 @@ def show_profile(user):
         posting_pattern_values=posting_pattern_values,
         comment_pattern_labels=comment_pattern_labels,
         comment_pattern_values=comment_pattern_values,
+        show_posts_tab=request.args.get("show_posts_tab"),
         post_next_url=post_next_url,
         post_prev_url=post_prev_url,
         replies_next_url=replies_next_url,
@@ -800,6 +801,7 @@ def user_settings():
     ]
     form.read_languages.choices = read_language_choices()
     if form.validate_on_submit():
+        old_read_languages = current_user.read_language_ids
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
         current_user.searchable = form.searchable.data
@@ -824,6 +826,7 @@ def user_settings():
         session["ui_language"] = form.interface_language.data
         current_user.vote_privately = not form.federate_votes.data
         current_user.show_subscribed_communities = form.show_subscribed_communities.data
+        current_user.ap_manually_approves_followers = form.manually_approves_followers.data
         if propagate_indexable:
             db.session.execute(
                 text(
@@ -842,6 +845,11 @@ def user_settings():
         from app.api.alpha.views import user_view
 
         cache.delete_memoized(user_view)
+
+        if old_read_languages != current_user.read_language_ids:
+            from app.utils import user_filters_languages
+
+            cache.delete_memoized(user_filters_languages, current_user.id)
 
         flash(_("Your changes have been saved."), "success")
 
@@ -957,6 +965,9 @@ def user_settings():
         form.code_style.data = current_user.code_style or "fruity"
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
+        form.manually_approves_followers.data = (
+            current_user.ap_manually_approves_followers
+        )
         form.max_hours_per_day.data = request.cookies.get("max_hours_per_day", "")
         form.max_hours_change_restriction.data = request.cookies.get(
             "max_hours_change_restriction", "anytime"
@@ -2970,7 +2981,10 @@ def user_follow(actor):
     follow_user(user.id, src=SRC_WEB)
 
     if request.headers.get('HX-Request') == 'true':
-        return '<div class="ms-auto">' + _('Done') + '</div>'
+        if user.ap_manually_approves_followers:
+            return '<div class="ms-auto">' + _('Requested') + '</div>'
+        else:
+            return '<div class="ms-auto">' + _('Done') + '</div>'
     else:
         flash(_('Follow request sent.'), 'success')
         return redirect(return_to)
@@ -3349,6 +3363,67 @@ def user_file_upload():
     form.referrer.data = referrer(url_for("user.user_files"))
 
     return render_template("user/file_upload.html", form=form, user=current_user)
+
+
+@bp.route('/user/follow_requests', methods=['GET'])
+@login_required
+def user_follow_requests():
+    follow_requests = db.session.query(User).join(UserFollower, User.id == UserFollower.remote_user_id) \
+        .outerjoin(UserBlock,
+                   (User.id == UserBlock.blocker_id) & (UserFollower.local_user_id == UserBlock.blocked_id)) \
+        .filter((UserFollower.local_user_id == current_user.id) & (UserBlock.id == None)) \
+        .filter(UserFollower.is_accepted == None, UserFollower.is_inward == True) \
+        .all()
+
+    return render_template('user/follow_requests.html', title=_('Follow requests'),
+                           follow_requests=follow_requests, user=current_user)
+
+
+@bp.route('/user/follow_request/<int:user_id>/accept', methods=['POST'])
+@login_required
+def user_follow_request_accept(user_id):
+    remote_user = User.query.get(user_id)
+    follow_request = UserFollower.query.filter(UserFollower.local_user_id == current_user.id,
+                                               UserFollower.remote_user_id == user_id,
+                                               UserFollower.is_inward == True).first()
+    if follow_request:
+        follow_request.is_accepted = True
+        db.session.commit()
+        if not remote_user.is_local():
+            accept = {"@context": default_context(),
+                      "actor": current_user.public_url(),
+                      "to": [remote_user.public_url()],
+                      "object": {"actor": remote_user.public_url(), "to": None,
+                                 "object": current_user.public_url(), "type": "Follow", "id": f'{current_app.config["SERVER_URL"]}/activities/follow/{gibberish(32)}'},
+                      "type": "Accept",
+                      "id": f"{current_app.config['SERVER_URL']}/activities/accept/" + gibberish(32)}
+            send_post_request(remote_user.ap_inbox_url, accept, current_user.private_key,
+                              f"{current_user.public_url()}#main-key")
+    return 'Done'
+
+
+@bp.route('/user/follow_request/<int:user_id>/reject', methods=['POST'])
+@login_required
+def user_follow_request_reject(user_id):
+    remote_user = User.query.get(user_id)
+    follow_request = UserFollower.query.filter(UserFollower.local_user_id == current_user.id,
+                                               UserFollower.remote_user_id == user_id,
+                                               UserFollower.is_inward == True).first()
+    if follow_request:
+        follow_request.is_accepted = True
+        db.session.commit()
+        if not remote_user.is_local():
+            accept = {"@context": default_context(),
+                      "actor": current_user.public_url(),
+                      "to": [remote_user.public_url()],
+                      "object": {"actor": remote_user.public_url(), "to": None,
+                                 "object": current_user.public_url(), "type": "Follow",
+                                 "id": f'{current_app.config["SERVER_URL"]}/activities/follow/{gibberish(32)}'},
+                      "type": "Reject",
+                      "id": f"{current_app.config['SERVER_URL']}/activities/reject/" + gibberish(32)}
+            send_post_request(remote_user.ap_inbox_url, accept, current_user.private_key,
+                              f"{current_user.public_url()}#main-key")
+    return 'Done'
 
 
 def _calculate_future_date(restriction_setting):

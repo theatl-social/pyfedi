@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from random import randint
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
@@ -1125,8 +1126,10 @@ def post_edit(post_id: int):
                     i += 1
             elif post_type == POST_TYPE_EVENT:
                 event = Event.query.filter_by(post_id=post.id).first()
-                form.start_datetime.data = event.start
-                form.end_datetime.data = event.end
+                # event.start / event.end are stored as naive UTC - show them in the event's timezone
+                event_tz = ZoneInfo(event.timezone) if event.timezone else ZoneInfo('UTC')
+                form.start_datetime.data = event.start.replace(tzinfo=ZoneInfo('UTC')).astimezone(event_tz).replace(tzinfo=None)
+                form.end_datetime.data = event.end.replace(tzinfo=ZoneInfo('UTC')).astimezone(event_tz).replace(tzinfo=None)
                 form.event_timezone.data = event.timezone
                 form.max_attendees.data = event.max_attendees
                 form.online.data = event.online
@@ -2388,6 +2391,13 @@ def post_set_ai(post_id):
         post.ai_generated = True
         db.session.commit()
     return 'Done'
+
+
+@bp.route('/post/<int:post_id>/set_read', methods=['POST'])
+@login_required
+def post_set_read(post_id):
+    mark_post_read([post_id], True, current_user.id)
+    return ''
 
 
 @bp.route('/post_reply/<int:post_reply_id>/check_ai', methods=['POST'])

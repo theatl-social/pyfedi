@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+from datetime import datetime, timedelta
 
 from flask import current_app, g
 from sqlalchemy import text, func, or_
@@ -68,6 +69,8 @@ def post_view(
     read_posts=None,
     content_filters=None,
     usernotes=None,
+    unread_counts=None,
+    interacted_at=None,
 ) -> dict:
     if isinstance(post, int):
         post = Post.query.get(post)
@@ -243,8 +246,44 @@ def post_view(
                 ).scalar()
             else:
                 read_post = post.id in read_posts
+
+            # unread comments on post
+            if unread_counts is None:
+                if interacted_at is None:
+                    since = db.session.execute(
+                        text(
+                            'SELECT interacted_at FROM "read_posts" WHERE read_post_id = :post_id and user_id = :user_id'
+                        ),
+                        {"post_id": post.id, "user_id": user_id},
+                    ).scalar()
+                else:
+                    since = interacted_at.get(post.id) or datetime.utcnow() - timedelta(
+                        days=1
+                    )
+                unread_comments = db.session.execute(
+                    text("""SELECT
+                                    p.id AS post_id,
+                                    COUNT(pr.id) AS reply_count
+                                FROM
+                                    post p
+                                LEFT JOIN
+                                    post_reply pr ON pr.post_id = p.id
+                                    AND pr.posted_at >= :since
+                                WHERE
+                                    p.id = :post_id
+                                GROUP BY
+                                    p.id;"""),
+                    {"since": since, "post_id": post.id},
+                ).scalar()
+            else:
+                unread_comments = unread_counts.get(post.id) or 0
         else:
             bookmarked = post_sub = followed = read_post = False
+            # Upstream v1.7.11 leaves unread_comments unbound on this branch,
+            # so variant 2 raises UnboundLocalError for every anonymous
+            # /post/list request. With no reader there is no read state, so
+            # every comment is unread -- which is the pre-v1.7.11 value.
+            unread_comments = post.reply_count
         if not stub:
             if banned_from is None:
                 banned = post.community_id in communities_banned_from(post.user_id)
@@ -304,7 +343,7 @@ def post_view(
             "saved": saved,
             "read": read,
             "hidden": False,
-            "unread_comments": post.reply_count,
+            "unread_comments": unread_comments,
             "my_vote": my_vote,
             "filtered": post.blocked_by_content_filter(content_filters, user_id)
             == "-1",
@@ -1804,8 +1843,9 @@ def site_instance_chooser_view():
         "can_make_communities": not g.site.community_creation_admin_only,
         "defederation": list(set([instance.domain for instance in defed_list])),
         "trusts": list(set([instance.domain for instance in trusted_list])),
-        "tos_url": g.site.tos_url,
+        "tos_url": g.site.tos_url or "",
         "registration_mode": g.site.registration_mode,
+        "software": "piefed",
     }
     return result
 
