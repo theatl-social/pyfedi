@@ -297,6 +297,36 @@ The repository includes comprehensive test infrastructure:
     raise at render. Replaced with `|length`
     (`tests/test_explore_page.py::test_all_templates_use_correct_length_syntax`
     catches this class).
+- **Two new security patches, both upstream regressions in v1.7.11's own new
+  features** (flagged by automated review after the merge commit, fixed before
+  the PR merged — see `SECURITY_PATCHES.md`). Both were in files that
+  *auto-merged*, which is why the conflict-resolution pass never read them:
+  - **SP-028** — `user_follow_request_reject()` set `is_accepted = True`, a copy
+    of the accept route, so rejecting a follow request **granted** it locally
+    while sending a `Reject` to the remote server. Independently,
+    `follow_requests.html` pointed the Reject button's `hx-post` at the
+    *accept* endpoint. Together there was no code path by which a user could
+    refuse a follower — `ap_manually_approves_followers` was a no-op that
+    failed open. Test: `tests/security/test_sp028_follow_request_reject.py`.
+  - **SP-029** — `community_rss_feed_edit()` / `community_rss_feed_delete()`
+    authorize on `community_id` but load `RssFeed` by a globally-scoped
+    `feed_id` with no ownership check, so a moderator of *any* community could
+    retarget or delete another community's feed —
+    `RssFeed.delete_dependencies()` also deletes every post the feed created.
+    Prospective rather than historical exposure: `RSS_FEEDS` is off unless set
+    and this fork has never enabled it. Test:
+    `tests/security/test_sp029_rss_feed_idor.py`.
+  - A third finding (SSRF via the moderator-supplied RSS feed URL) was
+    **verified as already mitigated** rather than patched: the fetch goes
+    through `get_request()`, and this merge deliberately kept the fork's
+    SP-002 `safe_httpx_get` version over upstream's weaker
+    `is_invalid_get_request_uri`. Confirmed empirically — cloud-metadata
+    literals, loopback, RFC1918, non-https schemes and each redirect hop are
+    all rejected. **Keeping our `get_request()` on every merge is load-bearing,
+    not cosmetic.**
+  - Lesson worth keeping: the files that need the most scrutiny after a merge
+    are not the ones that conflicted. Conflicts force you to read the code;
+    clean auto-merges of brand-new upstream features do not.
 - **Known-broken upstream code taken as-is, deliberately:** `flask lemmy-import`
   references `row.instance_id` on `post` and `comment` rows whose `SELECT`
   statements do not select that column (`AttributeError` on first row). Fixing

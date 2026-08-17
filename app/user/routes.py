@@ -3410,10 +3410,14 @@ def user_follow_request_reject(user_id):
                                                UserFollower.remote_user_id == user_id,
                                                UserFollower.is_inward == True).first()
     if follow_request:
-        follow_request.is_accepted = True
+        # SP-028: upstream v1.7.11 set this to True -- identical to the accept
+        # route -- so rejecting a follow request granted it. UserFollower
+        # documents is_accepted as None = pending, True = accepted,
+        # False = rejected.
+        follow_request.is_accepted = False
         db.session.commit()
         if not remote_user.is_local():
-            accept = {"@context": default_context(),
+            reject = {"@context": default_context(),
                       "actor": current_user.public_url(),
                       "to": [remote_user.public_url()],
                       "object": {"actor": remote_user.public_url(), "to": None,
@@ -3421,7 +3425,7 @@ def user_follow_request_reject(user_id):
                                  "id": f'{current_app.config["SERVER_URL"]}/activities/follow/{gibberish(32)}'},
                       "type": "Reject",
                       "id": f"{current_app.config['SERVER_URL']}/activities/reject/" + gibberish(32)}
-            send_post_request(remote_user.ap_inbox_url, accept, current_user.private_key,
+            send_post_request(remote_user.ap_inbox_url, reject, current_user.private_key,
                               f"{current_user.public_url()}#main-key")
     return 'Done'
 

@@ -2640,7 +2640,13 @@ def community_rss_feed_edit(community_id, feed_id=None):
         if (
             community.is_moderator() or current_user.is_admin()
         ) and current_app.config["RSS_FEEDS"]:
-            rss_feed = RssFeed.query.get(feed_id) if feed_id else None
+            # SP-029: feed_id is attacker-controlled and independent of
+            # community_id, which is the only thing the moderator check above
+            # covers. Without this, a moderator of any community can retarget
+            # another community's feed at a URL of their choosing.
+            rss_feed = RssFeed.query.get_or_404(feed_id) if feed_id else None
+            if rss_feed is not None and rss_feed.community_id != community.id:
+                abort(404)
             form = CommunityRssFeedEdit()
             form.flair.choices = [(-1, _("None"))] + flair_for_form(community_id)
             if form.validate_on_submit():
@@ -2699,6 +2705,12 @@ def community_rss_feed_delete(community_id, feed_id):
 
     if community.is_moderator() or current_user.is_admin():
         rss_feed = RssFeed.query.get_or_404(feed_id)
+        # SP-029: as in community_rss_feed_edit -- the moderator check above is
+        # on community_id only. delete_dependencies() also deletes every post
+        # the feed created, so an unowned feed_id here destroys another
+        # community's content.
+        if rss_feed.community_id != community.id:
+            abort(404)
         form = DeleteCommunityRssFeedForm()
         if form.validate_on_submit():
             rss_feed.delete_dependencies()

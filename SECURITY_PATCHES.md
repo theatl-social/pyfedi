@@ -405,6 +405,65 @@ Any failure means a patch has regressed and must be re-applied before the merge 
   `workers × configured`, not `configured`. A real bound, deliberately chosen
   over failing open; Redis remains the accurate, shared enforcement point.
 
+### SP-028 — "Reject" on a follow request accepted it instead (upstream regression)
+
+- **Origin:** upstream PieFed v1.7.11, in the manual follow-approval feature
+  (`0755f27f`); caught by automated review during the v1.7.11 merge, before it
+  ever reached a deploy
+- **Files:**
+  - `app/user/routes.py` — `user_follow_request_reject()`
+  - `app/templates/user/follow_requests.html` — the Reject button's `hx-post`
+- **Test:** `tests/security/test_sp028_follow_request_reject.py`
+- **Upstream status:** unpatched as of v1.7.11 — report upstream
+- **Severity:** the whole point of `ap_manually_approves_followers` is that the
+  account holder decides who may follow them; both defects removed that
+  decision, and both failed *open*. Not remotely triggerable — it needs the
+  victim to click their own Reject button — so this is a broken privacy
+  control rather than an externally exploitable hole. It is nonetheless a
+  complete one: there was no code path by which a user could refuse a
+  follower.
+- **Fix summary:** two independent defects landing on the same side.
+  `user_follow_request_reject()` set `is_accepted = True` — a copy of the
+  accept route — so the local row recorded the follow as **granted** while a
+  `Reject` activity went to the remote server, leaving the two sides
+  disagreeing about whether the follow existed. Separately,
+  `follow_requests.html` pointed the Reject button's `hx-post` at
+  `user.user_follow_request_accept`, so the reject route was unreachable from
+  the UI regardless. Now `is_accepted = False` (matching `UserFollower`'s
+  documented tri-state: `None` pending, `True` accepted, `False` rejected) and
+  the button targets the reject endpoint. The listing filters
+  `is_accepted == None`, so a rejected request does not reappear as pending,
+  and `/u/<name>/followers` filters `is_accepted == True`, so it never
+  publishes one.
+
+### SP-029 — IDOR on community RSS feed edit/delete (upstream regression)
+
+- **Origin:** upstream PieFed v1.7.11, in the community RSS feeds feature
+  (`0755f27f`); caught by automated review during the v1.7.11 merge
+- **Files:**
+  - `app/community/routes.py` — `community_rss_feed_edit()`,
+    `community_rss_feed_delete()`
+- **Test:** `tests/security/test_sp029_rss_feed_idor.py`
+- **Upstream status:** unpatched as of v1.7.11 — report upstream
+- **Severity:** High where the feature is enabled, but note `RSS_FEEDS` is off
+  unless explicitly set, and this fork has never enabled it — so the exposure
+  is prospective rather than historical. Requires an authenticated moderator
+  of *any one* community, which is a low bar on an open instance.
+- **Fix summary:** both routes take two independent path parameters,
+  `community_id` and `feed_id`, and authorized on the first only —
+  `community.is_moderator() or current_user.is_admin()` — then loaded
+  `RssFeed` by a globally-scoped `feed_id` with no ownership check. A
+  moderator supplying a `community_id` they legitimately moderate plus any
+  other community's `feed_id` could **edit** that feed (retargeting its URL,
+  so the victim community publishes attacker-chosen content authored by
+  `feed_bot`) or **delete** it — and `RssFeed.delete_dependencies()` deletes
+  every `Post` the feed ever created, so deletion destroys the victim
+  community's content, not just its configuration. Both routes now compare
+  `rss_feed.community_id` against `community.id` and `abort(404)` on a
+  mismatch, before any mutation. The edit route also switched from
+  `RssFeed.query.get(feed_id)` to `get_or_404`: upstream's `.get()` returned
+  `None` for an unknown id and then assigned attributes to it (a 500).
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.

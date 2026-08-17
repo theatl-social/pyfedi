@@ -29,7 +29,7 @@
                         <td id="request_{{ follow_request.id }}">
                             <a href='#' class="btn btn-primary btn-sm" hx-post="{{ url_for('user.user_follow_request_accept', user_id=follow_request.id) }}"
                                hx-trigger="click throttle:1s" hx-swap="innerHTML" hx-target="#request_{{ follow_request.id }}" rel="nofollow">{{ _('Accept') }}</a>
-                            <a href='#' class="btn btn-outline-primary btn-sm" hx-target="#request_{{ follow_request.id }}" hx-post="{{ url_for('user.user_follow_request_accept', user_id=follow_request.id) }}"
+                            <a href='#' class="btn btn-outline-primary btn-sm" hx-target="#request_{{ follow_request.id }}" hx-post="{{ url_for('user.user_follow_request_reject', user_id=follow_request.id) }}"
                                hx-trigger="click throttle:1s" hx-swap="innerHTML" rel="nofollow">{{ _('Reject') }}</a>
                         </td>
                     </tr>
