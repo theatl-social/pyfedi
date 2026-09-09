@@ -3379,7 +3379,7 @@ def announce_activity_to_followers(
             if (
                 creator.instance_id != instance.id
             ):  # don't send it to the instance that hosts the creator as presumably they already have the content
-                if can_batch and instance.software == "piefed":
+                if can_batch and instance.software in ("piefed", "pylova"):
                     db.session.add(
                         ActivityBatch(
                             instance_id=instance.id,

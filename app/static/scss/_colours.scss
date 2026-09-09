@@ -66,6 +66,7 @@ $grey: #bbb; // need as Sass variable for lighten function
 --white: #fff; // styles.scss
 --whitesmoke: whitesmoke; // #f5f5f5 named colour, very close to white
 --white-fade: #f0f0f2; // _controls.scss, table-striped
+--grey: #ddd;
 --light-grey: #ddd; // styles.scss border
 --dark-grey: #777; // styles.scss domain_link
 --super-dark-grey: #424549; // styles.scss dropdown bg
@@ -83,6 +84,8 @@ $grey: #bbb; // need as Sass variable for lighten function
 --opacity-00: 0; // emoji-picker
 --opacity-01: 0.1; // comment_body, #home_announcement
 --opacity-02: 0.2; // blocked
+--opacity-03: 0.3; // blocked
+--opacity-04: 0.4; // blocked
 --opacity-05: 0.5; // fe-video, img, .form-control::placeholder mixin
 --opacity-08: 0.8; // missing_thumbnail
 --opacity-09: 0.9; // navbar-light

@@ -262,7 +262,6 @@ def post_view(
                     )
                 unread_comments = db.session.execute(
                     text("""SELECT
-                                    p.id AS post_id,
                                     COUNT(pr.id) AS reply_count
                                 FROM
                                     post p
@@ -270,20 +269,17 @@ def post_view(
                                     post_reply pr ON pr.post_id = p.id
                                     AND pr.posted_at >= :since
                                 WHERE
-                                    p.id = :post_id
-                                GROUP BY
-                                    p.id;"""),
+                                    p.id = :post_id"""),
                     {"since": since, "post_id": post.id},
                 ).scalar()
             else:
                 unread_comments = unread_counts.get(post.id) or 0
         else:
             bookmarked = post_sub = followed = read_post = False
-            # Upstream v1.7.11 leaves unread_comments unbound on this branch,
-            # so variant 2 raises UnboundLocalError for every anonymous
-            # /post/list request. With no reader there is no read state, so
-            # every comment is unread -- which is the pre-v1.7.11 value.
-            unread_comments = post.reply_count
+            # Upstream v1.7.11 left unread_comments unbound on this branch, so
+            # variant 2 raised UnboundLocalError for every anonymous
+            # /post/list request. Upstream v1.7.15 fixed it the same way.
+            unread_comments = 0
         if not stub:
             if banned_from is None:
                 banned = post.community_id in communities_banned_from(post.user_id)

@@ -229,6 +229,147 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Merged upstream PieFed release tag `v1.7.15` on 2026-09-09
+- Branch: `20260909/merge-upstream-v1715`
+- Upstream tag commit: `9bb1a236` (60 commits since `0755f27f` = `v1.7.11`; clean
+  linear ancestry, verified with `git merge-base --is-ancestor`)
+- New version: `1.7.15-peachpie-20260909` / `1.7.15+peachpie.20260909`
+- **Tag selection note:** `git tag --sort=-v:refname` puts **`v1.7.91` first** --
+  it is a mis-tag from 2026-08-03 (commit `7696b0b9`, "anoobis fix"), not a
+  release. The real latest is `v1.7.15`. Upstream `main` is 153 commits ahead of
+  it on a separate line, as usual; we merged the **tag**, consistent with every
+  merge since v1.7.0.
+- Key additions from upstream:
+  - **AI image detection** -- new `c2pa-python~=0.37.0` dependency,
+    `inspect_image_c2pa()` in `app/utils.py`, called on uploads
+    (`app/shared/post.py`) and on federated image fetches
+    (`make_image_sizes_async`), setting `Post.ai_generated`. Gated on
+    `DETECT_AI_ENDPOINT`, which defaults to `""` (**off**) -- now documented in
+    `env.sample`, because when set it sends post/comment **public URLs** to a
+    third-party service.
+  - **Admin media browser** -- `/admin/media`, `/admin/media/<file_id>/delete`,
+    `/admin/media/<user_id>/delete_all` (+ a `delete_user_files_in_background`
+    celery task), built on the pre-existing `user_file` association table (moved
+    in `models.py`, so **no new migration**).
+  - **Topic import/export** -- `/admin/topics/import|export`, `TopicImportForm`,
+    `serialize_topic_tree` / `create_topic_and_children`.
+  - **Instance silencing reaches comments** -- `silenced_instances()` filters
+    replies for anonymous viewers; `pylova` now federates on the same batching
+    fast-path as `piefed`; `User.delete_dependencies()` rewritten to purge
+    `user_file` rows and ref-count avatar/cover before deleting.
+  - Emoji reactions refactored into a `render_emoji_reactions()` teaser macro;
+    `Post.is_event()` + `get_event_start()` Jinja global; markdown2 2.5.5 and
+    beautifulsoup4 4.15; gunicorn `max_requests` 2000 -> 20000.
+  - New migration: `7b8bf43fa079` (backfill NULL
+    `community.total_subscriptions_count` to 0).
+  - New merge migration: `merge_20260909_v1715.py` (merges
+    `20260817_manual_approve_backfill` + `7b8bf43fa079`) -- single head verified
+    with the alembic-based checker, which also printed the 3 revisions an
+    upgrade from `merge_20260817_v1711` would apply (all additive backfills).
+- **An upstream security fix we needed and took:** `ab000aa2` added
+  `escape()` to `post_source()` / `post_reply_source()`, which were
+  concatenating raw `post.body` / `post_reply.body` into `<pre><code>` -- a
+  stored XSS reachable by anyone who could get a ```` fence into a body. It also
+  added `@login_required` to both. Both files **auto-merged**, so this was found
+  by reading the incoming commits, not by resolving a conflict. Verified present
+  in the merged tree.
+- **Upstream bugs fixed rather than imported:**
+  - `Post.blocked_by_content_filter()` tokenizes the title with `re.findall(r"\w+")`
+    and then tests `keyword in tokens`. A token is `\w+` by construction, so
+    **any user content filter containing punctuation could never match** --
+    `[Trump]`, `c++`, `covid-19`, `u.s.` were all silently inert, i.e. the filter
+    failed *open* and showed the user exactly what they asked to hide. Punctuated
+    keywords now match the raw lowercased title; single-word keywords keep token
+    semantics so "elon" still does not match "melon".
+    Upstream shipped `tests/test_content_filter.py` with a test named
+    `test_content_filter_square_bracket_filter` that built the `[Trump]` filter
+    and then **passed `self.content_filters` instead** -- so it duplicated the
+    test above it and asserted nothing. Fixing the argument turned it red, which
+    is how the bug surfaced. Guarded by two added tests in that file.
+  - `app/post/util.py` called `comments.filter(PostReply.score > -20)` and
+    **discarded the result** at two sites (`post_replies`, `get_comment_branch`).
+    SQLAlchemy's `Query` is immutable, so the anonymous low-score cutoff had
+    never applied -- logged-out visitors and crawlers saw comments below -20 that
+    the feature exists to hide. Upstream added its new silencing filter directly
+    above one of those lines without noticing. Both now assign; silencing was
+    also mirrored into `get_comment_branch`, since otherwise a comment permalink
+    or "view context" bypassed it in one click.
+    Guarded by `tests/test_anonymous_reply_filters.py` (AST-based -- it detects
+    a bare `.filter()` **expression statement** in the anonymous branch, so it
+    catches the whole class, not just these two lines; verified to go red when
+    the bug is reintroduced).
+  - `inspect_image_c2pa()` had `import c2pa` **outside** its `try`, so a missing
+    or broken c2pa build would raise straight out of `make_image_sizes_async()`
+    for every federated image. Moved inside the `try`, which already returns the
+    empty-manifest result on any failure.
+  - Upstream's new emoji-reaction macro used single-quoted HTML attributes
+    (`hx-vals='{"emoji": ...}'`), which trips this fork's `.djlintrc` H008.
+    Rewritten to the fork's `&quot;`-escaped double-quoted form.
+- **Deliberately not taken from upstream:**
+  - `ad62c543` "api: temporarily disable file upload quota" **comments out** the
+    `FILE_UPLOAD_QUOTA` check in `app/api/alpha/utils/upload.py`. Kept ours
+    enforcing -- "temporarily" upstream has no expiry here, and an unbounded
+    upload path on a federated instance is a storage-exhaustion vector.
+  - anoobis stays removed (`env.sample`, `check_anoobis` in `app/utils.py`);
+    upstream's v1.7.15 anoobis tweaks (Google exemption, Discord link previews)
+    are no-ops for us. Guarded by `tests/test_anoobis_removed.py`.
+  - `allowed_instance_domains()` still not carried (dead code, zero callers).
+    `silenced_instances()` **was** carried -- it is load-bearing, since upstream's
+    auto-merged `app/post/util.py` and `app/instance/routes.py` import it, and
+    dropping it would have been an `ImportError` at startup.
+  - Dockerfile (fork keeps single-stage Debian + uv + gosu + cron over upstream's
+    multi-stage pip + supercronic), gunicorn `post_fork` / `post_worker_init`
+    pool hooks and `timeout`/`graceful_timeout`/`keepalive`, and the fork's
+    `media_library.js` DownArea polling fix (upstream's v1.7.15 change to that
+    file was only removing `console.log`s and adding a 3-attempt retry -- ours
+    already does 50 attempts with an idempotency guard).
+- **Merged both ways with upstream, where it had independently fixed our patch:**
+  - The v1.7.11 unread-comments SQL was
+    `SELECT p.id AS post_id, COUNT(pr.id) ... GROUP BY p.id` read with
+    `.scalar()`. `.scalar()` returns the **first column**, so `unread_comments`
+    was returning the *post id*, not a count -- and our fork carried it verbatim.
+    v1.7.15 drops the `p.id` column and the `GROUP BY`; taking upstream fixes a
+    live bug in our tree.
+  - Upstream also fixed the anonymous-branch `UnboundLocalError` we had patched,
+    choosing `unread_comments = 0` where we chose `post.reply_count`. Took
+    upstream's `0` rather than carry a permanent divergence in a frozen API field.
+  - `RssFeed.last_error` -- upstream now assigns `utcnow()` as we did; kept only
+    our extra `logger.warning` carrying the status code, which upstream drops.
+- `/delete_account` resolved as a **union**, not a pick: upstream replaced the
+  post-file cleanup loop with `current_user.delete_dependencies()`, but those are
+  not equivalent -- ours deletes files joined via **`Post`**, upstream's via
+  **`user_file`**. A post thumbnail fetched from a *remote* URL lives in
+  `post_file` and never in `user_file`, so taking upstream alone would have
+  quietly stopped purging those. Kept both.
+- Conflicts: 19 files. `requirements.txt` deleted per policy; no `.po` conflicts.
+- Verification:
+  - `uvx ruff check .` -- All checks passed
+  - `uv run djlint app/templates --lint` -- 304 files, 0 errors
+  - `tests/security/` -- **191 passed**
+  - Regression guards (`test_post_slug`, `test_ci_fixes`, `test_vote_lock_timeout`,
+    `test_celery_settings`, `test_admin_api_routes_registered`,
+    `test_anoobis_removed`, `test_migration_heads`, `test_api_post_list_anonymous`)
+    -- **373 passed**
+  - Migration heads -- **single head** (`merge_20260909_v1715`), graph fully
+    connected; upgrade path from the deployed revision printed and read
+  - Route surface: **622 -> 627, 5 added, 0 removed** (diffed rule-by-rule against
+    a pre-merge capture -- all 5 are admin media + topic import/export)
+  - Every changed template compiles against the real Jinja env from `pyfedi.py`;
+    all 54 `url_for` endpoints in them resolve
+  - Full sweep: **1 failed / 936 passed / 96 skipped**, against a pre-merge
+    baseline of **1 failed / 922 passed / 96 skipped** -- failure list identical,
+    the one failure being the known macOS-only `PicklingError` in
+    `test_connection_pool_thread_safety.py` (passes on Linux CI). **Zero new
+    failures.**
+- **Methodology note, worth not repeating:** the first baseline run this session
+  was started in the background and then `git merge` ran underneath it, so pytest
+  read a tree full of conflict markers and reported 9 failures. A baseline must
+  come from a tree nothing is mutating -- use `git worktree add <dir> origin/main`
+  and run there.
+- Not verified locally: the c2pa AI-detection path (needs `DETECT_AI_ENDPOINT`
+  set plus real C2PA-signed images) and the admin media browser (needs Postgres
+  plus populated `user_file` rows).
+
 - Merged upstream PieFed release tag `v1.7.11` on 2026-08-17
 - Branch: `20260817/merge-upstream-v1711`
 - Upstream tag commit: `0755f27f` (15 commits since `6e3edda1` = `v1.7.10`; clean

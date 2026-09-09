@@ -1210,6 +1210,20 @@ def links_with_parens(text: str) -> str:
     return better_html
 
 
+def fix_www_links(text: str) -> str:
+    """Add https:// to links that start with www."""
+
+    soup = BeautifulSoup(text, 'html.parser')
+
+    for link in soup.find_all("a"):
+        target_url = link.get("href")
+        if target_url and target_url.startswith("www."):
+            # Add https:// to links that start with www. but don't have a protocol
+            link['href'] = "https://" + target_url
+
+    return str(soup)
+
+
 def handle_better_lists(text: str) -> str:
     """Handles lists that don't have a blank line preceding them."""
 
@@ -1343,6 +1357,7 @@ def markdown_to_html(
         raw_html = handle_lemmy_spoilers(raw_html)
         raw_html = make_quotes_straight(raw_html)
         raw_html = links_with_parens(raw_html)
+        raw_html = fix_www_links(raw_html)
 
         return allowlist_html(
             raw_html, a_target=a_target if anchors_new_tab else "", test_env=test_env
@@ -1893,6 +1908,12 @@ def banned_instances(user_id) -> List[int]:
         return []
     blocks = db.session.query(InstanceBan).filter_by(user_id=user_id)
     return [block.instance_id for block in blocks]
+
+
+@cache.memoize(timeout=86400)
+def silenced_instances() -> List[int]:
+    instances = db.session.query(Instance).filter(Instance.silenced == True)  # noqa: E712
+    return [instance.id for instance in instances]
 
 
 def retrieve_block_list():
@@ -3791,7 +3812,7 @@ def download_defeds_worker(defederation_subscription_id: int, domain: str):
 def retrieve_defederation_list(domain: str) -> List[str]:
     result = []
     software = instance_software(domain)
-    if software == "lemmy" or software == "piefed":
+    if software in ("lemmy", "piefed", "pylova"):
         try:
             response = get_request(f"https://{domain}/api/v3/federated_instances")
         except:
@@ -5820,3 +5841,61 @@ EMAIL_RE = re.compile(
 
 def validate_email(value):
     return bool(EMAIL_RE.fullmatch(value.strip()))
+
+
+def inspect_image_c2pa(data: bytes, mimetype: str) -> dict:
+    result = {
+        "c2pa": {
+            "present": False,
+            "ai_generated": False,
+            "creator": None,
+            "software": None,
+        },
+    }
+
+    try:
+        # Imported inside the try: this runs on federated image fetches, and a
+        # missing or broken c2pa build must degrade to "no manifest" rather than
+        # take down make_image_sizes_async() for every remote image.
+        import c2pa
+
+        with c2pa.Context() as context:
+            with c2pa.Reader(mimetype, io.BytesIO(data), context=context) as reader:
+
+                result["c2pa"]["present"] = True
+
+                manifest = reader.get_active_manifest()
+
+                if manifest:
+                    result["c2pa"]["creator"] = (
+                        manifest.get("claim_generator")
+                    )
+
+                    # Inspect assertions
+                    for assertion in manifest.get("assertions", []):
+                        label = assertion.get("label", "")
+                        value = assertion.get("data", {})
+
+                        if label.startswith("c2pa.actions"):
+                            for action in value.get("actions", []):
+                                action_name = action.get("action")
+
+                                if action_name in ["c2pa.created", "c2pa.placed"]:
+                                    source = action.get("digitalSourceType", "")
+
+                                    if "trainedAlgorithmicMedia" in source:
+                                        result["c2pa"]["ai_generated"] = True
+
+    except Exception:
+        # No C2PA manifest, unsupported format, etc.
+        pass
+    return result
+
+def get_event_start(post_id: int):
+    post = Post.query.get(post_id)
+
+    if post and post.is_event():
+        if getattr(post.event, "start", False):
+            return post.event.start
+
+    return None

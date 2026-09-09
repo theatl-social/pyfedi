@@ -175,7 +175,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction, emoji):
                 ):
                     continue
 
-                if instance.software == "piefed":  # Send in a batch later
+                if instance.software in ("piefed", "pylova"):  # Send in a batch later
                     session.add(
                         ActivityBatch(
                             instance_id=instance.id,
