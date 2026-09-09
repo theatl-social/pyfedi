@@ -11,7 +11,7 @@ from sqlalchemy import desc, asc, text, or_
 from app import db, cache
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL, POST_TYPE_ARTICLE
 from app.models import PostReply, Post, Community, User, Language, utcnow
-from app.utils import blocked_or_banned_instances, blocked_users, is_video_hosting_site, get_request
+from app.utils import blocked_or_banned_instances, blocked_users, is_video_hosting_site, get_request, silenced_instances
 
 
 @cache.memoize(timeout=600)
@@ -163,7 +163,12 @@ def post_replies(post: Post, sort_by: str, viewer: User, db_only=False) -> List[
             comments = comments.filter(
                 or_(PostReply.language_id.in_(tuple(viewer.read_language_ids)), PostReply.language_id == None))
     else:
-        comments.filter(PostReply.score > -20)
+        if instance_ids := silenced_instances():
+            comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
+        # Query.filter() returns a new query; upstream discarded the result here
+        # and in get_comment_branch(), so the anonymous low-score cutoff has
+        # never actually been applied.
+        comments = comments.filter(PostReply.score > -20)
 
     if sort_by == 'hot':
         comments = comments.order_by(desc(PostReply.ranking))
@@ -220,7 +225,11 @@ def get_comment_branch(post: Post, comment_id: int, sort_by: str, viewer: User) 
             comments = comments.filter(
                 or_(PostReply.language_id.in_(tuple(viewer.read_language_ids)), PostReply.language_id == None))
     else:
-        comments.filter(PostReply.score > -20)
+        # Mirror post_replies(): without this, silenced-instance comments stay
+        # visible to anonymous users via a comment permalink or "view context".
+        if instance_ids := silenced_instances():
+            comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
+        comments = comments.filter(PostReply.score > -20)
 
     if sort_by == 'hot':
         comments = comments.order_by(desc(PostReply.ranking))

@@ -1,6 +1,6 @@
 [project]
 name = "pyfedi"
-version = "1.7.11+peachpie.20260817"
+version = "1.7.15+peachpie.20260909"
 description = "PieFed - A federated discussion and link aggregation platform"
 readme = "README.md"
 license = { text = "AGPL-3.0" }
@@ -28,8 +28,8 @@ dependencies = [
     "arrow~=1.4.0",
     "pyld==2.0.4",
     "boto3~=1.39.0",
-    "markdown2==2.5.3",
-    "beautifulsoup4==4.12.2",
+    "markdown2==2.5.5",
+    "beautifulsoup4~=4.15.0",
     "flask-caching~=2.3.0",
     "flask-compress~=1.24",
     "Pillow",
@@ -66,6 +66,7 @@ dependencies = [
     "pendulum~=3.2.0",
     "py-svg-hush~=0.3.0",
     "fastfeedparser~=0.6.0",
+    "c2pa-python~=0.37.0",
 ]
 
 [project.optional-dependencies]

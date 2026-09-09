@@ -68,7 +68,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setupScrollChat,
         setupCodeBlockCopy,
         setupLoadingAnimation,
-        setupHidRead
+        setupHidRead,
+        setupAutoReload
     ];
 
     // Run critical setups immediately
@@ -483,7 +484,13 @@ function setupLightDark() {
 
     var preferredTheme = getStoredTheme();
     if (!preferredTheme || (preferredTheme !== 'light' && preferredTheme !== 'dark')) {
-        preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const isLinux = navigator.platform.toLowerCase().includes('linux') && !navigator.platform.toLowerCase().includes('android');
+        if(isLinux) {
+            preferredTheme = 'dark';
+        }
+        else {
+            preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
     }
     //setTheme(preferredTheme);
     icon.classList.remove('fe-eye');
@@ -1053,6 +1060,10 @@ function setupKeyboardShortcuts() {
         }
     });
 
+    setupVotableElements();
+}
+
+function setupVotableElements() {
     const votableElements = document.querySelectorAll('.post_teaser, .post_full');
     votableElements.forEach(votable => {
         votable.addEventListener('mouseover', event => {
@@ -2620,4 +2631,24 @@ function setupHidRead() {
             a.dataset.hideReadSetup = 'true';
         }
     });
+}
+
+function setupAutoReload() {
+    // reload the home page every minute, if sorting by New
+    if (typeof reloadUrl === "undefined" || !reloadUrl) {
+        return;
+    }
+    var oldTitle = document.title;
+    setInterval(function () {
+        if (window.scrollY === 0 && reloadsDone <= 120) {
+            htmx.trigger("#auto-reload", "refreshFragment");    // in index.html there is hx-trigger="refreshFragment"
+            reloadsDone += 1;
+            /*document.title = oldTitle + ` (refreshed ${new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            })})`; */
+            setTimeout(setupVotableElements, 2000); // so people can vote with A and Z keys
+        }
+    }, 60000);  // once per minute
 }

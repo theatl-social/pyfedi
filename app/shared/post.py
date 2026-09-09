@@ -72,6 +72,7 @@ from app.utils import (
     sanitize_svg,
     user_ip_banned,
     ip_address,
+    inspect_image_c2pa,
 )
 
 
@@ -386,9 +387,9 @@ def edit_post(
         elif input.get("flair_id"):
             # Handle single flair_id for RSS feeds and other API calls.
             # Truthiness rather than `"flair_id" in input`: RssFeed.flair_id is
-            # nullable and the cron passes it through unconditionally, so
-            # upstream's membership test reaches `.in_(None)` and raises for
-            # every feed that has no flair configured -- i.e. the default.
+            # nullable and the cron passes it through unconditionally, so a
+            # membership test reaches `.in_(None)` and raises for every feed
+            # that has no flair configured -- i.e. the default.
             flair_id = input["flair_id"]
             if isinstance(flair_id, int):
                 flair = [CommunityFlair.query.get(flair_id)]
@@ -640,6 +641,12 @@ def edit_post(
                 "app/static/media/posts/" + new_filename[0:2] + "/" + new_filename[2:4]
             )
         ensure_directory_exists(directory)
+
+        # check for AI-generated images
+        uploaded_file.seek(0)
+        ai_gen = inspect_image_c2pa(uploaded_file.read(), uploaded_file.mimetype or "application/octet-stream")
+        if ai_gen['c2pa']['ai_generated']:
+            post.ai_generated = True
 
         # save the file
         final_place = os.path.join(directory, new_filename + file_ext.lower())

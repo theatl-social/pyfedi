@@ -1538,17 +1538,15 @@ def user_flair_unblock(flair_id):
 def delete_account():
     form = DeleteAccountForm()
     if form.validate_on_submit():
+        # Upstream v1.7.15 replaced this loop with delete_dependencies(), which
+        # purges files via the user_file association instead. That misses files
+        # attached to posts but never uploaded through the media library (e.g.
+        # thumbnails fetched from a remote URL), so we keep both.
         files = File.query.join(Post).filter(Post.user_id == current_user.id).all()
         for file in files:
             file.delete_from_disk()
             file.source_url = ""
-        if current_user.avatar_id:
-            current_user.avatar.delete_from_disk()
-            current_user.avatar.source_url = ""
-        if current_user.cover_id:
-            current_user.cover.delete_from_disk()
-            current_user.cover.source_url = ""
-
+        current_user.delete_dependencies()
         current_user.banned = True
         current_user.email = f"deleted_{current_user.id}@deleted.com"
         current_user.deleted_by = current_user.id

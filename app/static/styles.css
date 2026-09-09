@@ -59,6 +59,7 @@
   --white: #fff;
   --whitesmoke: whitesmoke;
   --white-fade: #f0f0f2;
+  --grey: #ddd;
   --light-grey: #ddd;
   --dark-grey: #777;
   --super-dark-grey: #424549;
@@ -73,6 +74,8 @@
   --opacity-00: 0;
   --opacity-01: 0.1;
   --opacity-02: 0.2;
+  --opacity-03: 0.3;
+  --opacity-04: 0.4;
   --opacity-05: 0.5;
   --opacity-08: 0.8;
   --opacity-09: 0.9;
@@ -1688,7 +1691,7 @@ ul.form-multicheck-columns li {
   opacity: var(--opacity-08);
 }
 .post_list .post_teaser.blocked {
-  opacity: var(--opacity-02);
+  opacity: var(--opacity-04);
   font-size: 12px;
   font-size: var(--font-size-12);
 }
@@ -2844,7 +2847,7 @@ h1 .warning_badge {
 }
 .post_poll ul li .vote_bar .vote_score {
   background-color: var(--grey);
-  color: var(--white);
+  color: var(--black);
   text-align: right;
   padding-right: var(--spacing-4);
   font-weight: bold;
@@ -3548,8 +3551,6 @@ form h5 {
 .message_reactions .message_reaction .emoji {
   margin: var(--spacing-2) var(--spacing-4);
   padding: var(--spacing-2) 0px;
-  height: var(--spacing-20);
-  width: var(--spacing-20);
   flex-shrink: 0;
   overflow: hidden;
   font-size: 18px;
@@ -3845,6 +3846,7 @@ div:has(> input.hide_field) {
   --white: #fff;
   --whitesmoke: whitesmoke;
   --white-fade: #f0f0f2;
+  --grey: #ddd;
   --light-grey: #ddd;
   --dark-grey: #777;
   --super-dark-grey: #424549;
@@ -3859,6 +3861,8 @@ div:has(> input.hide_field) {
   --opacity-00: 0;
   --opacity-01: 0.1;
   --opacity-02: 0.2;
+  --opacity-03: 0.3;
+  --opacity-04: 0.4;
   --opacity-05: 0.5;
   --opacity-08: 0.8;
   --opacity-09: 0.9;
@@ -4172,6 +4176,9 @@ body.compact-min .form-select {
 }
 body.compact-min .ts-wrapper {
   padding: 0;
+}
+body.compact-min .post_teaser_body .outermost_reaction_container {
+  display: none;
 }
 
 body.compact-max .post_teaser {
