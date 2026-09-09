@@ -91,40 +91,54 @@ If clean merge, skip to Step 6.
 
 ### 6. Check Migration Heads
 
-Cannot run `flask db heads` locally (needs Redis/Postgres). Use this Python script instead:
-
-```python
-python3 -c "
-import os, re
-versions_dir = 'migrations/versions'
-revisions = {}
-all_down = set()
-for f in os.listdir(versions_dir):
-    if not f.endswith('.py') or f == '__pycache__':
-        continue
-    content = open(os.path.join(versions_dir, f)).read()
-    rev_match = re.search(r'^revision\s*=\s*[\"\'](.*?)[\"\']', content, re.M)
-    down_match = re.search(r'^down_revision\s*=\s*(.*?)$', content, re.M)
-    if rev_match and down_match:
-        rev = rev_match.group(1)
-        down_raw = down_match.group(1).strip()
-        revisions[rev] = (down_raw, f)
-        for d in re.findall(r'[\"\'](.*?)[\"\']', down_raw):
-            all_down.add(d)
-heads = [r for r in revisions if r not in all_down]
-print(f'Heads: {len(heads)}')
-for h in heads:
-    print(f'  {h} <- {revisions[h][1]}')
-"
+```bash
+uv run python .claude/skills/merge-upstream/scripts/check_migrations.py
 ```
 
-If multiple heads, create a merge migration file manually:
+Exits non-zero on anything other than exactly one head, so it can gate the merge.
+
+`flask db heads` needs Redis and Postgres because it boots the app. Alembic's
+`ScriptDirectory` does not — it only reads `migrations/versions/` — so ask
+alembic directly rather than scraping the files.
+
+**This step used to regex-scrape `revision =` / `down_revision =` and count
+revisions nothing pointed down to.** That answers "how many heads", which is a
+*proxy* for "is the revision graph healthy". It cannot see a `down_revision`
+naming a revision that does not exist, an orphaned branch, or what an upgrade
+from a specific deployed revision would actually apply — and this fork has a
+long history of checks that measured a proxy and passed while broken (see
+"Verify behaviour, never artifacts" below).
+
+Before deploying, also confirm what the upgrade will actually do to the live
+database:
+
+```bash
+# the head shipped by the previous release, or:
+#   SELECT version_num FROM alembic_version;
+uv run python .claude/skills/merge-upstream/scripts/check_migrations.py \
+    --from <currently-deployed-revision>
+```
+
+That prints the exact revisions `flask db upgrade` will apply, in dependency
+order. Read them — a merge is the usual place a destructive or long-running
+migration arrives unnoticed, and "it's just additive" is worth confirming
+rather than assuming.
+
+If there is more than one head, create a merge migration whose `down_revision`
+is a tuple of **every** head reported:
+
 ```python
-revision = 'merge_YYYYMMDD'
+revision = 'merge_YYYYMMDD_vXYZ'
 down_revision = ('<head1>', '<head2>')
+branch_labels = None
+depends_on = None
+
 def upgrade(): pass
 def downgrade(): pass
 ```
+
+Then re-run the check. `tests/test_migration_heads.py` also asserts the single
+head, so the full suite catches a regression here too.
 
 ### 7. Sync Dependencies
 
@@ -257,6 +271,22 @@ about:
 | `ls app/api/admin/private_registration.py` | the file existed the whole time |
 | `-not -name` exclusions in `ci-cd.yml` | ~40 tests never ran, including the security suites |
 | `except Exception: pytest.skip(...)` in a fixture | reported "skipped", not "failed" |
+| `python -m pytest` in `run-production-mirror-tests.sh` | pytest absent from the `--no-dev` image; failure swallowed by a trailing `echo` with no `set -e` |
+| regex-scraping `down_revision` for head count (step 6, until 2026-08-17) | counts heads, but cannot see a dangling `down_revision`, an orphaned branch, or what an upgrade would actually apply |
+| `docker image inspect --format '{{.Architecture}}'` | reports the platform *requested*, not the one inside — read a binary's ELF header instead |
+
+Two more of the same shape, learned on the v1.7.11 merge (2026-08-17):
+
+- **A green route *count* is not a green route surface.** A silently relocated
+  route leaves the count unchanged — which is exactly how the admin API moved
+  namespaces unnoticed. Capture `sorted(str(r) for r in app.url_map.iter_rules())`
+  *before* merging and `comm`-diff it after.
+- **The files that most need reading are the ones that did not conflict.** Every
+  security defect found on the v1.7.11 merge (SP-028, SP-029, and the anonymous
+  `/post/list` 500) was in a file that auto-merged cleanly. Conflicts force you
+  to read the code; a clean auto-merge of a brand-new upstream feature invites
+  you to trust it. After resolving conflicts, diff the *whole* merge against the
+  previous release and read the new upstream code you never had to touch.
 
 **Never add a file to the `-not -name` exclusion list in `.github/workflows/ci-cd.yml`
 to make CI green.** That list may only contain files the workflow runs in a
