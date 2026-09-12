@@ -333,7 +333,7 @@ def list_communities():
         member_check = db.session.query(CommunityMember.community_id).filter(
             CommunityMember.user_id == current_user.id,
             CommunityMember.is_banned == False
-        ).subquery()
+        ).scalar_subquery()
         communities = communities.filter(
             or_(
                 Community.private == False,
@@ -924,7 +924,7 @@ def protocol_handler():
         try:
             resp = get_resolve_object(None, {'q': q.replace('web+ap://', 'https://')}, user_id=current_user.id)
         except Exception:
-            flash(_('Failed to look up %(url)s'))
+            flash(_('Failed to look up %(url)s', url=q))
             return redirect(url_for('main.index'))
 
         if 'post' in resp:

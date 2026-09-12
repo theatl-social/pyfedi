@@ -51,6 +51,20 @@ git log HEAD..upstream/main --oneline -- migrations/
 
 Review what's coming in. Note any migrations, model changes, or new dependencies.
 
+**Since v1.7.0 this fork merges release points, not upstream `main`** (which runs
+far ahead on a separate line). Upstream cuts releases on a `v1.7.x`-style branch
+and **does not always push a tag** — `v1.7.15.1` existed only as a `VERSION`
+bump commit, so every tag and `gh release` listing still said `v1.7.15`. Check
+the release branch head, not just tags:
+
+```bash
+git fetch upstream --tags --force
+git fetch upstream 'refs/heads/v1.7.x:refs/remotes/upstream/v1.7.x'
+git log --oneline <last-merged-tag-or-commit>..upstream/v1.7.x   # look for 'vX.Y.Z' bump commits
+```
+
+Also note `git tag --sort=-v:refname` lists the mis-tag `v1.7.91` first.
+
 ### 4. Merge Upstream
 
 ```bash

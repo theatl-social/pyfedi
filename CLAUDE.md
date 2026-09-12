@@ -229,6 +229,76 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Merged upstream PieFed **`v1.7.15.1`** on 2026-09-12
+- Branch: `20260912/merge-upstream-v1715.1`
+- Upstream commit: `29ec06f4` on upstream's **`v1.7.x` release branch**. **Upstream
+  never pushed a git tag for v1.7.15.1** -- only the `VERSION` bump commit exists
+  -- so `git tag`, `git ls-remote --tags` and `gh release` all still show
+  `v1.7.15` as newest. Found by listing `upstream/v1.7.x` commits past the
+  `v1.7.15` tag. **On future merges, check the release branch head, not just
+  tags:** `git fetch upstream v1.7.x && git log --oneline <last-tag>..upstream/v1.7.x`.
+  Clean linear ancestry from `v1.7.15` (5 commits, 11 files, no migrations, no
+  dependency changes).
+- New version: `1.7.15.1-peachpie-20260912` / `1.7.15.1+peachpie.20260912`
+- Based on `main` **after** PR #103 (AI detection removal), so the merge was
+  checked against the tree without those features.
+- Key additions from upstream: flash on post create/edit linking back to the
+  edit page; body-text heading sizes (`$h1_body`..`$h6_body`); static files get
+  `Cache-Control: ... immutable` with `Vary` trimmed to `Accept-Encoding`
+  (`manifest.json` excluded); topic import moves community assignment into a
+  `process_topic_communities` celery task; `search_for_community` uses
+  `db.session.query` so it works under `patch_db_session`; `list_communities`
+  `subquery()` -> `scalar_subquery()`.
+- Conflicts: 2. `app/constants.py` (version). `app/admin/util.py`
+  `move_community_images_to_here`: upstream independently fixed the
+  `content_type`-used-before-assignment bug this fork had fixed differently in
+  2026-06; took upstream's shape (one `extra_args`, `ContentType` set per file),
+  after confirming every upload path sets `ContentType` immediately before use.
+- **Upstream bugs fixed rather than imported:**
+  - `post_edit()` flashed
+    `Markup(_('... <a href="/post/%(post_id)d/edit">Edit it</a> ...'))` **without
+    passing `post_id`**. flask-babel only interpolates when kwargs are given
+    (`return s if not variables else s % variables`), so it does not raise --
+    every successful edit rendered a link to the literal `/post/%(post_id)d/edit`.
+    The same class had sat in `protocol_handler()` since 2025-09
+    (`'Failed to look up %(url)s'`, no `url=`); fixed too. Guarded by
+    `tests/test_gettext_placeholders.py`, an AST scan of every `_`/`_l`/`gettext`
+    call in `app/` for unfilled placeholders (allows kwargs, `**kwargs`, and
+    `_(...) % {...}`).
+  - **Topic import lost its communities whenever a worker was idle.**
+    `create_topic_and_children()` enqueued `process_topic_communities.delay(...,
+    new_topic.id)` right after `flush()`, but committed only after recursing all
+    children. The task runs in its own session and writes `community.topic_id`, an
+    FK to the uncommitted topic. **Verified on a throwaway Postgres 17 cluster**:
+    the worker's UPDATE fails *immediately* with `community_topic_id_fkey` -- it
+    does not wait for the other transaction -- and still fails after that
+    transaction commits. The task rolls back and re-raises; the `do_subscribe`
+    calls it already enqueued still go out. Fixed by committing before dispatch.
+    Upstream's `v1.7.x` head still has the bug. Guarded by
+    `tests/test_topic_import_commit_order.py` (source-level: needs two Postgres
+    sessions to reproduce, which CI's SQLite cannot).
+  - `num_communities` was computed right after dispatching the async task, so it
+    was always 0 in production. Upstream fixed this one commit past v1.7.15.1
+    (`a775d1cd`, increment inside the task); **applied verbatim** so the next
+    merge sees identical lines.
+  - Both guard tests were verified red against upstream's code and green after.
+- **Not taken yet -- 6 further commits on `upstream/v1.7.x` past v1.7.15.1**
+  (besides `a775d1cd`, applied above): `c80db570` exclude `local_only` communities from topic
+  export, `bc510f8f` `RATELIMIT_ENABLED = 'False'` disables rate limiting,
+  `dcb4df69` loosen daily rate limits, `9aca38fa` reduce default staff access,
+  `a16922de` show roles per admin page, `4afc32f4` JS tuning. The rate-limit
+  commits interact with **SP-027** (rate limiter fail-open) and deserve their own
+  pass rather than riding along with a point release.
+- Verification: `uvx ruff check .` clean; djlint 304 files, 0 errors; single
+  migration head (no new migrations); route surface **624 -> 624, identical
+  rule-by-rule**; `privacy_url` and PeachPie footer present; `tests/security/`
+  **191 passed**; regression guards incl. `test_ai_detection_removed` **387
+  passed**; full sweep **1 failed / 948 passed / 96 skipped** vs baseline
+  1 failed / 946 passed (+2 new guards; the one failure is the known macOS-only
+  `PicklingError`).
+- Not verified locally: topic import end-to-end (needs Postgres + a celery worker
+  + resolvable communities) and the post create/edit flash as rendered HTML.
+
 - **2026-09-12 -- upstream's automated AI detection removed (both features)**
 - Branch: `20260912/remove-ai-detection`. Not an upstream merge; removed by owner
   decision, following the anoobis precedent: delete the code, and add a guard
