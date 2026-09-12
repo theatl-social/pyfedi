@@ -11,8 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     libpq-dev \
     curl \
-    tesseract-ocr \
-    tesseract-ocr-eng \
     postgresql-client \
     bash \
     cron \

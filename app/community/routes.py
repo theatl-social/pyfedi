@@ -292,8 +292,6 @@ def add_local():
             subscriptions_count=1,
             instance_id=1,
             ai_generated=form.ai_generated.data,
-            low_quality=("memes" in form.url.data or "shitpost" in form.url.data)
-            and get_setting("meme_comms_low_quality", False),
             question_answer=form.question_answer.data,
             first_federated_at=utcnow(),
         )

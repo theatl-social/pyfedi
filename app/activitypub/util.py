@@ -14,7 +14,6 @@ from urllib.parse import urlparse, parse_qs
 import pendulum
 import boto3
 import httpx
-import pytesseract
 from PIL import Image, ImageOps
 from flask import current_app, request, g, url_for, json
 from flask_babel import _, force_locale, gettext
@@ -1817,11 +1816,6 @@ def actor_json_to_model(activity_json, address, server):
             if "postUrlType" in activity_json
             else None,
         )
-        if get_setting("meme_comms_low_quality", False):
-            community.low_quality = (
-                "memes" in activity_json["preferredUsername"]
-                or "shitpost" in activity_json["preferredUsername"]
-            )
         description_html = ""
         if "summary" in activity_json:
             description_html = activity_json["summary"]
@@ -2513,58 +2507,6 @@ def make_image_sizes_async(
                                     if s3:
                                         s3.close()
                                     session.commit()
-
-                                    site = session.query(Site).get(1)
-                                    if site is None:
-                                        site = Site()
-
-                                    # Alert regarding fascist meme content
-                                    if (
-                                        site.enable_chan_image_filter
-                                        and toxic_community
-                                        and img_width < 2000
-                                    ):  # images > 2000px tend to be real photos instead of 4chan screenshots.
-                                        if os.environ.get("ALLOW_4CHAN", None) is None:
-                                            try:
-                                                image_text = (
-                                                    pytesseract.image_to_string(
-                                                        Image.open(
-                                                            BytesIO(source_image)
-                                                        ).convert("L"),
-                                                        timeout=30,
-                                                    )
-                                                )
-                                            except Exception:
-                                                image_text = ""
-                                            if (
-                                                "Anonymous" in image_text
-                                                and (
-                                                    "No." in image_text
-                                                    or " N0" in image_text
-                                                )
-                                            ):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                                                post = (
-                                                    session.query(Post)
-                                                    .filter_by(image_id=file.id)
-                                                    .first()
-                                                )
-                                                targets_data = {
-                                                    "gen": "0",
-                                                    "post_id": post.id,
-                                                    "orig_post_title": post.title,
-                                                    "orig_post_body": post.body,
-                                                }
-                                                notification = Notification(
-                                                    title="Review this",
-                                                    user_id=1,
-                                                    author_id=post.user_id,
-                                                    url=post.slug,
-                                                    notif_type=NOTIF_REPORT,
-                                                    subtype="post_with_suspicious_image",
-                                                    targets=targets_data,
-                                                )
-                                                session.add(notification)
-                                                session.commit()
         except Exception:
             session.rollback()
             raise

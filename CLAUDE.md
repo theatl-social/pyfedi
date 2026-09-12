@@ -229,6 +229,51 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-09-12 -- upstream's surface-signal content heuristics removed**
+- Branch: `20260912/remove-content-heuristics`. Follow-up to the AI-detection
+  removal below, by owner decision: find every heuristic "like the em-dash one"
+  and remove it. Guarded by `tests/test_content_heuristics_removed.py` (16 tests,
+  red before, green after), added to the merge-upstream skill's table.
+- **Removed** -- each inferred something about a person or post from a
+  superficial signal, then acted on it:
+  - **Em-dash report** (`enable_report_em_dash_replies`, **on by default**): any
+    comment containing an em dash from an account under 24h old filed an
+    automated "likely AI" admin report.
+  - **OCR "4chan screenshot" filter** (`enable_chan_image_filter`, off by
+    default): Tesseract over uploads, rejecting any image whose text contained
+    "Anonymous" and "No."; for remote posts in `low_quality` communities it filed
+    a "Review this" report. Also removed `pytesseract` and the
+    `tesseract-ocr`/`tesseract-ocr-eng` apt packages (Dockerfile, INSTALL.md).
+    `user/notifs/20.html` **keeps** its `post_with_suspicious_image` branch so
+    notifications created before the removal still render.
+  - **"this" comment filter** (`enable_this_comment_filter`) and **GIF reply
+    filter** (`enable_gif_reply_rep_decrease`), both off by default: rejected
+    comments that were exactly "this" or a bare tenor/giphy/imgflip link --
+    with an error for local users, silently for federated ones.
+  - **Community name -> low quality** (`meme_comms_low_quality`): names
+    containing "memes"/"shitpost" were marked `low_quality`, so their upvotes
+    stopped counting toward reputation. `shared/community.py` (API creation)
+    **ignored the setting** and applied `"memes" in name` unconditionally.
+  - Side effect: `PostReply.new()` no longer runs a `Site` query per comment; it
+    existed only to feed those filters.
+- **Kept deliberately:** the `Site` columns (`enable_chan_image_filter`,
+  `enable_this_comment_filter`, `enable_gif_reply_rep_decrease` -- immutable
+  schema, now unread) and the `settings` rows for the others (inert);
+  `Community.low_quality` and its per-community admin toggle; users' own keyword
+  filters; `[NSFW]`/`(NSFW)` title tagging (author-signalled); admin-configured
+  domain warnings and blocked-image hashes; the read-only "Bad / Most downvoted"
+  and "Likely spam" admin review listings; the inoculation sidebar; the unused
+  `toxic_community` parameter of `make_image_sizes()` (kept to avoid touching six
+  call sites upstream edits often).
+- **Not removed, pending owner decision** (account-age / reputation gates rather
+  than content guesses): see the PR for the list.
+- Verification: ruff clean; djlint 304 files, 0 errors; imports orphaned by the
+  removal found by hand and dropped (`BytesIO`, `UnidentifiedImageError`, `Site`,
+  `db` in `community/forms.py`); `admin/misc.html` fields all present on
+  `SiteMiscForm`; route surface identical (624); `tests/security/` **191
+  passed**; guards **392 passed**; full sweep **1 failed / 964 passed / 96
+  skipped** (948 + 16 new; the known macOS-only `PicklingError`).
+
 - Merged upstream PieFed **`v1.7.15.1`** on 2026-09-12
 - Branch: `20260912/merge-upstream-v1715.1`
 - Upstream commit: `29ec06f4` on upstream's **`v1.7.x` release branch**. **Upstream

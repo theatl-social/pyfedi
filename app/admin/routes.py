@@ -273,9 +273,6 @@ def admin_misc():
         flash(_('Settings saved.'))
     elif form.validate_on_submit():
         site.enable_downvotes = form.enable_downvotes.data
-        site.enable_gif_reply_rep_decrease = form.enable_gif_reply_rep_decrease.data
-        site.enable_chan_image_filter = form.enable_chan_image_filter.data
-        site.enable_this_comment_filter = form.enable_this_comment_filter.data
         site.allow_local_image_posts = form.allow_local_image_posts.data
         site.enable_nsfw = form.enable_nsfw.data
         site.enable_nsfl = form.enable_nsfl.data
@@ -300,7 +297,6 @@ def admin_misc():
         cache.delete_memoized(blocked_referrers)
         cache.delete_memoized(get_site_as_dict)
         set_setting("allow_default_user_add_remote_community", form.allow_default_user_add_remote_community.data)
-        set_setting('meme_comms_low_quality', form.meme_comms_low_quality.data)
         set_setting('public_modlog', form.public_modlog.data)
         set_setting('email_verification', form.email_verification.data)
         set_setting('captcha_enabled', form.captcha_enabled.data)
@@ -312,16 +308,10 @@ def admin_misc():
         set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         set_setting('cache_remote_images_locally', form.cache_remote_images_locally.data)
         set_setting('allow_video_file_uploads', form.allow_video_file_uploads.data)
-        set_setting('enable_report_em_dash_replies', form.enable_report_em_dash_replies.data)
-        set_setting('limit_one_em_report_per_user', form.limit_one_em_report_per_user.data)
         set_setting('read_posts_cutoff', int(form.read_posts_cutoff.data))
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
-        form.enable_gif_reply_rep_decrease.data = site.enable_gif_reply_rep_decrease
-        form.enable_chan_image_filter.data = site.enable_chan_image_filter
-        form.enable_this_comment_filter.data = site.enable_this_comment_filter
-        form.meme_comms_low_quality.data = get_setting('meme_comms_low_quality', False)
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.enable_nsfw.data = site.enable_nsfw
         form.enable_nsfl.data = site.enable_nsfl
@@ -351,8 +341,6 @@ def admin_misc():
         form.honeypot.data = site.honeypot
         form.cache_remote_images_locally.data = get_setting('cache_remote_images_locally', True)
         form.allow_video_file_uploads.data = get_setting('allow_video_file_uploads', 'no')
-        form.enable_report_em_dash_replies.data = get_setting('enable_report_em_dash_replies', True)
-        form.limit_one_em_report_per_user.data = get_setting('limit_one_em_report_per_user', False)
         form.read_posts_cutoff.data = get_setting('read_posts_cutoff', 180)
     return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
 
