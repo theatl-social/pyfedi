@@ -2001,31 +2001,6 @@ def approval_required(func):
     return decorated_view
 
 
-def trustworthy_account_required(func):
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if current_user.trustworthy() or current_user.get_id() in g.admin_ids:
-            return func(*args, **kwargs)
-        else:
-            return redirect(url_for("auth.not_trustworthy"))
-
-    return decorated_view
-
-
-def aged_account_required(func):
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if (
-            current_user.get_id() in g.admin_ids
-            or not current_user.created_very_recently()
-        ):
-            return func(*args, **kwargs)
-        else:
-            return redirect(url_for("auth.not_trustworthy"))
-
-    return decorated_view
-
-
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -2313,9 +2288,6 @@ def can_downvote(user, community: Community, communities_banned_from_list=None) 
     if community.local_only and not user.is_local():
         return False
 
-    if (user.attitude is not None and user.attitude < 0.0) or user.reputation < -10:
-        return False
-
     if community.downvote_accept_mode != DOWNVOTE_ACCEPT_ALL:
         if community.downvote_accept_mode == DOWNVOTE_ACCEPT_NONE:
             return False
@@ -2373,10 +2345,6 @@ def can_create_post(user, content: Community) -> bool:
         if instance_banned(
             user.instance.domain
         ):  # don't allow posts from defederated instances
-            return False
-        if (
-            user.created_very_recently() and user.post_count > 3
-        ):  # new users can only do 3 posts in their first 24h
             return False
 
     if content.banned:

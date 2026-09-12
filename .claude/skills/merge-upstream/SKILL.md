@@ -322,6 +322,7 @@ repeatedly. Each now has a guard test — run them all after every merge:
 | anoobis stays removed | `tests/test_anoobis_removed.py` |
 | AI detection stays removed (external text-detection endpoint + auto-ban, C2PA image inspection, `c2pa-python` dep) | `tests/test_ai_detection_removed.py` |
 | Surface-signal content heuristics stay removed (em-dash report, OCR "4chan" filter + Tesseract, "this"/GIF comment filters, "memes"/"shitpost" name -> low quality) | `tests/test_content_heuristics_removed.py` |
+| Account-age / reputation gates and the `is_bad_name` word list stay removed (wiki "trusted" tier keeps `trustworthy()`) | `tests/test_reputation_gates_removed.py` |
 
 ### Upstream code is not automatically correct
 

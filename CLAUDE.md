@@ -265,8 +265,37 @@ The repository includes comprehensive test infrastructure:
   and "Likely spam" admin review listings; the inoculation sidebar; the unused
   `toxic_community` parameter of `make_image_sizes()` (kept to avoid touching six
   call sites upstream edits often).
-- **Not removed, pending owner decision** (account-age / reputation gates rather
-  than content guesses): see the PR for the list.
+- **Second pass, same branch -- account-age / reputation gates and the name word
+  list** (owner picked these from a list of borderline candidates). Guarded by
+  `tests/test_reputation_gates_removed.py` (8 tests, 7 red before / green after;
+  the 8th asserts what was kept):
+  - `can_downvote()`: dropped "reputation < -10 or negative `attitude` (more
+    downvotes than upvotes cast) can't downvote".
+  - `User.can_send_pm_to()`: dropped the <24h-old and reputation <= -10 refusals;
+    kept banned / unverified / the per-user `can_send_pm` flag.
+  - `trustworthy_account_required` (starting a chat) and inline `trustworthy()`
+    checks on suggesting topics and viewing `/tags/banned`: accounts <7 days old
+    with reputation <100 were refused. `/domains/banned` never had that gate, so
+    the two pages now match.
+  - `aged_account_required` (creating a local community) and the "account is too
+    new" refusal on inviting people to a community.
+  - `can_create_post()`: remote accounts <24h old limited to 3 posts.
+  - `is_bad_name()`: substring swear-word list silently skipping communities in
+    the four admin bulk-import paths and the CLI preload -- Scunthorpe-prone
+    ("petits" contains "tits"). Its unit tests (`tests/test_is_bad_name.py`) were
+    deleted with it; the `bad_words_count` skip counters went too.
+  - **Kept, on purpose:** `User.trustworthy()` itself, because community wiki
+    pages offer a moderator-chosen "trusted" edit tier (`who_can_edit == 1`)
+    defined by it (the guard asserts this). **Owner chose to keep:** dropping DMs
+    from remote senders <24h old ("Sender is too new"), purging content when a
+    remote account <24h old deletes itself, and the reputation warning icons.
+  - Left in place but now unreachable except by URL: the static refusal pages
+    `/auth/not_trustworthy` and `topic.suggestion_denied` (removing them would
+    only widen the diff against upstream).
+  - Verification for the combined branch: ruff clean; djlint 0 errors; no imports
+    orphaned; route surface identical (624); `tests/security/` 191 passed; guards
+    392 passed; full sweep **1 failed / 963 passed / 96 skipped** (964 - 9 deleted
+    `is_bad_name` tests + 8 new guards; the known macOS-only `PicklingError`).
 - Verification: ruff clean; djlint 304 files, 0 errors; imports orphaned by the
   removal found by hand and dropped (`BytesIO`, `UnidentifiedImageError`, `Site`,
   `db` in `community/forms.py`); `admin/misc.html` fields all present on

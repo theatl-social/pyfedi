@@ -985,16 +985,6 @@ def publicize_community_task(community_id: int):
     session.close()
 
 
-def is_bad_name(community_name: str) -> bool:
-    name_lower = community_name.lower()
-    # sort out the 'seven things you can't say on tv' names (cursewords), plus some "low effort" communities
-    seven_things_plus = [
-        'shit', 'piss', 'fuck',
-        'cunt', 'cocksucker', 'motherfucker', 'tits',
-        'greentext', '4chan', 'fauxbait'
-    ]
-    return any(badword in name_lower for badword in seven_things_plus)
-
 def community_theme_list():
     community_themes = theme_list()
     community_themes.insert(0,('disabled', _l('Disabled')))

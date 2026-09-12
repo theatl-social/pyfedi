@@ -34,7 +34,6 @@ from app import db, plugins
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
 from app.activitypub.util import extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
-from app.community.util import is_bad_name
 from app.constants import (
     NOTIF_COMMUNITY,
     NOTIF_POST,
@@ -2256,9 +2255,6 @@ def register(app):
 
                 # sort out any that do not have greater than 10 active users over the past week
                 elif c["counts"]["users_active_week"] < 10:
-                    continue
-
-                if is_bad_name(c["name"]):
                     continue
 
                 # convert the url to server, community

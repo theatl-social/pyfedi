@@ -30,7 +30,7 @@ from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_
     topics_for_form, move_community_images_to_here, switch_to_unsilenced, switch_to_silenced, serialize_topic_tree, \
     create_topic_and_children
 from app.auth.util import send_email_verification, random_token
-from app.community.util import save_icon_file, save_banner_file, search_for_community, is_bad_name
+from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
 from app.email import send_registration_approved_email
@@ -449,7 +449,7 @@ def admin_federation_preload():
         already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
         banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
 
-        total_count = already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = bad_words_count = 0
+        total_count = already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = 0
         candidate_communities = []
 
         for community in community_json:
@@ -480,14 +480,9 @@ def admin_federation_preload():
                 banned_count += 1
                 continue
 
-            if is_bad_name(community['name']):
-                bad_words_count += 1
-                continue
+            candidate_communities.append(community)
 
-            else:
-                candidate_communities.append(community)
-
-        filtered_count = already_known_count + nsfw_count + low_content_count + low_active_users_count + banned_count + bad_words_count
+        filtered_count = already_known_count + nsfw_count + low_content_count + low_active_users_count + banned_count
         flash(_('%d out of %d communities were excluded using current filters' % (filtered_count, total_count)))
 
         # sort the list based on the users_active_week key
@@ -652,7 +647,7 @@ def admin_federation_remote_scan():
                     page += 1
 
             # filter out the communities
-            already_known_count = low_content_count = low_active_users_count = bad_words_count = 0
+            already_known_count = low_content_count = low_active_users_count = 0
             candidate_communities = []
             for community in comms_list:
                 # sort out already known communities
@@ -667,11 +662,7 @@ def admin_federation_remote_scan():
                 elif community['counts']['users_active_week'] < min_users:
                     low_active_users_count += 1
                     continue
-                if is_bad_name(community['community']['name']):
-                    bad_words_count += 1
-                    continue
-                else:
-                    candidate_communities.append(community)
+                candidate_communities.append(community)
 
             # get the community urls to join
             community_urls_to_join = []
@@ -721,7 +712,7 @@ def admin_federation_remote_scan():
                     page += 1
 
             # filter out the communities
-            already_known_count = low_content_count = low_active_users_count = bad_words_count = 0
+            already_known_count = low_content_count = low_active_users_count = 0
             candidate_communities = []
             for community in comms_list:
                 # sort out already known communities
@@ -738,11 +729,7 @@ def admin_federation_remote_scan():
                     low_active_users_count += 1
                     continue
 
-                if is_bad_name(community['community']['name']):
-                    bad_words_count += 1
-                    continue
-                else:
-                    candidate_communities.append(community)
+                candidate_communities.append(community)
 
             # get the community urls to join
             community_urls_to_join = []
@@ -794,7 +781,7 @@ def admin_federation_remote_scan():
                     page += 1
 
             # filter out the magazines
-            already_known_count = low_content_count = low_subscribed_users_count = bad_words_count = 0
+            already_known_count = low_content_count = low_subscribed_users_count = 0
             candidate_communities = []
             for magazine in mags_list:
                 # sort out already known communities
@@ -810,11 +797,7 @@ def admin_federation_remote_scan():
                 elif magazine['subscriptionsCount'] < min_users:
                     low_subscribed_users_count += 1
                     continue
-                if is_bad_name(magazine['name']):
-                    bad_words_count += 1
-                    continue
-                else:
-                    candidate_communities.append(magazine)
+                candidate_communities.append(magazine)
 
             # get the community urls to join
             community_urls_to_join = []

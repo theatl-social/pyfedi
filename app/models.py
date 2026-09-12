@@ -1614,9 +1614,7 @@ class User(UserMixin, db.Model):
 
     def can_send_pm_to(self, recipient):
         if (
-            self.created_very_recently()
-            or self.reputation <= -10
-            or self.banned
+            self.banned
             or not self.verified
             or not self.can_send_pm
         ) and not (self.is_admin_or_staff() or recipient.is_admin_or_staff()):
