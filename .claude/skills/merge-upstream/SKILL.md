@@ -306,6 +306,7 @@ repeatedly. Each now has a guard test — run them all after every merge:
 | Celery settings + entrypoint privilege drop | `tests/test_celery_settings.py` |
 | admin API routing | `tests/test_admin_api_routes_registered.py` |
 | anoobis stays removed | `tests/test_anoobis_removed.py` |
+| AI detection stays removed (external text-detection endpoint + auto-ban, C2PA image inspection, `c2pa-python` dep) | `tests/test_ai_detection_removed.py` |
 
 ### Upstream code is not automatically correct
 

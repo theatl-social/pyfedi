@@ -105,7 +105,6 @@ from app.utils import (
     banned_instances,
     instance_banned,
     communities_run_by_inactive_mods,
-    inspect_image_c2pa,
 )
 
 
@@ -2212,20 +2211,6 @@ def make_image_sizes_async(
                                 ):
                                     source_image = source_image_response.content
                                     source_image_response.close()
-
-                                    # detect AI image posts
-                                    if directory == "posts":
-                                        ai_image = inspect_image_c2pa(
-                                            source_image, content_type
-                                        )
-                                        if ai_image["c2pa"]["ai_generated"]:
-                                            session.execute(
-                                                text(
-                                                    'UPDATE "post" SET ai_generated = true'
-                                                    " WHERE image_id = :file_id AND ai_generated is false"
-                                                ),
-                                                {"file_id": file.id},
-                                            )
 
                                     content_type_parts = content_type.split("/")
                                     if content_type_parts:

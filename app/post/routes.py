@@ -2351,79 +2351,11 @@ def show_post_ical(post_id: int):
         return resp
 
 
-@bp.route('/post/<int:post_id>/check_ai', methods=['POST'])
-def post_check_ai(post_id):
-    post = Post.query.get(post_id)
-    if current_app.config['DETECT_AI_ENDPOINT']:
-        is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
-        if is_ai and is_ai.status_code == 200:
-            is_ai_result = is_ai.json()
-            if is_ai_result['detection_result'] == 'ai':
-                result_type = 'alert-warning'
-            else:
-                result_type = 'alert-success'
-            if is_ai_result['detection_result'] == 'none':
-                return f'<div class="w-100 alert {result_type}">Detection blocked</div>'
-            output = f'<div class="w-100 alert {result_type}">'
-            output += 'Post: ' + is_ai_result['detection_result'].upper()
-            if result_type == 'alert-warning':
-                output += f' <a href="#" hx-post="/post/{post.id}/set_ai">' + _('Set AI flag on this post') + '</a>'
-            output += '<br>'
-            output += f"{int(is_ai_result['confidence'] * 100)}% confident"
-            output += '</div>'
-            if 'attachment' in is_ai_result:
-                if is_ai_result['attachment']['detection_result'] == 'ai':
-                    result_type = 'alert-warning'
-                else:
-                    result_type = 'alert-success'
-                output += f'<div class="w-100 alert {result_type}">'
-                output += 'Link: ' + is_ai_result['attachment']['detection_result'].upper()
-                output += '<br>'
-                output += f"{int(is_ai_result['attachment']['confidence'] * 100)}% confident"
-                output += '</div>'
-            return output
-    else:
-        return _('Not configured.')
-
-
-@bp.route('/post/<int:post_id>/set_ai', methods=['POST'])
-def post_set_ai(post_id):
-    post = Post.query.get(post_id)
-    if current_user.is_authenticated and (current_user.is_admin_or_staff() or post.user_id == current_user.id or post.community.is_moderator()):
-        post.ai_generated = True
-        db.session.commit()
-    return 'Done'
-
-
 @bp.route('/post/<int:post_id>/set_read', methods=['POST'])
 @login_required
 def post_set_read(post_id):
     mark_post_read([post_id], True, current_user.id)
     return ''
-
-
-@bp.route('/post_reply/<int:post_reply_id>/check_ai', methods=['POST'])
-def post_reply_check_ai(post_reply_id):
-    post_reply = PostReply.query.get(post_reply_id)
-    if current_app.config['DETECT_AI_ENDPOINT']:
-        if len(post_reply.body) > 100:
-            is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post_reply.ap_id}")
-            if is_ai and is_ai.status_code == 200:
-                is_ai_result = is_ai.json()
-                if is_ai_result['detection_result'] == 'ai':
-                    result_type = 'alert-warning'
-                else:
-                    result_type = 'alert-success'
-                output = f'<div class="w-100 mb-0 mt-2 alert {result_type}">'
-                output += is_ai_result['detection_result'].upper()
-                output += '<br>'
-                output += f"{int(is_ai_result['confidence'] * 100)}% confident"
-                output += '</div>'
-                return output
-        else:
-            return _('Body text is too short to be sure.')
-    else:
-        return _('Not configured.')
 
 
 @bp.route('/post_reply/<int:post_reply_id>/choose_answer', methods=['POST'])

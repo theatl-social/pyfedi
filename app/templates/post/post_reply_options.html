@@ -170,17 +170,6 @@
                 </a>
             </li>
         {% endif -%}
-        {% if post_reply.body|length >= 100 and can_detect_ai -%}
-            <li>
-                <a href="#" hx-post="{{ url_for('post.post_reply_check_ai', post_reply_id=post_reply.id) }}"
-                        hx-trigger="click throttle:1s"
-                        hx-target="#post_reply_ai_check_{{ post_reply.id }}"
-                        style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
-                    <span class="fe fe-bot-account"></span>
-                    {{ _('Written by AI?') }}
-                </a>
-            </li>
-        {% endif -%}
         <li>
             <a href="{{ url_for('post.post_reply_view_voting_activity', comment_id=post_reply.id) }}"
                     class="dropdown-item no-underline" rel="nofollow">
