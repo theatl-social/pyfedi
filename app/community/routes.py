@@ -190,7 +190,6 @@ from app.utils import (
     patch_db_session,
     approval_required,
     permission_required,
-    aged_account_required,
     communities_banned_from_all_users,
     moderating_communities_ids_all_users,
     block_honey_pot,
@@ -215,7 +214,6 @@ from datetime import timezone, timedelta
 @login_required
 @validation_required
 @approval_required
-@aged_account_required
 def add_local():
     if current_user.banned:
         return show_ban_message()
@@ -292,8 +290,6 @@ def add_local():
             subscriptions_count=1,
             instance_id=1,
             ai_generated=form.ai_generated.data,
-            low_quality=("memes" in form.url.data or "shitpost" in form.url.data)
-            and get_setting("meme_comms_low_quality", False),
             question_answer=form.question_answer.data,
             first_federated_at=utcnow(),
         )
@@ -3719,10 +3715,6 @@ def community_invite(actor):
     form = InviteCommunityForm()
 
     community = actor_to_community(actor)
-
-    if current_user.created_very_recently() and not current_user.is_admin():
-        flash(_("Sorry your account is too new to do this."), "warning")
-        return redirect(referrer())
 
     if community is not None:
         if not community.can_invite():

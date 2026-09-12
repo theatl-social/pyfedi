@@ -36,7 +36,7 @@ def tools():
             private_key, public_key = RsaKeys.generate_keypair()
             # generate a Title, name, description, rules, as strings, all the same with num from loop
             # add local_only, ap_profile_id, ap_public_url. ap_followers_url, ap_domain, subscriptions_count
-            # instance_id, and low_quality='memes' in form.url.data  bits as in the community thing
+            # and instance_id, as in the community thing
             loop_num = "{:02d}".format(n)
             title = "dev_Community_" + loop_num
             name = "dev_Community_" + loop_num
@@ -49,7 +49,7 @@ def tools():
                                   ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name,
                                   ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower() + '/followers',
                                   ap_domain=current_app.config['SERVER_NAME'],
-                                  subscriptions_count=1, instance_id=1, low_quality='memes' in name)            
+                                  subscriptions_count=1, instance_id=1)            
             
             # add and commit to db
             db.session.add(community)

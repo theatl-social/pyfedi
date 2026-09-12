@@ -20,7 +20,7 @@ from app.models import (
     ModLog,
 )
 from app.shared.site import block_remote_instance
-from app.utils import render_template, login_required, trustworthy_account_required
+from app.utils import render_template, login_required
 
 
 @bp.route("/chat", methods=["GET", "POST"])
@@ -127,7 +127,6 @@ def chat_home(conversation_id=None):
 
 @bp.route("/chat/<int:to>/new", methods=["GET", "POST"])
 @login_required
-@trustworthy_account_required
 def new_message(to):
     recipient = User.query.get_or_404(to)
 

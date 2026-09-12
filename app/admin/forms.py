@@ -29,10 +29,6 @@ class SiteProfileForm(FlaskForm):
 
 class SiteMiscForm(FlaskForm):
     enable_downvotes = BooleanField(_l('Enable downvotes'))
-    enable_gif_reply_rep_decrease = BooleanField(_l('Ignore comments that are just a gif reaction'))
-    enable_chan_image_filter = BooleanField(_l('Stop local 4chan screenshot posts and notify about remote ones'))
-    enable_this_comment_filter = BooleanField(_l('Filter out comments that are simply a form of "this"'))
-    meme_comms_low_quality = BooleanField(_l('Meme communities = low-quality'))
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
     video_upload_options = [('no', _l('No')),
                ('user 1', _l('User ID 1')),
@@ -70,8 +66,6 @@ class SiteMiscForm(FlaskForm):
     default_filter = SelectField(_l('Default home filter'), choices=filters, validators=[DataRequired()], coerce=str,
                                  render_kw={'class': 'form-select'})
     cache_remote_images_locally = BooleanField(_l('Cache remote images locally'))
-    enable_report_em_dash_replies = BooleanField(_l('Report comments containing an em dash (—) from newly created users - likely spam / AI.'))
-    limit_one_em_report_per_user = BooleanField(_l('Limit em dash reports to just the first occurence per user'))
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     public_modlog = BooleanField(_l('Show moderation actions publicly'))
     private_instance = BooleanField(_l('Private instance - require login to browse'))

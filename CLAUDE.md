@@ -229,6 +229,80 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-09-12 -- upstream's surface-signal content heuristics removed**
+- Branch: `20260912/remove-content-heuristics`. Follow-up to the AI-detection
+  removal below, by owner decision: find every heuristic "like the em-dash one"
+  and remove it. Guarded by `tests/test_content_heuristics_removed.py` (16 tests,
+  red before, green after), added to the merge-upstream skill's table.
+- **Removed** -- each inferred something about a person or post from a
+  superficial signal, then acted on it:
+  - **Em-dash report** (`enable_report_em_dash_replies`, **on by default**): any
+    comment containing an em dash from an account under 24h old filed an
+    automated "likely AI" admin report.
+  - **OCR "4chan screenshot" filter** (`enable_chan_image_filter`, off by
+    default): Tesseract over uploads, rejecting any image whose text contained
+    "Anonymous" and "No."; for remote posts in `low_quality` communities it filed
+    a "Review this" report. Also removed `pytesseract` and the
+    `tesseract-ocr`/`tesseract-ocr-eng` apt packages (Dockerfile, INSTALL.md).
+    `user/notifs/20.html` **keeps** its `post_with_suspicious_image` branch so
+    notifications created before the removal still render.
+  - **"this" comment filter** (`enable_this_comment_filter`) and **GIF reply
+    filter** (`enable_gif_reply_rep_decrease`), both off by default: rejected
+    comments that were exactly "this" or a bare tenor/giphy/imgflip link --
+    with an error for local users, silently for federated ones.
+  - **Community name -> low quality** (`meme_comms_low_quality`): names
+    containing "memes"/"shitpost" were marked `low_quality`, so their upvotes
+    stopped counting toward reputation. `shared/community.py` (API creation)
+    **ignored the setting** and applied `"memes" in name` unconditionally.
+  - Side effect: `PostReply.new()` no longer runs a `Site` query per comment; it
+    existed only to feed those filters.
+- **Kept deliberately:** the `Site` columns (`enable_chan_image_filter`,
+  `enable_this_comment_filter`, `enable_gif_reply_rep_decrease` -- immutable
+  schema, now unread) and the `settings` rows for the others (inert);
+  `Community.low_quality` and its per-community admin toggle; users' own keyword
+  filters; `[NSFW]`/`(NSFW)` title tagging (author-signalled); admin-configured
+  domain warnings and blocked-image hashes; the read-only "Bad / Most downvoted"
+  and "Likely spam" admin review listings; the inoculation sidebar; the unused
+  `toxic_community` parameter of `make_image_sizes()` (kept to avoid touching six
+  call sites upstream edits often).
+- **Second pass, same branch -- account-age / reputation gates and the name word
+  list** (owner picked these from a list of borderline candidates). Guarded by
+  `tests/test_reputation_gates_removed.py` (8 tests, 7 red before / green after;
+  the 8th asserts what was kept):
+  - `can_downvote()`: dropped "reputation < -10 or negative `attitude` (more
+    downvotes than upvotes cast) can't downvote".
+  - `User.can_send_pm_to()`: dropped the <24h-old and reputation <= -10 refusals;
+    kept banned / unverified / the per-user `can_send_pm` flag.
+  - `trustworthy_account_required` (starting a chat) and inline `trustworthy()`
+    checks on suggesting topics and viewing `/tags/banned`: accounts <7 days old
+    with reputation <100 were refused. `/domains/banned` never had that gate, so
+    the two pages now match.
+  - `aged_account_required` (creating a local community) and the "account is too
+    new" refusal on inviting people to a community.
+  - `can_create_post()`: remote accounts <24h old limited to 3 posts.
+  - `is_bad_name()`: substring swear-word list silently skipping communities in
+    the four admin bulk-import paths and the CLI preload -- Scunthorpe-prone
+    ("petits" contains "tits"). Its unit tests (`tests/test_is_bad_name.py`) were
+    deleted with it; the `bad_words_count` skip counters went too.
+  - **Kept, on purpose:** `User.trustworthy()` itself, because community wiki
+    pages offer a moderator-chosen "trusted" edit tier (`who_can_edit == 1`)
+    defined by it (the guard asserts this). **Owner chose to keep:** dropping DMs
+    from remote senders <24h old ("Sender is too new"), purging content when a
+    remote account <24h old deletes itself, and the reputation warning icons.
+  - Left in place but now unreachable except by URL: the static refusal pages
+    `/auth/not_trustworthy` and `topic.suggestion_denied` (removing them would
+    only widen the diff against upstream).
+  - Verification for the combined branch: ruff clean; djlint 0 errors; no imports
+    orphaned; route surface identical (624); `tests/security/` 191 passed; guards
+    392 passed; full sweep **1 failed / 963 passed / 96 skipped** (964 - 9 deleted
+    `is_bad_name` tests + 8 new guards; the known macOS-only `PicklingError`).
+- Verification: ruff clean; djlint 304 files, 0 errors; imports orphaned by the
+  removal found by hand and dropped (`BytesIO`, `UnidentifiedImageError`, `Site`,
+  `db` in `community/forms.py`); `admin/misc.html` fields all present on
+  `SiteMiscForm`; route surface identical (624); `tests/security/` **191
+  passed**; guards **392 passed**; full sweep **1 failed / 964 passed / 96
+  skipped** (948 + 16 new; the known macOS-only `PicklingError`).
+
 - Merged upstream PieFed **`v1.7.15.1`** on 2026-09-12
 - Branch: `20260912/merge-upstream-v1715.1`
 - Upstream commit: `29ec06f4` on upstream's **`v1.7.x` release branch**. **Upstream

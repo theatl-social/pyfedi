@@ -309,8 +309,6 @@ def topic_notification(topic_id: int):
 @login_required
 def suggest_topics():
     form = SuggestTopicsForm()
-    if not current_user.trustworthy():
-        return redirect(url_for('topic.suggestion_denied'))
     if form.validate_on_submit():
         subject = _('New topic suggestion from %(site_name)s', site_name=g.site.name)
         recipients = g.site.contact_email

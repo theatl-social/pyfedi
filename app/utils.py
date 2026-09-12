@@ -2001,31 +2001,6 @@ def approval_required(func):
     return decorated_view
 
 
-def trustworthy_account_required(func):
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if current_user.trustworthy() or current_user.get_id() in g.admin_ids:
-            return func(*args, **kwargs)
-        else:
-            return redirect(url_for("auth.not_trustworthy"))
-
-    return decorated_view
-
-
-def aged_account_required(func):
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if (
-            current_user.get_id() in g.admin_ids
-            or not current_user.created_very_recently()
-        ):
-            return func(*args, **kwargs)
-        else:
-            return redirect(url_for("auth.not_trustworthy"))
-
-    return decorated_view
-
-
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -2313,9 +2288,6 @@ def can_downvote(user, community: Community, communities_banned_from_list=None) 
     if community.local_only and not user.is_local():
         return False
 
-    if (user.attitude is not None and user.attitude < 0.0) or user.reputation < -10:
-        return False
-
     if community.downvote_accept_mode != DOWNVOTE_ACCEPT_ALL:
         if community.downvote_accept_mode == DOWNVOTE_ACCEPT_NONE:
             return False
@@ -2373,10 +2345,6 @@ def can_create_post(user, content: Community) -> bool:
         if instance_banned(
             user.instance.domain
         ):  # don't allow posts from defederated instances
-            return False
-        if (
-            user.created_very_recently() and user.post_count > 3
-        ):  # new users can only do 3 posts in their first 24h
             return False
 
     if content.banned:
@@ -2483,32 +2451,6 @@ def reply_already_exists(user_id, post_id, parent_id, body) -> bool:
             },
         ).scalar()
     return num_matching_replies != 0
-
-
-def reply_is_just_link_to_gif_reaction(body) -> bool:
-    tmp_body = body.strip()
-    if (
-        tmp_body.startswith("https://media.tenor.com/")
-        or tmp_body.startswith("https://media1.tenor.com/")
-        or tmp_body.startswith("https://media2.tenor.com/")
-        or tmp_body.startswith("https://media3.tenor.com/")
-        or tmp_body.startswith("https://i.giphy.com/")
-        or tmp_body.startswith("https://i.imgflip.com")
-        or tmp_body.startswith("https://media1.giphy.com/")
-        or tmp_body.startswith("https://media2.giphy.com/")
-        or tmp_body.startswith("https://media3.giphy.com/")
-        or tmp_body.startswith("https://media4.giphy.com/")
-    ):
-        return True
-    else:
-        return False
-
-
-def reply_is_low_effort(body) -> bool:
-    lower_body = body.lower().strip()
-    if lower_body == "this" or lower_body == "this." or lower_body == "this!":
-        return True
-    return False
 
 
 @cache.memoize(timeout=3000)

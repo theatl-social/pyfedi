@@ -198,9 +198,6 @@ def tags():
 @bp.route('/tags/banned', methods=['GET'])
 @login_required
 def tags_blocked_list():
-    if not current_user.trustworthy():
-        abort(404)
-
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
 

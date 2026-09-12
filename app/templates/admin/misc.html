@@ -28,10 +28,6 @@
             {{ render_field(form.default_filter) }}
             <p class="small field_hint">{{ _('This is for anonymous users. Logged-in users always default to Subscribed') }}</p>
             {{ render_field(form.enable_downvotes) }}
-            {{ render_field(form.enable_gif_reply_rep_decrease) }}
-            {{ render_field(form.enable_chan_image_filter) }}
-            {{ render_field(form.enable_this_comment_filter) }}
-            {{ render_field(form.meme_comms_low_quality) }}
             {{ render_field(form.allow_local_image_posts) }}
             {{ render_field(form.allow_video_file_uploads) }}
             {{ render_field(form.enable_nsfw) }}
@@ -64,12 +60,6 @@
             <h3>{{ _('Other random stuff') }}</h3>
             {{ render_field(form.cache_remote_images_locally) }}
             <p class="small field_hint">{{ _('Turn this off to save storage and reduce server load. Increases load on clients.') }}</p>
-            {{ render_field(form.enable_report_em_dash_replies) }}
-            <ul>
-                <li>
-                    {{ render_field(form.limit_one_em_report_per_user) }}
-                </li>
-            </ul>
             {{ render_field(form.read_posts_cutoff) }}
             {{ render_field(form.log_activitypub_json) }}
             {{ render_field(form.public_modlog) }}

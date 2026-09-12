@@ -30,7 +30,7 @@ from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_
     topics_for_form, move_community_images_to_here, switch_to_unsilenced, switch_to_silenced, serialize_topic_tree, \
     create_topic_and_children
 from app.auth.util import send_email_verification, random_token
-from app.community.util import save_icon_file, save_banner_file, search_for_community, is_bad_name
+from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
 from app.email import send_registration_approved_email
@@ -273,9 +273,6 @@ def admin_misc():
         flash(_('Settings saved.'))
     elif form.validate_on_submit():
         site.enable_downvotes = form.enable_downvotes.data
-        site.enable_gif_reply_rep_decrease = form.enable_gif_reply_rep_decrease.data
-        site.enable_chan_image_filter = form.enable_chan_image_filter.data
-        site.enable_this_comment_filter = form.enable_this_comment_filter.data
         site.allow_local_image_posts = form.allow_local_image_posts.data
         site.enable_nsfw = form.enable_nsfw.data
         site.enable_nsfl = form.enable_nsfl.data
@@ -300,7 +297,6 @@ def admin_misc():
         cache.delete_memoized(blocked_referrers)
         cache.delete_memoized(get_site_as_dict)
         set_setting("allow_default_user_add_remote_community", form.allow_default_user_add_remote_community.data)
-        set_setting('meme_comms_low_quality', form.meme_comms_low_quality.data)
         set_setting('public_modlog', form.public_modlog.data)
         set_setting('email_verification', form.email_verification.data)
         set_setting('captcha_enabled', form.captcha_enabled.data)
@@ -312,16 +308,10 @@ def admin_misc():
         set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         set_setting('cache_remote_images_locally', form.cache_remote_images_locally.data)
         set_setting('allow_video_file_uploads', form.allow_video_file_uploads.data)
-        set_setting('enable_report_em_dash_replies', form.enable_report_em_dash_replies.data)
-        set_setting('limit_one_em_report_per_user', form.limit_one_em_report_per_user.data)
         set_setting('read_posts_cutoff', int(form.read_posts_cutoff.data))
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
-        form.enable_gif_reply_rep_decrease.data = site.enable_gif_reply_rep_decrease
-        form.enable_chan_image_filter.data = site.enable_chan_image_filter
-        form.enable_this_comment_filter.data = site.enable_this_comment_filter
-        form.meme_comms_low_quality.data = get_setting('meme_comms_low_quality', False)
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.enable_nsfw.data = site.enable_nsfw
         form.enable_nsfl.data = site.enable_nsfl
@@ -351,8 +341,6 @@ def admin_misc():
         form.honeypot.data = site.honeypot
         form.cache_remote_images_locally.data = get_setting('cache_remote_images_locally', True)
         form.allow_video_file_uploads.data = get_setting('allow_video_file_uploads', 'no')
-        form.enable_report_em_dash_replies.data = get_setting('enable_report_em_dash_replies', True)
-        form.limit_one_em_report_per_user.data = get_setting('limit_one_em_report_per_user', False)
         form.read_posts_cutoff.data = get_setting('read_posts_cutoff', 180)
     return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
 
@@ -461,7 +449,7 @@ def admin_federation_preload():
         already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
         banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
 
-        total_count = already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = bad_words_count = 0
+        total_count = already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = 0
         candidate_communities = []
 
         for community in community_json:
@@ -492,14 +480,9 @@ def admin_federation_preload():
                 banned_count += 1
                 continue
 
-            if is_bad_name(community['name']):
-                bad_words_count += 1
-                continue
+            candidate_communities.append(community)
 
-            else:
-                candidate_communities.append(community)
-
-        filtered_count = already_known_count + nsfw_count + low_content_count + low_active_users_count + banned_count + bad_words_count
+        filtered_count = already_known_count + nsfw_count + low_content_count + low_active_users_count + banned_count
         flash(_('%d out of %d communities were excluded using current filters' % (filtered_count, total_count)))
 
         # sort the list based on the users_active_week key
@@ -664,7 +647,7 @@ def admin_federation_remote_scan():
                     page += 1
 
             # filter out the communities
-            already_known_count = low_content_count = low_active_users_count = bad_words_count = 0
+            already_known_count = low_content_count = low_active_users_count = 0
             candidate_communities = []
             for community in comms_list:
                 # sort out already known communities
@@ -679,11 +662,7 @@ def admin_federation_remote_scan():
                 elif community['counts']['users_active_week'] < min_users:
                     low_active_users_count += 1
                     continue
-                if is_bad_name(community['community']['name']):
-                    bad_words_count += 1
-                    continue
-                else:
-                    candidate_communities.append(community)
+                candidate_communities.append(community)
 
             # get the community urls to join
             community_urls_to_join = []
@@ -733,7 +712,7 @@ def admin_federation_remote_scan():
                     page += 1
 
             # filter out the communities
-            already_known_count = low_content_count = low_active_users_count = bad_words_count = 0
+            already_known_count = low_content_count = low_active_users_count = 0
             candidate_communities = []
             for community in comms_list:
                 # sort out already known communities
@@ -750,11 +729,7 @@ def admin_federation_remote_scan():
                     low_active_users_count += 1
                     continue
 
-                if is_bad_name(community['community']['name']):
-                    bad_words_count += 1
-                    continue
-                else:
-                    candidate_communities.append(community)
+                candidate_communities.append(community)
 
             # get the community urls to join
             community_urls_to_join = []
@@ -806,7 +781,7 @@ def admin_federation_remote_scan():
                     page += 1
 
             # filter out the magazines
-            already_known_count = low_content_count = low_subscribed_users_count = bad_words_count = 0
+            already_known_count = low_content_count = low_subscribed_users_count = 0
             candidate_communities = []
             for magazine in mags_list:
                 # sort out already known communities
@@ -822,11 +797,7 @@ def admin_federation_remote_scan():
                 elif magazine['subscriptionsCount'] < min_users:
                     low_subscribed_users_count += 1
                     continue
-                if is_bad_name(magazine['name']):
-                    bad_words_count += 1
-                    continue
-                else:
-                    candidate_communities.append(magazine)
+                candidate_communities.append(magazine)
 
             # get the community urls to join
             community_urls_to_join = []

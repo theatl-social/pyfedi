@@ -360,7 +360,6 @@ def make_community(
         ap_domain=current_app.config["SERVER_NAME"],
         subscriptions_count=1,
         instance_id=1,
-        low_quality="memes" in name,
         question_answer=question_answer,
         first_federated_at=utcnow(),
     )
