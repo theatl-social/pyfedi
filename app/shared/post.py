@@ -72,7 +72,6 @@ from app.utils import (
     sanitize_svg,
     user_ip_banned,
     ip_address,
-    inspect_image_c2pa,
 )
 
 
@@ -641,12 +640,6 @@ def edit_post(
                 "app/static/media/posts/" + new_filename[0:2] + "/" + new_filename[2:4]
             )
         ensure_directory_exists(directory)
-
-        # check for AI-generated images
-        uploaded_file.seek(0)
-        ai_gen = inspect_image_c2pa(uploaded_file.read(), uploaded_file.mimetype or "application/octet-stream")
-        if ai_gen['c2pa']['ai_generated']:
-            post.ai_generated = True
 
         # save the file
         final_place = os.path.join(directory, new_filename + file_ext.lower())

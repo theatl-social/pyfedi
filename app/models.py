@@ -2209,61 +2209,6 @@ class Post(db.Model):
             post.generate_slug(community)
             db.session.commit()
 
-            # check new accounts to see if their comments are AI generated
-            if current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(post.body) > 250:
-                from app.utils import get_request, notify_admin
-                try:
-                    is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
-                except Exception:
-                    is_ai = None
-                if is_ai and is_ai.status_code == 200:
-                    is_ai_result = is_ai.json()
-                    if is_ai_result['confidence'] > 0.8:
-                        if is_ai_result['detection_result'] == 'ai':
-                            post.ai_generated = True
-                            db.session.commit()
-                        # use redis to keep track of the posts this person has done in the last day and whether each is AI-generated
-                        from app import redis_client
-
-                        redis_key = f"ai_detection:user:{user.id}"
-                        now = time()
-
-                        # Store each detection as a JSON entry with timestamp
-                        detection_data = {
-                            'detection': is_ai_result['detection_result'],
-                            'confidence': is_ai_result['confidence'],
-                            'timestamp': utcnow().isoformat()
-                        }
-
-                        # Add with timestamp as score
-                        redis_client.zadd(redis_key, {json.dumps(detection_data): now})
-
-                        # Remove entries older than 24h
-                        redis_client.zremrangebyscore(redis_key, 0, now - 86400)
-
-                        # Get all recent detections
-                        detections = redis_client.zrange(redis_key, 0, -1)
-                        if len(detections) >= 3:
-                            ai_count = sum(1 for d in detections if json.loads(d)['detection'] != 'human')
-                            ai_percentage = ai_count / len(detections)
-
-                            # if there are 3 or more posts and > 66% of them are ai generated
-                            if ai_percentage > 0.66:
-                                user.banned = True  # ban
-                                db.session.commit()
-
-                                # notify admin
-                                targets_data = {'gen': '0',
-                                                'suspect_user_id': user.id,
-                                                'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
-                                                'source_instance_id': 1,
-                                                'source_instance_domain': '',
-                                                'reporter_id': 1,
-                                                'reporter_user_name': 'automated'
-                                                }
-                                notify_admin('User auto-banned for AI-generated content', f'/u/{user.link()}', 1,
-                                             NOTIF_REPORT, 'user_reported', targets_data)
-
         return post
 
     def calculate_cross_posts(self, delete_only=False, url_changed=False):
@@ -3008,58 +2953,6 @@ class PostReply(db.Model):
                 # Store this in redis for a day so that duplicate reports aren't created if that setting is enabled
                 if cache_report:
                     cache.set(f'em-dash_used_by_{repr(reply.author)}', True, timeout=86400)
-        elif current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(reply.body) >= 250:
-            # Use API to check new accounts to see if their comments are AI generated
-            from app.utils import get_request, notify_admin
-            try:
-                is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={reply.ap_id}")
-            except Exception:
-                is_ai = None
-            if is_ai and is_ai.status_code == 200:
-                is_ai_result = is_ai.json()
-                if is_ai_result['confidence'] > 0.8:
-                    # use redis to keep track of the posts this person has done in the last day and whether each is AI-generated
-                    from app import redis_client
-
-                    redis_key = f"ai_detection:user:{user.id}"
-                    now = time()
-
-                    # Store each detection as a JSON entry with timestamp
-                    detection_data = {
-                        'reply_id': reply.id,
-                        'detection': is_ai_result['detection_result'],
-                        'confidence': is_ai_result['confidence'],
-                        'timestamp': utcnow().isoformat()
-                    }
-
-                    # Add with timestamp as score
-                    redis_client.zadd(redis_key, {json.dumps(detection_data): now})
-
-                    # Remove entries older than 24h
-                    redis_client.zremrangebyscore(redis_key, 0, now - 86400)
-
-                    # Get all recent detections
-                    detections = redis_client.zrange(redis_key, 0, -1)
-                    if len(detections) >= 3:
-                        ai_count = sum(1 for d in detections if json.loads(d)['detection'] != 'human')
-                        ai_percentage = ai_count / len(detections)
-
-                        # if there are 3 or more posts and > 66% of them are ai generated
-                        if ai_percentage > 0.66:
-                            user.banned = True  # ban
-                            session.commit()
-
-                            # notify admin
-                            targets_data = {'gen': '0',
-                                            'suspect_user_id': user.id,
-                                            'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
-                                            'source_instance_id': 1,
-                                            'source_instance_domain': '',
-                                            'reporter_id': 1,
-                                            'reporter_user_name': 'automated'
-                                            }
-                            notify_admin('User auto-banned for AI-generated content', f'/u/{user.link()}', 1,
-                                         NOTIF_REPORT, 'user_reported', targets_data)
 
         return reply
 

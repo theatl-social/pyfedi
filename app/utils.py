@@ -5843,54 +5843,6 @@ def validate_email(value):
     return bool(EMAIL_RE.fullmatch(value.strip()))
 
 
-def inspect_image_c2pa(data: bytes, mimetype: str) -> dict:
-    result = {
-        "c2pa": {
-            "present": False,
-            "ai_generated": False,
-            "creator": None,
-            "software": None,
-        },
-    }
-
-    try:
-        # Imported inside the try: this runs on federated image fetches, and a
-        # missing or broken c2pa build must degrade to "no manifest" rather than
-        # take down make_image_sizes_async() for every remote image.
-        import c2pa
-
-        with c2pa.Context() as context:
-            with c2pa.Reader(mimetype, io.BytesIO(data), context=context) as reader:
-
-                result["c2pa"]["present"] = True
-
-                manifest = reader.get_active_manifest()
-
-                if manifest:
-                    result["c2pa"]["creator"] = (
-                        manifest.get("claim_generator")
-                    )
-
-                    # Inspect assertions
-                    for assertion in manifest.get("assertions", []):
-                        label = assertion.get("label", "")
-                        value = assertion.get("data", {})
-
-                        if label.startswith("c2pa.actions"):
-                            for action in value.get("actions", []):
-                                action_name = action.get("action")
-
-                                if action_name in ["c2pa.created", "c2pa.placed"]:
-                                    source = action.get("digitalSourceType", "")
-
-                                    if "trainedAlgorithmicMedia" in source:
-                                        result["c2pa"]["ai_generated"] = True
-
-    except Exception:
-        # No C2PA manifest, unsupported format, etc.
-        pass
-    return result
-
 def get_event_start(post_id: int):
     post = Post.query.get(post_id)
 

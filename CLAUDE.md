@@ -229,6 +229,58 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-09-12 -- upstream's automated AI detection removed (both features)**
+- Branch: `20260912/remove-ai-detection`. Not an upstream merge; removed by owner
+  decision, following the anoobis precedent: delete the code, and add a guard
+  test so upstream merges cannot silently bring it back.
+- **1. External text detection (`DETECT_AI_ENDPOINT`, upstream since v1.6.0,
+  Nov 2025).** When set, `Post.new()` / `PostReply.new()` sent the public URL of
+  posts (>250 chars) and comments (>=250 chars) by recently created accounts to
+  a third-party classifier. It set `ai_generated` on posts, and **auto-banned the
+  user** (`user.banned = True`, no human in the loop) once 3+ scored as
+  not-human at >80% confidence within 24h, tallied in a Redis sorted set
+  `ai_detection:user:<id>`. It also exposed `/post/<id>/check_ai` and
+  `/post_reply/<id>/check_ai` with **no authentication** (anyone logged out could
+  make the server call the service for any post), which wrote the service's
+  `detection_result` string into HTML **unescaped** and 500'd on a missing id.
+  Removed: the config key, the `can_detect_ai` context flag, both auto-ban blocks,
+  all three routes (`post_set_ai` was only reachable from `check_ai`'s output),
+  both "Written by AI?" menu items and their result containers.
+- **2. C2PA image inspection (upstream v1.7.13, Aug 2026).** `inspect_image_c2pa()`
+  ran `c2pa-python`, a native parser, over every upload **and every remote
+  image fetched for a federated post**, setting `ai_generated` when an embedded
+  Content Credentials manifest claimed AI origin. Always on. Removed the
+  function, both call sites, and the `c2pa-python` dependency (`uv lock` also
+  dropped its transitive `toml`).
+- **Kept deliberately:** the `post.ai_generated` column (immutable schema) and
+  manual labelling; rows already flagged by either feature are untouched.
+  The admin-toggleable **em-dash heuristic** in `PostReply.new()`
+  (`enable_report_em_dash_replies`, **default on**, files an automated admin
+  report for any comment containing an em dash from a new account) is a separate
+  feature and was *not* removed.
+- **Correction of the v1.7.15 entry below:** it said C2PA detection was "gated on
+  `DETECT_AI_ENDPOINT`" and off by default, and the merge added an `env.sample`
+  comment labelling `DETECT_AI_ENDPOINT` as a v1.7.15 feature. Both were wrong --
+  they are unrelated, C2PA had no setting, and the endpoint dates to v1.6.0. The
+  `env.sample` comment is gone and the entry is annotated in place.
+- Guard: `tests/test_ai_detection_removed.py` (10 tests), which asserts the live
+  `url_map` for the routes, source/templates for the setting, template flag and
+  auto-ban tally, and `pyproject.toml` + `uv.lock` for the dependency. Verified
+  red before removal (10 failed) and green after. Added to the merge-upstream
+  skill's "Regressions that recur every merge" table. It matches identifiers, so
+  a comment in `app/` naming one of these will trip it -- reword the comment.
+- Verification: `uvx ruff check .` clean; djlint 304 files, 0 errors; imports
+  left behind by the removal checked by hand (ruff ignores F401 here) -- `time`,
+  `json`, `NOTIF_REPORT`, `get_request`, `io` all still used elsewhere;
+  `tests/security/` **191 passed**; route surface **627 -> 624, exactly the 3
+  AI routes removed**; the 4 edited templates compile against the real Jinja env;
+  full sweep **1 failed / 946 passed / 96 skipped** (936 + the 10 new guard
+  tests; the one failure is the known macOS-only `PicklingError`).
+- **If production had `DETECT_AI_ENDPOINT` set**, remove it from `.env.pyfed`
+  (now inert) and review users banned with an admin report from
+  `reporter_user_name: 'automated'` titled "User auto-banned for AI-generated
+  content".
+
 - Merged upstream PieFed release tag `v1.7.15` on 2026-09-09
 - Branch: `20260909/merge-upstream-v1715`
 - Upstream tag commit: `9bb1a236` (60 commits since `0755f27f` = `v1.7.11`; clean
@@ -243,10 +295,11 @@ The repository includes comprehensive test infrastructure:
   - **AI image detection** -- new `c2pa-python~=0.37.0` dependency,
     `inspect_image_c2pa()` in `app/utils.py`, called on uploads
     (`app/shared/post.py`) and on federated image fetches
-    (`make_image_sizes_async`), setting `Post.ai_generated`. Gated on
-    `DETECT_AI_ENDPOINT`, which defaults to `""` (**off**) -- now documented in
-    `env.sample`, because when set it sends post/comment **public URLs** to a
-    third-party service.
+    (`make_image_sizes_async`), setting `Post.ai_generated`. **Always on, with no
+    setting.** *(This entry originally said it was gated on `DETECT_AI_ENDPOINT`
+    and off by default. That was wrong: `DETECT_AI_ENDPOINT` is an unrelated
+    text-detection feature dating to v1.6.0. Both were removed on 2026-09-12 --
+    see the entry above.)*
   - **Admin media browser** -- `/admin/media`, `/admin/media/<file_id>/delete`,
     `/admin/media/<user_id>/delete_all` (+ a `delete_user_files_in_background`
     celery task), built on the pre-existing `user_file` association table (moved
@@ -298,7 +351,8 @@ The repository includes comprehensive test infrastructure:
     a bare `.filter()` **expression statement** in the anonymous branch, so it
     catches the whole class, not just these two lines; verified to go red when
     the bug is reintroduced).
-  - `inspect_image_c2pa()` had `import c2pa` **outside** its `try`, so a missing
+  - *(Moot since 2026-09-12, when C2PA inspection was removed.)*
+    `inspect_image_c2pa()` had `import c2pa` **outside** its `try`, so a missing
     or broken c2pa build would raise straight out of `make_image_sizes_async()`
     for every federated image. Moved inside the `try`, which already returns the
     empty-manifest result on any failure.
@@ -366,9 +420,9 @@ The repository includes comprehensive test infrastructure:
   read a tree full of conflict markers and reported 9 failures. A baseline must
   come from a tree nothing is mutating -- use `git worktree add <dir> origin/main`
   and run there.
-- Not verified locally: the c2pa AI-detection path (needs `DETECT_AI_ENDPOINT`
-  set plus real C2PA-signed images) and the admin media browser (needs Postgres
-  plus populated `user_file` rows).
+- Not verified locally: the admin media browser (needs Postgres plus populated
+  `user_file` rows). (The C2PA path was also never exercised; it has since been
+  removed.)
 
 - Merged upstream PieFed release tag `v1.7.11` on 2026-08-17
 - Branch: `20260817/merge-upstream-v1711`
