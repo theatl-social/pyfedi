@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List
 from urllib.parse import urlparse
 from datetime import datetime
@@ -6,12 +7,13 @@ import orjson
 
 from flask import current_app
 from flask_login import current_user
-from sqlalchemy import desc, asc, text, or_
+from sqlalchemy import desc, asc, text, or_, func
 
 from app import db, cache
-from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL
-from app.models import PostReply, Post, Community, User, Language, utcnow
-from app.utils import blocked_or_banned_instances, blocked_users, is_video_hosting_site, get_request, silenced_instances
+from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL, POST_TYPE_GALLERY
+from app.models import PostReply, Post, Community, User, Language, utcnow, UserFlair, UserExtraField
+from app.utils import blocked_or_banned_instances, blocked_users, is_video_hosting_site, get_request, \
+    silenced_instances, html_to_text
 
 
 @cache.memoize(timeout=600)
@@ -296,10 +298,46 @@ def post_type_to_form_url_type(post_type: int, post_url: str):
     if post_type == POST_TYPE_LINK or is_video_hosting_site(post_url):
         return 'link'
     elif post_type == POST_TYPE_IMAGE:
-        return 'image'
+        return 'link'
+    elif post_type == POST_TYPE_GALLERY:
+        return 'link'
     elif post_type == POST_TYPE_VIDEO:
-        return 'video'
+        return 'link'
     elif post_type == POST_TYPE_POLL:
         return 'poll'
     else:
         return ''
+
+
+def user_flair_on_post(post) -> dict:
+    user_flair = {}
+    # Collect all post IDs (main + cross-posts)
+    all_post_ids = [post.id]
+    if post.cross_posts:
+        all_post_ids.extend(post.cross_posts)
+    user_subq = db.session.query(PostReply.user_id).filter(PostReply.post_id.in_(all_post_ids)).distinct()
+    # Include post author
+    user_subq = user_subq.union(db.session.query(db.literal(post.user_id)))
+    for u_flair in UserFlair.query.filter(UserFlair.user_id.in_(user_subq)):
+        user_flair[u_flair.user_id] = u_flair.flair
+    return user_flair
+
+
+def user_pronouns_on_post(post) -> dict:
+    result = defaultdict(str)
+    all_post_ids = [post.id]
+    if post.cross_posts:
+        all_post_ids.extend(post.cross_posts)
+    user_subq = db.session.query(PostReply.user_id).filter(PostReply.post_id.in_(all_post_ids)).distinct()
+    # Include post author
+    user_subq = user_subq.union(db.session.query(db.literal(post.user_id)))
+
+    pronouns = db.session.query(UserExtraField).filter(UserExtraField.user_id.in_(user_subq)).\
+        filter(or_(func.lower(UserExtraField.label) == 'pronouns', func.lower(UserExtraField.label) == 'species'))
+    for pronoun in pronouns:
+        if len(pronoun.text) <= 22:
+            if '<' in pronoun.text and '>' in pronoun.text:
+                result[pronoun.user_id] = html_to_text(pronoun.text)
+            else:
+                result[pronoun.user_id] = pronoun.text
+    return result

@@ -17,6 +17,7 @@
         <h1>{{ _('Content') }}</h1>
         <form method="get">
             <div>
+                <input type="radio" class="form-check-input submit_on_change" name="show" value="approval" id="show_approval" {{ 'checked' if show == 'approval' }}><label for="show_approval" class="form-check-label">&nbsp;{{ _('Approval queue') }}</label>
                 <input type="radio" class="form-check-input submit_on_change" name="show" value="trash" id="show_trash" {{ 'checked' if show == 'trash' }}><label for="show_trash" class="form-check-label">&nbsp;{{ _('Trash') }}</label>
                 <input type="radio" class="form-check-input submit_on_change" name="show" value="spammy" id="show_spammy" {{ 'checked' if show == 'spammy' }}><label for="show_spammy" class="form-check-label">&nbsp;{{ _('Spammy') }}</label>
                 <input type="radio" class="form-check-input submit_on_change" name="show" value="deleted" id="show_deleted" {{ 'checked' if show == 'deleted' }}><label for="show_deleted" class="form-check-label">&nbsp;{{ _('Deleted') }}</label>

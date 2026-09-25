@@ -27,7 +27,7 @@
         {% endif -%}
 
         {% if people %}
-            <form><input type="search" placeholder="{{ _('Search') }}" name="q" class="form-control" autofocus value="{{ q if q else '' }}"></form>
+            <form><input type="search" placeholder="{{ _('Search') }}" name="q" class="form-control" value="{{ q if q else '' }}"></form>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3 mt-2">
                 {% for person in people.items %}
                     <div class="col">

@@ -13,7 +13,6 @@ from urllib.parse import urlparse, parse_qs
 import pendulum
 import boto3
 import httpx
-import pytesseract
 from PIL import Image, ImageOps
 from flask import current_app, request, g, url_for, json
 from flask_babel import _, force_locale, gettext
@@ -173,6 +172,12 @@ def post_to_page(post: Post):
             activity_data['attachment'] = [{'type': 'Image',
                                             'url': post.image.source_url,
                                             'name': post.image.alt_text}]
+    if post.type == POST_TYPE_GALLERY:
+        if 'attachment' not in activity_data:
+            activity_data['attachment'] = []
+        for file in post.gallery:
+            activity_data['attachment'].append({'type': 'Document', 'url': file.source_url, 'name': file.alt_text,
+                                                'width': file.width, 'height': file.height})
     if post.type == POST_TYPE_POLL:
         poll = Poll.query.filter_by(post_id=post.id).first()
         activity_data['type'] = 'Question'
@@ -1085,7 +1090,7 @@ def actor_json_to_model(activity_json, address, server):
         try:
             user = User(user_name=activity_json['preferredUsername'].strip(),
                         title=activity_json['name'].strip() if 'name' in activity_json and activity_json['name'] else None,
-                        email=f"{address}@{server}",
+                        email=f"{address}_{gibberish(5)}@{server}",
                         matrix_user_id=activity_json['matrixUserId'] if 'matrixUserId' in activity_json else '',
                         indexable=activity_json['indexable'] if 'indexable' in activity_json else True,
                         searchable=activity_json['discoverable'] if 'discoverable' in activity_json else True,
@@ -1684,27 +1689,49 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     # Alert regarding fascist meme content
                                     if site.enable_chan_image_filter and toxic_community and img_width < 2000:  # images > 2000px tend to be real photos instead of 4chan screenshots.
                                         if os.environ.get('ALLOW_4CHAN', None) is None:
-                                            try:
-                                                image_text = pytesseract.image_to_string(
-                                                    Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                                            except Exception:
-                                                image_text = ''
-                                            if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                                                post = session.query(Post).filter_by(image_id=file.id).first()
-                                                targets_data = {'gen': '0',
-                                                                'post_id': post.id,
-                                                                'orig_post_title': post.title,
-                                                                'orig_post_body': post.body
-                                                                }
-                                                notification = Notification(title='Review this',
-                                                                            user_id=1,
-                                                                            author_id=post.user_id,
-                                                                            url=post.slug,
-                                                                            notif_type=NOTIF_REPORT,
-                                                                            subtype='post_with_suspicious_image',
-                                                                            targets=targets_data)
-                                                session.add(notification)
-                                                session.commit()
+                                            if current_app.config['CHAN_DETECTION_ENDPOINT'] == '':
+                                                import pytesseract
+                                                try:
+                                                    image_text = pytesseract.image_to_string(
+                                                        Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                                                except Exception:
+                                                    image_text = ''
+                                                if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                                                    post = session.query(Post).filter_by(image_id=file.id).first()
+                                                    targets_data = {'gen': '0',
+                                                                    'post_id': post.id,
+                                                                    'orig_post_title': post.title,
+                                                                    'orig_post_body': post.body
+                                                                    }
+                                                    notification = Notification(title='Review this',
+                                                                                user_id=1,
+                                                                                author_id=post.user_id,
+                                                                                url=post.slug,
+                                                                                notif_type=NOTIF_REPORT,
+                                                                                subtype='post_with_suspicious_image',
+                                                                                targets=targets_data)
+                                                    session.add(notification)
+                                                    session.commit()
+                                            else:
+                                                resp = get_request(f'{current_app.config["CHAN_DETECTION_ENDPOINT"]}?url={file.source_url}')
+                                                result = resp.json()
+                                                resp.close()
+                                                if result['confidence'] > 0.8 and result['label'] == 'greentext':
+                                                    if post := session.query(Post).filter_by(image_id=file.id).first():
+                                                        targets_data = {'gen': '0',
+                                                                        'post_id': post.id,
+                                                                        'orig_post_title': post.title,
+                                                                        'orig_post_body': post.body
+                                                                        }
+                                                        notification = Notification(title='Review this',
+                                                                                    user_id=1,
+                                                                                    author_id=post.user_id,
+                                                                                    url=post.slug,
+                                                                                    notif_type=NOTIF_REPORT,
+                                                                                    subtype='post_with_suspicious_image',
+                                                                                    targets=targets_data)
+                                                        session.add(notification)
+                                                        session.commit()
         except Exception:
             session.rollback()
             raise

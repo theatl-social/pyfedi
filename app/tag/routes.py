@@ -97,7 +97,7 @@ def show_tag(tag):
         posts = posts.order_by(desc(Post.posted_at))
 
         # pagination
-        posts = posts.paginate(page=page, per_page=100, error_out=False)
+        posts = posts.paginate(page=page, per_page=50, error_out=False)
         next_url = url_for('tag.show_tag', tag=tag, page=posts.next_num,
                            category=category, category_id=category_id) if posts.has_next else None
         prev_url = url_for('tag.show_tag', tag=tag, page=posts.prev_num,

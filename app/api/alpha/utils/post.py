@@ -10,7 +10,7 @@ from app.api.alpha.views import post_view, post_report_view, reply_view, communi
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
 from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply, PostVote, \
-    CommunityFlair, read_posts, Poll, Report
+    CommunityFlair, read_posts, Poll, Report, hidden_posts
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read, \
     vote_for_poll, hide_post
@@ -402,6 +402,29 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 if len(u_rp_ids) > 0:
                     post_query_criteria.append('p.id NOT IN :read_post_ids')
                     post_query_parameters['read_post_ids'] = tuple(u_rp_ids)
+
+            # exclude hidden posts
+            if not query:
+                hidden_ids = tuple(
+                    db.session.execute(text('SELECT hidden_post_id FROM "hidden_posts" WHERE user_id = :user_id'),
+                                       {"user_id": user_id}).scalars())
+                if len(hidden_ids) > 0:
+                    # Alias the hidden_posts table
+                    hp = hidden_posts.alias()
+
+                    # Filter posts that the user has NOT read, using ~exists
+                    posts = posts.filter(
+                        ~exists().where(
+                            and_(
+                                hp.c.user_id == user_id,
+                                hp.c.hidden_post_id == Post.id
+                            )
+                        )
+                    )
+                    # SQL query building for hide_read_posts
+
+                    post_query_criteria.append('p.id NOT IN :hidden_post_ids')
+                    post_query_parameters['hidden_post_ids'] = tuple(hidden_ids)
 
         filtered_out_community_ids = filtered_out_communities(user)
         if len(filtered_out_community_ids):

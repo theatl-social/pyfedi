@@ -17,6 +17,7 @@ from app.activitypub.util import users_total, active_month, local_posts, local_c
 from app.activitypub.signature import default_context, LDSignature, HttpSignature
 from app.admin.util import topics_for_form
 from app.api.alpha.utils.misc import get_resolve_object
+from app.community.util import hashtags_recent
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
     POST_STATUS_REVIEWING
 from app.email import send_email, send_registration_approved_email
@@ -42,7 +43,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, \
     num_topics, referrer, block_honey_pot, user_pronouns, get_instance_stickies, \
-    community_membership_private, favorite_communities, check_anoobis
+    community_membership_private, favorite_communities, mimetype_from_url, check_anoobis, get_request
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage, BannedInstances, BotChallenge
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
@@ -234,7 +235,8 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
                                enable_mod_filter=enable_mod_filter,
                                has_topics=num_topics() > 0, time=time,
                                user_pronouns=user_pronouns(),
-                               rss_feed=rss_feed, reload_url=reload_url(sort, view_filter)
+                               rss_feed=rss_feed, reload_url=reload_url(sort, view_filter),
+                               tags=hashtags_recent(content_filters),
                                ))
     if current_user.is_anonymous:
         resp.headers.set('ETag', f"{sort}_{view_filter}_{hash(str(g.site.last_active))}")

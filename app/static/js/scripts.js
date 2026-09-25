@@ -82,6 +82,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setupShareIcons,
         setupAutoReload,
         setupPopupTooltips,
+        setupLightboxPostGallery,
 
         // must be last - see comment above
         setupDynamicContentObserver
@@ -348,7 +349,7 @@ function setupLightboxTeaser() {
     if(typeof baguetteBox !== 'undefined') {
         function popStateListener(event) {
             baguetteBox.hide();
-        }
+        };
         function baguetteBoxClickImg(event) {
           if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
             this.style.width = "100vw";
@@ -356,8 +357,7 @@ function setupLightboxTeaser() {
           } else {
             baguetteBox.hide();
           }
-        }
-
+        };
         baguetteBox.run('.post_teaser a.post_link', {
             fullScreen: false,
             noScrollbars: true,
@@ -404,6 +404,48 @@ function setupLightboxPostBody() {
             titleTag: true,
             async: true,
             preload: 3
+        });
+    }
+
+}
+
+function setupLightboxPostGallery() {
+    if(typeof baguetteBox !== 'undefined') {
+        function popStateListener(event) {
+            baguetteBox.hide();
+        };
+        function baguetteBoxClickImg(event) {
+          if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
+            this.style.width = "100vw";
+            this.style.maxHeight = "none";
+          } else {
+            baguetteBox.hide();
+          }
+        };
+        baguetteBox.run('.post_gallery', {
+            fullScreen: false,
+            noScrollbars: true,
+            async: true,
+            preload: 3,
+            ignoreClass: 'preview_image',
+            afterShow: function() {
+                window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
+                window.addEventListener('popstate', popStateListener);
+                for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+                  el.addEventListener('click', baguetteBoxClickImg);
+                }
+            },
+            afterHide: function() {
+                if (window.history.state === '#lightbox') {
+                  for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+                    el.style.width = "";
+                    el.style.maxHeight = "";
+                    el.removeEventListener('click', baguetteBoxClickImg);
+                  }
+                  window.removeEventListener('popstate', popStateListener);
+                  window.history.back();
+                }
+            },
         });
     }
 
@@ -469,13 +511,7 @@ function setupLightDark() {
 
     var preferredTheme = getStoredTheme();
     if (!preferredTheme || (preferredTheme !== 'light' && preferredTheme !== 'dark')) {
-        const isLinux = navigator.platform.toLowerCase().includes('linux') && !navigator.platform.toLowerCase().includes('android');
-        if(isLinux) {
-            preferredTheme = 'dark';
-        }
-        else {
-            preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
+        preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
     //setTheme(preferredTheme);
     icon.classList.remove('fe-eye');
@@ -2623,7 +2659,7 @@ function setupAutoReload() {
 
 function setupPopupTooltips() {
     // Find all warning elements with a title, add the necessary bootstrap attributes
-    document.querySelectorAll('span.fe-warning[title]').forEach(el => {
+    document.querySelectorAll('span.fe-warning[title], span.score[title]').forEach(el => {
       if (!el.hasAttribute('data-bs-toggle') && !el.dataset.tooltipSetup) {     // don't mess with dropdowns that use data-bs-toggle
         el.setAttribute('data-bs-toggle', 'tooltip');
         el.setAttribute('data-bs-placement', 'top');

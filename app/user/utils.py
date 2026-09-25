@@ -3,7 +3,7 @@ import time
 
 from flask import current_app
 from flask_login import current_user
-from sqlalchemy import text, desc, or_
+from sqlalchemy import text, desc, or_, func
 
 from app import celery, db
 from app.activitypub.signature import signed_get_request, send_post_request
@@ -316,6 +316,15 @@ def _get_user_same_ip(user):
         return []
 
     return User.query.filter_by(ip_address=user.ip_address).filter(User.ap_id == None, User.id != user.id).all()
+
+
+def _get_user_same_name(user):
+    """Get users with the same user name"""
+
+    if current_user.is_anonymous:
+        return []
+
+    return User.query.filter(func.lower(User.user_name) == user.user_name.lower(), User.id != user.id).all()
 
 
 def _get_user_upvoted_posts(user):

@@ -188,7 +188,7 @@
                 </a>
             </li>
         {% endif -%}
-        {% if post.domain_id -%}
+        {% if post.domain_id and post.type != POST_TYPE_IMAGE and post.type != POST_TYPE_GALLERY -%}
             <li>
                 <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block domain %(domain)s', domain=post.domain.name) }}"
                         hx-post="/post/{{ post.id }}/block_domain" hx-trigger="click throttle:1s"tabindex="0">

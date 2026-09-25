@@ -10,6 +10,7 @@ from flask_babel import _, lazy_gettext as _l
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_NONE
 from app.models import Community, User, CmsPage
+from app.utils import get_setting
 
 
 class SiteProfileForm(FlaskForm):
@@ -51,6 +52,7 @@ class SiteMiscForm(FlaskForm):
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str, render_kw={'class': 'form-select'})
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
     registration_approved_email = TextAreaField(_l('Registration approved email'), render_kw={'rows': '5'})
+    ban_posts = BooleanField(_l('Manually approve posts by new accounts'))
 
     choose_topics = BooleanField(_l('Provide a list of topics to subscribe to'))
     filter_selection = BooleanField(_l('Filter setup during onboarding'))
@@ -390,6 +392,11 @@ class EmojiForm(FlaskForm):
                       render_kw={'placeholder': _l('e.g. https://...')})
     aliases = StringField(_l('Keywords'), validators=[Optional(), Length(max=100)])
     category = StringField(_l('Category'), validators=[DataRequired(), Length(max=20)])
+    submit = SubmitField(_l('Save'))
+
+
+class EmojiFilterForm(FlaskForm):
+    filter = TextAreaField(_l('Filter'), validators=[Length(max=1000)])
     submit = SubmitField(_l('Save'))
 
 

@@ -64,7 +64,7 @@ sudo docker compose up --build
 - Test external access from browser (On port 8030). Watch for movement in terminal window. Browser will show "Internal Server Error" message. Proceed to initialize database to address this error message.
 
 #### INITIALIZE DATABASE
-- Open a new terminal window
+- Open a new terminal window (and keep the other running)
 ```bash
 sudo docker exec -it piefed_app1 sh
 ```

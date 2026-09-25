@@ -11,10 +11,11 @@ from flask import request, flash, json, url_for, current_app, redirect, g, abort
 from flask_login import current_user, login_user
 from flask_babel import _, ngettext
 from slugify import slugify
-from sqlalchemy import text, desc, or_, delete, update, select
+from sqlalchemy import text, desc, or_, and_, delete, update, select
 from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
+from wtforms import Label
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
@@ -24,7 +25,8 @@ from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
-    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm, CloseInstanceForm, EmojiForm, TopicImportForm
+    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm, CloseInstanceForm, EmojiForm, TopicImportForm, \
+    EmojiFilterForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here, switch_to_unsilenced, switch_to_silenced, serialize_topic_tree, \
@@ -316,6 +318,7 @@ def admin_misc():
         set_setting('enable_report_em_dash_replies', form.enable_report_em_dash_replies.data)
         set_setting('limit_one_em_report_per_user', form.limit_one_em_report_per_user.data)
         set_setting('read_posts_cutoff', int(form.read_posts_cutoff.data))
+        set_setting('ban_posts', form.ban_posts.data)
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -355,6 +358,7 @@ def admin_misc():
         form.enable_report_em_dash_replies.data = get_setting('enable_report_em_dash_replies', True)
         form.limit_one_em_report_per_user.data = get_setting('limit_one_em_report_per_user', False)
         form.read_posts_cutoff.data = get_setting('read_posts_cutoff', 180)
+        form.ban_posts.data = get_setting('ban_posts', False)
     return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form,
                            roles_with=roles_with('change instance settings'))
 
@@ -1631,11 +1635,18 @@ def admin_content():
     page = request.args.get('page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
     posts_replies = request.args.get('posts_replies', '')
-    show = request.args.get('show', 'trash')
+    if get_setting('ban_posts', False):
+        show = request.args.get('show', 'approval')
+    else:
+        show = request.args.get('show', 'trash')
     days = request.args.get('days', 3, type=int)
 
-    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False,
-                                                                  Post.status > POST_STATUS_REVIEWING)
+    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False)
+    if show == 'approval':
+        posts = posts.filter(Post.status == POST_STATUS_REVIEWING)
+    else:
+        posts = posts.filter(Post.status > POST_STATUS_REVIEWING)
+
     post_replies = PostReply.query.join(User, User.id == PostReply.user_id).filter(PostReply.deleted == False)
     if show == 'trash':
         title = _('Bad / Most downvoted')
@@ -1669,6 +1680,10 @@ def admin_content():
         if days > 0:
             post_replies = post_replies.filter(PostReply.posted_at > utcnow() - timedelta(days=days))
         post_replies = post_replies.order_by(desc(PostReply.posted_at))
+    elif show == 'approval':
+        title = _('Approval queue')
+        posts = posts.order_by(Post.posted_at)
+        post_replies = post_replies.filter(PostReply.instance_id == -1)
 
     if posts_replies == 'posts':
         post_replies = post_replies.filter(False)
@@ -1696,7 +1711,8 @@ def admin_content():
                            posts_replies=posts_replies, show=show, days=days,
                            reported_posts=reported_posts(current_user.get_id(), current_user.get_id() in g.admin_ids),
                            moderated_community_ids=moderating_communities_ids(current_user.get_id()),
-                           roles_with=roles_with('administer all communities')
+                           roles_with=roles_with('administer all communities'),
+                           admin_ids=g.admin_ids
                            )
 
 
@@ -1716,7 +1732,8 @@ def admin_approve_registrations():
     return render_template('admin/approve_registrations.html',
                            registrations=registrations, disposable_domains=disposable_domains,
                            recently_approved=recently_approved,
-                           roles_with=roles_with('approve registrations')
+                           roles_with=roles_with('approve registrations'),
+                           admin_ids=g.admin_ids
                            )
 
 
@@ -1782,6 +1799,8 @@ def admin_approve_registrations_denied(user_id):
 def admin_user_edit(user_id):
     form = EditUserForm()
     user = User.query.get_or_404(user_id)
+    if user.is_local() and get_setting('ban_posts', False):
+        form.ban_posts.label = Label("ban_posts", _("Manually approve posts"))
     if form.validate_on_submit():
         user.bot = form.bot.data
         user.bot_override = form.bot_override.data
@@ -2405,7 +2424,13 @@ def admin_cms_page_delete(page_id):
 @permission_required('change instance settings')
 @login_required
 def admin_emoji():
-    emojis = Emoji.query.order_by(Emoji.token).all()
+    query = Emoji.query.order_by(Emoji.token)
+    if filter := get_setting('emoji_filter'):
+        patterns = filter.split('\n')
+        conditions = [~Emoji.url.like(f'%{pattern.strip()}%') for pattern in patterns if pattern.strip()]
+        if conditions:
+            query = query.filter(and_(*conditions))
+    emojis = query.all()
     return render_template('admin/emoji.html', emojis=emojis, title=_('Emoji'),
                            roles_with=roles_with('change instance settings'))
 
@@ -2459,6 +2484,23 @@ def admin_emoji_delete(emoji_id):
     cache.delete_memoized(get_emoji_replacements)
     flash(_('Emoji deleted.'))
     return redirect(url_for('admin.admin_emoji'))
+
+
+@bp.route('/emoji/filter', methods=['GET', 'POST'])
+@permission_required('change instance settings')
+@login_required
+def admin_emoji_filter():
+    form = EmojiFilterForm()
+    if form.validate_on_submit():
+        set_setting('emoji_filter', form.filter.data)
+        cache.delete_memoized(get_emoji_replacements)
+        flash(_('Saved'))
+        return redirect(url_for('admin.admin_emoji'))
+
+    form.filter.data = get_setting('emoji_filter', '')
+
+    return render_template('admin/emoji_filter.html', form=form, title=_('Filter out emoji with this in their url'),
+                           roles_with=roles_with('change instance settings'))
 
 
 @bp.route('/masquerade/<int:user_id>')

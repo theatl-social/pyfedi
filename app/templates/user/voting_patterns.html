@@ -1,0 +1,193 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_username, render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
+{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle, render_emoji_button %}
+
+{% if current_user.is_authenticated and user.id == current_user.id %}
+    {% set active_child = 'view_profile' %}
+{% endif %}
+
+{% block end_scripts -%}
+    <script src="{{ url_for('static', filename='js/chart.js', changed=getmtime('js/chart.js')) }}" nonce={{ nonce }}></script>
+{% endblock -%}
+
+{% macro vote_breakdown(heading, rows, prefix, who) -%}
+    <h2 class="mt-4">{{ heading }}</h2>
+    {% if rows %}
+        {% set named = rows|selectattr('sort_order', 'equalto', 0)|list %}
+        {% set total = rows|sum(attribute='votes') %}
+        <p class="text-muted">{{ _('%(total)d votes', total=total) }}</p>
+
+        <div class="row">
+            <div class="col-12 col-md-7">
+                <div style="height: {{ 60 + named|length * 32 }}px;">
+                    <canvas id="{{ prefix }}_bar"></canvas>
+                </div>
+            </div>
+            <div class="col-12 col-md-5">
+                <div style="height: 320px;">
+                    <canvas id="{{ prefix }}_pie"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <table class="table table-sm table-striped mt-3">
+            <thead>
+                <tr>
+                    <th scope="col">{{ who }}</th>
+                    <th scope="col" class="text-end">{{ _('Votes') }}</th>
+                    <th scope="col" class="text-end">{{ _('Up') }}</th>
+                    <th scope="col" class="text-end">{{ _('Down') }}</th>
+                    <th scope="col" class="text-end">{{ _('Share') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td>
+                            {% if row.user_id %}
+                                <a href="/u/{{ row.label }}/voting_patterns">{{ row.label }}</a>
+                            {% else %}
+                                <em>{{ row.label }}</em>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ row.votes }}</td>
+                        <td class="text-end">{{ row.ups }}</td>
+                        <td class="text-end">{{ row.downs }}</td>
+                        <td class="text-end">{{ row.pct }}%</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <script nonce="{{ nonce }}">
+            document.addEventListener("DOMContentLoaded", () => {
+
+                new Chart(document.getElementById('{{ prefix }}_bar'), {
+                    type: 'bar',
+                    data: {
+                        labels: {{ named|map(attribute='label')|map('truncate', 32, True)|list|tojson }},
+                        datasets: [
+                            {
+                                label: '{{ _('Upvotes') }}',
+                                data: {{ named|map(attribute='ups')|list|tojson }}
+                            },
+                            {
+                                label: '{{ _('Downvotes') }}',
+                                data: {{ named|map(attribute='downs')|list|tojson }}
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                stacked: true,
+                                beginAtZero: true,
+                                ticks: { font: { size: 10 } },
+                                grid: { display: false }
+                            },
+                            y: {
+                                stacked: true,
+                                ticks: { font: { size: 10 } },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+
+            });
+        </script>
+    {% else %}
+        <p class="text-muted">{{ _('No votes in the last 60 days.') }}</p>
+    {% endif %}
+{%- endmacro %}
+
+{% block app_content %}
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        {% if user.cover_image() != '' %}
+            <div class="community_header" style="height: 240px; background-image: url({{ user.cover_image() }});">
+                <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
+                  <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+                    <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ user.display_name()|shorten }}</li>
+                  </ol>
+                </nav>
+            </div>
+            <a href="{{ user.avatar_image() }}"><img class="community_icon_big bump_up rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
+            <h1 class="mt-2">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name) }}</h1>
+        {% elif user.avatar_image() != '' %}
+            <div class="row">
+                <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
+                  <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+                    <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ user.display_name()|shorten }}</li>
+                  </ol>
+                </nav>
+                <div class="col-3 col-md-2">
+                    {% if low_bandwidth %}
+                        <a href="{{ user.avatar_image() }}"><img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
+                    {% else %}
+                        {% if user.avatar.source_url and user.avatar.source_url.endswith('.mp4') %}
+                            <video autoplay disablepictureinpicture loop muted class="community_icon_big rounded-circle">
+                                <source src="{{ user.avatar.source_url }}" type="video/mp4">
+                            </video>
+                        {% else %}
+                            <a href="{{ user.avatar_image() }}"><img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="col-9 col-md-10">
+                    <h1 class="mt-3">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name) }}</h1>
+                </div>
+            </div>
+        {% else %}
+            <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
+              <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+                <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ user.link()|shorten }}</li>
+              </ol>
+            </nav>
+            <h1 class="mt-2">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name) }}
+            </h1>
+        {% endif %}
+        {{ vote_breakdown(_('Votes received'), votes_received, 'votes_received', _('Voter')) }}
+
+        {{ vote_breakdown(_('Votes cast'), votes_cast, 'votes_cast', _('Author voted on')) }}
+
+    </main>
+
+    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
+        {% if current_user.is_authenticated and current_user.id == user.id %}
+            <div class="card mb-3">
+                <div class="card-header">
+                     <h2>{{ _('Manage') }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-4">
+                            <a class="w-100 btn btn-primary btn-sm" href="/u/{{ user.link() }}/profile">{{ _('Profile') }}</a>
+                        </div>
+                        <div class="col-4">
+                            <a class="w-100 btn btn-primary btn-sm" href="/user/settings">{{ _('Settings') }}</a>
+                        </div>
+                        <div class="col-4">
+                            <a class="w-100 btn btn-primary btn-sm" href="/user/files">{{ _('Files') }}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </aside>
+</div>
+{% endblock %}

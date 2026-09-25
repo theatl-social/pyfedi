@@ -1355,13 +1355,19 @@ details {
   padding-right: var(--spacing-4);
 }
 
-.post_type_image {
+.post_type_image, .post_type_gallery {
   .post_image {
     img {
       max-width: 100%;
       height: auto;
     }
   }
+}
+
+.gallery-thumbnail {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
 }
 
 .voting_buttons_new {
@@ -2644,7 +2650,7 @@ form {
   background-color: var(--bs-secondary-bg);
 }
 
-.post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
+.post_type_gallery.reported, .post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
   img {
     filter: grayscale(100%) blur(var(--spacing-8))!important;
   }

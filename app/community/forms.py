@@ -2,15 +2,14 @@ import re
 from io import BytesIO
 from zoneinfo import ZoneInfo
 
-import pytesseract
 from PIL import Image, UnidentifiedImageError
-from flask import request, g
+from flask import request, g, current_app
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField, IntegerField, DateTimeLocalField, RadioField
+    DateField, IntegerField, DateTimeLocalField, RadioField, FieldList, FormField
 
 from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Optional, URL
 
@@ -18,7 +17,7 @@ from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_NONE
 from app.models import Community, Site, utcnow, User, Feed
-from app.utils import domain_from_url, MultiCheckboxField, get_timezones
+from app.utils import domain_from_url, MultiCheckboxField, get_timezones, get_request
 
 
 class AddCommunityForm(FlaskForm):
@@ -319,19 +318,21 @@ class CreateImageForm(CreatePostForm):
 
             if site.enable_chan_image_filter:
                 # Do not allow fascist meme content
-                try:
-                    if '.avif' in uploaded_file.filename:
-                        import pillow_avif  # NOQA
-                    image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
-                except FileNotFoundError:
-                    image_text = ''
-                except UnidentifiedImageError:
-                    image_text = ''
+                if current_app.config['LOCAL_4CHAN_DETECTION'] and current_app.config['CHAN_DETECTION_ENDPOINT'] == '':
+                    import pytesseract
+                    try:
+                        if '.avif' in uploaded_file.filename:
+                            import pillow_avif  # NOQA
+                        image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
+                    except FileNotFoundError:
+                        image_text = ''
+                    except UnidentifiedImageError:
+                        image_text = ''
 
-                if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                    self.image_file.errors.append("This image is from 4chan.")
-                    db.session.commit()
-                    return False
+                    if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                        self.image_file.errors.append("This image is from 4chan.")
+                        db.session.commit()
+                        return False
         if uploaded_file.filename.endswith('.gif'):
             max_size_in_mb = 10 * 1024 * 1024  # 10 MB
             if len(uploaded_file.read()) > max_size_in_mb:
@@ -361,6 +362,38 @@ class EditImageForm(CreateImageForm):
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:
                 self.communities.errors.append(_l('Images cannot be posted to local communities.'))
+
+        return True
+
+
+class GalleryImageForm(FlaskForm):
+    image_file = FileField(_l('Image'), validators=[Optional()], render_kw={'accept': 'image/*'})
+    alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=1500)])
+
+
+class CreateGalleryForm(CreatePostForm):
+    images = FieldList(FormField(GalleryImageForm), min_entries=10)
+
+    def validate(self, extra_validators=None) -> bool:
+        super().validate(extra_validators)
+
+        # Validate file sizes for each uploaded image (only checks entries with data)
+        max_size_in_mb = 10 * 1024 * 1024  # 10 MB
+        for entry in self.images:
+            if entry.image_file.data:
+                uploaded_file = entry.image_file.data
+                file_content = uploaded_file.read()
+                if len(file_content) > max_size_in_mb:
+                    entry.image_file.errors.append(_l('This image file size is too large.'))
+                    uploaded_file.seek(0)
+                    return False
+                uploaded_file.seek(0)
+
+        if self.communities:
+            community = Community.query.get(self.communities.data)
+            if community.is_local() and g.site.allow_local_image_posts is False:
+                self.communities.errors.append(_l('Galleries cannot be posted to local communities.'))
+                return False
 
         return True
 

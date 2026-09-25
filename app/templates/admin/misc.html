@@ -60,6 +60,7 @@
             <p class="small field_hint">{{ _('PieFed instances only. One per line, no https:// on the front.') }}</p>
             {{ render_field(form.registration_approved_email) }}
             <p class="small field_hint">{{ _('This will be sent after their application is approved. Use markdown.') }}</p>
+            {{ render_field(form.ban_posts) }}
             <hr>
             <h3>{{ _('Other random stuff') }}</h3>
             {{ render_field(form.cache_remote_images_locally) }}

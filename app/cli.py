@@ -23,6 +23,7 @@ from flask import json, current_app, g
 from flask_babel import _, force_locale
 from furl import furl
 from sqlalchemy import or_, desc, text, create_engine
+from pwinput import pwinput
 
 from app import db, plugins
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
@@ -238,10 +239,10 @@ def register(app):
                 while '@' in user_name or ' ' in user_name:
                     print('User name cannot be an email address or have spaces.')
                     user_name = input("Admin user name (ideally not 'admin'): ")
-                password = input("Admin password: ")
+                password = pwinput(prompt="Admin password: ")
                 while len(password) < 8:
                     print('Password must be at least 8 characters')
-                    password = input("Admin password: ")
+                    password = pwinput(prompt="Admin password: ")
                 verification_token = random_token(16)
                 private_key, public_key = RsaKeys.generate_keypair()
                 admin_user = User(user_name=user_name, title=user_name,

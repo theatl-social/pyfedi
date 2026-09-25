@@ -388,6 +388,20 @@
                     </div>
                 </div>
             {% endif %}
+            {% if same_user_name and len(same_user_name) -%}
+                <div class="card mb-3">
+                    <div class="card-header"><h2>{{ _("Same user name") }}</h2></div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for alt in same_user_name -%}
+                                <li class="list-group-item">
+                                    {{ render_username(alt) }}
+                                </li>
+                            {% endfor -%}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
         {% endif -%}
         <div class="card mb-3">
             <div class="card-body">
@@ -464,10 +478,13 @@
         {% if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()) %}
             <div class="card mb-3">
                 <div class="card-header">
-                     <h2>{{ _('Upvoted') }}</h2>
+                     <h2>{{ _('Voting') }}</h2>
                 </div>
                 <div class="card-body">
-                    <a href="{{ user.link() }}/upvotes">{{ _('Posts upvoted by %(user_name)s', user_name=user.user_name) }}</a>
+                    <p><a href="{{ user.link() }}/upvotes">{{ _('Posts upvoted by %(user_name)s', user_name=user.user_name) }}</a></p>
+                    {% if current_user.is_admin_or_staff() %}
+                        <p><a href="{{ user.link() }}/voting_patterns">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name) }}</a></p>
+                    {% endif %}
                 </div>
             </div>
         {% endif %}

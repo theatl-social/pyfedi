@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from io import BytesIO
 from typing import List
 from zoneinfo import ZoneInfo
 from datetime import datetime
@@ -18,14 +19,14 @@ from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form, flairs_from_string
 from app.constants import *
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, \
-    Report, Site, User, utcnow, Instance, Event, Community, CommunityFlair, votes_cast_today
+    Report, Site, User, utcnow, Instance, Event, Community, CommunityFlair, votes_cast_today, post_file
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
     is_image_url, add_to_modlog, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
     hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language, to_srgb, can_upload_video, \
-    is_video_url, sanitize_svg, user_ip_banned, ip_address, inspect_image_c2pa
+    is_video_url, sanitize_svg, user_ip_banned, ip_address, inspect_image_c2pa, make_gallery_thumbnail, get_request
 
 
 def vote_for_post(post_id: int, vote_direction, federate: bool, emoji: str, src, auth=None):
@@ -160,7 +161,7 @@ def extra_rate_limit_check(user):
     return False
 
 
-def make_post(input, community, type, src, auth=None, uploaded_file=None):
+def make_post(input, community, type, src, auth=None, uploaded_file=None, uploaded_files=None, image_alt_texts=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
         if extra_rate_limit_check(user):
@@ -205,6 +206,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
     post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id, from_bot=user.bot or user.bot_override,
                 posted_at=utcnow(), ap_id=gibberish(), title=title, language_id=language_id)
+    if user.ban_posts:
+        post.status = POST_STATUS_REVIEWING
     db.session.add(post)
     db.session.commit()
 
@@ -228,7 +231,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.commit()
 
     try:    # federation is done in edit_post
-        post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True)
+        post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True,
+                         uploaded_files=uploaded_files, image_alt_texts=image_alt_texts)
     except Exception as e:
         db.session.delete(vote)
         db.session.delete(post)
@@ -247,7 +251,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
 
 # 'from_scratch == True' means that it's not really a user edit, we're just re-using code for make_post()
-def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
+def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None, uploaded_files=None, image_alt_texts=None):
     if src == SRC_API:
         if not user:
            user = authorise_api_user(auth, return_type='model', id_match=post.user_id)
@@ -323,6 +327,8 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
             url = input.video_url.data.strip()
         elif type == POST_TYPE_IMAGE and not from_scratch:
             url = post.url
+        elif type == POST_TYPE_GALLERY:    # gallery posts have a url going to the post, so Lemmy users can view the gallery
+            url = f"{current_app.config['SERVER_URL']}{post.slug}"
         else:
             url = None
         nsfw = input.nsfw.data
@@ -454,6 +460,8 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         post.tags.clear()
         post.flair.clear()
 
+
+
         post.edited_at = utcnow()
 
         db.session.commit()
@@ -558,98 +566,266 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
             os.unlink(final_place)
 
     if url and (from_scratch or url_changed):
-        domain = domain_from_url(url)
-        if domain:
-            if domain.banned or domain.name.endswith('.pages.dev'):
-                raise Exception(domain.name + ' is blocked by admin')
-            post.domain = domain
-            domain.post_count += 1
-            already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
-            targets_data = {'gen': '0',
-                            'post_id': post.id,
-                            'orig_post_title': post.title,
-                            'orig_post_body': post.body,
-                            'orig_post_domain': post.domain,
-                            'author_user_name': user.ap_id if user.ap_id else user.user_name
-                            }
-            if domain.notify_mods:
-                for community_member in post.community.moderators():
-                    if community_member.is_local():
-                        notify = Notification(title='Suspicious content', url=post.ap_id,
-                                              user_id=community_member.user_id, author_id=user.id,
-                                              notif_type=NOTIF_REPORT,
-                                              subtype='post_from_suspicious_domain',
-                                              targets=targets_data)
-                        db.session.add(notify)
-                        already_notified.add(community_member.user_id)
-            if domain.notify_admins:
-                for admin in Site.admins():
-                    if admin.id not in already_notified:
-                        notify = Notification(title='Suspicious content', url=post.ap_id,
-                                              user_id=admin.id, author_id=user.id,
-                                              notif_type=NOTIF_REPORT,
-                                              subtype='post_from_suspicious_domain',
-                                              targets=targets_data)
-                        db.session.add(notify)
+        if type != POST_TYPE_GALLERY:
+            domain = domain_from_url(url)
+            if domain:
+                if domain.banned or domain.name.endswith('.pages.dev'):
+                    raise Exception(domain.name + ' is blocked by admin')
+                post.domain = domain
+                domain.post_count += 1
+                already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+                targets_data = {'gen': '0',
+                                'post_id': post.id,
+                                'orig_post_title': post.title,
+                                'orig_post_body': post.body,
+                                'orig_post_domain': post.domain,
+                                'author_user_name': user.ap_id if user.ap_id else user.user_name
+                                }
+                if domain.notify_mods:
+                    for community_member in post.community.moderators():
+                        if community_member.is_local():
+                            notify = Notification(title='Suspicious content', url=post.ap_id,
+                                                  user_id=community_member.user_id, author_id=user.id,
+                                                  notif_type=NOTIF_REPORT,
+                                                  subtype='post_from_suspicious_domain',
+                                                  targets=targets_data)
+                            db.session.add(notify)
+                            already_notified.add(community_member.user_id)
+                if domain.notify_admins:
+                    for admin in Site.admins():
+                        if admin.id not in already_notified:
+                            notify = Notification(title='Suspicious content', url=post.ap_id,
+                                                  user_id=admin.id, author_id=user.id,
+                                                  notif_type=NOTIF_REPORT,
+                                                  subtype='post_from_suspicious_domain',
+                                                  targets=targets_data)
+                            db.session.add(notify)
 
-        thumbnail_url, embed_url = fixup_url(url)
-        if is_image_url(url):
-            file = File(source_url=url, hash=hash)
-            if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
-                # change this line when uploaded_file is supported in API
-                file.alt_text = image_alt_text
-            db.session.add(file)
-            db.session.commit()
-            post.image_id = file.id
+            thumbnail_url, embed_url = fixup_url(url)
+            if is_image_url(url):
+                file = File(source_url=url, hash=hash)
+                if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
+                    # change this line when uploaded_file is supported in API
+                    file.alt_text = image_alt_text
+                db.session.add(file)
+                db.session.commit()
+                post.image_id = file.id
 
-            
-            # For events, uploaded images are banners - don't change post type or URL
-            if type == POST_TYPE_EVENT:
-                post.url = None  # Events don't have URLs when they have banner images
-                make_image_sizes(post.image_id, 170, 2000, 'posts', post.community.low_quality)
-            else:
-                make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
+
+                # For events, uploaded images are banners - don't change post type or URL
+                if type == POST_TYPE_EVENT:
+                    post.url = None  # Events don't have URLs when they have banner images
+                    make_image_sizes(post.image_id, 170, 2000, 'posts', post.community.low_quality)
+                else:
+                    make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
+                    post.type = POST_TYPE_IMAGE
+                    post.url = url
+            elif url.startswith('https://pixelfed.social') or url.startswith('pixelfed.uno'):
                 post.type = POST_TYPE_IMAGE
-                post.url = url
-        elif url.startswith('https://pixelfed.social') or url.startswith('pixelfed.uno'):
-            post.type = POST_TYPE_IMAGE
-            opengraph = opengraph_parse(thumbnail_url)
-            if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                if not filename.startswith('/'):
-                    file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
-                    post.image = file
-                    db.session.add(file)
-            post.url = url
-            post.body += '\n\nSource: '
-        elif url.startswith('https://loops.video'):
-            post.type = POST_TYPE_VIDEO
-            opengraph = opengraph_parse(thumbnail_url)
-            if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                if not filename.startswith('/'):
-                    filename = filename.replace('.jpg', '.720p.mp4')
-                    file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
-                    post.image = file
-                    db.session.add(file)
-            post.url = url
-        else:
-            opengraph = opengraph_parse(thumbnail_url)
-            if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                if not filename.startswith('/'):
-                    file = url_to_thumbnail_file(filename)
-                    if file:
-                        file.alt_text = shorten_string(opengraph.get('og:title'), 295)
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
                         post.image = file
                         db.session.add(file)
-
-            post.url = embed_url
-
-            if is_video_url(url) or url.endswith('.mp4') or url.endswith('.webm') or is_video_hosting_site(embed_url):
+                post.url = url
+                post.body += '\n\nSource: '
+            elif url.startswith('https://loops.video'):
                 post.type = POST_TYPE_VIDEO
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        filename = filename.replace('.jpg', '.720p.mp4')
+                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                        post.image = file
+                        db.session.add(file)
+                post.url = url
             else:
-                post.type = POST_TYPE_LINK
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        file = url_to_thumbnail_file(filename)
+                        if file:
+                            file.alt_text = shorten_string(opengraph.get('og:title'), 295)
+                            post.image = file
+                            db.session.add(file)
+
+                post.url = embed_url
+
+                if is_video_url(url) or url.endswith('.mp4') or url.endswith('.webm') or is_video_hosting_site(embed_url):
+                    post.type = POST_TYPE_VIDEO
+                else:
+                    post.type = POST_TYPE_LINK
+
+        # Handle gallery images
+        if type == POST_TYPE_GALLERY and uploaded_files:
+            post.type = POST_TYPE_GALLERY
+            # Get existing gallery images sorted by weight
+            existing_gallery = db.session.query(File).join(
+                post_file, (post_file.c.file_id == File.id) & (post_file.c.post_id == post.id)
+            ).order_by(post_file.c.weight).all()
+            
+            # Process each form entry
+            if store_files_in_s3():
+                session = boto3.session.Session()
+                extra_args = {}
+                if current_app.config.get('S3_STORAGE_CLASS'):
+                    extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+                if current_app.config.get('S3_PUBLIC_ACL'):
+                    extra_args['ACL'] = 'public-read'
+                s3 = session.client(
+                    service_name='s3',
+                    region_name=current_app.config['S3_REGION'],
+                    endpoint_url=current_app.config['S3_ENDPOINT'],
+                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                )
+
+            for i, uploaded_file in enumerate(uploaded_files):
+                # Check if this entry has a new file upload
+                if uploaded_file and uploaded_file.filename != '':
+                    # If there's an existing image at this index, delete it first
+                    if i < len(existing_gallery):
+                        old_file = existing_gallery[i]
+                        # Delete from post_file table first (to avoid FK constraint)
+                        db.session.execute(
+                            text('DELETE FROM post_file WHERE post_id = :post_id AND file_id = :file_id'),
+                            {'post_id': post.id, 'file_id': old_file.id}
+                        )
+                        old_file.delete_from_disk()
+                        db.session.delete(old_file)
+                        db.session.commit()
+                    
+                    # Validate file type
+                    allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg']
+                    file_ext = os.path.splitext(uploaded_file.filename)[1]
+                    if file_ext.lower() not in allowed_extensions:
+                        raise Exception('filetype not allowed')
+
+                    # Generate new filename
+                    new_filename = gibberish(15)
+                    if store_files_in_s3():
+                        directory = 'app/static/tmp'
+                    else:
+                        directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+                    ensure_directory_exists(directory)
+
+                    # Check for AI-generated images
+                    uploaded_file.seek(0)
+                    ai_gen = inspect_image_c2pa(uploaded_file.read(), uploaded_file.mimetype or "application/octet-stream")
+                    if ai_gen['c2pa']['ai_generated']:
+                        post.ai_generated = True
+
+                    # Save the file
+                    final_place = os.path.join(directory, new_filename + file_ext.lower())
+                    uploaded_file.seek(0)
+                    uploaded_file.save(final_place)
+
+                    final_ext = file_ext.lower()
+
+                    # Handle special formats
+                    if final_ext == '.heic':
+                        register_heif_opener()
+                    if final_ext == '.avif':
+                        import pillow_avif
+
+                    Image.MAX_IMAGE_PIXELS = 89478485
+                    image_max_dimension = current_app.config['MEDIA_IMAGE_MAX_DIMENSION']
+                    image_format = current_app.config['MEDIA_IMAGE_FORMAT']
+                    image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
+
+                    if final_ext == '.svg':
+                        sanitize_svg(final_place)
+
+                    if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
+                        img = Image.open(final_place)
+                        if '.' + img.format.lower() in allowed_extensions:
+                            img = ImageOps.exif_transpose(img)
+                            if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']):
+                                img = to_srgb(img)
+                            else:
+                                img = img.convert('RGBA')
+                            img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
+
+                            kwargs = {}
+                            if image_format:
+                                kwargs['format'] = image_format.upper()
+                                final_ext = '.' + image_format.lower()
+                                final_place = os.path.splitext(final_place)[0] + final_ext
+                            if image_quality:
+                                kwargs['quality'] = int(image_quality)
+
+                            img.save(final_place, optimize=True, **kwargs)
+                        else:
+                            raise Exception('filetype not allowed')
+
+                    url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
+
+                    # Move to S3 if configured
+                    if store_files_in_s3():
+                        extra_args['ContentType'] = guess_mime_type(final_place)
+                        s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                                       new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                                       ExtraArgs=extra_args)
+                        url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
+                              new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
+                        os.unlink(final_place)
+
+                    # Create File record
+                    alt_text = image_alt_texts[i] if image_alt_texts and i < len(image_alt_texts) else ''
+                    file = File(source_url=url, alt_text=alt_text)
+                    db.session.add(file)
+                    db.session.commit()
+
+                    # Associate file with post via post_file table
+                    db.session.execute(
+                        text('INSERT INTO post_file (post_id, file_id, weight) VALUES (:post_id, :file_id, :weight)'),
+                        {'post_id': post.id, 'file_id': file.id, 'weight': i}
+                    )
+
+                    # Generate image sizes
+                    make_image_sizes(file.id, 512, 1200, 'posts', post.community.low_quality)
+
+                    # Check against image hash blocking
+                    if current_app.config['IMAGE_HASHING_ENDPOINT']:
+                        hash = retrieve_image_hash(url)
+                        if hash and hash_matches_blocked_image(hash):
+                            raise Exception('This image is blocked')
+                    
+                    # Update file hash
+                    file.hash = hash if 'hash' in locals() else None
+                    db.session.commit()
+
+            if store_files_in_s3():
+                s3.close()
+            
+            # Handle existing images that weren't replaced (update alt text)
+            # and remove any existing images beyond the uploaded files count
+            for i in range(len(existing_gallery)):
+                if i >= len(uploaded_files) or not (uploaded_files[i] and uploaded_files[i].filename != ''):
+                    # This existing image wasn't replaced
+                    old_file = existing_gallery[i]
+                    # Update alt text if provided
+                    if i < len(image_alt_texts) and image_alt_texts[i]:
+                        old_file.alt_text = image_alt_texts[i]
+                        db.session.commit()
+            
+            # Remove any existing images beyond the number of form entries
+            if len(existing_gallery) > len(uploaded_files):
+                for i in range(len(uploaded_files), len(existing_gallery)):
+                    old_file = existing_gallery[i]
+                    # Delete from post_file table first (to avoid FK constraint)
+                    db.session.execute(
+                        text('DELETE FROM post_file WHERE post_id = :post_id AND file_id = :file_id'),
+                        {'post_id': post.id, 'file_id': old_file.id}
+                    )
+                    old_file.delete_from_disk()
+                    db.session.delete(old_file)
+                db.session.commit()
+            post.image_id = build_gallery_thumbnail([file.source_url for file in post.gallery])
 
         post.calculate_cross_posts(url_changed=url_changed)
     elif url and is_video_hosting_site(url):
@@ -1169,3 +1345,71 @@ def vote_for_poll(post_id, votes, src, auth=None):
             poll.vote_for_choice(int(choice_id), user.id)
             task_selector('vote_for_poll', post_id=post_id, user_id=user.id,
                           choice_text=PollChoice.query.get(int(choice_id)).choice_text)
+
+
+def build_gallery_thumbnail(files: List[str]):
+    pil_images = []
+    for file in files:
+        if file.startswith('https://'):
+            source_image_response = get_request(file)
+            if source_image_response and source_image_response.status_code == 200:
+                content_type = source_image_response.headers.get('content-type')
+                if content_type:
+                    if content_type.startswith('image') or (content_type == 'application/octet-stream' and file.endswith('.avif')):
+                        source_image = source_image_response.content
+                        source_image_response.close()
+
+                        Image.MAX_IMAGE_PIXELS = 89478485
+                        image = Image.open(BytesIO(source_image))
+                        image = ImageOps.exif_transpose(image)
+                        pil_images.append(image)
+        else:
+            pil_images.append(Image.open(file))
+
+    thumbnail = make_gallery_thumbnail(pil_images, size=1200)
+
+    if thumbnail:
+        # Generate new filename
+        new_filename = gibberish(15)
+        if store_files_in_s3():
+            directory = 'app/static/tmp'
+        else:
+            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+        ensure_directory_exists(directory)
+
+        final_ext = '.webp'
+        final_place = os.path.join(directory, new_filename + final_ext)
+
+        url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
+
+        # Move to S3 if configured
+        if store_files_in_s3():
+            session = boto3.session.Session()
+            extra_args = {}
+            if current_app.config.get('S3_STORAGE_CLASS'):
+                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+            if current_app.config.get('S3_PUBLIC_ACL'):
+                extra_args['ACL'] = 'public-read'
+            s3 = session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            extra_args['ContentType'] = guess_mime_type(final_place)
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                           ExtraArgs=extra_args)
+            url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
+                  new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
+            os.unlink(final_place)
+
+        # Create File record
+        file = File(source_url=url)
+        db.session.add(file)
+        db.session.commit()
+
+        return file.id
+    else:
+        return None

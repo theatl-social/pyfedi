@@ -874,6 +874,29 @@ def find_potential_moderators(search: str) -> List[User]:
           order_by(desc(User.reputation)).all()
 
 
+@cache.memoize(timeout=600)
+def hashtags_recent(content_filters):
+    tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
+        FROM "tag" AS t
+        INNER JOIN post_tag pt ON t.id = pt.tag_id
+        INNER JOIN "post" ON pt.post_id = post.id
+        WHERE post.created_at >= now() - interval '1 day'
+          AND t.banned IS FALSE AND post.deleted IS FALSE
+        GROUP BY t.id
+        ORDER BY pc DESC
+        LIMIT 10;""")).mappings().all()
+
+    def tag_blocked(tag):
+        for name, keywords in content_filters.items() if content_filters else {}:
+            for keyword in keywords:
+                if keyword in tag['name'].lower():
+                    return True
+        return False
+
+    return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
+
+
+@cache.memoize(timeout=600)
 def hashtags_used_in_community(community_id: int, content_filters):
     tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
     FROM "tag" AS t
@@ -895,6 +918,7 @@ def hashtags_used_in_community(community_id: int, content_filters):
     return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
 
 
+@cache.memoize(timeout=600)
 def hashtags_used_in_communities(community_ids: List[int], content_filters):
     if community_ids is None or len(list(community_ids)) == 0:
         return None

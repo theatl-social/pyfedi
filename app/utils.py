@@ -46,7 +46,7 @@ from flask import current_app, json, redirect, url_for, request, make_response, 
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
-from sqlalchemy import text, or_, desc, asc, event, select, func, update
+from sqlalchemy import text, or_, and_, desc, asc, event, select, func, update
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
@@ -56,7 +56,7 @@ import boto3
 from app import db, cache, httpx_client, celery, plugins
 from app.constants import *
 import re
-from PIL import Image, ImageOps, ImageCms
+from PIL import Image, ImageOps, ImageCms, ImageDraw, ImageFont
 from py_svg_hush import filter_svg
 
 from captcha.audio import AudioCaptcha
@@ -999,7 +999,15 @@ def html_to_text(html) -> str:
 
 @cache.memoize(timeout=5000)
 def get_emoji_replacements():
-    return {e.token: e.url for e in db.session.query(Emoji)}
+    if filter := get_setting('emoji_filter'):
+        patterns = filter.split('\n')
+        conditions = [~Emoji.url.like(f'%{pattern.strip()}%') for pattern in patterns if pattern.strip()]
+        if conditions:
+            return {e.token: e.url for e in db.session.query(Emoji).filter(and_(*conditions))}
+        else:
+            return {e.token: e.url for e in db.session.query(Emoji)}
+    else:
+        return {e.token: e.url for e in db.session.query(Emoji)}
 
 
 def mastodon_extra_field_link(extra_field: str) -> str:
@@ -2237,6 +2245,7 @@ def finalize_user_setup(user):
     from app.activitypub.signature import RsaKeys
     user.verified = True
     user.last_seen = utcnow()
+    user.ban_posts = get_setting('ban_posts', False) is True    # despite the name, this doesn't ban posts it holds their posts for review by an admin. See admin_misc()
     if user.private_key is None and user.public_key is None:
         private_key, public_key = RsaKeys.generate_keypair()
         user.private_key = private_key
@@ -4704,3 +4713,90 @@ def roles_with(permission):
         filter(RolePermission.permission == permission).\
         order_by(Role.weight)
     return ', '.join([role.name for role in roles.all()])
+
+
+def make_gallery_thumbnail(images, size=600):
+    """Create a square composite thumbnail for an image gallery."""
+
+    padding = 4
+
+    count = len(images)
+
+    if not count:
+        return None
+
+    # Single image: just make it square.
+    if count == 1:
+        return ImageOps.fit(images[0], (size, size))
+
+    # Background and tile dimensions.
+    result = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+
+    tile_size = (size - padding) // 2
+
+    # 2 images: side by side.
+    if count == 2:
+        positions = [
+            (0, 0),
+            (tile_size + padding, 0),
+        ]
+        dimensions = (tile_size, size)
+
+    # 3+ images: 2x2 grid.
+    else:
+        positions = [
+            (0, 0),
+            (tile_size + padding, 0),
+            (0, tile_size + padding),
+            (tile_size + padding, tile_size + padding),
+        ]
+        dimensions = (tile_size, tile_size)
+
+    for image, position in zip(images[:4], positions):
+        tile = ImageOps.fit(image, dimensions)
+        result.paste(tile, position)
+
+    # Overlay count if there are more than four images.
+    if count > 4:
+        draw = ImageDraw.Draw(result, "RGBA")
+
+        count_font = ImageFont.truetype("app/static/fonts/inter/InterVariable.ttf", size // 5)
+
+        hidden_count = count - 4
+        text = '+' + str(hidden_count)
+
+        bbox = draw.textbbox((0, 0), text, font=count_font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
+        # Position in center of bottom-right tile
+        tile_x = tile_size + padding
+        tile_y = tile_size + padding
+        x = tile_x + (tile_size - text_width) // 2
+        y = tile_y + (tile_size - text_height) // 2 - bbox[1]
+
+        # Dark semi-transparent overlay over entire fourth image
+        overlay = Image.new("RGBA", (tile_size, tile_size), (0, 0, 0, 150))
+        result.alpha_composite(overlay, dest=(tile_x, tile_y))
+
+        # Grey glow / shadow.
+        draw.text(
+            (x + 3, y + 3),
+            text,
+            font=count_font,
+            fill=(100, 100, 100, 220),
+            stroke_width=3,
+            stroke_fill=(100, 100, 100, 220),
+        )
+
+        # White foreground.
+        draw.text(
+            (x, y),
+            text,
+            font=count_font,
+            fill="white",
+            stroke_width=1,
+            stroke_fill="white",
+        )
+
+    return result

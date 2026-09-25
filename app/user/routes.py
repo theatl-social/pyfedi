@@ -32,7 +32,8 @@ from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportU
     UploadFileForm, BlockUserForm, BlockCommunityForm, BlockDomainForm, BlockInstanceForm, UnsubAllForm
 from app.user.utils import unsubscribe_from_community, search_for_user, _get_user_moderates, \
     _get_user_upvoted_posts, _get_user_subscribed_communities, _get_user_posts, _get_user_post_replies, \
-    _get_user_archived_replies, _get_user_posts_and_replies, _get_user_same_ip, insert_or_update_user_note
+    _get_user_archived_replies, _get_user_posts_and_replies, _get_user_same_ip, insert_or_update_user_note, \
+    _get_user_same_name
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, theme_list, \
@@ -82,6 +83,7 @@ def show_profile(user):
     archived_post_replies = _get_user_archived_replies(user)
     overview_items, overview_has_next_page = _get_user_posts_and_replies(user, overview_page)
     same_ip_address = _get_user_same_ip(user)
+    same_user_name = _get_user_same_name(user)
 
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
@@ -182,6 +184,7 @@ def show_profile(user):
                            user_has_public_feeds=user_has_public_feeds, user_public_feeds=user_public_feeds,
                            overview_items=overview_items, overview_next_url=overview_next_url,
                            overview_prev_url=overview_prev_url, same_ip_address=same_ip_address,
+                           same_user_name=same_user_name,
                            archived_post_replies=archived_post_replies,
                            followers=followers, following=following,
                            bot_challenge=bot_challenge, vote_quota_used=vote_quota_used)
@@ -205,6 +208,112 @@ def user_upvotes(actor):
                                user_notes=user_notes(current_user.get_id()),
                                rss_feed=f"{current_app.config['SERVER_URL']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                                rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None)
+
+
+@bp.route('/u/<actor>/voting_patterns')
+@login_required_if_private_instance
+@permission_required('manage users')
+def user_voting_patterns(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
+    else:
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
+
+    if user is not None:
+        votes_received_sql = """
+        WITH v AS (
+            SELECT pv.user_id AS other_id, pv.effect
+            FROM post_vote pv
+            WHERE pv.author_id = :user_id AND pv.effect <> 0 AND pv.user_id <> pv.author_id
+              AND pv.created_at >= NOW() - make_interval(days => :days)
+            UNION ALL
+            SELECT prv.user_id, prv.effect
+            FROM post_reply_vote prv
+            WHERE prv.author_id = :user_id AND prv.effect <> 0 AND prv.user_id <> prv.author_id
+              AND prv.created_at >= NOW() - make_interval(days => :days)
+        ),
+        agg AS (
+            SELECT other_id,
+                   COUNT(*) AS votes,
+                   COUNT(*) FILTER (WHERE effect > 0) AS ups,
+                   COUNT(*) FILTER (WHERE effect < 0) AS downs
+            FROM v GROUP BY other_id
+        ),
+        ranked AS (
+            SELECT *, ROW_NUMBER() OVER (ORDER BY votes DESC, other_id) AS rn,
+                      SUM(votes) OVER () AS grand_total
+            FROM agg
+        )
+        SELECT 0 AS sort_order, r.other_id AS user_id,
+               COALESCE(u.ap_id, u.user_name) AS label,
+               r.votes, r.ups, r.downs,
+               ROUND(100.0 * r.votes / r.grand_total, 2) AS pct
+        FROM ranked r JOIN "user" u ON u.id = r.other_id
+        WHERE r.rn <= :top_n
+        UNION ALL
+        SELECT 1, NULL,
+               'Others (' || COUNT(*) || ' accounts)',
+               CAST(SUM(votes) AS bigint), CAST(SUM(ups) AS bigint), CAST(SUM(downs) AS bigint),
+               ROUND(100.0 * SUM(votes) / MAX(grand_total), 2)
+        FROM ranked WHERE rn > :top_n
+        HAVING COUNT(*) > 0
+        ORDER BY sort_order, votes DESC;"""
+
+        votes_cast_sql = """
+        WITH v AS (
+            SELECT pv.author_id AS other_id, pv.effect
+            FROM post_vote pv
+            WHERE pv.user_id = :user_id AND pv.effect <> 0 AND pv.user_id <> pv.author_id
+              AND pv.author_id IS NOT NULL
+              AND pv.created_at >= NOW() - make_interval(days => :days)
+            UNION ALL
+            SELECT prv.author_id, prv.effect
+            FROM post_reply_vote prv
+            WHERE prv.user_id = :user_id AND prv.effect <> 0 AND prv.user_id <> prv.author_id
+              AND prv.author_id IS NOT NULL
+              AND prv.created_at >= NOW() - make_interval(days => :days)
+        ),
+        agg AS (
+            SELECT other_id,
+                   COUNT(*)                           AS votes,
+                   COUNT(*) FILTER (WHERE effect > 0) AS ups,
+                   COUNT(*) FILTER (WHERE effect < 0) AS downs
+            FROM v GROUP BY other_id
+        ),
+        ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (ORDER BY votes DESC, other_id) AS rn,
+                   SUM(votes)   OVER ()                              AS grand_total
+            FROM agg
+        )
+        SELECT 0 AS sort_order,
+               r.other_id                     AS user_id,
+               COALESCE(u.ap_id, u.user_name) AS label,
+               r.votes, r.ups, r.downs,
+               ROUND(100.0 * r.votes / r.grand_total, 2) AS pct
+        FROM ranked r
+        JOIN "user" u ON u.id = r.other_id
+        WHERE r.rn <= :top_n
+        UNION ALL
+        SELECT 1, NULL,
+               'Others (' || COUNT(*) || ' accounts)',
+               CAST(SUM(votes) AS bigint), CAST(SUM(ups) AS bigint), CAST(SUM(downs) AS bigint),
+               ROUND(100.0 * SUM(votes) / MAX(grand_total), 2)
+        FROM ranked WHERE rn > :top_n
+        HAVING COUNT(*) > 0
+        ORDER BY sort_order, votes DESC;"""
+
+        votes_received = db.session.execute(text(votes_received_sql), {'user_id': user.id, 'top_n': 8, 'days': 60}).all()
+
+        votes_cast = db.session.execute(text(votes_cast_sql), {'user_id': user.id, 'top_n': 8, 'days': 60}).all()
+
+        return render_template('user/voting_patterns.html', user=user,
+                               title=_('Voting patterns of %(user_name)s', user_name=user.user_name),
+                               votes_received=votes_received, votes_cast=votes_cast
+                               )
+    else:
+        return ''
 
 
 @bp.route('/u/<actor>/profile', methods=['GET', 'POST'])
@@ -2353,7 +2462,7 @@ def user_follow_request_accept(user_id):
                       "id": f"{current_app.config['SERVER_URL']}/activities/accept/" + gibberish(32)}
             send_post_request(remote_user.ap_inbox_url, accept, current_user.private_key,
                               f"{current_user.public_url()}#main-key")
-    return 'Done'
+    return _('Done')
 
 
 @bp.route('/user/follow_request/<int:user_id>/reject', methods=['POST'])
@@ -2377,7 +2486,7 @@ def user_follow_request_reject(user_id):
                       "id": f"{current_app.config['SERVER_URL']}/activities/reject/" + gibberish(32)}
             send_post_request(remote_user.ap_inbox_url, accept, current_user.private_key,
                               f"{current_user.public_url()}#main-key")
-    return 'Done'
+    return _('Done')
 
 
 def _calculate_future_date(restriction_setting):

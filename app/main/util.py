@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import List
 
-from flask import g
+from flask import g, request
 from flask_login import current_user
 from sqlalchemy import desc, text
 
@@ -89,7 +89,7 @@ def _base_list_communities_context():
 
 
 def reload_url(sort, view_filter):
-    if current_user.is_authenticated:
+    if current_user.is_authenticated and 'page' not in request.args:
         if sort == 'new' or sort.startswith('top'):
             return f'/home/{sort}/{view_filter}?fragment=1'
     return ''

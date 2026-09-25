@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
 from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, POST_TYPE_VIDEO, \
-    POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION, POST_TYPE_EVENT
+    POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION, POST_TYPE_EVENT, POST_TYPE_GALLERY
 from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow, Event, \
     Community
 from app.user.utils import search_for_user
@@ -179,6 +179,10 @@ def send_post(post_id, edit=False, session=None):
         attachment.append({'href': post.url, 'type': 'Link'})
     elif post.type == POST_TYPE_IMAGE:
         attachment.append({'type': 'Image', 'url': post.image.source_url, 'name': post.image.alt_text})
+    elif post.type == POST_TYPE_GALLERY:
+        for file in post.gallery:
+            attachment.append({'type': 'Document', 'url': file.source_url, 'name': file.alt_text,
+                               'width': file.width, 'height': file.height})
 
     page = {
       'id': post.public_url(),

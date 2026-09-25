@@ -24,7 +24,8 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
     InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm, \
-    CreateEventForm, InviteAcceptForm, EditCommunityMembership, CommunityRssFeedEdit, DeleteCommunityRssFeedForm
+    CreateEventForm, InviteAcceptForm, EditCommunityMembership, CommunityRssFeedEdit, DeleteCommunityRssFeedForm, \
+    CreateGalleryForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, \
@@ -34,14 +35,14 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL, SRC_WEB, \
     NOTIF_REPORT, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION, NOTIF_MENTION, POST_STATUS_REVIEWING, \
-    POST_TYPE_EVENT, REPORT_TYPE_COMMUNITY
+    POST_TYPE_EVENT, REPORT_TYPE_COMMUNITY, POST_TYPE_GALLERY
 from app.email import send_email
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, Site, \
     File, utcnow, Report, Notification, Topic, PostReply, \
     NotificationSubscription, Language, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
-    post_tag, Tag, hidden_posts, CommunityInvitation, CommunityFlairBlock, RssFeed
+    post_tag, Tag, hidden_posts, CommunityInvitation, CommunityFlairBlock, RssFeed, UserFollower
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
@@ -301,6 +302,7 @@ def show_community(community: Community):
     content_type = request.args.get('content_type', 'posts')
     flair = request.args.get('flair', '')
     tag = request.args.get('tag', '')
+    microblog_mode = request.args.get('microblog_mode', 'following')
     if sort is None:
         sort = ''
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
@@ -434,6 +436,18 @@ def show_community(community: Community):
             tag_record = Tag.query.filter(Tag.name == tag.strip()).first()
             if tag_record:
                 posts = posts.join(post_tag).filter(post_tag.c.tag_id == tag_record.id)
+
+        if community.name == 'microblogs' and microblog_mode == 'following' and current_user.is_authenticated and current_user.num_following:
+            # limit posts query to those from people the current user is following, similar to get_deduped_post_ids() does.
+            posts = posts.filter(
+                db.session.query(UserFollower.id)
+                    .filter(
+                        UserFollower.local_user_id == current_user.id,
+                        UserFollower.remote_user_id == Post.user_id,
+                        UserFollower.is_inward == False
+                    )
+                    .exists()
+            )
 
         sticky_posts = posts.filter(Post.sticky == True)
         posts = posts.filter(Post.sticky == False)
@@ -678,6 +692,7 @@ def show_community(community: Community):
                                          moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                                          inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                          post_layout=post_layout, content_type=content_type, current_app=current_app,
+                                         microblog_mode=microblog_mode,
                                          user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
                                          current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts))
     if current_user.is_anonymous:
@@ -738,12 +753,12 @@ def show_community_rss(actor):
             image = community.image.source_url
         else:
             image = f"{server_url}/static/images/apple-touch-icon.png"
-        feed = RSSFeed(title = f'{community.title} on {g.site.name}',
-                       link = f"{server_url}/c/{actor}",
-                       description = description,
-                       logo = image,
-                       self_link = f"{server_url}/c/{actor}/feed",
-                       language = 'en'
+        feed = RSSFeed(title=f'{community.title} on {g.site.name}',
+                       link=f"{server_url}/c/{actor}",
+                       description=description,
+                       logo=image,
+                       self_link=f"{server_url}/c/{actor}/feed",
+                       language='en'
                      )
 
         response = make_response(feed.create_feed(posts, server_url))
@@ -799,7 +814,10 @@ def subscribe(actor):
     do_subscribe(actor, current_user.id, admin_preload=request.method == 'POST')
     if request.method == 'POST':
         community = actor_to_community(actor)
-        return render_template('community/_leave_button.html', community=community)
+        if request.headers.get('HX-Request'):
+            return _('Joined')
+        else:
+            return render_template('community/_leave_button.html', community=community)
     else:
         referrer = request.headers.get('Referer', None)
         if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
@@ -1038,6 +1056,9 @@ def add_post(actor, type=None):
     elif type == 'event':
         post_type = POST_TYPE_EVENT
         form = CreateEventForm()
+    elif type == 'gallery':
+        post_type = POST_TYPE_GALLERY
+        form = CreateGalleryForm()
     else:
         abort(404)
 
@@ -1074,13 +1095,28 @@ def add_post(actor, type=None):
             }
             plugins.fire_hook('before_post_create', post_data)
 
-            if type == 'image' or type == 'event':
+            if type == 'gallery':
+                # Collect all gallery images
+                uploaded_files = []
+                image_alt_texts = []
+                for entry in form.images:
+                    if entry.image_file.data:
+                        uploaded_files.append(entry.image_file.data)
+                        image_alt_texts.append(entry.alt_text.data or '')
+                # Check that at least one image is provided (for creation)
+                if not uploaded_files:
+                    flash(_('At least one image is required for a gallery post.'), 'error')
+                    return redirect(url_for('community.add_post', actor=community.ap_id if community.ap_id else community.name, type='gallery'))
+                post = make_post(form, community, post_type, SRC_WEB, uploaded_files=uploaded_files, image_alt_texts=image_alt_texts)
+            elif type == 'image' or type == 'event':
                 uploaded_file = request.files['image_file']
             elif type == 'video' and can_upload_video():
                 uploaded_file = request.files['image_file']
             else:
                 uploaded_file = None
-            post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
+            
+            if type != 'gallery':
+                post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
         except Exception as ex:
             flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
             if current_app.debug:
@@ -1097,6 +1133,9 @@ def add_post(actor, type=None):
 
         if post.sticky:
             sticky_post(post.id, True, SRC_WEB)  # federating post's stickiness is separate from creating it
+
+        if post.status == POST_STATUS_REVIEWING:
+            flash(_('Because your account is new we will review your post before allowing it to be published. Please wait.'))
 
         flash(Markup(_('Your post has been created. <a href="/post/%(post_id)d/edit">Edit it</a> if you notice any typos!', post_id=post.id)))
 

@@ -19,13 +19,13 @@ from wtforms.fields import Label
 
 from app import db, constants, cache, limiter, get_locale
 from app.activitypub.signature import default_context, send_post_request
-from app.activitypub.util import update_post_from_activity
+from app.activitypub.util import update_post_from_activity, notify_about_post
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm, \
-    CreateEventForm
+    CreateEventForm, CreateGalleryForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community, \
     search_for_community
 from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    POST_TYPE_EVENT, NOTIF_MENTION, NOTIF_ANSWER, SRC_API
+    POST_TYPE_EVENT, NOTIF_MENTION, NOTIF_ANSWER, SRC_API, POST_TYPE_GALLERY
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -34,13 +34,13 @@ from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
     PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language, Event, \
-    Reminder, Emoji
+    Reminder, Emoji, post_file
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm, NewReminderForm, \
     ShareMastodonForm, ChooseEmojiForm, MovePostForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
-    generate_archive_link, body_has_no_archive_link, retrieve_archived_post
+    generate_archive_link, body_has_no_archive_link, retrieve_archived_post, user_flair_on_post, user_pronouns_on_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
     vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post, \
@@ -62,9 +62,9 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
-    site_language_code, block_honey_pot, joined_communities, moderating_communities, user_pronouns, \
+    site_language_code, block_honey_pot, joined_communities, moderating_communities, \
     instance_sticky_posts, instance_sticky_post_ids, user_access, show_reason_why_no_federation, \
-    community_membership_private, user_ip_banned, check_anoobis, roles_with
+    community_membership_private, user_ip_banned, check_anoobis
 
 
 @login_required_if_private_instance
@@ -183,9 +183,7 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                 form.language_id.data = current_user.language_id or g.site.language_id
 
             # user flair
-            user_flair = {}
-            for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id):
-                user_flair[u_flair.user_id] = u_flair.flair
+            user_flair = user_flair_on_post(post)
 
         og_image = post.image.source_url if post.image_id else None
         description = shorten_string(markdown_to_text(post.body), 150) if post.body else None
@@ -342,7 +340,7 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                                    recipient_language_code=recipient_language_code,
                                    recipient_language_name=recipient_language_name,
                                    author_banned=author_banned,
-                                   user_pronouns=user_pronouns(),
+                                   user_pronouns=user_pronouns_on_post(post),
                                    hide_community_actions = community.name == 'microblogs',
                                    )
         response.headers.set('Link',
@@ -370,9 +368,7 @@ def post_lazy_replies(post_id, nonce):
     user = current_user if current_user.is_authenticated else None
 
     # user flair
-    user_flair = {}
-    for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id):
-        user_flair[u_flair.user_id] = u_flair.flair
+    user_flair = user_flair_on_post(post)
 
     # Voting history
     if current_user.is_authenticated:
@@ -419,7 +415,7 @@ def post_lazy_replies(post_id, nonce):
                            show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff() if current_user.is_authenticated else False,
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                            user_flair=user_flair if current_user.is_authenticated else {},
-                           user_pronouns=user_pronouns(),
+                           user_pronouns=user_pronouns_on_post(post),
                            upvoted_class='',
                            downvoted_class='')
 
@@ -716,9 +712,7 @@ def continue_discussion(post_id, comment_id):
             parent_id = comment.parent_id
 
     # user flair
-    user_flair = {}
-    for u_flair in UserFlair.query.filter(UserFlair.community_id == post.community_id):
-        user_flair[u_flair.user_id] = u_flair.flair
+    user_flair = user_flair_on_post(post)
 
     description = shorten_string(markdown_to_text(comment.body), 200) if comment.body else None
     og_image = post.image.source_url if post.image_id else None
@@ -736,7 +730,7 @@ def continue_discussion(post_id, comment_id):
                                community=post.community, parent_id=parent_id,
                                community_flair=get_comm_flair_list(post.community),
                                user_notes=user_notes(current_user.get_id()) if current_user.is_authenticated else {},
-                               user_pronouns = user_pronouns(), user_flair=user_flair,
+                               user_pronouns = user_pronouns_on_post(post), user_flair=user_flair,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
 
@@ -763,9 +757,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
     replies = get_comment_branch(post, comment.id, 'top', current_user if current_user.is_authenticated else None)
 
     # user flair
-    user_flair = {}
-    for u_flair in UserFlair.query.filter(UserFlair.community_id == post.community.id):
-        user_flair[u_flair.user_id] = u_flair.flair
+    user_flair = user_flair_on_post(post)
 
     # Voting history
     if current_user.is_authenticated:
@@ -796,7 +788,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
                                show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff() if current_user.is_authenticated else False,
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                                user_flair=user_flair if current_user.is_authenticated else {},
-                               user_pronouns=user_pronouns(),
+                               user_pronouns=user_pronouns_on_post(post),
                                upvoted_class='',
                                downvoted_class='')
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
@@ -904,7 +896,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                recipient_language_code=recipient_language_code,
                                recipient_language_name=recipient_language_name,
                                in_reply_to=in_reply_to, author_banned=author_banned,
-                               user_pronouns=user_pronouns(),
+                               user_pronouns=user_pronouns_on_post(post),
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
     else:
         content = request.form.get('body', '').strip()
@@ -1035,6 +1027,8 @@ def post_edit(post_id: int):
         del form.finish_in
     elif post.type == POST_TYPE_EVENT:
         form = CreateEventForm()
+    elif post.type == POST_TYPE_GALLERY:
+        form = CreateGalleryForm()
     else:
         abort(404)
 
@@ -1073,6 +1067,15 @@ def post_edit(post_id: int):
             try:
                 uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE or post_type == POST_TYPE_EVENT or post_type == POST_TYPE_VIDEO else None
                 edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file)
+                uploaded_files = []
+                image_alt_texts = []
+                if post_type == POST_TYPE_GALLERY:
+                    # Collect info about which entries have new files
+                    for entry in form.images:
+                        uploaded_files.append(entry.image_file.data)
+                        image_alt_texts.append(entry.alt_text.data or '')
+                edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file, uploaded_files=uploaded_files,
+                          image_alt_texts=image_alt_texts)
                 flash(Markup(_('Your changes have been saved. <a href="/post/%(post_id)d/edit">Edit it</a> if you notice any typos!')))
             except Exception as ex:
                 flash(_('Your edit was not accepted because %(reason)s', reason=str(ex)), 'error')
@@ -1118,6 +1121,16 @@ def post_edit(post_id: int):
 
             elif post_type == POST_TYPE_VIDEO:
                 form.video_url.data = post.url
+            elif post_type == POST_TYPE_GALLERY:
+                # Pre-populate gallery form with existing images, sorted by weight
+                # Query gallery files with their weights from the post_file table
+                existing_images = db.session.query(File).join(
+                    post_file, (post_file.c.file_id == File.id) & (post_file.c.post_id == post.id)
+                ).order_by(post_file.c.weight).all()
+                for i, entry in enumerate(form.images):
+                    if i < len(existing_images):
+                        # Set the alt text for existing images
+                        entry.alt_text.data = existing_images[i].alt_text
             elif post_type == POST_TYPE_POLL:
                 poll = Poll.query.filter_by(post_id=post.id).first()
                 form.mode.data = poll.mode
@@ -1652,6 +1665,25 @@ def post_flair_list(post_id):
         abort(401)
 
 
+@bp.route('/post/<int:post_id>/approve', methods=['POST'])
+@login_required
+@permission_required('administer all communities')
+def post_approve(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin():
+        post.status = POST_STATUS_PUBLISHED
+        post.posted_at = utcnow()
+        post.author.ban_posts = False
+        db.session.commit()
+
+        # Federate post
+        task_selector('make_post', post_id=post.id)
+
+        notify_about_post(post)
+
+        return _('Done')
+
+
 @bp.route('/post/<int:post_id>/lock/<mode>', methods=['POST'])
 @login_required
 def post_lock(post_id: int, mode):
@@ -2131,8 +2163,7 @@ def post_block_image(post_id: int):
             return render_template('generic_form.html',
                                    title=_('Are you sure you want to block this image?'),
                                    message=_('All posts that use this image will be deleted and future posts of the image will be rejected.'),
-                                   form=form,
-                                   roles_with=roles_with('change instance settings'))
+                                   form=form)
 
     return redirect(referrer())
 
@@ -2161,8 +2192,7 @@ def post_block_image_purge_posts(post_id: int):
         order_by(desc(Post.posted_at)).all()
     return render_template('post/post_block_image_purge_posts.html', post=post, posts=posts,
                            title=_('Posts containing blocked images'),
-                           referrer=request.args.get('referrer'),
-                           roles_with=roles_with('change instance settings'))
+                           referrer=request.args.get('referrer'))
 
 
 @bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
@@ -2397,7 +2427,7 @@ def post_set_ai(post_id):
     if current_user.is_authenticated and (current_user.is_admin_or_staff() or post.user_id == current_user.id or post.community.is_moderator()):
         post.ai_generated = True
         db.session.commit()
-    return 'Done'
+    return _('Done')
 
 
 @bp.route('/post/<int:post_id>/set_read', methods=['POST'])

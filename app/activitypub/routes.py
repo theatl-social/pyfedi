@@ -2086,15 +2086,10 @@ def comment_ap(comment_id):
     if is_activitypub_request():
         if reply.community.local_only or reply.community.private:
             abort(403)
-        if reply.author.has_blocked_instance(find_instance_id(requestor_domain())):
-            return make_response(f'Author has blocked {requestor_domain()}'), 401
         reply_data = comment_model_to_json(reply) if request.method == 'GET' else []
         resp = jsonify(reply_data)
         resp.content_type = 'application/activity+json'
-        if reply.author.has_blocked_instances():
-            resp.headers.set('Vary', 'Accept, User-Agent')
-        else:
-            resp.headers.set('Vary', 'Accept')
+        resp.headers.set('Vary', 'Accept')
         resp.headers.set('Cache-Control', 'public, max-age=120')
         resp.headers.set('Link',
                          f'<https://{current_app.config["SERVER_NAME"]}/comment/{reply.id}>; rel="alternate"; type="text/html"')
@@ -2115,8 +2110,6 @@ def post_ap(post_id):
         if post.is_local():
             if post.community.local_only or post.community.private or post.status < POST_STATUS_PUBLISHED:
                 abort(403)
-            if post.author.has_blocked_instance(find_instance_id(requestor_domain())):
-                return make_response(f'Author has blocked {requestor_domain()}'), 401
             if request.method == 'GET':
                 post_data = post_to_page(post)
                 post_data['@context'] = default_context()
@@ -2125,10 +2118,7 @@ def post_ap(post_id):
             resp = jsonify(post_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Cache-Control', 'public, max-age=120')
-            if post.author.has_blocked_instances():
-                resp.headers.set('Vary', 'Accept, User-Agent')
-            else:
-                resp.headers.set('Vary', 'Accept')
+            resp.headers.set('Vary', 'Accept')
             if post.slug:
                 resp.headers.set('Link',
                                  f'<https://{current_app.config["SERVER_NAME"]}{post.slug}>; rel="alternate"; type="text/html"')

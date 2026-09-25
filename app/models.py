@@ -35,7 +35,7 @@ from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
     ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
-    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO, INVITE_MEMBERS_ONLY, INVITE_MODS_ONLY, INVITE_OWNER_ONLY
+    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO, INVITE_MEMBERS_ONLY, INVITE_MODS_ONLY, INVITE_OWNER_ONLY, POST_TYPE_GALLERY
 
 
 def utcnow(naive=True):
@@ -1436,10 +1436,6 @@ class User(UserMixin, db.Model):
         instance_block = db.session.query(InstanceBlock).filter_by(user_id=self.id, instance_id=instance_id).first()
         return instance_block is not None
 
-    def has_blocked_instances(self):
-        instance_block = db.session.query(InstanceBlock).filter_by(user_id=self.id).first()
-        return instance_block is not None
-
     def has_blocked_user(self, user_id: int):
         existing_block = db.session.query(UserBlock).filter_by(blocker_id=self.id, blocked_id=user_id).first()
         return existing_block is not None
@@ -1740,7 +1736,7 @@ class Post(db.Model):
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
     event = db.relationship('Event', uselist=False, backref='post', lazy='select', cascade='all, delete-orphan')
     boosts = db.relationship('PostBoost', backref='post', lazy='dynamic', cascade='all, delete-orphan')
-    gallery = db.relationship('File', secondary=post_file, lazy='dynamic')
+    gallery = db.relationship('File', secondary=post_file, lazy='dynamic', order_by=post_file.c.weight)
     votes = db.relationship('PostVote', lazy='dynamic', backref='post', cascade='all, delete-orphan', passive_deletes=True)
     bookmarks = db.relationship('PostBookmark', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     poll = db.relationship('Poll', uselist=False, backref='post', lazy='select', cascade='all, delete-orphan')
@@ -1929,6 +1925,7 @@ class Post(db.Model):
                 isinstance(request_json['object']['attachment'], list) and
                 len(request_json['object']['attachment']) > 0 and
                 'type' in request_json['object']['attachment'][0]):
+            attached_images = []
             for attachment in request_json['object']['attachment']:
                 alt_text = None
                 if attachment['type'] == 'Link':
@@ -1942,6 +1939,7 @@ class Post(db.Model):
                     post.url = attachment['url']  # Mastodon
                     if 'name' in attachment:
                         alt_text = attachment['name']
+                    attached_images.append(attachment)
                     if post.url:
                         break
                 elif attachment['type'] == 'Audio':  # WordPress podcast
@@ -1957,9 +1955,14 @@ class Post(db.Model):
                         post.url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
                         alt_text = attachment.get("name")
                         file_path = attachment.get("file_path")
+            if len(attached_images) > 1:
+                post.type = POST_TYPE_GALLERY
+                for f in attached_images:
+                    file = File(alt_text=f.get('name'), source_url=f.get('url'))
+                    db.session.add(file)
+                    post.gallery.append(file)
 
-        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'],
-                                                                 dict):  # a.gup.pe (Mastodon)
+        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
             alt_text = None
             post.url = request_json['object']['attachment']['url']
 

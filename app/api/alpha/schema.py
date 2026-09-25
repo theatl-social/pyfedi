@@ -205,6 +205,7 @@ class LocalUser(DefaultSchema):
     show_read_posts = fields.Boolean(required=True)
     show_scores = fields.Boolean(required=True)
     manually_approves_followers = fields.Boolean(allow_none=True)
+    posts_subject_to_admin_approval = fields.Boolean(allow_none=True)
 
 
 class LocalUserView(DefaultSchema):

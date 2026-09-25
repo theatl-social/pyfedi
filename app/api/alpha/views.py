@@ -339,6 +339,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
 
     if isinstance(user, int):
         user = User.query.get(user)
+        if user is None:
+            raise Exception('user not found')
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
@@ -372,7 +374,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
             try:
                 extra_fields = user.extra_fields
             except DetachedInstanceError:  # when loading archived posts and their replies, temporary detatched users are created. See convert_archived_replies_to_tree()
-                extra_fields = User.query.get(user.id).extra_fields
+                fetched_user = User.query.get(user.id)
+                extra_fields = fetched_user.extra_fields if fetched_user else []
             num_extra_fields = 0
             for field in extra_fields:
                 user_field = {}
@@ -476,7 +479,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                     "feed_auto_follow": user.feed_auto_follow,
                     "feed_auto_leave": user.feed_auto_leave,
                     "ai_visibility": ai_visibility_options[user.hide_gen_ai],
-                    "manually_approves_followers": user.ap_manually_approves_followers
+                    "manually_approves_followers": user.ap_manually_approves_followers,
+                    "posts_subject_to_admin_approval": user.is_local() and user.ban_posts
                 },
                 "person": {
                     "id": user.id,

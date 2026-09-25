@@ -23,10 +23,10 @@
 
 ## Minimum server requirements
 
-Any OS that runs Python 3.10+
-2 CPU cores
-4 GB of RAM
-40 GB of storage (eventually)
+ - Any OS that runs Python 3.10+
+ - 2 CPU cores
+ - 4 GB of RAM
+ - 40 GB of storage (eventually)
 
 If your server will be used by more than 10 people, double the CPU and RAM.
 

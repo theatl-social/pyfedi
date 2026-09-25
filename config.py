@@ -200,3 +200,5 @@ class Config(object):
     ANOOBIS_DIFFICULTY_MOBILE = os.environ.get('') or 12
 
     RSS_FEEDS = os.environ.get('RSS_FEEDS') or False
+
+    CHAN_DETECTION_ENDPOINT = os.environ.get('CHAN_DETECTION_ENDPOINT') or ''

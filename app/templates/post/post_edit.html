@@ -86,6 +86,8 @@
             showHideLocationDivs(online);
         }
 
+
+
         // Initialize Media Library
         const mediaLibrary = new MediaLibrary({
             dialogId: 'insertImageDialog',
@@ -162,9 +164,58 @@
                     {{ render_field(form.image_alt_text) }}
                     <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
                 {% endif %}
+            {% elif post_type == POST_TYPE_GALLERY %}
+                <div id="gallery_images_container">
+                    {% set existing_gallery = post.gallery.all() if post.gallery else [] %}
+                    {% for image_entry in form.images %}
+                    <fieldset class="gallery_image_entry mb-3 p-3 border rounded">
+                        <legend class="float-none w-auto">{{ _('Image %(num)d', num=loop.index) }}</legend>
+                        {% if existing_gallery and loop.index0 < existing_gallery|length %}
+                            {% set gallery_image = existing_gallery[loop.index0] %}
+                            <div class="mb-3">
+                                <p class="mb-1">{{ _('Current image') }}:</p>
+                                {% if low_bandwidth -%}
+                                    <a href="{{ gallery_image.view_url(resize=True) }}" rel="nofollow ugc">
+                                        <img src="{{ gallery_image.medium_url() }}" 
+                                             alt="{{ gallery_image.alt_text if gallery_image.alt_text else _('Gallery image') }}" 
+                                             class="img-thumbnail me-2" 
+                                             fetchpriority="high" referrerpolicy="same-origin"
+                                             style="max-height: 150px;" />
+                                    </a>
+                                {% else -%}
+                                    <a href="{{ gallery_image.view_url() }}" rel="nofollow ugc">
+                                        <img src="{{ gallery_image.medium_url() }}"
+                                             alt="{{ gallery_image.alt_text if gallery_image.alt_text else _('Gallery image') }}"
+                                             class="img-thumbnail me-2" 
+                                             fetchpriority="high" referrerpolicy="same-origin" 
+                                             style="max-height: 150px;" >
+                                    </a>
+                                {% endif %}
+                                <small class="text-muted">{{ gallery_image.alt_text if gallery_image.alt_text else _('No alt text') }}</small>
+                            </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            {{ image_entry.image_file.label(class_="form-label") }}
+                            {{ image_entry.image_file(class_="form-control", accept="image/*") }}
+                            {% if image_entry.image_file.errors %}
+                                <div class="text-danger">{{ image_entry.image_file.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            {{ image_entry.alt_text.label(class_="form-label") }}
+                            {{ image_entry.alt_text(class_="form-control", placeholder=_('Describe the image, to help visually impaired people.')) }}
+                        </div>
+                        {% if loop.index == 4 -%}
+                            <p>{{ _('Mastodon will only display the first four images.') }}</p>
+                        {% endif -%}
+                    </fieldset>
+                    {% endfor %}
+                </div>
+                <p class="small field_hint">{{ _('Upload new images to add or replace existing ones. Empty fields will be ignored.') }}</p>
             {% elif post_type == POST_TYPE_VIDEO %}
                 {{ render_field(form.video_url) }}
-                <p class="small field_hint">{{ _('Provide a URL ending with .mp4 or .webm.') }}</p>
+                <p class="small field_hint">{{ _('Provide a URL ending with .mp4 or .webm.') }}
+                    {{ _('<a href="https://dansup.github.io/media-transcode/" target="_blank">Convert video files before uploading</a>, if necessary.') }}</p>
                 {% if can_upload_video() -%}
                 {{ render_field(form.image_file) }}
                 <p class="small field_hint">{{ _('Either provide an url OR upload a file but not both. Use common codecs like h.264 and mp3.') }}</p>
@@ -174,6 +225,7 @@
 
             {% set preview_type = "post" %}
             {% include "community/_body_edit_preview.html" %}
+            <p class="small">{{ _('Check for AI-generated text by pasting it into <a href="https://gptzero.me/" target="_blank">gptzero.me</a>. If found, tick the checkbox in "More options".') }}</p>
 
             {{ render_field(form.language_id) }}
 
