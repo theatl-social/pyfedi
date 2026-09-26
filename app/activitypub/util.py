@@ -13,6 +13,7 @@ from urllib.parse import urlparse, parse_qs
 import pendulum
 import boto3
 import httpx
+import pillow_jxl
 from PIL import Image, ImageOps
 from flask import current_app, request, g, url_for, json
 from flask_babel import _, force_locale, gettext
