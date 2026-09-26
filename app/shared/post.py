@@ -204,7 +204,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None, upload
         if file_ext.lower() not in allowed_extensions:
             raise Exception('filetype not allowed')
 
-    post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id, from_bot=user.bot or user.bot_override,
+    post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id,
+                from_bot=user.bot or user.bot_override, from_reposter=user.reposter or user.reposter_override,
                 posted_at=utcnow(), ap_id=gibberish(), title=title, language_id=language_id)
     if user.ban_posts:
         post.status = POST_STATUS_REVIEWING

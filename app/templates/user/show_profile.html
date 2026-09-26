@@ -430,14 +430,14 @@
                                 {% if bot_challenge is none %}
                                     {% if not user.bot and not user.bot_override %}
                                     <div class="col-4">
-                                        <a class="w-100 btn btn-primary confirm_first send_post" href="#" data-url="/u/{{ user.link() }}/bot_challenge">{{ _('Ask if bot') }}</a>
+                                        <a class="w-100 btn btn-primary confirm_first send_post" href="#" data-url="/u/{{ user.link() }}/bot_challenge">{{ _('Ask if reposter') }}</a>
                                     </div>
                                     {% endif %}
                                 {% else %}
                                     {% if bot_challenge.is_a_bot is none %}
-                                        {{ _('Bot challenge result pending') }}
+                                        {{ _('Reposter challenge result pending') }}
                                     {% elif bot_challenge.is_a_bot is false %}
-                                        {{ _('Not a bot') }}
+                                        {{ _('Not a reposter') }}
                                     {% endif %}
                                 {% endif %}
                             {% endif %}
@@ -546,6 +546,7 @@
                             });
                         });
                     </script>
+                    <p class="mb-0"><a href="{{ user.link() }}/post_timing">{{ _('Post timings') }}</a></p>
                 </div>
             </div>
         {% endif %}

@@ -336,6 +336,7 @@ def put_user_save_user_settings(auth, data):
     hide_low_quality = data['hide_low_quality'] if 'hide_low_quality' in data else None
     community_keyword_filter = data['community_keyword_filter'] if 'community_keyword_filter' in data else []
     bot_visibility = data['bot_visibility'] if 'bot_visibility' in data else None
+    reposter_visibility = data['reposter_visibility'] if 'reposter_visibility' in data else None
     accept_private_messages = data['accept_private_messages'] if 'accept_private_messages' in data else None
     newsletter = data['newsletter'] if 'newsletter' in data else None
     email_unread = data['email_unread'] if 'email_unread' in data else None
@@ -431,6 +432,16 @@ def put_user_save_user_settings(auth, data):
             user.ignore_bots = 2
         elif bot_visibility == "Transparent":
             user.ignore_bots = 3
+
+    if reposter_visibility:
+        if reposter_visibility == "Show":
+            user.ignore_reposters = 0
+        elif reposter_visibility == "Hide":
+            user.ignore_reposters = 1
+        elif reposter_visibility == "Blur":
+            user.ignore_reposters = 2
+        elif reposter_visibility == "Transparent":
+            user.ignore_reposters = 3
 
     if show_read_posts == True:
         user.hide_read_posts = False

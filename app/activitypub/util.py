@@ -653,6 +653,8 @@ def refresh_user_profile_task(user_id):
                                 user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
                     if 'type' in activity_json:
                         user.bot = True if activity_json['type'] == 'Service' else False
+                    if 'reposter' in activity_json:
+                        user.reposter = activity_json['reposter']
                     user.ap_fetched_at = utcnow()
                     user.public_key = activity_json['publicKey']['publicKeyPem']
                     user.accept_private_messages = activity_json['acceptPrivateMessages'] if 'acceptPrivateMessages' in activity_json else 3
@@ -1161,6 +1163,9 @@ def actor_json_to_model(activity_json, address, server):
                         field_data['value'] = mastodon_extra_field_link(field_data['value'])
                     user.extra_fields.append(UserExtraField(label=shorten_string(field_data['name'].strip()),
                                                             text=field_data['value'].strip()))
+
+        if 'reposter' in activity_json:
+            user.reposter = activity_json['reposter']
         try:
             db.session.add(user)
             db.session.commit()

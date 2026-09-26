@@ -389,6 +389,8 @@ def show_community(community: Community):
             user = current_user
             if current_user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
+            if current_user.ignore_reposters == 1:
+                posts = posts.filter(Post.from_reposter == False)
             if current_user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
             if current_user.hide_nsfw == 1:

@@ -12,6 +12,7 @@ from flask_login import current_user, login_user
 from flask_babel import _, ngettext
 from slugify import slugify
 from sqlalchemy import text, desc, or_, and_, delete, update, select
+from sqlalchemy.exc import SQLAlchemyError
 from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
@@ -49,7 +50,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
     safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, \
-    instance_allowed, trusted_instance_ids, get_emoji_replacements, get_site_as_dict, roles_with
+    instance_allowed, trusted_instance_ids, get_emoji_replacements, get_site_as_dict, roles_with, sql_file
 from app.admin import bp
 
 
@@ -1804,6 +1805,8 @@ def admin_user_edit(user_id):
     if form.validate_on_submit():
         user.bot = form.bot.data
         user.bot_override = form.bot_override.data
+        user.reposter = form.reposter.data
+        user.reposter_override = form.reposter_override.data
         user.suppress_crossposts = form.suppress_crossposts.data
         user.banned = form.banned.data
         user.ban_posts = form.ban_posts.data
@@ -1853,6 +1856,8 @@ def admin_user_edit(user_id):
             flash(_('This is a remote user - most settings here will be regularly overwritten with data from the original server.'), 'warning')
         form.bot.data = user.bot
         form.bot_override.data = user.bot_override
+        form.reposter.data = user.reposter
+        form.reposter_override.data = user.reposter_override
         form.suppress_crossposts.data = user.suppress_crossposts
         form.verified.data = user.verified
         form.banned.data = user.banned
@@ -1909,6 +1914,7 @@ def admin_users_add():
         user.about_html = markdown_to_html(form.about.data)
         user.matrix_user_id = form.matrix_user_id.data
         user.bot = form.bot.data
+        user.reposter = form.reposter.data
         profile_file = request.files['profile_file']
         if profile_file and profile_file.filename != '':
             # remove old avatar
@@ -2595,3 +2601,100 @@ def delete_user_files_in_background(user_id):
             raise
         finally:
             session.close()
+
+
+# Vote manipulation detection.
+#
+VOTE_TARGETING_DAYS = 7
+VOTE_NAMESAKE_DAYS = 7
+
+
+def _vote_span_text(seconds):
+    seconds = int(seconds or 0)
+    if seconds < 120:
+        return ngettext('%(num)d second', '%(num)d seconds', seconds, num=seconds)
+    if seconds < 7200:
+        return ngettext('%(num)d minute', '%(num)d minutes', seconds // 60, num=seconds // 60)
+    if seconds < 172800:
+        return ngettext('%(num)d hour', '%(num)d hours', seconds // 3600, num=seconds // 3600)
+    return ngettext('%(num)d day', '%(num)d days', seconds // 86400, num=seconds // 86400)
+
+
+def _run_vote_query(sql, params):
+    """Run one detector under its own time budget.
+
+    Two statements share a 30s gunicorn worker, so each gets 12s: worst case is
+    24s plus rendering. SET LOCAL is scoped to the transaction and cannot leak
+    into another request via the connection pool. A detector that blows its
+    budget degrades to None so the other one still renders - a slow query must
+    not turn the whole page into a 500.
+    """
+    try:
+        db.session.execute(text("SET LOCAL statement_timeout = '12s'"))
+        return db.session.execute(text(sql), params).all()
+    except SQLAlchemyError:
+        db.session.rollback()   # the aborted statement poisons the transaction
+        return None
+
+
+@cache.memoize(timeout=3600)
+def vote_manipulation_findings():
+
+    targeting_rows = _run_vote_query(sql_file('vote_targeting'),
+                                     {'days': VOTE_TARGETING_DAYS, 'min_votes': 10,
+                                      'min_focus': 0.5, 'min_communities': 4,
+                                      'min_rate': 6.0})
+    namesake_rows = _run_vote_query(sql_file('vote_namesake'),
+                                    {'days': VOTE_NAMESAKE_DAYS, 'min_votes': 5})
+
+    targeting = []
+    for row in (targeting_rows or []):
+        targeting.append({
+            'voter': row.voter_label,
+            'target': row.target_label,
+            'votes': row.votes,
+            'against': row.downs > 0,
+            'communities': row.communities,
+            'share_pct': int(row.share_pct),
+            'span': _vote_span_text(row.span_seconds),
+            # "too fast to be human" is the more damning of the two reasons, so
+            # it wins when a row qualifies on both counts
+            'too_fast': row.per_min >= 6.0,
+        })
+
+    # One row per (copy -> target); fold them into one entry per target so the
+    # admin sees "seven accounts called vegan_joe" rather than seven rows.
+    groups = {}
+    for row in (namesake_rows or []):
+        g = groups.setdefault(row.target_label, {
+            'username': row.username, 'target': row.target_label,
+            'accounts': [], 'votes': 0, 'ups': 0, 'downs': 0,
+        })
+        g['accounts'].append({'label': row.voter_label, 'votes': row.votes})
+        g['votes'] += row.votes
+        g['ups'] += row.ups
+        g['downs'] += row.downs
+    namesakes = sorted(groups.values(),
+                       key=lambda g: (len(g['accounts']), g['votes']), reverse=True)
+
+    return {
+        'targeting': targeting,
+        'namesakes': namesakes,
+        'targeting_failed': targeting_rows is None,
+        'namesake_failed': namesake_rows is None,
+        'targeting_days': VOTE_TARGETING_DAYS,
+        'namesake_days': VOTE_NAMESAKE_DAYS,
+        'generated': utcnow(),
+    }
+
+
+@bp.route('/votes', methods=['GET'])
+@permission_required('administer all communities')
+@login_required
+def admin_votes():
+    if request.args.get('refresh'):
+        cache.delete_memoized(vote_manipulation_findings)
+        return redirect(url_for('admin.admin_votes'))
+    return render_template('admin/votes.html',
+                           findings=vote_manipulation_findings(),
+                           roles_with=roles_with('administer all communities'))

@@ -367,6 +367,9 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             if user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
                 post_query_criteria.append('from_bot = false')
+            if user.ignore_reposters == 1:
+                posts = posts.filter(Post.from_reposter == False)
+                post_query_criteria.append('from_reposter = false')
             if user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
                 post_query_criteria.append('p.nsfl = false')
@@ -961,6 +964,8 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
                                           {"user_id": user_id}).scalars())
             if user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
+            if user.ignore_reposters == 1:
+                posts = posts.filter(Post.from_reposter == False)
             if user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
             if nsfw == '' and user.hide_nsfw == 1:

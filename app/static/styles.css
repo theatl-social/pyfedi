@@ -662,6 +662,14 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e94d";
 }
 
+.fe-reposter-account {
+  position: relative;
+  top: 1px;
+}
+.fe-reposter-account:before {
+  content: "\e94d";
+}
+
 .fe-translate:before {
   content: "\e972";
 }

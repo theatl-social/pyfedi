@@ -200,6 +200,7 @@ class LocalUser(DefaultSchema):
     reply_hide_threshold = fields.Integer(required=True, metadata={"description": "Hide replies with a score at or below this level"})
     searchable = fields.Boolean(required=True, metadata={"description": "If profile shows up in the user list on the instance"})
     show_bot_accounts = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
+    show_reposter_accounts = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
     show_nsfl = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
     show_nsfw = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
     show_read_posts = fields.Boolean(required=True)
@@ -1093,6 +1094,7 @@ class UserSaveSettingsRequest(DefaultSchema):
     bio = fields.String(metadata={"format": "markdown"})
     bot = fields.Boolean(metadata={"description": "This user is a bot"})
     bot_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list))
+    reposter_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list))
     community_keyword_filter = fields.List(fields.String(), allow_none=True,
                                            metadata={"description": "Filter out communities with these words in their name. Pass null to remove any filters."})
     cover = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})

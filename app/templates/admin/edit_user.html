@@ -25,6 +25,8 @@
             {% endif %}
             {{ render_field(form.bot) }}
             {{ render_field(form.bot_override) }}
+            {{ render_field(form.reposter) }}
+            {{ render_field(form.reposter_override) }}
             {{ render_field(form.suppress_crossposts) }}
             {{ render_field(form.verified) }}
             {% if not user.verified -%}

@@ -17,6 +17,8 @@
         {% endif -%}
         {% if user.bot or user.bot_override -%}
             <span class="fe fe-bot-account" title="{{ _('Bot account') }}"> </span>
+        {% elif user.reposter or user.reposter_override -%}
+            <span class="fe fe-reposter-account" title="{{ _('Reposter account') }}"> </span>
         {% endif -%}
         {% if current_user and user.id != current_user.id -%}
             {% if user.reputation < -12 -%}

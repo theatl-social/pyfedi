@@ -399,6 +399,7 @@ def user_profile(actor):
                           "indexable": user.indexable,
                           "acceptPrivateMessages": user.accept_private_messages,
                           "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
+                          "reposter": user.reposter,
                           "publicKey": {
                               "id": f"{user.public_url()}#main-key",
                               "owner": user.public_url(),

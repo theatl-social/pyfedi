@@ -256,6 +256,7 @@ class AddUserForm(FlaskForm):
     profile_file = FileField(_l('Avatar image'))
     banner_file = FileField(_l('Top banner image'))
     bot = BooleanField(_l('This profile is a bot'))
+    reposter = BooleanField(_l('This profile is a reposter'))
     verified = BooleanField(_l('Email address is verified'))
     banned = BooleanField(_l('Banned'))
     newsletter = BooleanField(_l('Subscribe to email newsletter'))
@@ -319,6 +320,8 @@ class AddUserForm(FlaskForm):
 class EditUserForm(FlaskForm):
     bot = BooleanField(_l('This profile is a bot'))
     bot_override = BooleanField(_l('Flag their posts as from a bot'))
+    reposter = BooleanField(_l('This profile is a reposter'))
+    reposter_override = BooleanField(_l('Flag their posts as from a reposter (bot)'))
     suppress_crossposts = BooleanField(_l('Suppress cross-posts'))
     verified = BooleanField(_l('Email address is verified'))
     banned = BooleanField(_l('Banned'))

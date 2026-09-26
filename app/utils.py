@@ -213,6 +213,13 @@ def file_get_contents(filename):
     return contents
 
 
+# Return saved SQL from app/sql/*
+def sql_file(filename):
+    if '../' in filename:
+        return ''
+    return file_get_contents(f'app/sql/{filename}.sql')
+
+
 random_chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 
@@ -3310,6 +3317,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
             params['private_community_ids'] = tuple(private_community_ids)
         if current_user.ignore_bots == 1:
             post_id_where.append('p.from_bot is false ')
+        if current_user.ignore_reposters == 1:
+            post_id_where.append('p.from_reposter is false ')
         if current_user.hide_nsfl == 1:
             post_id_where.append('p.nsfl is false ')
         if current_user.hide_nsfw == 1:

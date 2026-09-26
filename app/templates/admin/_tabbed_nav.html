@@ -20,6 +20,7 @@
             {% if user_access('administer all communities', current_user.id) %}
                 <a class="nav-link{% if active_child == 'admin_content' %} active{% endif %}" id="content-tab" type="button" role="tab" href="/admin/content" style="view-transition-name: content">{{ _('Content') }}</a>
                 <a class="nav-link{% if active_child == 'admin_reports' %} active{% endif %}" id="moderation-tab" type="button" role="tab" href="/admin/reports" style="view-transition-name: reports">{{ _('Moderation') }}</a>
+                <a class="nav-link{% if active_child == 'admin_votes' %} active{% endif %}" id="votes-tab" type="button" role="tab" href="/admin/votes" style="view-transition-name: votes">{{ _('Votes') }}</a>
             {% endif -%}
             {% if user_access('edit cms pages', current_user.id) %}
                 <a class="nav-link{% if active_child == 'admin_cms_pages' %} active{% endif %}" id="cms-pages-tab" type="button" role="tab" href="/admin/pages" style="view-transition-name: cms-pages">{{ _('Pages') }}</a>

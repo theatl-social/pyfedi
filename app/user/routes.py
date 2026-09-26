@@ -44,7 +44,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, blocked_or_banned_instances, blocked_domains, get_task_session, \
     patch_db_session, user_in_restricted_country, referrer, user_pronouns, \
-    permission_required, check_anoobis
+    permission_required, check_anoobis, sql_file
 from app.rss_extras import RSSFeed
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -221,88 +221,9 @@ def user_voting_patterns(actor):
         user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
 
     if user is not None:
-        votes_received_sql = """
-        WITH v AS (
-            SELECT pv.user_id AS other_id, pv.effect
-            FROM post_vote pv
-            WHERE pv.author_id = :user_id AND pv.effect <> 0 AND pv.user_id <> pv.author_id
-              AND pv.created_at >= NOW() - make_interval(days => :days)
-            UNION ALL
-            SELECT prv.user_id, prv.effect
-            FROM post_reply_vote prv
-            WHERE prv.author_id = :user_id AND prv.effect <> 0 AND prv.user_id <> prv.author_id
-              AND prv.created_at >= NOW() - make_interval(days => :days)
-        ),
-        agg AS (
-            SELECT other_id,
-                   COUNT(*) AS votes,
-                   COUNT(*) FILTER (WHERE effect > 0) AS ups,
-                   COUNT(*) FILTER (WHERE effect < 0) AS downs
-            FROM v GROUP BY other_id
-        ),
-        ranked AS (
-            SELECT *, ROW_NUMBER() OVER (ORDER BY votes DESC, other_id) AS rn,
-                      SUM(votes) OVER () AS grand_total
-            FROM agg
-        )
-        SELECT 0 AS sort_order, r.other_id AS user_id,
-               COALESCE(u.ap_id, u.user_name) AS label,
-               r.votes, r.ups, r.downs,
-               ROUND(100.0 * r.votes / r.grand_total, 2) AS pct
-        FROM ranked r JOIN "user" u ON u.id = r.other_id
-        WHERE r.rn <= :top_n
-        UNION ALL
-        SELECT 1, NULL,
-               'Others (' || COUNT(*) || ' accounts)',
-               CAST(SUM(votes) AS bigint), CAST(SUM(ups) AS bigint), CAST(SUM(downs) AS bigint),
-               ROUND(100.0 * SUM(votes) / MAX(grand_total), 2)
-        FROM ranked WHERE rn > :top_n
-        HAVING COUNT(*) > 0
-        ORDER BY sort_order, votes DESC;"""
+        votes_received_sql = sql_file('user_votes_received')
 
-        votes_cast_sql = """
-        WITH v AS (
-            SELECT pv.author_id AS other_id, pv.effect
-            FROM post_vote pv
-            WHERE pv.user_id = :user_id AND pv.effect <> 0 AND pv.user_id <> pv.author_id
-              AND pv.author_id IS NOT NULL
-              AND pv.created_at >= NOW() - make_interval(days => :days)
-            UNION ALL
-            SELECT prv.author_id, prv.effect
-            FROM post_reply_vote prv
-            WHERE prv.user_id = :user_id AND prv.effect <> 0 AND prv.user_id <> prv.author_id
-              AND prv.author_id IS NOT NULL
-              AND prv.created_at >= NOW() - make_interval(days => :days)
-        ),
-        agg AS (
-            SELECT other_id,
-                   COUNT(*)                           AS votes,
-                   COUNT(*) FILTER (WHERE effect > 0) AS ups,
-                   COUNT(*) FILTER (WHERE effect < 0) AS downs
-            FROM v GROUP BY other_id
-        ),
-        ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (ORDER BY votes DESC, other_id) AS rn,
-                   SUM(votes)   OVER ()                              AS grand_total
-            FROM agg
-        )
-        SELECT 0 AS sort_order,
-               r.other_id                     AS user_id,
-               COALESCE(u.ap_id, u.user_name) AS label,
-               r.votes, r.ups, r.downs,
-               ROUND(100.0 * r.votes / r.grand_total, 2) AS pct
-        FROM ranked r
-        JOIN "user" u ON u.id = r.other_id
-        WHERE r.rn <= :top_n
-        UNION ALL
-        SELECT 1, NULL,
-               'Others (' || COUNT(*) || ' accounts)',
-               CAST(SUM(votes) AS bigint), CAST(SUM(ups) AS bigint), CAST(SUM(downs) AS bigint),
-               ROUND(100.0 * SUM(votes) / MAX(grand_total), 2)
-        FROM ranked WHERE rn > :top_n
-        HAVING COUNT(*) > 0
-        ORDER BY sort_order, votes DESC;"""
+        votes_cast_sql = sql_file('user_votes_cast')
 
         votes_received = db.session.execute(text(votes_received_sql), {'user_id': user.id, 'top_n': 8, 'days': 60}).all()
 
@@ -311,6 +232,34 @@ def user_voting_patterns(actor):
         return render_template('user/voting_patterns.html', user=user,
                                title=_('Voting patterns of %(user_name)s', user_name=user.user_name),
                                votes_received=votes_received, votes_cast=votes_cast
+                               )
+    else:
+        return ''
+
+
+@bp.route('/u/<actor>/post_timing')
+@login_required_if_private_instance
+@permission_required('manage users')
+def user_post_timing(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
+    else:
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
+
+    if user is not None:
+        posts = Post.query.filter(Post.user_id == user.id).order_by(desc(Post.posted_at)).limit(100).all()
+
+        # posts made within 60 seconds of the post before or after them
+        close_together = set()
+        for newer, older in zip(posts, posts[1:]):
+            if (newer.posted_at - older.posted_at).total_seconds() < 60:
+                close_together.add(newer.id)
+                close_together.add(older.id)
+
+        return render_template('user/post_timing.html', user=user,
+                               title=_('Post timings of %(user_name)s', user_name=user.user_name),
+                               posts=posts, close_together=close_together
                                )
     else:
         return ''
@@ -1528,6 +1477,7 @@ def user_settings_filters():
         if (form.hide_nsfw.data != 1 or form.hide_nsfl.data != 1) and user_in_restricted_country(current_user):
             flash(_('NSFW content will be hidden due to legal restrictions in your country.'))
         current_user.ignore_bots = form.ignore_bots.data
+        current_user.ignore_reposters = form.ignore_reposters.data
         current_user.hide_nsfw = form.hide_nsfw.data
         current_user.hide_nsfl = form.hide_nsfl.data
         current_user.hide_gen_ai = form.hide_gen_ai.data
@@ -1548,6 +1498,7 @@ def user_settings_filters():
 
     elif request.method == 'GET':
         form.ignore_bots.data = current_user.ignore_bots
+        form.ignore_reposters.data = current_user.ignore_reposters
         form.hide_nsfw.data = current_user.hide_nsfw
         form.hide_nsfl.data = current_user.hide_nsfl
         form.hide_gen_ai.data = current_user.hide_gen_ai
@@ -2043,6 +1994,8 @@ def user_read_posts(sort=None):
 
     if current_user.ignore_bots == 1:
         posts = posts.filter(Post.from_bot == False)
+    if current_user.ignore_reposters == 1:
+        posts = posts.filter(Post.from_reposter == False)
     if current_user.hide_nsfl == 1:
         posts = posts.filter(Post.nsfl == False)
     if current_user.hide_nsfw == 1:
@@ -2197,7 +2150,7 @@ def user_bot_challenge(actor):
 
     bot_challenge_user(user.id, src=SRC_WEB)
 
-    flash(_('Bot challenge was sent. If they do not respond within 48 hours their account will be flagged as a bot.'), 'success')
+    flash(_('A message was sent to them. If they do not respond within 48 hours their account will be flagged as a resposter.'), 'success')
     if request.headers.get('HX-Request') == 'true':
         return '<div class="ms-auto">' + _('Done') + '</div>'
     else:

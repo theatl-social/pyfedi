@@ -464,6 +464,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                     "default_listing_type": user.default_filter.capitalize() if user.default_filter else 'Popular',
                     "show_scores": True,
                     "show_bot_accounts": not user.ignore_bots == 1,
+                    "show_reposter_accounts": not user.ignore_reposters == 1,
                     "show_read_posts": not user.hide_read_posts == True,
                     "reply_collapse_threshold": user.reply_collapse_threshold,
                     "reply_hide_threshold": user.reply_hide_threshold,

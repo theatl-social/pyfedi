@@ -1,0 +1,78 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% set active_child = 'admin_votes' %}
+
+{% block app_content %}
+{% include 'admin/_tabbed_nav.html' %}
+<br>
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>{{ _('Votes') }}</h2>
+            <a class="btn btn-outline-secondary btn-sm" href="?refresh=1">{{ _('Recheck now') }}</a>
+        </div>
+
+        <h3 class="mt-4">{{ _('Accounts that only ever vote on one person') }}</h3>
+        {% if findings.targeting_failed %}
+            <p class="mb-4"><em>{{ _('This check took too long to run and was stopped. Try Recheck now.') }}</em></p>
+        {% elif findings.targeting %}
+            <ul class="list-group mb-4">
+                {% for f in findings.targeting %}
+                    <li class="list-group-item">
+                        <a href="/u/{{ f.voter }}">{{ f.voter }}</a>
+                        {% if f.against %}
+                            {{ _('cast %(votes)d votes against', votes=f.votes) }}
+                        {% else %}
+                            {{ _('cast %(votes)d votes for', votes=f.votes) }}
+                        {% endif %}
+                        <a href="/u/{{ f.target }}">{{ f.target }}</a>
+                        {% if f.too_fast %}
+                            <strong>{{ _('in %(span)s', span=f.span) }}</strong>,
+                        {% else %}
+                            {{ _('across %(n)d different communities,', n=f.communities) }}
+                        {% endif %}
+                        {{ _('and never voted the other way.') }}
+                        <span class="text-muted">{{ _('That is %(pct)d%% of everything this account did.', pct=f.share_pct) }}</span>
+                        <a class="small" href="/u/{{ f.voter }}/voting_patterns">{{ _('see their voting') }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="mb-4"><em>{{ _('Nothing found.') }}</em></p>
+        {% endif %}
+
+        <h3>{{ _('The same username on several servers, voting for itself') }}</h3>
+        {% if findings.namesake_failed %}
+            <p class="mb-4"><em>{{ _('This check took too long to run and was stopped. Try Recheck now.') }}</em></p>
+        {% elif findings.namesakes %}
+            <ul class="list-group mb-4">
+                {% for g in findings.namesakes %}
+                    <li class="list-group-item">
+                        {{ ngettext('%(num)d account called', '%(num)d accounts called', g.accounts|length, num=g.accounts|length) }}
+                        <strong>{{ g.username }}</strong>
+                        {{ ngettext('on another server', 'on other servers', g.accounts|length) }}
+                        {% if g.downs %}
+                            {{ _('cast %(votes)d downvotes against', votes=g.downs) }}
+                        {% else %}
+                            {{ _('cast %(votes)d upvotes for', votes=g.ups) }}
+                        {% endif %}
+                        <a href="/u/{{ g.target }}">{{ g.target }}</a>.
+                        <div class="small mt-1">
+                            {% for a in g.accounts %}
+                                <a href="/u/{{ a.label }}">{{ a.label }}</a> ({{ a.votes }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="mb-4"><em>{{ _('Nothing found.') }}</em></p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1017,11 +1017,14 @@ class User(UserMixin, db.Model):
     indexable = db.Column(db.Boolean, default=True)         # whether posts appear in search results
     bot = db.Column(db.Boolean, default=False, index=True)
     bot_override = db.Column(db.Boolean, default=False, index=True)
+    reposter = db.Column(db.Boolean, default=False, index=True)
+    reposter_override = db.Column(db.Boolean, default=False, index=True)
     suppress_crossposts = db.Column(db.Boolean, default=False, index=True)
     vote_privately = db.Column(db.Boolean, default=False)
     can_send_pm = db.Column(db.Boolean, default=True)
     finished_onboarding = db.Column(db.Boolean, default=False)
     ignore_bots = db.Column(db.Integer, default=0)
+    ignore_reposters = db.Column(db.Integer, default=0)
     unread_notifications = db.Column(db.Integer, default=0)
     ip_address = db.Column(db.String(50))
     ip_address_country = db.Column(db.String(50))
@@ -1695,6 +1698,7 @@ class Post(db.Model):
     notify_author = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=True, index=True)
     from_bot = db.Column(db.Boolean, default=False, index=True)
+    from_reposter = db.Column(db.Boolean, default=False, index=True)
     private = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the content arrived here
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the original server created it
@@ -1862,6 +1866,7 @@ class Post(db.Model):
                     ap_announce_id=announce_id,
                     up_votes=1,
                     from_bot=user.bot or user.bot_override,
+                    from_reposter=user.reposter or user.reposter_override,
                     score=1.0,
                     instance_id=user.instance_id,
                     indexable=user.indexable,

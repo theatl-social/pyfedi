@@ -798,6 +798,8 @@ And if you want to add your score to the database to help your fellow Bookworms 
             posts = posts.filter(CommunityMember.user_id == user.id)
             if user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
+            if user.ignore_reposters == 1:
+                posts = posts.filter(Post.from_reposter == False)
             if user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
             if user.hide_nsfw == 1:
@@ -1385,6 +1387,7 @@ def anoobis():
 
 
 @bp.route('/bot_challenge/<uuid>')
+@bp.route('/botchallenge/<uuid>')
 @limiter.limit("20 per 1 minutes")
 def bot_challenge_result(uuid):
     challenge = BotChallenge.query.filter(BotChallenge.uuid == uuid).first()

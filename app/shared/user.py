@@ -324,13 +324,13 @@ def bot_challenge_user(user_id: int, src, auth=None):
 
     challenge_text = """Hi there,
 
-We noticed some unusual behaviour coming from your account and are starting to wonder if it is a bot or a human.
+We noticed some unusual behaviour coming from your account and are starting to wonder if it is a bot or a human or a mixture.
 
-If you are NOT using scripts, LLMs or other automation to create posts and comments, please visit this link:
+If you are NOT using scripts, LLMs or other automation to create posts, please visit this link:
 
 """
-    challenge_text += f"{current_app.config['SERVER_URL']}/bot_challenge/{uuid}\n\n"
-    challenge_text += f"If this account is run by a bot, in part or fully, do nothing and we will automatically flag it as a bot.\n\nThank you"
+    challenge_text += f"{current_app.config['SERVER_URL']}/botchallenge/{uuid}\n\n"
+    challenge_text += f"If this account is run by a bot, in part or fully, do nothing and we will automatically flag it as a reposter / bot. If you'd rather not click the link, just reply to this message and I'll do it for you.\n\nThank you"
     send_message(challenge_text, conversation.id)
 
     if existing_challenge is None:

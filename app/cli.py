@@ -1,6 +1,10 @@
 # if commands in this file are not working (e.g. 'flask translate') make sure you set the FLASK_APP environment variable.
 # e.g. export FLASK_APP=pyfedi.py
 import hashlib
+import math
+import sys
+from collections import Counter, defaultdict
+from statistics import median
 # This file is part of PieFed, which is licensed under the GNU Affero General Public License (AGPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 
@@ -46,7 +50,7 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
     guess_mime_type, ensure_directory_exists, \
     render_from_tpl, get_task_session, patch_db_session, get_setting, get_recipient_language, \
-    log_cron_task_to_db, allowlist_html, markdown_to_html, html_to_text, site_language_id
+    log_cron_task_to_db, allowlist_html, markdown_to_html, html_to_text, site_language_id, sql_file
 
 logger = logging.getLogger(__name__)
 
@@ -1564,6 +1568,8 @@ def register(app):
                             posts = posts.filter(CommunityMember.user_id == user.id)
                             if user.ignore_bots == 1:
                                 posts = posts.filter(Post.from_bot == False)
+                            if user.ignore_reposters == 1:
+                                posts = posts.filter(Post.from_reposter == False)
                             if user.hide_nsfl == 1:
                                 posts = posts.filter(Post.nsfl == False)
                             if user.hide_nsfw == 1:
@@ -2230,6 +2236,383 @@ def register(app):
                 raise
             finally:
                 session.close()
+
+    @app.cli.command("voting_clusters")
+    @click.option("--days", default=30, help="Size of the window to analyse.")
+    @click.option("--cap", default=25,
+                  help="Ignore items with more voters than this. Two people both upvoting a "
+                       "2000-vote front page post means nothing; both upvoting a 3-vote comment "
+                       "means a lot. Also the main cost control.")
+    @click.option("--min-shared", default=10, help="Ignore pairs sharing fewer items than this.")
+    @click.option("--min-communities", default=2,
+                  help="Ignore pairs whose shared items sit in fewer communities than this, "
+                       "which drops people who simply read the same thread.")
+    @click.option("--min-logp", default=20.0, help="Edge strength, as -log10 of the chance overlap.")
+    @click.option("--min-clique", default=4, help="Smallest group to report.")
+    @click.option("--top", default=25, help="How many groups to print.")
+    @click.option("--min-inward", default=0.25,
+                  help="Treat a group as a boost ring when the typical member aims at least "
+                       "this share of its own voting at the rest of the group.")
+    @click.option("--min-promoted", default=10,
+                  help="Votes the beneficiary must receive from the group before we will "
+                       "characterise it at all. Guards against verdicts drawn from a "
+                       "handful of votes.")
+    @click.option("--min-hub-share", default=0.4,
+                  help="Share of internal votes landing on one account for the group to be "
+                       "described as a boost ring rather than mutual boosting. Affects "
+                       "wording and ordering only, not whether a group is reported.")
+    @click.option("--overlap", default=0.7,
+                  help="Hide a group when this share of its members already appeared in a "
+                       "higher-ranked one. Clique enumeration emits many near-duplicates of "
+                       "the same ring.")
+    @click.option("--all", "show_all", is_flag=True,
+                  help="Also show groups with no clear beneficiary - usually friends who "
+                       "read the same communities. Off by default because they outnumber "
+                       "the real findings by roughly twenty to one.")
+    def voting_clusters(days, cap, min_shared, min_communities, min_logp, min_clique, top,
+                        min_inward, min_promoted, min_hub_share, overlap, show_all):
+        """Find groups of accounts that vote on the same content far more than chance allows.
+
+        The admin dashboard only catches manipulation that is blatant on its own terms - one
+        account hammering one target, or a username reused across servers. This catches the
+        case neither of those can: a group whose members each look unremarkable in isolation.
+        The known Vegan_Joe farm had focus values of 0.11-0.54 per account and was invisible to
+        every per-account heuristic, but its eight members form a perfect clique in this report.
+
+        Stage 1, FIND PAIRS. Only items with few voters count (--cap): two people both
+        upvoting a 2000-vote front page post means nothing, both upvoting a 3-vote comment
+        means a lot. Each pair is scored against a popularity-corrected null - if an account
+        picked items in proportion to how popular they are, how much overlap would we expect?
+        Overlap far above that expectation (--min-logp) becomes an edge.
+
+        Stage 2, FIND GROUPS. Maximal cliques of those edges, because a farm is a clique
+        sitting inside an ordinary topical community. Connected components just percolate into
+        one giant blob - 11k accounts at any useful threshold - and modularity clustering
+        returns the topic rather than the farm.
+
+        Stage 3, WORK OUT WHAT THEY DO. Cliques alone say a group is coordinated, not what it
+        is up to, so every group is described by where its votes go. The deciding
+        number is the inward share: how much of a typical member's own voting is aimed at the
+        rest of the group (median, so the beneficiary - who votes outward like anyone else -
+        does not drag it down). Above --min-inward the group is reported; below it they are
+        people who happen to read the same things, hidden unless you pass --all.
+
+        Stage 4, MERGE AND DESCRIBE. One dense blob yields dozens of near-identical cliques,
+        so everything pointing at the same beneficiary is merged into a single finding and
+        re-described from the union. Each group is then reported as one of two shapes, which
+        --min-hub-share distinguishes for wording and ordering only:
+
+        \b
+          boost ring      - internal votes funnel to one account (vegan_joe: 106 of 118)
+          mutual boosting - members boost each other reciprocally, no dominant recipient
+                            (RustyShackleford's nine accounts, four already banned)
+
+        Caveats worth keeping in mind. A group all on one server is often just that server's
+        regulars, and is flagged as such. The null ignores subscriptions, so accounts that
+        follow the same communities look more alike than they should. And this only sees votes
+        that reached this instance, which for remote accounts is not all of them.
+
+        """
+        sql = sql_file('voting_clusters')
+        print('This report is to *suggest* accounts to investigate further and should not be used as the final or only basis for a moderation decision.')
+        print(f"scanning {days} days (items with <= {cap} voters) ...", flush=True)
+        rows = db.session.execute(text(sql), {'days': days, 'cap': cap,
+                                              'min_shared': min_shared,
+                                              'min_communities': min_communities}).all()
+        if not rows:
+            print("no candidate pairs")
+            return
+        universe = rows[0].universe
+        print(f"{len(rows):,} candidate pairs over {universe:,} votes on low-traffic items")
+
+        edges = {}
+        adj = defaultdict(set)
+        for r in rows:
+            # Expected overlap if each account picked items in proportion to their
+            # popularity. Symmetrised over the two directions.
+            mu = (r.n2 * float(r.s1) + r.n1 * float(r.s2)) / (2.0 * universe)
+            strength = poisson_tail_log10(r.shared, mu)
+            if strength < min_logp:
+                continue
+            # Containment: the overlap as a share of the SMALLER account's own
+            # activity. Without this the ranking fills up with the instance's
+            # heaviest voters, who overlap in absolute terms simply because they
+            # all read /new, and real farms sink hundreds of places.
+            containment = r.shared / max(1, min(r.n1, r.n2))
+            edges[(r.u1, r.u2)] = {'shared': r.shared, 'communities': r.communities,
+                                   'strength': strength, 'containment': containment}
+            adj[r.u1].add(r.u2)
+            adj[r.u2].add(r.u1)
+        print(f"{len(edges):,} edges at -log10(p) >= {min_logp}")
+        if not edges:
+            return
+
+        cliques = maximal_cliques(adj, min_clique)
+        print(f"{len(cliques):,} groups of >= {min_clique} accounts")
+
+        def edge(u, v):
+            return edges.get((u, v)) or edges[(v, u)]
+
+        groups = []
+        for members in cliques:
+            pair_data = [edge(u, v) for i, u in enumerate(members) for v in members[i + 1:]
+                         if (u, v) in edges or (v, u) in edges]
+            groups.append({
+                'members': members,
+                'containment': min(d['containment'] for d in pair_data),
+                'strength': min(d['strength'] for d in pair_data),
+                'communities': min(d['communities'] for d in pair_data),
+                'shared': max(d['shared'] for d in pair_data),
+            })
+        ids = sorted({u for g in groups for u in g['members']})
+
+        # The clique statistics say a group is coordinated but not what it is
+        # DOING, which is the tell. To find out, pull every
+        # vote these accounts cast so each group can be assessed:
+        # who they boost, and whether they boost each other.
+        votes_by_member = defaultdict(list)
+        for row in db.session.execute(text("""
+                SELECT user_id, post_id * 2 AS item, author_id, effect
+                FROM post_vote
+                WHERE created_at >= NOW() - make_interval(days => :days)
+                  AND effect <> 0 AND author_id IS NOT NULL AND user_id = ANY(:ids)
+                UNION ALL
+                SELECT user_id, post_reply_id * 2 + 1, author_id, effect
+                FROM post_reply_vote
+                WHERE created_at >= NOW() - make_interval(days => :days)
+                  AND effect <> 0 AND author_id IS NOT NULL AND user_id = ANY(:ids)
+                """), {'days': days, 'ids': ids}).all():
+            votes_by_member[row.user_id].append((row.item, row.author_id, row.effect))
+
+        def describe(members):
+            """Who does this set of accounts vote for, and how inward-facing is it?"""
+            members = set(members)
+            internal = defaultdict(lambda: [0, 0])          # (voter, author) -> [up, down]
+            upvoters_of_item = defaultdict(set)             # item -> members who upvoted it
+            item_author = {}
+            for u in members:
+                for item, author, effect in votes_by_member.get(u, ()):
+                    if author in members and author != u:
+                        internal[(u, author)][0 if effect > 0 else 1] += 1
+                    if effect > 0:
+                        upvoters_of_item[item].add(u)
+                        item_author[item] = author
+            co_authors = Counter(item_author[i] for i, us in upvoters_of_item.items()
+                                 if len(us) >= 2)
+            # Does the group exist to promote somebody, or do its members just
+            # read the same things? Judge this on where the votes GO, not on
+            # which items happen to overlap: in a group of eight, "two of them
+            # upvoted it" is a low bar that incidental overlap on outside
+            # content easily clears, which is how the Vegan_Joe ring - where
+            # seven of eight accounts point 14-16 upvotes at the same member -
+            # initially got classified as friends.
+            cast_inside = defaultdict(int)
+            received_inside = defaultdict(int)
+            for (voter, author), (ups, downs) in internal.items():
+                cast_inside[voter] += ups + downs
+                received_inside[author] += ups + downs
+            # Share of each member's own voting that is aimed at the group. An
+            # alt spends most of its life on the account it exists to boost; a
+            # real person spends most of theirs elsewhere. Take the median so
+            # the beneficiary - who votes outward like anyone else - does not
+            # drag an otherwise inward-facing group down.
+            shares = [cast_inside.get(u, 0) / max(1, len(votes_by_member.get(u, ())))
+                      for u in members]
+            top_recv = max(received_inside, key=received_inside.get) if received_inside else None
+            return {
+                'members': sorted(members),
+                'internal': sorted(internal.items(), key=lambda kv: -sum(kv[1]))[:8],
+                'internal_total': sum(sum(v) for v in internal.values()),
+                'co_authors': co_authors,
+                'total_co': sum(co_authors.values()),
+                'inward': median(shares) if shares else 0.0,
+                'beneficiary': top_recv,
+                'ben_votes': received_inside[top_recv] if top_recv else 0,
+                # Share of the group's internal votes going to one member. A
+                # hub-and-spoke ring is near 1.0; a dense community spreads its
+                # internal votes around and sits far lower.
+                'hub_share': (received_inside[top_recv] / sum(received_inside.values())
+                              if top_recv else 0.0),
+            }
+
+        for g in groups:
+            g.update(describe(g['members']))
+            g['is_ring'] = g['inward'] >= min_inward and g['ben_votes'] >= min_promoted
+
+        rings = [g for g in groups if g['is_ring']]
+        print(f"{len(rings):,} of them concentrate on one account; "
+              f"the rest look like people who read the same things")
+
+        # Clique enumeration emits many overlapping cliques out of one dense
+        # blob, so the same ring otherwise gets reported again and again under
+        # slightly different membership. Everything pointing at the same
+        # beneficiary is one finding - merge them and re-describe the union.
+        merged, by_beneficiary = [], defaultdict(list)
+        for g in rings:
+            by_beneficiary[g['beneficiary']].append(g)
+        for beneficiary, gs in by_beneficiary.items():
+            union = set().union(*(g['members'] for g in gs))
+            entry = describe(union)
+            # Re-test after merging: a hub that looked dominant inside one small
+            # clique can turn out to receive a minority of the merged group's
+            # internal votes, which means it is a community, not a ring.
+            entry.update({
+                'is_ring': (entry['inward'] >= min_inward
+                            and entry['ben_votes'] >= min_promoted),
+                'merged_from': len(gs),
+                # cohesion stats describe a clique, so quote the best constituent
+                'containment': max(g['containment'] for g in gs),
+                'strength': max(g['strength'] for g in gs),
+                'communities': max(g['communities'] for g in gs),
+                'shared': max(g['shared'] for g in gs),
+            })
+            merged.append(entry)
+        collapsed = len(rings) - len(merged)
+        if collapsed > 0:
+            print(f"merged {collapsed:,} overlapping groups into the ones below "
+                  f"(same beneficiary)")
+        demoted = [g for g in merged if not g['is_ring']]
+        merged = [g for g in merged if g['is_ring']]
+        if demoted:
+            print(f"{len(demoted):,} looked like rings per-clique but spread their votes much "
+                  f"more widely once merged - treating those as communities")
+        # Hub-and-spoke rings first: they are the least ambiguous. Mesh rings,
+        # where members boost each other reciprocally, follow.
+        merged.sort(key=lambda g: (-g['hub_share'], -g['inward'], -g['ben_votes']))
+
+        kept = merged[:top]
+        if show_all:
+            # Non-rings stay as individual cliques; suppress near-duplicates so a
+            # single blob does not fill the page.
+            others = sorted([g for g in groups if not g['is_ring']] + demoted,
+                            key=lambda g: (-g['containment'], -len(g['members'])))
+            shown_sets = [set(g['members']) for g in kept]
+            for g in others:
+                if len(kept) >= top:
+                    break
+                ms = set(g['members'])
+                if any(len(ms & prev) / len(ms) >= overlap for prev in shown_sets):
+                    continue
+                g.setdefault('merged_from', 1)
+                kept.append(g)
+                shown_sets.append(ms)
+        reports = [(g, g['internal'], g['co_authors']) for g in kept]
+
+        # one label lookup covering members and the authors they promote
+        label_ids = set(ids)
+        for _g, _internal, co_authors in reports:
+            label_ids.update(a for a, _ in co_authors.most_common(4))
+        info = {}
+        for row in db.session.execute(text(
+                'SELECT id, COALESCE(ap_id, user_name) AS label, ap_id IS NULL AS is_local, '
+                'created::date AS created, banned FROM "user" WHERE id = ANY(:ids)'),
+                {'ids': sorted(label_ids)}).all():
+            info[row.id] = row
+
+        def label(uid):
+            row = info.get(uid)
+            if row is None:
+                return f'user {uid}'
+            return f'{row.label} (LOCAL)' if row.is_local else str(row.label)
+
+        for i, (g, internal, co_authors) in enumerate(reports, 1):
+            members = sorted(g['members'], key=label)
+            instances = {'(local)' if info[u].is_local else str(info[u].label).split('@')[-1]
+                         for u in members if u in info}
+            merged_note = (f" (merged from {g['merged_from']} overlapping groups)"
+                           if g.get('merged_from', 1) > 1 else "")
+            print(f"\n=== group {i}: {len(members)} accounts{merged_note} ===")
+
+            total_co = g['total_co']
+            if g['ben_votes'] < min_promoted:
+                # A "60% of their votes go to X" verdict off five items is noise
+                # dressed as a finding. Say nothing rather than overclaim.
+                print(f"    They only cast {g['ben_votes']} votes on each other - too little "
+                      f"to say what they are doing.")
+            elif g['is_ring'] and g['hub_share'] < min_hub_share:
+                print(f"    Looks like a mutual boosting group - its members upvote each "
+                      f"other rather than funnelling to one account "
+                      f"({g['internal_total']} votes cast within the group, top recipient "
+                      f"{label(g['beneficiary'])} on {g['hub_share'] * 100:.0f}%), and the "
+                      f"typical member aims {g['inward'] * 100:.0f}% of all its voting at "
+                      f"the group.")
+            elif g['is_ring']:
+                top_author = g['beneficiary']
+                inside = ' (one of the group)' if top_author in g['members'] else ''
+                print(f"    Looks like a boost ring for {label(top_author)}{inside}: "
+                      f"it received {g['ben_votes']} of the {g['internal_total']} votes this "
+                      f"group cast on its own members ({g['hub_share'] * 100:.0f}%), and the "
+                      f"typical member aims {g['inward'] * 100:.0f}% of all its voting at "
+                      f"the group.")
+            else:
+                print(f"    Probably not a ring - the typical member aims only "
+                      f"{g['inward'] * 100:.0f}% of its voting at the group, so they look like "
+                      f"people who read the same things.")
+            print(f"    Overlap is {g['containment'] * 100:.0f}% of the smallest account's "
+                  f"voting, up to {g['shared']} shared items, spread over at least "
+                  f"{g['communities']} communities (weakest link -log10(p)={g['strength']:.0f}).")
+            if len(instances) == 1:
+                print("    NOTE: all on one server - could just be that server's regulars.")
+
+            print("    Accounts:")
+            for u in members:
+                row = info.get(u)
+                if row is None:
+                    continue
+                print(f"      {label(u):46} joined {row.created}"
+                      f"{'  BANNED' if row.banned else ''}")
+
+            if internal:
+                print("    Votes they cast on each other:")
+                for (voter, author), (ups, downs) in internal:
+                    detail = f"{ups} up" + (f", {downs} down" if downs else "")
+                    print(f"      {label(voter):30} -> {label(author):30} {detail}")
+
+            if co_authors:
+                print("    Whose content two or more of them upvoted:")
+                for author, n in co_authors.most_common(4):
+                    print(f"      {label(author):46} {n} items")
+                rest = total_co - sum(n for _, n in co_authors.most_common(4))
+                if rest > 0:
+                    print(f"      {'everyone else combined':46} {rest} items")
+
+
+def poisson_tail_log10(k, mu):
+    """-log10 of the chance that Poisson(mu) reaches k or more."""
+    if mu <= 0:
+        return 1e4
+    log_first = -mu + k * math.log(mu) - math.lgamma(k + 1)
+    total, term = 1.0, 1.0
+    for j in range(1, 64):
+        term *= mu / (k + j)
+        total += term
+        if term < 1e-12 * total:
+            break
+    return -(log_first + math.log(total)) / math.log(10)
+
+
+def maximal_cliques(adj, min_size):
+    """Maximal cliques of at least min_size, via Bron-Kerbosch with pivoting."""
+    found = []
+
+    def expand(r, p, x):
+        if not p and not x:
+            if len(r) >= min_size:
+                found.append(sorted(r))
+            return
+        pivot = max(p | x, key=lambda v: len(adj[v] & p))
+        for v in list(p - adj[pivot]):
+            expand(r | {v}, p & adj[v], x & adj[v])
+            p.discard(v)
+            x.add(v)
+
+    limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(max(limit, 10000))
+    try:
+        expand(set(), set(adj), set())
+    finally:
+        sys.setrecursionlimit(limit)
+    return found
 
 
 def parse_communities(interests_source, segment):

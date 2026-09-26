@@ -118,9 +118,11 @@ def process_expired_bans():
 
         expired_instance_bans = session.query(InstanceBan).filter(InstanceBan.banned_until != None, InstanceBan.banned_until < utcnow()).all()
         for expired_ban in expired_instance_bans:
+            session.execute(text('UPDATE "user" SET banned = false WHERE id = :user_id'), {'user_id': expired_ban.user_id})
             cache.delete_memoized(banned_instances, expired_ban.user_id)
             cache.delete_memoized(blocked_or_banned_instances, expired_ban.user_id)
             session.delete(expired_ban)
+
         session.commit()
 
     except Exception:
@@ -1161,12 +1163,12 @@ def clean_up_tmp():
 
 
 def pwn_bots():
-    """ Everyone who has not responded to a bot challenge within 24h is assumed to be a bot"""
+    """ Everyone who has not responded to a reposter challenge within 24h is assumed to be a reposter"""
     session = get_task_session()
     cut_off = utcnow() - timedelta(days=1)
     try:
         for expired_challenge in BotChallenge.query.filter(BotChallenge.sent_at < cut_off, BotChallenge.is_a_bot == None).all():
-            session.execute(text('UPDATE "user" SET bot = true, bot_override = true, suppress_crossposts = true WHERE id = :user_id'), {
+            session.execute(text('UPDATE "user" SET reposter = true, reposter_override = true, suppress_crossposts = true WHERE id = :user_id'), {
                 'user_id': expired_challenge.user_id
             })
             session.execute(text('UPDATE "bot_challenge" SET is_a_bot = true WHERE id = :id'),

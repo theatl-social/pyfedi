@@ -38,6 +38,7 @@ def filter_selection():
                     content_filter = Filter(title='Trump & Musk', filter_home=True, filter_posts=True, filter_replies=False, hide_type=form.trump_musk_level.data, keywords='trump\nmusk', expire_after=None, user_id=current_user.id)
                     db.session.add(content_filter)
             current_user.ignore_bots = form.ignore_bots.data
+            current_user.ignore_reposters = form.ignore_reposters.data
             current_user.hide_nsfw = form.hide_nsfw.data
             current_user.hide_nsfl = form.hide_nsfl.data
             current_user.hide_gen_ai = form.hide_gen_ai.data
@@ -46,6 +47,7 @@ def filter_selection():
         else:
             form.hide_nsfw.data = 0 if current_app.config['CONTENT_WARNING'] or g.site.enable_nsfw else 1
             form.ignore_bots.data = 1
+            form.ignore_reposters.data = 3
             return render_template('auth/filter_selection.html', form=form)
     else:
         return redirect(url_for('auth.choose_topics'))
