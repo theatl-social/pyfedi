@@ -2698,3 +2698,13 @@ def admin_votes():
     return render_template('admin/votes.html',
                            findings=vote_manipulation_findings(),
                            roles_with=roles_with('administer all communities'))
+
+
+@bp.route('/votes_for_noone', methods=['GET'])
+@permission_required('administer all communities')
+@login_required
+def admin_votes_for_noone():
+    rows = db.session.execute(text(sql_file('accounts_no_votes'))).all()
+    return render_template('admin/votes_for_noone.html',
+                           rows=rows,
+                           roles_with=roles_with('administer all communities'))

@@ -33,6 +33,7 @@
     {% endif %}
     {% if user_access('administer all communities', current_user.id) %}
         <a href="{{ url_for('admin.admin_blocked_images') }}">{{ _('Blocked images') }}</a> |
+        <a href="{{ url_for('admin.admin_votes') }}">{{ _('Votes') }}</a> |
     {% endif %}
     <a href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a>
     {% if debug_mode %}

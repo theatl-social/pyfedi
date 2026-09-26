@@ -72,7 +72,15 @@
         {% else %}
             <p class="mb-4"><em>{{ _('Nothing found.') }}</em></p>
         {% endif %}
+        <hr />
+        <p><a href="{{ url_for('admin.admin_votes_for_noone') }}">{{ _('Also check accounts that never vote, they tend to be bots.') }}</a></p>
     </div>
 </div>
-
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}
