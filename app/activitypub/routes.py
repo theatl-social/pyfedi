@@ -1950,8 +1950,10 @@ def announce_activity_to_followers(community: Community, creator: User, activity
 @bp.route('/c/<actor>/outbox', methods=['GET'])
 def community_outbox(actor):
     actor = actor.strip()
-    community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
+    community: Community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
+        if community.local_only or community.private:
+            abort(403)
         sticky_posts = Post.query.filter(Post.community_id == community.id).filter(Post.sticky == True, Post.deleted == False,
                                          Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(50).all()
         remaining_limit = 50 - len(sticky_posts)
@@ -1983,6 +1985,8 @@ def community_featured(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
+        if community.local_only or community.private:
+            abort(403)
         posts = Post.query.filter_by(community_id=community.id, sticky=True, deleted=False).all()
 
         community_data = {
@@ -2147,6 +2151,9 @@ def post_replies_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
         post = Post.query.get_or_404(post_id)
 
+        if post.community.local_only or post.community.private:
+            abort(403)
+
         if request.method == 'GET':
             replies = post_replies_for_ap(post.id)
             replies_collection = {"type": "OrderedCollection", "totalItems": len(replies), "orderedItems": replies}
@@ -2166,6 +2173,8 @@ def post_ap_context(post_id):
         post = Post.query.get_or_404(post_id)
         if post.deleted:
             abort(404)
+        if post.community.local_only or post.community.private:
+            abort(403)
         if request.method == 'GET':
             replies = PostReply.query.filter_by(post_id=post_id, deleted=False).order_by(PostReply.posted_at).limit(2000)
             urls = [reply.ap_id for reply in replies]
