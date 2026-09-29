@@ -30,7 +30,7 @@ from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, \
     find_potential_moderators, hashtags_used_in_community, publicize_community, \
-    community_theme_list, set_community_theme_allowed, get_community_theme_allowed
+    community_theme_list, set_community_theme_allowed, get_community_theme_allowed, delete_community_task
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL, SRC_WEB, \
@@ -1421,18 +1421,10 @@ def community_delete(community_id: int):
     if community.is_owner() or current_user.is_admin():
         form = DeleteCommunityForm()
         if form.validate_on_submit():
-            if community.is_local():
-                community.banned = True
-                # todo: federate deletion out to all instances. At end of federation process, delete_dependencies() and delete community
-
-            # record for modlog
-            reason = f"Community {community.name} deleted by {current_user.user_name}"
-            add_to_modlog('delete_community', actor=current_user, reason=reason, community=community)
-
-            # actually delete the community
-            community.delete_dependencies()
-            db.session.delete(community)
-            db.session.commit()
+            if current_app.debug:
+                delete_community_task()
+            else:
+                delete_community_task.delay()
 
             flash(_('Community deleted'))
             return redirect('/communities')

@@ -22,7 +22,8 @@ from app.constants import SRC_WEB, POST_TYPE_LINK
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
     Instance, User, Tag, CommunityFlair, CommunityThemeAllowed
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
-    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting, scale_gif, theme_list
+    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting, scale_gif, theme_list, \
+    add_to_modlog
 from sqlalchemy import func, desc, text
 import os
 
@@ -386,6 +387,32 @@ def flairs_from_string(flairs: str, community_id: int) -> List[Tag]:
         if flair_to_append and flair_to_append not in return_value:
             return_value.append(flair_to_append)
     return return_value
+
+
+@celery.task
+def delete_community_task(community_id):
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                community = session.query(Community).get(community_id)
+                if community.is_local():
+                    community.banned = True
+                    # todo: federate deletion out to all instances. At end of federation process, delete_dependencies() and delete community
+
+                # record for modlog
+                reason = f"Community {community.name} deleted by {current_user.user_name}"
+                add_to_modlog('delete_community', actor=current_user, reason=reason, community=community)
+
+                # actually delete the community
+                community.delete_dependencies()
+                session.delete(community)
+                session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def delete_post_from_community(post_id):

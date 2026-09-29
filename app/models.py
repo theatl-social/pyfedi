@@ -20,6 +20,7 @@ from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
 from flask_sqlalchemy.query import Query
 from furl import furl
+from redis.exceptions import LockNotOwnedError
 from slugify import slugify
 from sqlalchemy import or_, text, desc, Index, func
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
@@ -918,10 +919,13 @@ class Community(db.Model):
             db.session.delete(rss_feed)
             db.session.commit()
         for post in db.session.query(Post).filter_by(community_id=self.id):
-            with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
-                post.delete_dependencies()
-                db.session.delete(post)
-                db.session.commit()
+            try:
+                with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
+                    post.delete_dependencies()
+                    db.session.delete(post)
+                    db.session.commit()
+            except LockNotOwnedError:
+                pass
         db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
@@ -4350,10 +4354,13 @@ class RssFeedItem(db.Model):
         from app import redis_client
         post = Post.query.get(self.post_id)
         if post:
-            with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
-                post.delete_dependencies()
-                db.session.delete(post)
-                db.session.commit()
+            try:
+                with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
+                    post.delete_dependencies()
+                    db.session.delete(post)
+                    db.session.commit()
+            except LockNotOwnedError:
+                pass
 
     __table_args__ = (
         db.UniqueConstraint('feed_id', 'guid'),
