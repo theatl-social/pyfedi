@@ -3794,10 +3794,20 @@ def reported_post_replies(user_id, admin_ids) -> List[int]:
 
 def possible_communities():
     which_community = {}
+    favorites = favorite_communities(current_user.get_id())
+    if len(favorites):
+        favorites = Community.query.filter(Community.id.in_(favorites)).order_by(Community.title).all()
     joined = joined_communities(current_user.get_id())
     moderating = moderating_communities(current_user.get_id())
     comms = []
     already_added = set()
+    for c in favorites:
+        if c.id not in already_added:
+            comms.append((c.id, c.display_name()))
+            already_added.add(c.id)
+    if len(comms) > 0:
+        which_community['Favorites'] = comms
+    comms = []
     for c in moderating:
         if c.id not in already_added:
             comms.append((c.id, c.display_name()))

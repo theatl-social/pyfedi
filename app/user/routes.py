@@ -237,6 +237,32 @@ def user_voting_patterns(actor):
         return ''
 
 
+@bp.route('/u/<actor>/voting_patterns_down')
+@login_required_if_private_instance
+@permission_required('manage users')
+def user_voting_patterns_down(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
+    else:
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
+
+    if user is not None:
+        downvote_sql = """
+            select author_id, created_at, effect, 'post' as kind, post_id as item_id
+            from "post_vote" where user_id = :user_id and effect < 0
+            union all
+            select author_id, created_at, effect, 'reply' as kind, post_reply_id as item_id
+            from "post_reply_vote" where user_id = :user_id and effect < 0
+            order by created_at desc """
+        votes_cast = db.session.execute(text(downvote_sql), {'user_id': user.id}).all()
+
+        return render_template('user/voting_patterns_down.html', user=user,
+                               title=_('Downvoting history of %(user_name)s', user_name=user.user_name),
+                               votes=votes_cast
+                               )
+
+
 @bp.route('/u/<actor>/post_timing')
 @login_required_if_private_instance
 @permission_required('manage users')
@@ -313,6 +339,7 @@ def edit_profile(actor):
             current_user.extra_fields.append(
                 UserExtraField(label=form.extra_label_4.data.strip(), text=form.extra_text_4.data.strip()))
         current_user.bot = form.bot.data
+        current_user.reposter = form.reposter.data
         db.session.commit()
 
         profile_file = request.files['profile_file']
@@ -377,6 +404,7 @@ def edit_profile(actor):
             i += 1
         form.matrixuserid.data = current_user.matrix_user_id
         form.bot.data = current_user.bot
+        form.reposter.data = current_user.reposter
         form.password.data = ''
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
@@ -521,7 +549,7 @@ def export_user_settings(user):
     for user_note in UserNote.query.filter(UserNote.user_id == user.id):
         target = User.query.get(user_note.target_id)
         if target:
-            notes.append({'target': target.profile_id(), 'note': user_note.body})
+            notes.append({'target': target.profile_id(), 'body': user_note.body})
     user_dict['user_notes'] = notes
 
     # piefed versions of (most of) the same settings

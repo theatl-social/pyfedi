@@ -1403,21 +1403,6 @@ function setupAddPassKeyAndCaptcha() {
 }
 
 function setupFancySelects() {
-    var crossPostCommunity = document.getElementById('which_community');
-    if(crossPostCommunity && crossPostCommunity.type === 'select-one') {
-        new TomSelect('#which_community', {maxOptions: null, maxItems: 1});
-    }
-
-    var communities = document.getElementById('communities');
-    if(communities && communities.type === 'select-one') {
-        new TomSelect('#communities', {maxOptions: null, maxItems: 1});
-    }
-
-    var community = document.getElementById('community');
-    if(community && community.type === 'select-one') {
-        new TomSelect('#community', {maxOptions: null, maxItems: 1});
-    }
-
     var languageSelect = document.querySelector('#tom_select div #language_id');
     if (languageSelect) {
         new TomSelect('#tom_select #language_id', {maxOptions: null, maxItems: 1});

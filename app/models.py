@@ -149,6 +149,9 @@ class Instance(db.Model):
         elif self.failures > 2 and self.dormant == False:
             self.dormant = True
 
+    def can_gallery(self):
+        return self.software != 'lemmy'
+
     def can_poll(self):
         return self.software != 'lemmy'
 

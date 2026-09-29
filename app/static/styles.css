@@ -668,6 +668,7 @@ h1 .fe-bell, h1 .fe-no-bell {
 }
 .fe-reposter-account:before {
   content: "\e94d";
+  opacity: var(--opacity-05);
 }
 
 .fe-translate:before {

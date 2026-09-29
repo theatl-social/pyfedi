@@ -2708,3 +2708,13 @@ def admin_votes_for_noone():
     return render_template('admin/votes_for_noone.html',
                            rows=rows,
                            roles_with=roles_with('administer all communities'))
+
+
+@bp.route('/serial_downvoters', methods=['GET'])
+@permission_required('administer all communities')
+@login_required
+def admin_votes_serial_downvoters():
+    rows = db.session.execute(text(sql_file('serial_downvoters'))).all()
+    return render_template('admin/votes_serial_downvoters.html',
+                           rows=rows,
+                           roles_with=roles_with('administer all communities'))

@@ -483,7 +483,8 @@
                 <div class="card-body">
                     <p><a href="{{ user.link() }}/upvotes">{{ _('Posts upvoted by %(user_name)s', user_name=user.user_name) }}</a></p>
                     {% if current_user.is_admin_or_staff() %}
-                        <p><a href="{{ user.link() }}/voting_patterns">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name) }}</a></p>
+                        <p><a href="/u/{{ user.link() }}/voting_patterns">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name) }}</a></p>
+                        <p><a href="/u/{{ user.link() }}/voting_patterns_down">{{ _('Downvoting history of %(user_name)s', user_name=user.user_name) }}</a></p>
                     {% endif %}
                 </div>
             </div>

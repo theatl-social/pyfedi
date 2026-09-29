@@ -480,6 +480,7 @@ h1 {
   top: 1px;
   &:before {
     content: "\e94d";
+    opacity: var(--opacity-05);
   }
 }
 

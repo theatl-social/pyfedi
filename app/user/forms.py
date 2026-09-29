@@ -33,6 +33,7 @@ class ProfileForm(FlaskForm):
     profile_file = FileField(_l('Avatar image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Top banner image'), render_kw={'accept': 'image/*'})
     bot = BooleanField(_l('This profile is a bot'))
+    reposter = BooleanField(_l('This profile is a reposter'))
     timezone = SelectField(_l('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', 'class': 'form-control tom-select'})
     submit = SubmitField(_l('Save profile'))
 

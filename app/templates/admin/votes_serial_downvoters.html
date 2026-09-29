@@ -1,0 +1,52 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% set active_child = 'admin_votes' %}
+
+{% block app_content %}
+{% include 'admin/_tabbed_nav.html' %}
+<br>
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>{{ _('Serial downvoters') }}</h2>
+        </div>
+
+        <p>{{ _('These accounts downvoted someone else more than 10 times in 3 minutes, in the last 7 days.') }}</p>
+        {% if rows %}
+            <table class="table table-striped">
+                <tr>
+                    <th>{{ _('Downvoter') }}</th>
+                    <th>{{ _('Vote burst') }}</th>
+                    <th> </th>
+                </tr>
+                {% for row in rows %}
+                    {% set link = row.voter_ap_id if row.voter_ap_id else row.user_name %}
+                    <tr>
+                        <td><a href="/admin/user/{{ link }}/edit">{{ link }}</a></td>
+                        <td>{{ row.max_downvotes_in_3min }}</td>
+                        <td>
+                            <a class="small" href="/u/{{ link }}/post_timing">{{ _('post timing') }}</a> |
+                            <a class="small" href="/u/{{ link }}/voting_patterns">{{ _('voting') }}</a> |
+                            <a class="small" href="/u/{{ link }}/voting_patterns_down">{{ _('downvotes') }}</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p class="mb-4"><em>{{ _('Nothing found.') }}</em></p>
+        {% endif %}
+
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
+{% endblock %}
