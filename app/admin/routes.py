@@ -2612,12 +2612,12 @@ VOTE_NAMESAKE_DAYS = 7
 def _vote_span_text(seconds):
     seconds = int(seconds or 0)
     if seconds < 120:
-        return ngettext('%(num)d second', '%(num)d seconds', seconds, num=seconds)
+        return ngettext('%(num)d second', '%(num)d seconds', seconds)
     if seconds < 7200:
-        return ngettext('%(num)d minute', '%(num)d minutes', seconds // 60, num=seconds // 60)
+        return ngettext('%(num)d minute', '%(num)d minutes', seconds // 60)
     if seconds < 172800:
-        return ngettext('%(num)d hour', '%(num)d hours', seconds // 3600, num=seconds // 3600)
-    return ngettext('%(num)d day', '%(num)d days', seconds // 86400, num=seconds // 86400)
+        return ngettext('%(num)d hour', '%(num)d hours', seconds // 3600)
+    return ngettext('%(num)d day', '%(num)d days', seconds // 86400)
 
 
 def _run_vote_query(sql, params):
