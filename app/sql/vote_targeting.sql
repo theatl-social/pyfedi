@@ -42,6 +42,6 @@ WHERE (p.ups = 0 OR p.downs = 0)                     -- never voted the other wa
   AND p.votes::float / t.total >= :min_focus
   AND (p.communities >= :min_communities OR p.per_min >= :min_rate)
   AND voter.deleted IS NOT TRUE AND voter.banned IS NOT TRUE
-  AND target.deleted IS NOT TRUE AND target.bot IS NOT TRUE
+  AND target.deleted IS NOT TRUE AND target.bot IS NOT TRUE AND target.bot_override IS NOT TRUE AND target.banned IS NOT TRUE
 ORDER BY p.votes DESC
 LIMIT 50
