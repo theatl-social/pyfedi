@@ -26,7 +26,7 @@
                 {% for row in rows %}
                     {% set link = row.voter_ap_id if row.voter_ap_id else row.user_name %}
                     <tr>
-                        <td><a href="/admin/user/{{ link }}/edit">{{ link }}</a></td>
+                        <td><a href="/u/{{ link }}">{{ link }}</a></td>
                         <td>{{ row.max_downvotes_in_3min }}</td>
                         <td>
                             <a class="small" href="/u/{{ link }}/post_timing">{{ _('post timing') }}</a> |

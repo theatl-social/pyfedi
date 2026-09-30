@@ -16,6 +16,8 @@
             <a class="btn btn-outline-secondary btn-sm" href="?refresh=1">{{ _('Recheck now') }}</a>
         </div>
 
+        <p>{{ _('All these statistics are for activity in the last %(days)d days.', days=findings.targeting_days) }}</p>
+
         <h3 class="mt-4">{{ _('Accounts that only ever vote on one person') }}</h3>
         {% if findings.targeting_failed %}
             <p class="mb-4"><em>{{ _('This check took too long to run and was stopped. Try Recheck now.') }}</em></p>
@@ -35,9 +37,8 @@
                         {% else %}
                             {{ _('across %(n)d different communities,', n=f.communities) }}
                         {% endif %}
-                        {{ _('and never voted the other way.') }}
-                        <span class="text-muted">{{ _('That is %(pct)d%% of everything this account did.', pct=f.share_pct) }}</span>
-                        <a class="small" href="/u/{{ f.voter }}/voting_patterns">{{ _('see their voting') }}</a>
+                        <span class="text-muted">{{ _('That is %(pct)d%% of their votes.', pct=f.share_pct) }}</span>
+                        <a class="small" href="/u/{{ f.voter }}/voting_patterns">{{ _('voting patterns') }}</a>
                     </li>
                 {% endfor %}
             </ul>
