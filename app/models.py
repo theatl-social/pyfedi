@@ -1972,6 +1972,10 @@ class Post(db.Model):
                     file = File(alt_text=f.get('name'), source_url=f.get('url'))
                     db.session.add(file)
                     post.gallery.append(file)
+                if 'image' in request_json['object']:
+                    image = File(source_url=request_json['object']['image']['url'])
+                    db.session.add(image)
+                    post.image = image
             elif len(attached_images) == 1:
                 post.type = POST_TYPE_IMAGE
                 post.url = attached_images[0]['url']

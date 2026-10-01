@@ -377,7 +377,7 @@
     {{ render_title(post, user_pronouns=user_pronouns, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
     {% if post.image_id and not low_bandwidth and not compact_thumbs -%}
         <div class="post_teaser_image_preview">
-            <a href="{{ post.slug }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}" decoding="async" referrerpolicy="no-referrer"
+            <a href="{{ post.slug }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}"><img src="{{ post.image.medium_url() }}" decoding="async" referrerpolicy="no-referrer"
                     alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
         </div>
     {% endif -%}

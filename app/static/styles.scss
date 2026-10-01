@@ -1364,6 +1364,11 @@ details {
   }
 }
 
+.post_gallery > div > a {
+    display: block;
+}
+
+
 .gallery-thumbnail {
     aspect-ratio: 1 / 1;
     object-fit: cover;

@@ -199,14 +199,12 @@
             {% endif -%}
         {% elif post.type == POST_TYPE_GALLERY and not post.deleted -%}
             <div class="post_gallery row g-2">
-                {% for file in post.gallery -%}
-                    <div class="col-12 col-md-4">
-                        <a href="{{ file.view_url() }}" target="_blank" rel="nofollow ugc">
-                            <img src="{{ file.thumbnail_url() }}" alt="{{ file.alt_text if file.alt_text else post.title }}"
-                                    width="{{ file.width }}" height="{{ file.height }}" class="img-fluid w-100 gallery-thumbnail" loading="lazy">
-                        </a>
-                    </div>
-                {% endfor -%}
+                {%- for file in post.gallery -%}
+                    <div class="col-12 col-md-4"><a href="{{ file.view_url() }}" target="_blank" rel="nofollow ugc">
+                        <img src="{{ file.thumbnail_url() }}" alt="{{ file.alt_text if file.alt_text else post.title }}"
+                            width="{{ file.width if file.width else '' }}" height="{{ file.height if file.height else '' }}"
+                            class="img-fluid w-100 gallery-thumbnail" loading="lazy"></a></div>
+                {%- endfor -%}
             </div>
         {% elif post.type == POST_TYPE_EVENT and not post.deleted -%}
             <div class="post_event">
