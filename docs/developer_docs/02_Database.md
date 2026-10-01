@@ -8,6 +8,9 @@ This guide is meant to help developers understand some of the basic ways that da
 
 The database schema are all defined in the [models.py file](https://codeberg.org/rimu/pyfedi/src/branch/main/app/models.py). The `sqlalchemy` structure (which they refer to as [declarative mapping](https://docs.sqlalchemy.org/en/20/orm/mapping_styles.html#orm-declarative-mapping)) interprets each python `class` as an object that corresponds to a table in the database, and attributes of that class as columns in the corresponding table. All of this is meant to make it easy to query the database elsewhere in the codebase.
 
+Classes inheriting from `db.model` have a `query` class attribute which implements the [SQLAlchemy Legacy Query API](https://docs.sqlalchemy.org/en/20/orm/queryguide/query.html), for example `Post.query`, `User.query` etc.
+With this attribute, even rather convoluted queries can be built quite ergonomically (by using `filter`, `filter_by`, `join` etc. consecutively), and it has several execute options (e.g. `all`, `first`, `one_or_none`).
+
 As an example, if I wanted to query how many posts a user with an `id` of 351 has made, then I can do it in a easily comprehensible  way with two lines of code using the ORM flow:
 
 ```python
@@ -28,7 +31,7 @@ user_object.post_count = num_posts + 1
 db.session.commit()
 ```
 
-Finally, to filter a table to a list of rows matching a criteria, the `filter` or `filter_by` functions can be used. So, if you wanted to get a list of all the posts that are in a specific community (with a `community_id` of 45) that have not been deleted and are not marked NSFW, you could do so like this:
+To filter a table to a list of rows matching a criteria, the `filter` or `filter_by` functions can be used. So, if you wanted to get a list of all the posts that are in a specific community (with a `community_id` of 45) that have not been deleted and are not marked NSFW, you could do so like this:
 
 ```python
 # using filter function - filter uses Boolean conditionals as arguments
@@ -36,6 +39,15 @@ post_list_1 = Post.query.filter(Post.community_id == 45, Post.deleted == False, 
 
 # using filter_by function - filter_by uses keyword arguments corresponding to column names
 post_list_2 = Post.query.filter_by(community_id=45, deleted=False, nsfw=False).all()
+```
+
+Finally, some tables describing [many-to-many relations](https://en.wikipedia.org/wiki/Associative_entity) are defined with the [Table class](https://docs.sqlalchemy.org/en/20/core/metadata.html#sqlalchemy.schema.Table), and can be [directly accessed](https://docs.sqlalchemy.org/en/20/core/metadata.html#accessing-tables-and-columns). For example, to get all posts that are tagged with *example*, you can execute a SQL `JOIN` in this way:
+
+```python
+tag = Tag.query.filter(Tag.name == 'example').first() 
+posts = Post.query
+if tag:
+	posts = posts.join(post_tag).filter(post_tag.c.tag_id == tag.id).all()
 ```
 
 ## Executing Raw SQL
