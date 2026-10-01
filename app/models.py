@@ -36,7 +36,8 @@ from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
     ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
-    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO, INVITE_MEMBERS_ONLY, INVITE_MODS_ONLY, INVITE_OWNER_ONLY, POST_TYPE_GALLERY
+    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO, INVITE_MEMBERS_ONLY, INVITE_MODS_ONLY, INVITE_OWNER_ONLY, POST_TYPE_GALLERY, \
+    POST_TYPE_IMAGE
 
 
 def utcnow(naive=True):
@@ -1948,12 +1949,9 @@ class Post(db.Model):
                     if post.url:
                         break
                 elif attachment['type'] == 'Document':
-                    post.url = attachment['url']  # Mastodon
                     if 'name' in attachment:
                         alt_text = attachment['name']
                     attached_images.append(attachment)
-                    if post.url:
-                        break
                 elif attachment['type'] == 'Audio':  # WordPress podcast
                     post.url = attachment['url']
                     if 'name' in attachment:
@@ -1968,11 +1966,15 @@ class Post(db.Model):
                         alt_text = attachment.get("name")
                         file_path = attachment.get("file_path")
             if len(attached_images) > 1:
+                post.url = None
                 post.type = POST_TYPE_GALLERY
                 for f in attached_images:
                     file = File(alt_text=f.get('name'), source_url=f.get('url'))
                     db.session.add(file)
                     post.gallery.append(file)
+            elif len(attached_images) == 1:
+                post.type = POST_TYPE_IMAGE
+                post.url = attached_images[0]['url']
 
         if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
             alt_text = None

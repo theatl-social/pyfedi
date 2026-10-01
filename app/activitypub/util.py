@@ -179,6 +179,7 @@ def post_to_page(post: Post):
         for file in post.gallery:
             activity_data['attachment'].append({'type': 'Document', 'url': file.source_url, 'name': file.alt_text,
                                                 'width': file.width, 'height': file.height})
+        activity_data["attachment"].append({"href": post.ap_id, "type": "Link"})
     if post.type == POST_TYPE_POLL:
         poll = Poll.query.filter_by(post_id=post.id).first()
         activity_data['type'] = 'Question'

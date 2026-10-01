@@ -1381,6 +1381,8 @@ def build_gallery_thumbnail(files: List[str]):
         final_ext = '.webp'
         final_place = os.path.join(directory, new_filename + final_ext)
 
+        thumbnail.save(final_place)
+
         url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
 
         # Move to S3 if configured
