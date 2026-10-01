@@ -43,7 +43,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, \
     num_topics, referrer, block_honey_pot, user_pronouns, get_instance_stickies, \
-    community_membership_private, favorite_communities, mimetype_from_url, check_anoobis, get_request
+    community_membership_private, favorite_communities, mimetype_from_url, check_anoobis, get_request, store_files_in_s3
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage, BannedInstances, BotChallenge
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
@@ -1163,6 +1163,10 @@ def static_manifest():
             icon['src'] = logo_192 if logo_192 else '/static/images/piefed_logo_icon_t_192.png'
         elif icon.get('sizes') == '512x512':
             icon['src'] = logo_512 if logo_512 else '/static/images/piefed_logo_icon_t_512.png'
+
+    # S3 media url
+    if store_files_in_s3():
+        manifest['scope_extensions'] = [{"origin": current_app.config['S3_PUBLIC_URL']}]
 
     # Build response with cache headers
     response = make_response(jsonify(manifest))
