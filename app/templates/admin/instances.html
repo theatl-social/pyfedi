@@ -25,7 +25,8 @@
         <a href="{{ url_for('admin.admin_instances', filter='gone_forever') }}">{{ _('Gone forever') }}</a> |
         <a href="{{ url_for('admin.admin_instances', filter='trusted') }}">{{ _('Trusted') }}</a> |
         <a href="{{ url_for('admin.admin_instances', filter='silenced') }}">{{ _('Silenced') }}</a> |
-        <a href="{{ url_for('admin.admin_instances', filter='blocked') }}">{{ _('Blocked') }}</a>
+        <a href="{{ url_for('admin.admin_instances', filter='blocked') }}">{{ _('Defederated') }}</a> |
+        <a href="{{ url_for('admin.admin_instances', filter='liability') }}">{{ _('Liabilities') }}</a>
         <table class="table table-striped">
             <tr>
                <th>

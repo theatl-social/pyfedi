@@ -651,6 +651,12 @@ def monitor_healthy_instances():
                                                       aliases=' '.join(aliases))
                                     session.add(new_emoji)
                                 session.commit()
+
+                        # determine if they're a liability - open registration with no captcha makes them a source of problems
+                        instance.liability = instance_data['site_view']['local_site']['registration_mode'] == 'Open' \
+                                             and instance_data['site_view']['local_site']['captcha_enabled'] is False \
+                                             and instance_data['site_view']['local_site']['require_email_verification'] is False
+
                     cache.delete_memoized(get_emoji_replacements)
                 except Exception:
                     session.rollback()

@@ -2118,6 +2118,9 @@ def admin_instances():
         elif filter == 'gone_forever':
             instances = instances.filter(Instance.gone_forever == True)
             title = 'Gone forever instances'
+        elif filter == 'liability':
+            instances = instances.filter(Instance.liability == True)
+            title = 'Liabilities'
         elif filter == 'blocked':
             instances = instances.join(BannedInstances, BannedInstances.domain == Instance.domain)
 
