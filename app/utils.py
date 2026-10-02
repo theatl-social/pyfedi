@@ -1880,7 +1880,7 @@ def can_create_post(user, content: Community) -> bool:
     if user is None or content is None or user.banned:
         return False
 
-    if user.ban_posts:
+    if user.ban_posts and not user.is_local():
         return False
 
     if user.is_local():

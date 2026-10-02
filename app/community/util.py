@@ -13,17 +13,17 @@ from pillow_heif import register_heif_opener
 from psycopg2 import IntegrityError
 from flask_babel import _, lazy_gettext as _l
 
-from app import db, cache, celery
+from app import db, cache, celery, plugins
 from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, \
     find_hashtag_or_create, create_post, remote_object_to_json, find_flair
 from app.community.forms import CreateLinkForm
-from app.constants import SRC_WEB, POST_TYPE_LINK
+from app.constants import SRC_WEB, POST_TYPE_LINK, NOTIF_NEW_POST
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
-    Instance, User, Tag, CommunityFlair, CommunityThemeAllowed
+    Instance, User, Tag, CommunityFlair, CommunityThemeAllowed, Notification
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
     store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting, scale_gif, theme_list, \
-    add_to_modlog
+    add_to_modlog, role_access
 from sqlalchemy import func, desc, text
 import os
 
@@ -1050,3 +1050,29 @@ def community_theme_list():
     community_themes = theme_list()
     community_themes.insert(0,('disabled', _l('Disabled')))
     return community_themes
+
+
+def notify_admins_of_post_needing_approval(post):
+    """Notify admins when a post is ready for review"""
+
+    targets_data = {'gen': '0', 'post_id': post.id, 'user_id': post.user_id}
+    for admin in Site.admins():
+        notify = Notification(title='Approve new post',
+                              url=f'/admin/content?show=approval', user_id=admin.id,
+                              author_id=post.user_id, notif_type=NOTIF_NEW_POST,
+                              subtype='new_post_for_approval',
+                              targets=targets_data)
+        admin.unread_notifications += 1
+        db.session.add(notify)
+    if role_access('approve registrations', 3):
+        for admin in Site.staff():
+            notify = Notification(title='Approve new post',
+                                  url=f'/admin/content?show=approval', user_id=admin.id,
+                                  author_id=post.user_id, notif_type=NOTIF_NEW_POST,
+                                  subtype='new_post_for_approval',
+                                  targets=targets_data)
+            admin.unread_notifications += 1
+            db.session.add(notify)
+    db.session.commit()
+
+    plugins.fire_hook("new_post_for_approval", post)

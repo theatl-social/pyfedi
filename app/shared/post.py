@@ -1236,7 +1236,8 @@ def mod_remove_post(post_id: int, reason, src, auth):
                   community=post.community, post=post,
                   link_text=shorten_string(post.title), link=f'post/{post.id}')
 
-    task_selector('delete_post', user_id=user.id, post_id=post.id, reason=reason)
+    if post.status == POST_STATUS_PUBLISHED:
+        task_selector('delete_post', user_id=user.id, post_id=post.id, reason=reason)
 
     # remove any notifications about the post
     notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)

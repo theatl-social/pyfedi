@@ -30,7 +30,8 @@ from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, \
     find_potential_moderators, hashtags_used_in_community, publicize_community, \
-    community_theme_list, set_community_theme_allowed, get_community_theme_allowed, delete_community_task
+    community_theme_list, set_community_theme_allowed, get_community_theme_allowed, delete_community_task, \
+    notify_admins_of_post_needing_approval
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL, SRC_WEB, \
@@ -1026,7 +1027,7 @@ def join_then_add(actor):
 @validation_required
 @approval_required
 def add_post(actor, type=None):
-    if current_user.banned or current_user.ban_posts or user_ip_banned():
+    if current_user.banned or user_ip_banned():
         return show_ban_message()
     if request.method == 'GET':
         community = actor_to_community(actor)
@@ -1138,6 +1139,7 @@ def add_post(actor, type=None):
 
         if post.status == POST_STATUS_REVIEWING:
             flash(_('Because your account is new we will review your post before allowing it to be published. Please wait.'))
+            notify_admins_of_post_needing_approval(post)
 
         flash(Markup(_('Your post has been created. <a href="/post/%(post_id)d/edit">Edit it</a> if you notice any typos!', post_id=post.id)))
 
