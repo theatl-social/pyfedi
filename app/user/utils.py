@@ -331,6 +331,7 @@ def _get_user_upvoted_posts(user):
     """Get posts upvoted by user (only for user themselves or admins)."""
     if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()):
         return Post.query.join(PostVote, PostVote.post_id == Post.id).filter(PostVote.effect > 0, PostVote.user_id == user.id). \
+            filter(PostVote.author_id != user.id). \
             order_by(desc(PostVote.id)).limit(50).all()
     return []
 

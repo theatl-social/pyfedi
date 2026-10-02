@@ -25,7 +25,8 @@
                   <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                     <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ user.display_name()|shorten }}</li>
+                    <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ _('Downvoting history of %(user_name)s', user_name=user.user_name)|shorten }}</li>
                   </ol>
                 </nav>
             </div>
@@ -37,7 +38,8 @@
                   <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                     <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ user.display_name()|shorten }}</li>
+                    <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ _('Downvoting history of %(user_name)s', user_name=user.user_name)|shorten }}</li>
                   </ol>
                 </nav>
                 <div class="col-3 col-md-2">
@@ -62,7 +64,8 @@
               <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                 <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ user.link()|shorten }}</li>
+                <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ _('Downvoting history of %(user_name)s', user_name=user.user_name)|shorten }}</li>
               </ol>
             </nav>
             <h1 class="mt-2">{{ _('Downvoting history of %(user_name)s', user_name=user.user_name) }}
@@ -72,10 +75,11 @@
         <p>{{ _('As you scan the table, look for blocks where the same target or dates occur.') }}</p>
 
         <table class="table table-striped">
-            <tr><th>{{ _('Target') }}</th><th>{{ _('When') }}</th></tr>
+            <tr><th>{{ _('Target') }}</th><th>{{ _('Post / comment') }}</th><th>{{ _('When') }}</th></tr>
         {% for vote in votes -%}
             <tr>
                 <td>{{ vote.author_id }}</td>
+                <td><a href="/{{ vote.kind }}/{{ vote.item_id }}">{{ _('view') }}</a></td>
                 <td>{{ vote.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
             </tr>
         {% endfor -%}

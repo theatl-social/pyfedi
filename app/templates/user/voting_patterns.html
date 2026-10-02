@@ -40,7 +40,6 @@
             <thead>
                 <tr>
                     <th scope="col">{{ who }}</th>
-                    <th scope="col" class="text-end">{{ _('Votes') }}</th>
                     <th scope="col" class="text-end">{{ _('Up') }}</th>
                     <th scope="col" class="text-end">{{ _('Down') }}</th>
                     <th scope="col" class="text-end">{{ _('Share') }}</th>
@@ -51,12 +50,12 @@
                     <tr>
                         <td>
                             {% if row.user_id %}
-                                <a href="/u/{{ row.label }}/voting_patterns">{{ row.label }}</a>
+                                <a href="/u/{{ row.label }}">{{ row.label }}</a>
+                                <small><a href="/u/{{ row.label }}/voting_patterns">{{ _('votes') }}</a></small>
                             {% else %}
                                 <em>{{ row.label }}</em>
                             {% endif %}
                         </td>
-                        <td class="text-end">{{ row.votes }}</td>
                         <td class="text-end">{{ row.ups }}</td>
                         <td class="text-end">{{ row.downs }}</td>
                         <td class="text-end">{{ row.pct }}%</td>
@@ -118,7 +117,8 @@
                   <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                     <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ user.display_name()|shorten }}</li>
+                    <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name)|shorten }}</li>
                   </ol>
                 </nav>
             </div>
@@ -130,7 +130,8 @@
                   <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                     <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ user.display_name()|shorten }}</li>
+                    <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name)|shorten }}</li>
                   </ol>
                 </nav>
                 <div class="col-3 col-md-2">
@@ -155,7 +156,8 @@
               <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                 <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ user.link()|shorten }}</li>
+                <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name)|shorten }}</li>
               </ol>
             </nav>
             <h1 class="mt-2">{{ _('Voting patterns of %(user_name)s', user_name=user.user_name) }}

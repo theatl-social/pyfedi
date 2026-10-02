@@ -252,7 +252,7 @@ def user_voting_patterns_down(actor):
             select author_id, created_at, effect, 'post' as kind, post_id as item_id
             from "post_vote" where user_id = :user_id and effect < 0
             union all
-            select author_id, created_at, effect, 'reply' as kind, post_reply_id as item_id
+            select author_id, created_at, effect, 'comment' as kind, post_reply_id as item_id
             from "post_reply_vote" where user_id = :user_id and effect < 0
             order by created_at desc """
         votes_cast = db.session.execute(text(downvote_sql), {'user_id': user.id}).all()
