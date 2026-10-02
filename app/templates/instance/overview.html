@@ -43,6 +43,9 @@
                     {% else %}
                       <a class="btn btn-primary confirm_first" role="button" aria-label="{{ _('Block everyone from %(instance_name)s', instance_name=instance.domain) }}" hx-post="/instance/{{ instance.id }}/block" hx-trigger="click throttle:1s"tabindex="0">{{ _('Block') }}</a>
                     {% endif -%}
+                    {% if user_access('administer all communities', current_user.get_id()) and instance.can_contact() %}
+                        <p class="mt-4"><a href="/admin/instance/{{ instance.id }}/contact">{{ _('Contact instance admins on %(instance_name)s', instance_name=instance.domain) }}</a></p>
+                    {% endif %}
                 {% endif -%}
             </div>
         </div>

@@ -160,6 +160,9 @@ class Instance(db.Model):
     def can_event(self):
         return self.software != 'lemmy'
 
+    def can_contact(self):
+        return self.software == 'piefed' or self.software == 'pylova' or self.software == 'lemmy' and not (self.dormant or self.gone_forever)
+
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)
 

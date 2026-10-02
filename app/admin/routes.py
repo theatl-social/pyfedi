@@ -27,12 +27,13 @@ from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditC
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
     CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm, CloseInstanceForm, EmojiForm, TopicImportForm, \
-    EmojiFilterForm
+    EmojiFilterForm, ContactInstanceForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here, switch_to_unsilenced, switch_to_silenced, serialize_topic_tree, \
     create_topic_and_children
 from app.auth.util import send_email_verification, random_token
+from app.chat.util import send_message
 from app.community.util import save_icon_file, save_banner_file, search_for_community, is_bad_name
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
@@ -40,7 +41,7 @@ from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, CronJobLog, utcnow, Site, Community, \
     CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
-    Tag, DefederationSubscription, BlockedImage, CmsPage, Notification, Emoji, user_file
+    Tag, DefederationSubscription, BlockedImage, CmsPage, Notification, Emoji, user_file, InstanceRole, Conversation
 from app.shared.tasks import task_selector
 from app.shared.upload import process_file_delete
 from app.translation import LibreTranslateAPI
@@ -2183,6 +2184,40 @@ def admin_instance_edit(instance_id):
             form.hide.data = hide
 
     return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance,
+                           roles_with=roles_with('administer all communities'))
+
+
+@bp.route('/instance/<int:instance_id>/contact', methods=['GET', 'POST'])
+@permission_required('administer all communities')
+@login_required
+def admin_instance_contact(instance_id):
+    form = ContactInstanceForm()
+    instance = Instance.query.get_or_404(instance_id)
+    admins = User.query.join(InstanceRole, InstanceRole.user_id == User.id).\
+        filter(InstanceRole.instance_id == instance_id, InstanceRole.role == 'admin').\
+        order_by(desc(User.last_seen))
+    form.admin.choices = [(admin.id, admin.display_name()) for admin in admins.all()]
+    if form.validate_on_submit():
+        recipient = User.query.get(form.admin.data)
+        conversation = None
+        existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=current_user)
+        if existing_conversation:
+            members = list(db.session.execute(text(
+                "SELECT user_id FROM conversation_member WHERE joined = :state AND conversation_id = :conversation_id"),
+                                         {"state": True, "conversation_id": existing_conversation.id}).scalars())
+            if current_user.id in members and recipient.id in members:
+                conversation = existing_conversation
+        if conversation is None:
+            conversation = Conversation(user_id=current_user.id)
+            conversation.members.append(recipient)
+            conversation.members.append(current_user)
+            db.session.add(conversation)
+            db.session.commit()
+        flash(_('Message sent.'))
+        send_message(form.message.data, conversation.id)
+        return redirect(url_for('chat.chat_home', conversation_id=conversation.id, _anchor='message'))
+    return render_template('admin/instance_contact.html', title=_('Contact instance admins on %(instance_name)s', instance_name=instance.domain),
+                           form=form, instance=instance,
                            roles_with=roles_with('administer all communities'))
 
 

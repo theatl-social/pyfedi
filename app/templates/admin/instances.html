@@ -68,12 +68,6 @@
                    </button>
                </th>
                <th>
-                   <button form="searchInstances" name="sort_by" value="failures{{' ASC' if sort_by == 'failures DESC' else ' DESC' }}" class="btn" title="{{ _('How many times we failed to send (reset to 0 after every successful send)') }}">
-                       {{ _('Failed') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'failures ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'failures DESC' }}"></span>
-                   </button>
-               </th>
-               <th>
                    <button form="searchInstances" name="sort_by" value="{{'gone_forever ASC, dormant ASC' if sort_by == 'gone_forever DESC, dormant DESC' else 'gone_forever DESC, dormant DESC' }}" class="btn" title="{{ _('Instance Status - Online/Dormant/Gone Forever') }}">
                        {{ _('Status') }}
                        <span class="{{ 'fe fe-chevron-up' if sort_by == 'gone_forever ASC, dormant ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'gone_forever DESC, dormant DESC' }}"></span>
@@ -92,7 +86,6 @@
                     <td><span title="{{ _('Trusted') }}">{{ _('Yes') if instance.trusted }}</span></td>
                     <td><span title="{{ _('Last Seen') }}: {{ instance.last_seen }}">{{ localize_datetime(instance.last_seen, locale) if instance.last_seen }}</span></td>
                     <td><span title="{{ _('Sent') }}">{{ localize_datetime(instance.last_successful_send, locale) if instance.last_successful_send }}</span></td>
-                    <td><span title="{{ _('Failed') }}">{{ instance.failures  }}</span></td>
                     {% if instance.gone_forever %}
                         <td><span title="{{ _('Status') }}">{{ _('Gone forever') }}</span></td>
                     {% elif instance.dormant %}
@@ -100,7 +93,9 @@
                     {% else %}
                         <td><span title="{{ _('Status') }}">{{ _('Online') }}</span></td>
                     {% endif %}
-                    <td><a href="{{ url_for('admin.admin_instance_edit', instance_id=instance.id) }}">{{ _('Edit') }}</a></td>
+                    <td><a href="{{ url_for('admin.admin_instance_edit', instance_id=instance.id) }}">{{ _('Edit') }}</a>
+                    {% if instance.can_contact() %} | <a href="{{ url_for('admin.admin_instance_contact', instance_id=instance.id) }}">{{ _('Contact') }}</a>{% endif %}
+                    </td>
                 </tr>
             {% endfor %}
         </table>

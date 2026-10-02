@@ -224,6 +224,13 @@ class EditInstanceForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
+class ContactInstanceForm(FlaskForm):
+    admin = SelectField(_l('Admin'), coerce=int, validators=[DataRequired()], render_kw={'class': 'form-select'})
+    message = TextAreaField(_l('Message'), validators=[DataRequired(), Length(min=1, max=5000)],
+                            render_kw={'placeholder': _l('Type a message here...'), 'rows': 3, 'autofocus': 'true'})
+    submit = SubmitField(_l('Send'))
+
+
 class CreateOfflineInstanceForm(FlaskForm):
     domain = StringField(_l('Domain (not including https://)'))
     submit = SubmitField(_l('Save'))
