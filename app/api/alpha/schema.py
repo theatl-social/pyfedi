@@ -1424,22 +1424,14 @@ class PostReport(DefaultSchema):
     original_post_body = fields.String(required=True)
     reason = fields.String(required=True)
     resolved = fields.Boolean(required=True)
+    description = fields.String(metadata={"description": "Additional context/information to accompany the report"})
     published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
 
 
-class PostReportView(DefaultSchema):
+class PostReportView(PostView):
     post_report = fields.Nested(PostReport, required=True)
-    post = fields.Nested(Post, required=True)
-    community = fields.Nested(Community, required=True)
-    creator = fields.Nested(Person, required=True)
-    post_creator = fields.Nested(Person, required=True)
-    counts = fields.Nested(PostAggregates, required=True)
-    creator_banned_from_community = fields.Boolean(required=True)
-    creator_is_moderator = fields.Boolean(required=True)
-    creator_is_admin = fields.Boolean(required=True)
+    post_creator = fields.Nested(Person, required=True, metadata={"description": "Creator of the reported post"})
     creator_blocked = fields.Boolean(required=True)
-    subscribed = fields.String(validate=validate.OneOf(subscribed_type_list), required=True)
-    saved = fields.Boolean(required=True)
 
 
 class PostReportResponse(DefaultSchema):
