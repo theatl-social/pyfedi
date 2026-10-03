@@ -748,15 +748,14 @@ def show_feed_rss(feed_path):
         posts = post_ids_to_models(post_ids, 'new')
 
         server_url = current_app.config['SERVER_URL']
-        feed = RSSFeed(title = f'{feed.title} on {g.site.name}',
-                       link = f"{server_url}/f/{last_feed_machine_name}",
-                       description = ' ',
-                       logo = f"{server_url}/static/images/apple-touch-icon.png",
-                       self_link = f"{server_url}/f/{last_feed_machine_name}.rss",
-                       language = 'en'
-                     )
+        rss_feed = RSSFeed(title=f'{feed.title} on {g.site.name}',
+                           link=f"{server_url}/f/{last_feed_machine_name}",
+                           description=' ',
+                           logo=f"{server_url}/static/images/apple-touch-icon.png",
+                           self_link=f"{server_url}/f/{last_feed_machine_name}.rss",
+                           language='en')
 
-        response = make_response(feed.create_feed(posts, server_url))
+        response = make_response(rss_feed.create_feed(posts, server_url))
         response.headers.set('Content-Type', 'application/rss+xml')
         response.headers.add_header('ETag', f"{feed.id}_{hash(g.site.last_active)}")
         response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')

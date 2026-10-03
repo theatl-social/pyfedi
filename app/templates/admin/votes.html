@@ -53,7 +53,7 @@
             <ul class="list-group mb-4">
                 {% for g in findings.namesakes %}
                     <li class="list-group-item">
-                        {{ ngettext('%(num)d account called', '%(num)d accounts called', g.accounts|length, num=g.accounts|length) }}
+                        {{ ngettext('%(num)d account called', '%(num)d accounts called', g.accounts|length) }}
                         <strong>{{ g.username }}</strong>
                         {{ ngettext('on another server', 'on other servers', g.accounts|length) }}
                         {% if g.downs %}

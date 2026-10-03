@@ -482,7 +482,7 @@
             {{ _('Active') }}
         </a>
     </div>
-    {% if community.name == 'microblogs' %}
+    {% if community and community.name == 'microblogs' %}
         <div class="btn-group me-lg-1">
             <a href="?microblog_mode=following&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show posts from people you are following') }}" class="btn {{ 'btn-primary' if microblog_mode == '' or microblog_mode == 'following' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                 {{ _('Following') }}
