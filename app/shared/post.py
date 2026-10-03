@@ -1349,7 +1349,7 @@ def vote_for_poll(post_id, votes, src, auth=None):
                           choice_text=PollChoice.query.get(int(choice_id)).choice_text)
 
 
-def build_gallery_thumbnail(files: List[str]):
+def build_gallery_thumbnail(files: List[str], return_file_id=True):
     pil_images = []
     for file in files:
         if file.startswith('https://'):
@@ -1410,10 +1410,13 @@ def build_gallery_thumbnail(files: List[str]):
             os.unlink(final_place)
 
         # Create File record
-        file = File(source_url=url)
-        db.session.add(file)
-        db.session.commit()
+        if return_file_id:
+            file = File(source_url=url)
+            db.session.add(file)
+            db.session.commit()
 
-        return file.id
+            return file.id
+        else:
+            return url
     else:
         return None

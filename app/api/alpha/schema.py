@@ -22,7 +22,7 @@ content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
 feature_type_list = ["Community", "Local"]
-post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
+post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event", "Gallery"]
 nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
@@ -417,6 +417,7 @@ class Post(DefaultSchema):
     emoji_reactions = fields.List(fields.Nested(Reactions), allow_none=True)
     event = fields.Nested(PostEvent)
     poll = fields.Nested(PostPoll)
+    gallery = fields.List(fields.String(metadata={"format": "url"}))
 
 
 class PostAggregates(DefaultSchema):

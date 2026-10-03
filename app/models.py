@@ -1982,6 +1982,12 @@ class Post(db.Model):
                     image = File(source_url=request_json['object']['image']['url'])
                     db.session.add(image)
                     post.image = image
+                else:
+                    from app.shared.post import build_gallery_thumbnail
+                    if source_url := build_gallery_thumbnail([f.get('url') for f in attached_images], return_file_id=False):
+                        image = File(source_url=source_url)
+                        db.session.add(image)
+                        post.image = image
             elif len(attached_images) == 1:
                 post.type = POST_TYPE_IMAGE
                 post.url = attached_images[0]['url']

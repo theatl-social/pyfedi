@@ -83,6 +83,13 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                     v1['small_thumbnail_url'] = valid_url
                 if post.image.alt_text:
                     v1['alt_text'] = post.image.alt_text
+        if post.type == POST_TYPE_GALLERY:
+            if post.image_id:
+                if valid_url := post.image.view_url():
+                    v1['thumbnail_url'] = valid_url
+                if valid_url := post.image.thumbnail_url():
+                    v1['small_thumbnail_url'] = valid_url
+            v1['url'] = post.url if post.url else current_app.config['SERVER_URL'] + post.slug
         if post.cross_posts:
             v1['cross_posts'] = []
             cross_post_data = db.session.execute(text('SELECT p.id, reply_count, c.title FROM "post" as p INNER JOIN "community" as c ON p.community_id = c.id WHERE p.id IN :cross_posts'),
@@ -288,6 +295,13 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                             poll_data['my_votes'] = [vote.choice_id for vote in my_poll_votes]
 
                     v2['post']['poll'] = poll_data
+
+            # Gallery data
+            if post.type == POST_TYPE_GALLERY:
+                gallery_data = []
+                for gallery_image in post.gallery:
+                    gallery_data.append(gallery_image.source_url)
+                v2['post']['gallery'] = gallery_data
 
         return v2
 
