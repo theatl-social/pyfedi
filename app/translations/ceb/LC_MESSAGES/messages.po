@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2026-07-02 19:09+1200\n"
-"PO-Revision-Date: 2026-09-12 01:33+0000\n"
+"PO-Revision-Date: 2026-10-02 05:49+0000\n"
 "Last-Translator: Zai Diocson <zaidiocson7@gmail.com>\n"
 "Language-Team: Cebuano <http://translate.piefed.social/projects/piefed/main-"
 "web-app/ceb/>\n"
@@ -255,7 +255,7 @@ msgstr "- dili mahimong anaa sa URL. Gamita lang ang _?"
 
 #: app/utils.py:3875
 msgid "Feed urls can only contain letters, numbers, and underscores."
-msgstr ""
+msgstr "Ang mga feed url mahimo ra adunay mga letra, numero, ug underscore."
 
 #: app/utils.py:3885
 msgid "A Feed with this url already exists."
@@ -311,7 +311,6 @@ msgid "Microblog posts from around the fediverse."
 msgstr "Mga microblog nga mga post gikan sa tibuok fediverse."
 
 #: app/admin/constants.py:16
-#, fuzzy
 msgid "Post"
 msgstr "Post"
 
@@ -325,7 +324,7 @@ msgstr "Ngalan sa Site"
 
 #: app/admin/forms.py:17
 msgid "Tagline"
-msgstr ""
+msgstr "Tagline"
 
 #: app/admin/forms.py:18
 msgid "Icon"
@@ -333,12 +332,11 @@ msgstr "Ikon"
 
 #: app/admin/forms.py:20
 msgid "Sidebar"
-msgstr ""
+msgstr "Sidebar"
 
 #: app/admin/forms.py:21 app/templates/auth/instance_chooser.html:93
 #: app/templates/base.html:314 app/templates/instance/people.html:25
 #: app/templates/themes/dillo/base.html:184 app/templates/user/people.html:22
-#, fuzzy
 msgid "About"
 msgstr "Mahitungod"
 
@@ -355,8 +353,9 @@ msgid "Terms of service url"
 msgstr "Mga termino sa serbisyo nga URL"
 
 #: app/admin/forms.py:25
+#, fuzzy
 msgid "General instance contact email address"
-msgstr ""
+msgstr "Kinatibuk-ang email address sa kontak sa Instance"
 
 #: app/admin/forms.py:26 app/admin/forms.py:81 app/admin/forms.py:90
 #: app/admin/forms.py:110 app/admin/forms.py:187 app/admin/forms.py:209
@@ -403,7 +402,7 @@ msgstr "Dili"
 
 #: app/admin/forms.py:37
 msgid "User ID 1"
-msgstr ""
+msgstr "User ID 1"
 
 #: app/admin/forms.py:38
 msgid "Admins and staff"
@@ -506,15 +505,18 @@ msgstr "Default nga tema"
 
 #: app/admin/forms.py:62 app/user/forms.py:139
 msgid "Additional CSS"
-msgstr ""
+msgstr "Dugang nga CSS"
 
 #: app/admin/forms.py:63
 msgid "Additional JS"
-msgstr ""
+msgstr "Dugang nga JS"
 
 #: app/admin/forms.py:64
+#, fuzzy
 msgid "Trim read posts table after this many days"
 msgstr ""
+"I-trim ang table sa mga nabasa nga post pagkahuman niini nga daghang mga "
+"adlaw"
 
 #: app/admin/forms.py:65 app/templates/_view_filter_nav.html:9
 #: app/templates/_view_filter_nav.html:23 app/templates/admin/reports.html:20
@@ -535,7 +537,7 @@ msgstr "Sikat"
 
 #: app/admin/forms.py:69 app/user/forms.py:101
 msgid "Default home filter"
-msgstr ""
+msgstr "Default nga filter sa home"
 
 #: app/admin/forms.py:71
 msgid "Cache remote images locally"
@@ -546,6 +548,8 @@ msgid ""
 "Report comments containing an em dash (—) from newly created users - "
 "likely spam / AI."
 msgstr ""
+"I-report ang mga komento nga adunay em dash (—) gikan sa mga bag-ong user—"
+"lagmit spam / AI."
 
 #: app/admin/forms.py:73
 msgid "Limit em dash reports to just the first occurence per user"
@@ -555,7 +559,7 @@ msgstr ""
 
 #: app/admin/forms.py:74
 msgid "Log ActivityPub JSON for debugging"
-msgstr ""
+msgstr "I-log ang ActivityPub JSON alang sa debugging"
 
 #: app/admin/forms.py:75
 msgid "Show moderation actions publicly"
@@ -603,7 +607,7 @@ msgstr "Paagi sa Pederasyon"
 
 #: app/admin/forms.py:95
 msgid "Blocklist - deny federation with specified instances"
-msgstr ""
+msgstr "Blocklist - ilimod ang federation sa mga espesipikong instance"
 
 #: app/admin/forms.py:96
 msgid "Allowlist - only allow federation with specified instances"
@@ -630,9 +634,8 @@ msgid "Intense"
 msgstr "Grabe kaayo"
 
 #: app/admin/forms.py:104
-#, fuzzy
 msgid "Deny federation with these instances"
-msgstr "Balibari ang pag-pederar sa niining mga instansya"
+msgstr "Balibari ang pag-pederar sa niining mga instance"
 
 #: app/admin/forms.py:105
 msgid "Auto-defederate from any instance defederated by"
@@ -642,18 +645,24 @@ msgstr ""
 #: app/admin/forms.py:106
 msgid "Discard all posts, comments and PMs with these phrases (one per line)"
 msgstr ""
+"Isalikway ang tanang post, komento ug PM gamit kining mga hugpong sa mga "
+"pulong (usa kada linya)"
 
 #: app/admin/forms.py:107
 msgid ""
 "Discard all posts and comments by users with these words in their name "
 "(one per line)"
 msgstr ""
+"Isalikway ang tanan nga post ug komento gikan sa mga user nga adunay mga "
+"pulong niini sa ilang ngalan (usa matag linya)"
 
 #: app/admin/forms.py:108
 msgid ""
 "Discard all posts and comments by users with these phrases in their bio "
 "(one per line)"
 msgstr ""
+"Isalikway ang tanan nga post ug komento gikan sa mga user nga adunay mga "
+"pulong niini sa ilang bio (usa matag linya)"
 
 #: app/admin/forms.py:109
 msgid "Automatically add new remote communities"
@@ -682,13 +691,16 @@ msgstr "Lagyo nga Server"
 #: app/admin/forms.py:126
 msgid "Communities must have at least this many posts"
 msgstr ""
+"Ang mga komunidad kinahanglan adunay labing menos niini nga kadaghan sa mga "
+"post"
 
 #: app/admin/forms.py:127
 msgid "Communities must have at least this many active users in the past week."
 msgstr ""
+"Kinahanglan adunay labing menos niini nga gidaghanon sa mga aktibong user "
+"ang mga komunidad sulod sa miaging semana."
 
 #: app/admin/forms.py:128
-#, fuzzy
 msgid "Dry Run"
 msgstr "Pagsulay nga pagdagan"
 
@@ -698,7 +710,7 @@ msgstr "I-scan"
 
 #: app/admin/forms.py:133
 msgid "Import Bans List Json File"
-msgstr ""
+msgstr "I-import ang Ban List Json File"
 
 #: app/admin/forms.py:134 app/templates/user/import_export.html:24
 #: app/user/forms.py:146
@@ -721,7 +733,7 @@ msgstr "Pamagat"
 #: app/feed/forms.py:13 app/feed/forms.py:65
 #: app/templates/community/community_wiki_list.html:34
 msgid "Url"
-msgstr ""
+msgstr "Url"
 
 #: app/admin/forms.py:141 app/community/forms.py:27 app/community/forms.py:88
 #: app/feed/forms.py:14 app/feed/forms.py:66 app/templates/admin/home.html:58
@@ -753,9 +765,8 @@ msgid "NSFW community"
 msgstr "Komunidad nga NSFW"
 
 #: app/admin/forms.py:146 app/community/forms.py:33
-#, fuzzy
 msgid "Only AI-generated content"
-msgstr "Mga sulod nga gihimo sa AI lang"
+msgstr "Mga content nga gihimo sa AI lang"
 
 #: app/admin/forms.py:147
 msgid "Banned - no new posts accepted"
@@ -904,11 +915,11 @@ msgstr "Mga pinulongan"
 
 #: app/admin/forms.py:183
 msgid "Override remote language setting"
-msgstr ""
+msgstr "I-override ang setting sa remote language"
 
 #: app/admin/forms.py:184
 msgid "Override remote AI content setting"
-msgstr ""
+msgstr "I-override ang setting sa remote alang sa AI nga content"
 
 #: app/admin/forms.py:185
 msgid "Always show translation icon on posts"
@@ -916,7 +927,7 @@ msgstr "Kanunay nga ipakita ang mga icon sa paghubad sa mga post"
 
 #: app/admin/forms.py:186
 msgid "Old posts can be archived"
-msgstr ""
+msgstr "Ang mga karaang post mahimo nang i-archive"
 
 #: app/admin/forms.py:193 app/community/forms.py:54 app/feed/forms.py:31
 msgid "Url is required."
@@ -946,20 +957,19 @@ msgstr "Nabasa ug masabtan nga ngalan alang sa hilisgutan."
 
 #: app/admin/forms.py:205 app/community/forms.py:143
 msgid "Slug"
-msgstr ""
+msgstr "Slug"
 
 #: app/admin/forms.py:205
 msgid "A short and unique identifier that becomes part of the URL."
 msgstr "Mubo ug talagsaon nga identifier nga mahimong bahin sa URL."
 
 #: app/admin/forms.py:206
-#, fuzzy
 msgid "Parent topic"
-msgstr "Ginikanang hilisgutan"
+msgstr "Parent topic"
 
 #: app/admin/forms.py:207
 msgid "Show posts from child topics"
-msgstr ""
+msgstr "Ipakita ang mga post gikan sa mga child topic"
 
 #: app/admin/forms.py:208 app/templates/admin/topics.html:43
 msgid "Countries"
@@ -974,8 +984,9 @@ msgstr "Gamit ug duha ka-letter nga country code, usa ka code matag linya."
 #: app/templates/instance/list_instances.html:44
 #: app/templates/instance/list_instances.html:101
 #: app/templates/instance/list_instances.html:184
+#, fuzzy
 msgid "Dormant"
-msgstr ""
+msgstr "Dormant"
 
 #: app/admin/forms.py:214 app/templates/admin/instances.html:25
 #: app/templates/admin/instances.html:97
@@ -1006,11 +1017,11 @@ msgstr "Ang mga komunidad mahimong popular kung idugang"
 
 #: app/admin/forms.py:220
 msgid "Notes about this instance (only visible to other admins)"
-msgstr ""
+msgstr "Mga nota bahin niini nga instance (makita ra sa ubang mga admin)"
 
 #: app/admin/forms.py:221
 msgid "Inbox"
-msgstr ""
+msgstr "Inbox"
 
 #: app/admin/forms.py:226
 msgid "Domain (not including https://)"
@@ -1019,7 +1030,7 @@ msgstr "Domain (dili apil ang https://)"
 #: app/admin/forms.py:231 app/admin/forms.py:239
 #: app/templates/admin/blocked_images.html:19
 msgid "Hash"
-msgstr ""
+msgstr "Hash"
 
 #: app/admin/forms.py:232 app/admin/forms.py:240
 msgid "Filename"
@@ -1040,12 +1051,12 @@ msgstr "Ngalan sa user"
 
 #: app/admin/forms.py:248 app/user/forms.py:13
 msgid "Email address"
-msgstr ""
+msgstr "Email address"
 
 #: app/admin/forms.py:249 app/auth/forms.py:18 app/auth/forms.py:30
 #: app/auth/forms.py:114
 msgid "Password"
-msgstr ""
+msgstr "Password"
 
 #: app/admin/forms.py:251 app/auth/forms.py:32 app/auth/forms.py:115
 msgid "Repeat password"
@@ -1053,19 +1064,19 @@ msgstr "Usba ang password"
 
 #: app/admin/forms.py:252 app/user/forms.py:16
 msgid "Bio"
-msgstr ""
+msgstr "Bio"
 
 #: app/admin/forms.py:253 app/user/forms.py:31
 msgid "Matrix User ID"
-msgstr ""
+msgstr "Matrix User ID"
 
 #: app/admin/forms.py:254 app/user/forms.py:33
 msgid "Avatar image"
-msgstr ""
+msgstr "Avatar image"
 
 #: app/admin/forms.py:255 app/user/forms.py:34
 msgid "Top banner image"
-msgstr ""
+msgstr "Hulagway sa top banner"
 
 #: app/admin/forms.py:256 app/admin/forms.py:318 app/user/forms.py:35
 msgid "This profile is a bot"
@@ -1073,7 +1084,7 @@ msgstr "Kini nga profile usa ka bot"
 
 #: app/admin/forms.py:257 app/admin/forms.py:321
 msgid "Email address is verified"
-msgstr ""
+msgstr "Naberipika na ang email address"
 
 #: app/admin/forms.py:258 app/admin/forms.py:322
 #: app/templates/admin/approve_registrations.html:56
@@ -1084,7 +1095,7 @@ msgstr "Gi-ban"
 
 #: app/admin/forms.py:259 app/user/forms.py:61
 msgid "Subscribe to email newsletter"
-msgstr ""
+msgstr "Mag-subscribe sa newsletter sa email"
 
 #: app/admin/forms.py:260 app/admin/forms.py:326 app/auth/forms.py:131
 #: app/auth/forms.py:135 app/user/forms.py:197 app/user/forms.py:201
@@ -1129,7 +1140,7 @@ msgstr "Kawani"
 
 #: app/admin/forms.py:275 app/admin/forms.py:338
 msgid "Role"
-msgstr ""
+msgstr "Katungdanan"
 
 #: app/admin/forms.py:281 app/auth/forms.py:49
 msgid "An account with this email address already exists."
@@ -1137,7 +1148,7 @@ msgstr "Adunay na’y account nga naglungtad na gamit kining email address."
 
 #: app/admin/forms.py:285 app/auth/forms.py:56
 msgid "User names cannot contain @."
-msgstr ""
+msgstr "Ang mga username dili mahimong adunay @."
 
 #: app/admin/forms.py:289 app/auth/forms.py:65
 msgid "This username was used in the past and cannot be reused."
@@ -1194,7 +1205,7 @@ msgstr "Kuhaa ang banner"
 
 #: app/admin/forms.py:341
 msgid "Notes about this user (only visible to other admins)"
-msgstr ""
+msgstr "Mga notes bahin niining user (makita ra sa ubang admin)"
 
 #: app/admin/forms.py:346
 msgid "Subject"
@@ -1236,10 +1247,9 @@ msgstr "Ang usa ka lokal nga komunidad sa maong URL naa na na"
 
 #: app/admin/forms.py:365
 msgid "URL path"
-msgstr ""
+msgstr "URL path"
 
 #: app/admin/forms.py:366
-#, fuzzy
 msgid "e.g., /about-us"
 msgstr "pananglitan, /about-us"
 
@@ -1249,32 +1259,33 @@ msgstr "Pamagat sa Pahina"
 
 #: app/admin/forms.py:368
 msgid "Content (Markdown)"
-msgstr ""
+msgstr "Content (Markdown)"
 
 #: app/admin/forms.py:369
 msgid "Write your content in Markdown format..."
-msgstr ""
+msgstr "Isulat ang imong content sa Markdown format..."
 
 #: app/admin/forms.py:383
+#, fuzzy
 msgid "A page with this URL already exists."
-msgstr ""
+msgstr "Adunay page nga sama niini nga URL."
 
 #: app/admin/forms.py:387
 msgid "Token or character"
-msgstr ""
+msgstr "Token o karakter"
 
 #: app/admin/forms.py:388
 msgid "e.g., :happy: or a single character like 👍"
-msgstr ""
+msgstr "Pananglitan: :happy: o usa ra ka karakter sama sa 👍"
 
 #: app/admin/forms.py:389 app/community/forms.py:275 app/community/forms.py:294
 #: app/templates/admin/cms_pages.html:25 app/templates/admin/emoji.html:25
 msgid "URL"
-msgstr ""
+msgstr "URL"
 
 #: app/admin/forms.py:390
 msgid "e.g. https://..."
-msgstr ""
+msgstr "Pananglitan https://..."
 
 #: app/admin/forms.py:391 app/templates/admin/emoji.html:27
 #: app/templates/user/filters.html:48
@@ -1309,6 +1320,8 @@ msgid ""
 "Settings saved. It might take up to 24 hours before other instances show "
 "your changes."
 msgstr ""
+"Nasave na ang setting. Mahimong molungtad hangtod sa 24 ka oras sa dili pa "
+"makita sa ubang mga instance ang imong mga pagbag-o."
 
 #: app/admin/routes.py:417
 msgid "Admin settings saved"
@@ -1340,14 +1353,20 @@ msgid_plural ""
 "%(parsed_communities_sorted)d communities launched in background, check "
 "admin/activities for details"
 msgstr[0] ""
+"Proseso sa pag-subscribe para sa %(communities_to_add)d nga %"
+"(parsed_communities_sorted)d nga komunidad nga gilunsad sa background; tan-"
+"awa ang admin/activities para sa mga detalye"
 msgstr[1] ""
+"Proseso sa pag-subscribe para sa %(communities_to_add)d nga %"
+"(parsed_communities_sorted)d nga mga komunidad nga gilunsad sa background; "
+"tan-awa ang admin/activities para sa mga detalye"
 
 #: app/admin/routes.py:559
 msgid "Federation settings - preload"
-msgstr ""
+msgstr "Mga setting sa Federation - i-preload"
 
 #: app/admin/routes.py:875
-#, python-format
+#, fuzzy, python-format
 msgid ""
 "Based on current filters, the subscription process for "
 "%(communities_to_join)d of %(candidate_communities)d community launched "
@@ -1357,37 +1376,46 @@ msgid_plural ""
 "%(communities_to_join)d of %(candidate_communities)d communities launched"
 " in background, check admin/activities for details"
 msgstr[0] ""
+"Base sa karon nga mga filter, ang proseso sa subscription para sa %"
+"(communities_to_join)d sa %(candidate_communities)d nga komunidad giilunsad "
+"sa background, susiha ang admin/activities para sa mga detalye"
 msgstr[1] ""
+"Base sa karon nga mga filter, ang proseso sa subscription para sa %"
+"(communities_to_join)d sa %(candidate_communities)d nga mga komunidad "
+"giilunsad sa background, susiha ang admin/activities para sa mga detalye"
 
 #: app/admin/routes.py:882
 msgid "Federation settings - remote scan"
-msgstr ""
+msgstr "Mga setting sa Federation - remote scan"
 
 #: app/admin/routes.py:913
 msgid "Ban imports started in a background process."
-msgstr ""
+msgstr "Magsugod ang pagban sa pag-import sa usa ka proseso sa background."
 
 #: app/admin/routes.py:916
+#, fuzzy
 msgid "Ban imports requested, but no json provided."
-msgstr ""
+msgstr "I-ban ang mga imports nga girequest, apan wala’y gihatag nga JSON."
 
 #: app/admin/routes.py:980
 msgid "Federation settings - ban lists"
-msgstr ""
+msgstr "Mga setting sa Federation - ban lists"
 
 #: app/admin/routes.py:1116
 msgid ""
 "LOG_ACTIVITYPUB_TO_DB is off so no incoming activities are being logged "
 "to the database."
 msgstr ""
+"Ang LOG_ACTIVITYPUB_TO_DB naka-off mao nga walay mga papasulod nga activity "
+"ang giatiman nga i-log sa database."
 
 #: app/admin/routes.py:1139
 msgid "ActivityPub Log"
-msgstr ""
+msgstr "ActivityPub Log"
 
 #: app/admin/routes.py:1168 app/templates/admin/activity_json.html:13
 msgid "Activity JSON"
-msgstr ""
+msgstr "Activity JSON"
 
 #: app/admin/routes.py:1204 app/community/routes.py:579
 #: app/community/routes.py:2015 app/community/routes.py:2067
@@ -1441,6 +1469,8 @@ msgid ""
 "This is a remote community - most settings here will be regularly "
 "overwritten with data from the original server."
 msgstr ""
+"Kini usa ka remote nga komunidad - kadaghanan sa mga setting dinhi kanunayng "
+"ma-overwrite pag-usab sa datos gikan sa orihinal nga server."
 
 #: app/admin/routes.py:1347 app/community/routes.py:1308
 msgid "Edit community"
@@ -1513,12 +1543,16 @@ msgid ""
 "Permissions are cached for 50 seconds so new admin roles won't take "
 "effect immediately."
 msgstr ""
+"Ang mga permiso gi-cache sulod sa 50 segundos, mao nga ang bag-ong admin "
+"roles dili dayon moapekto."
 
 #: app/admin/routes.py:1732
 msgid ""
 "This is a remote user - most settings here will be regularly overwritten "
 "with data from the original server."
 msgstr ""
+"Kini usa ka remote nga user - kadaghanan sa mga setting dinhi kanunayng ma-"
+"overwrite pag-usab sa datos gikan sa orihinal nga server."
 
 #: app/admin/routes.py:1747
 msgid "Edit user"
@@ -1566,7 +1600,7 @@ msgstr "Na-save na ang mga setting"
 
 #: app/admin/routes.py:1928 app/templates/user/show_profile.html:146
 msgid "Role permissions"
-msgstr ""
+msgstr "Mga permiso sa papel"
 
 #: app/admin/routes.py:2027
 msgid "Edit instance"
@@ -1587,6 +1621,8 @@ msgid ""
 "%(community_name)s is now %(new_url)s. Contact the initiator of this "
 "request to let them know."
 msgstr ""
+"%(community_name)s karon %(new_url)s. Kontaka ang nagpasugod niini nga "
+"hangyo aron ipahibalo kanila."
 
 #: app/admin/routes.py:2102
 msgid "Ensure this community has the right moderators."
@@ -1609,6 +1645,8 @@ msgid ""
 "Provide the url of an image or the hash (and file name) of it, but not "
 "both."
 msgstr ""
+"Ihatag ang url sa usa ka imahe o ang hash (ug ang ngalan sa file) niini, "
+"apan dili pareho."
 
 #: app/admin/routes.py:2166 app/templates/admin/blocked_images.html:14
 #: app/templates/admin/edit_blocked_image.html:15
@@ -1634,12 +1672,13 @@ msgid "CMS Pages"
 msgstr "Mga Panid sa CMS"
 
 #: app/admin/routes.py:2223 app/admin/routes.py:2244
+#, fuzzy
 msgid "Page saved."
-msgstr ""
+msgstr "Page saved."
 
 #: app/admin/routes.py:2226
 msgid "Add CMS Page"
-msgstr ""
+msgstr "Pagdugang ug CMS nga Page"
 
 #: app/admin/routes.py:2247
 msgid "Edit page"
@@ -1652,15 +1691,15 @@ msgstr "Gipapas na ang panid."
 #: app/admin/routes.py:2267 app/templates/admin/_nav.html:25
 #: app/templates/admin/_tabbed_nav.html:27 app/templates/admin/emoji.html:15
 msgid "Emoji"
-msgstr ""
+msgstr "Emoji"
 
 #: app/admin/routes.py:2281 app/admin/routes.py:2301
 msgid "Emoji saved."
-msgstr ""
+msgstr "Emoji saved."
 
 #: app/admin/routes.py:2284
 msgid "Add Emoji"
-msgstr ""
+msgstr "Pagdugang og Emoji"
 
 #: app/admin/routes.py:2304
 msgid "Edit Emoji"
@@ -1668,7 +1707,7 @@ msgstr "I-edit ang Emoji"
 
 #: app/admin/routes.py:2315
 msgid "Emoji deleted."
-msgstr ""
+msgstr "Gipapas ang Emoji."
 
 #: app/admin/util.py:96
 msgid "No recipients"
@@ -1690,11 +1729,11 @@ msgstr "Pinakaubos nga gitas-on 8, pinakataas nga gitas-on 128"
 
 #: app/auth/forms.py:20 app/user/forms.py:70
 msgid "Low bandwidth mode"
-msgstr ""
+msgstr "Low bandwidth mode"
 
 #: app/auth/forms.py:22
 msgid "Log In"
-msgstr ""
+msgstr "Mag-log in"
 
 #: app/auth/forms.py:28 app/auth/forms.py:29 app/auth/forms.py:109
 #: app/auth/forms.py:120 app/auth/forms.py:156
@@ -1702,7 +1741,7 @@ msgstr ""
 #: app/templates/admin/approve_registrations.html:80
 #: app/templates/admin/edit_user.html:18
 msgid "Email"
-msgstr ""
+msgstr "Email"
 
 #: app/auth/forms.py:34
 msgid "Why would you like to join this site?"
@@ -1711,6 +1750,8 @@ msgstr "Ngano nga gusto nimo moapil niini nga site?"
 #: app/auth/forms.py:35
 msgid "I agree to the terms of service & privacy policy (see links in footer)"
 msgstr ""
+"Mouyon ko sa mga termino sa serbisyo ug privacy policy (tan-awa ang mga link "
+"sa footer)"
 
 #: app/auth/forms.py:36
 msgid "Enter captcha code below"
@@ -1728,6 +1769,8 @@ msgstr "Ang mga username dili mahimong adunay mga espasyo."
 #: app/auth/forms.py:60
 msgid "User names can only contain letters, numbers, and underscores."
 msgstr ""
+"Ang mga user name puwede lang maglangkob og mga letra, numero, ug "
+"underscores."
 
 #: app/auth/forms.py:72 app/auth/forms.py:76 app/community/forms.py:77
 #: app/community/forms.py:81 app/feed/forms.py:47
@@ -1762,7 +1805,7 @@ msgstr "Ok ra bisan gamay ra"
 
 #: app/auth/forms.py:127
 msgid "Bring it on"
-msgstr ""
+msgstr "Kumbati"
 
 #: app/auth/forms.py:129
 msgid "How tired of Trump and Musk news are you?"
@@ -1787,7 +1830,7 @@ msgstr "Mga post nga gihimo gamit sa AI"
 
 #: app/auth/forms.py:151
 msgid "Choose some topics you are interested in"
-msgstr ""
+msgstr "Pili ug pipila ka mga topiko nga interesado ka"
 
 #: app/auth/forms.py:152 app/post/forms.py:125
 msgid "Choose"
@@ -1802,10 +1845,12 @@ msgid ""
 "An account with this email already exists, please login and connect this "
 "account over \"Connect OAuth\" setting."
 msgstr ""
+"Aduna nay account na adunay kining email, palihog mag-login ug i-ambit kini "
+"nga account pinaagi sa setting nga \"Connect OAuth\"."
 
 #: app/auth/oauth_util.py:128 app/auth/oauth_util.py:131
 msgid "Account registrations are currently closed."
-msgstr ""
+msgstr "Ang pagrirehistro sa account karon sirado na."
 
 #: app/auth/oauth_util.py:134 app/auth/oauth_util.py:135 app/auth/util.py:169
 msgid "Application declined"
@@ -1833,18 +1878,24 @@ msgid ""
 "You have joined some communities relating to those interests. Find more "
 "on the Explore menu or browse the home page."
 msgstr ""
+"Niapil ka og pipila ka mga komunidad nga may kalabotan sa imong mga "
+"interest. Pangita pa og dugang sa menu nga Explore o i-browse ang home page."
 
 #: app/auth/onboarding.py:72 app/main/routes.py:282 app/main/routes.py:1427
 msgid ""
 "You did not choose any topics. Would you like to choose individual "
 "communities instead?"
 msgstr ""
+"Wala ka nagpili ug bisan unsang mga topic. Ganahan ka bang mo-pili na lang "
+"ug mga indibidwal nga komunidad imbis?"
 
 #: app/auth/onboarding.py:79
 msgid ""
 "Please join some communities you're interested in and then go to the home"
 " page by clicking on the logo above."
 msgstr ""
+"Palihog apil sa pipila ka mga komunidad nga imong ganahan og dayon moadto sa "
+"home page pinaagi sa pag-klik sa logo sa ibabaw."
 
 #: app/auth/routes.py:85
 msgid "Account under review"
@@ -1862,6 +1913,8 @@ msgid ""
 "You are not able to do this action due to being a very new account or "
 "because of a low reputation."
 msgstr ""
+"Wala ka’y mahimo ani nga aksyon tungod kay bag-o pa kaayo ang imong account "
+"o tungod kay ubos ang imong reputasyon."
 
 #: app/auth/routes.py:95 app/templates/auth/check_email.html:12
 msgid "Check your email"
@@ -1887,7 +1940,7 @@ msgstr "Pasensya na, dili nimo magamit ang maong email address."
 
 #: app/auth/routes.py:144
 msgid "If an account exists, a link has been sent."
-msgstr ""
+msgstr "Kung adunay account, gipadala na ang link."
 
 #: app/auth/routes.py:148
 msgid "Reset Password"
@@ -1899,6 +1952,8 @@ msgid ""
 "Your password has been reset. Please use it to log in with user name of "
 "%(name)s."
 msgstr ""
+"Na-reset na ang imong password. Palihog gamita kini aron maka-log in gamit "
+"ang user name nga %(name)s."
 
 #: app/auth/routes.py:176 app/auth/routes.py:192
 msgid "Thank you for verifying your email address."
@@ -1910,11 +1965,11 @@ msgstr "Nakapakyas ang pag-validate sa email address."
 
 #: app/auth/routes.py:258
 msgid "This Google account is already connected to another user."
-msgstr ""
+msgstr "Kini nga Google account konektado na sa laing user."
 
 #: app/auth/routes.py:265
 msgid "Your Google account has been connected successfully."
-msgstr ""
+msgstr "Ang imong Google account nakonektar na ug malampuson."
 
 #: app/auth/routes.py:268
 #, python-format
@@ -1984,7 +2039,7 @@ msgstr ""
 
 #: app/auth/util.py:432 app/shared/auth.py:53
 msgid "Invalid password"
-msgstr ""
+msgstr "Sayop nga password"
 
 #: app/auth/util.py:449
 msgid "Login failed"
@@ -2041,12 +2096,12 @@ msgstr "Rasismo, seksismo, transphobia"
 #: app/chat/forms.py:22 app/post/forms.py:36
 #: app/templates/user/user_ban.html:20 app/user/forms.py:175
 msgid "Minor abuse or sexualization"
-msgstr ""
+msgstr "Pag-abuso o pag-sekswalize"
 
 #: app/chat/forms.py:23 app/post/forms.py:37
 #: app/templates/user/user_ban.html:21 app/user/forms.py:176
 msgid "Non-consensual intimate media"
-msgstr ""
+msgstr "Dili mouyon nga intimate media"
 
 #: app/chat/forms.py:24 app/post/forms.py:38
 #: app/templates/user/user_ban.html:22 app/user/forms.py:177
@@ -2089,7 +2144,7 @@ msgstr "Hinungdan"
 #: app/chat/forms.py:29 app/community/forms.py:527 app/post/forms.py:43
 #: app/user/forms.py:182
 msgid "More info"
-msgstr ""
+msgstr "Mas daghang impormasyon"
 
 #: app/chat/forms.py:31 app/community/forms.py:529 app/post/forms.py:45
 #: app/templates/community/community_moderate_subscribers.html:96
@@ -2229,7 +2284,7 @@ msgstr "Kalihukan"
 
 #: app/community/forms.py:132
 msgid "Default post type"
-msgstr ""
+msgstr "Default nga matang sa pag-post"
 
 #: app/community/forms.py:134
 msgid "Friendly urls"
@@ -2241,7 +2296,7 @@ msgstr "Mga post id ra"
 
 #: app/community/forms.py:136
 msgid "Post url structure to use in this community"
-msgstr ""
+msgstr "Istruktura sa url sa post nga gamiton niini nga komunidad"
 
 #: app/community/forms.py:144 app/community/forms.py:219 app/post/forms.py:15
 msgid "Body"
@@ -2282,6 +2337,8 @@ msgstr "Tala alang sa mod log"
 #: app/community/forms.py:167
 msgid "Also resolve all other reports about the same thing."
 msgstr ""
+"Iresolba usab ang tanan nga ubang mga report mahitungod sa mao gihapon nga "
+"butang."
 
 #: app/community/forms.py:168
 #: app/templates/community/community_moderate_report_resolve.html:13
@@ -2356,7 +2413,7 @@ msgstr "I-ban"
 #: app/templates/tag/tags.html:21 app/templates/tag/tags_blocked.html:12
 #: app/templates/tag/tags_blocked.html:21
 msgid "Tags"
-msgstr ""
+msgstr "Mga tag"
 
 #: app/community/forms.py:221 app/community/forms.py:541
 #: app/community/forms.py:581 app/post/forms.py:92
@@ -2367,15 +2424,15 @@ msgstr ""
 #: app/templates/community/community_flair.html:32
 #: app/templates/post/_post_full.html:437
 msgid "Flair"
-msgstr ""
+msgstr "Flair"
 
 #: app/community/forms.py:223 app/templates/post/post_options.html:67
 msgid "Sticky"
-msgstr ""
+msgstr "Sticky"
 
 #: app/community/forms.py:225 app/post/forms.py:94
 msgid "Gore/gross"
-msgstr ""
+msgstr "Gore/gross"
 
 #: app/community/forms.py:226 app/post/forms.py:95
 #: app/templates/post/_flair_choices.html:14
@@ -2399,7 +2456,7 @@ msgstr "Pinulongan"
 
 #: app/community/forms.py:230
 msgid "Publish at"
-msgstr ""
+msgstr "I-publish"
 
 #: app/community/forms.py:231
 msgid "Repeat"
@@ -2541,7 +2598,7 @@ msgstr "Ang pagsugod kinahanglan nga mas sayo kaysa sa katapusan."
 
 #: app/community/forms.py:428
 msgid "Online link is required for online events."
-msgstr ""
+msgstr "Kinahanglan ang online link para sa mga online nga event."
 
 #: app/community/forms.py:433
 msgid "Address is required for physical events."
@@ -2623,7 +2680,7 @@ msgstr ""
 
 #: app/community/forms.py:510
 msgid "Provide at least two choices"
-msgstr ""
+msgstr "Hatagi og labing menos duha ka kapilian"
 
 #: app/community/forms.py:513
 msgid "Maximum 15 choices"
@@ -2647,7 +2704,7 @@ msgstr "Panlimbong"
 
 #: app/community/forms.py:522
 msgid "Alt-right pipeline"
-msgstr ""
+msgstr "Alt-right pipeline"
 
 #: app/community/forms.py:523 app/post/forms.py:32
 msgid "Hate / genocide"
@@ -2665,11 +2722,11 @@ msgstr "dawat sa imbitasyon"
 
 #: app/community/forms.py:554
 msgid "Full URL"
-msgstr ""
+msgstr "Tibuok nga URL"
 
 #: app/community/forms.py:557
 msgid "Retrieve"
-msgstr ""
+msgstr "Kuhaa"
 
 #: app/community/forms.py:561
 msgid "To"
@@ -2677,7 +2734,7 @@ msgstr "Sa"
 
 #: app/community/forms.py:562
 msgid "Email addresses or fediverse handles, one per line"
-msgstr ""
+msgstr "Mga email address o fediverse handles, usa matag linya"
 
 #: app/community/forms.py:564 app/templates/community/invite.html:16
 msgid "Invite"
@@ -2700,7 +2757,6 @@ msgid "Move notification post in old community"
 msgstr "Ilisi ang pag-post sa pahibalo sa karaang komunidad"
 
 #: app/community/forms.py:577
-#, fuzzy
 msgid "Request move"
 msgstr "Ipahangyo ang pagbalhin"
 
@@ -2720,10 +2776,9 @@ msgstr ""
 
 #: app/community/routes.py:86
 msgid "Community creation has been restricted to admins on this site"
-msgstr ""
+msgstr "Ang paghimo og Komunidad limitado ra sa mga admin sa kining site"
 
 #: app/community/routes.py:160
-#, fuzzy
 msgid "Your new community has been created."
 msgstr "Gihimo na ang imong bag-ong komunidad."
 
@@ -2765,7 +2820,6 @@ msgstr ""
 "a> aron makakita ug pipila."
 
 #: app/community/routes.py:210 app/community/routes.py:2594
-#, fuzzy
 msgid "Community not found."
 msgstr "Wala nakita ang komunidad."
 
@@ -2847,7 +2901,7 @@ msgstr "Gibawalan ka na sa niini nga komunidad."
 #: app/templates/user/show_upvoted.html:44
 #: app/templates/user/show_upvoted.html:73
 msgid "Home"
-msgstr ""
+msgstr "Home"
 
 #: app/community/routes.py:584 app/templates/_side_pane.html:201
 #: app/templates/communities_menu.html:45 app/templates/explore.html:15
@@ -2865,6 +2919,8 @@ msgid ""
 "This instance no longer online, so posts and comments will only be "
 "visible locally"
 msgstr ""
+"Kini nga Instance dili na online, mao nga ang mga post ug komento makita ra "
+"sa lokal"
 
 #: app/community/routes.py:837 app/shared/tasks/follows.py:51
 msgid "You cannot join this community"
@@ -2940,6 +2996,8 @@ msgid ""
 "A community must have one or more owners. Make someone else an owner "
 "before removing this owner."
 msgstr ""
+"Ang usa ka komunidad kinahanglan nga adunay usa o daghan pa nga mga tag-iya. "
+"Himoa og lain nga tawo nga tag-iya una sa pagtangtang niini nga tag-iya."
 
 #: app/community/routes.py:1514
 #: app/templates/community/community_find_moderator.html:14
@@ -3065,6 +3123,8 @@ msgid ""
 "You are being unsubscribed from all communities and feeds. Please allow a"
 " couple minutes for the process to complete."
 msgstr ""
+"Gi-unsubscribe ka sa tanan nga mga komunidad ug feed. Palihug hatag ug "
+"pipila ka minuto aron mahuman ang proseso."
 
 #: app/community/routes.py:2497
 msgid "Sorry your account is too new to do this."
@@ -3080,11 +3140,11 @@ msgstr ""
 #, python-format
 msgid "Invited %(num)d person"
 msgid_plural "Invited %(num)d people"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Ginaimbitahan nga %(num)d nga tawo"
+msgstr[1] "Ginaimbitahan %(num)d nga mga tawo"
 
 #: app/community/routes.py:2525
-#, fuzzy, python-format
+#, python-format
 msgid "using %(num)d chat message"
 msgid_plural "using %(num)d chat messages"
 msgstr[0] "gamit ug %(num)d ka mensahe sa chat"
@@ -3104,6 +3164,9 @@ msgid ""
 "account. People on other instances will need to make an account here to "
 "participate."
 msgstr ""
+"Kini nga Komunidad ma-access ra sa mga tawo nga adunay %(domain)s nga "
+"account. Ang mga tawo sa ubang instance kinahanglan nga mohimog account "
+"dinhi aron makapahimog partisipasyon."
 
 #: app/community/routes.py:2531
 msgid "Invite to community"
@@ -3145,12 +3208,13 @@ msgid "Disabled"
 msgstr "Naka-disable"
 
 #: app/dev/forms.py:12
+#, fuzzy
 msgid "Populate Communities"
-msgstr ""
+msgstr "Puno-a ang mga komunidad"
 
 #: app/dev/forms.py:16
 msgid "Populate Topics"
-msgstr ""
+msgstr "Puno-a ang mga Topics"
 
 #: app/dev/forms.py:20
 msgid "Delete Communities"
@@ -3162,14 +3226,14 @@ msgstr "Ipapas ang mga Hilisgutan"
 
 #: app/dev/forms.py:28 app/templates/admin/activities.html:34
 msgid "JSON"
-msgstr ""
+msgstr "JSON"
 
 #: app/dev/routes.py:149
 #, python-format
 msgid "%(num)d dev community deleted"
 msgid_plural "%(num)d dev communities deleted"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%(num)d dev nga komunidad gi-delete"
+msgstr[1] "%(num)d dev nga mga komunidad gi-delete"
 
 #: app/dev/routes.py:207
 msgid "ActivityPub has been sent to inbox."
@@ -3177,11 +3241,11 @@ msgstr "Ang ActivityPub naipadala na sa inbox."
 
 #: app/dev/routes.py:209
 msgid "Invalid json "
-msgstr ""
+msgstr "Invalid json "
 
 #: app/dev/routes.py:211
 msgid "Send ActivityPub to local inbox"
-msgstr ""
+msgstr "Ipadala ang ActivityPub sa lokal nga inbox"
 
 #: app/domain/forms.py:7
 msgid "Warning on posts"
@@ -3221,17 +3285,17 @@ msgstr ""
 "giwagtang."
 
 #: app/domain/routes.py:275 app/tag/routes.py:241
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s un-banned for all users."
 msgstr "Gi-unban ang %(name)s alang sa tanan nga mga tiggamit."
 
 #: app/feed/forms.py:15 app/feed/forms.py:67
 msgid "Parent feed"
-msgstr ""
+msgstr "Parent feed"
 
 #: app/feed/forms.py:17 app/feed/forms.py:69
 msgid "Show posts from child feeds"
-msgstr ""
+msgstr "Ipakita ang mga post gikan sa mga child feed"
 
 #: app/feed/forms.py:23 app/feed/forms.py:75
 #: app/templates/user/user_feeds.html:23
@@ -3297,15 +3361,17 @@ msgstr "Gipapas ang feed"
 #: app/feed/routes.py:415
 msgid "Could not find that feed or it is not public. Try one of these instead..."
 msgstr ""
+"Dili makita kana nga feed o dili kini public. Sulayi lang ang usa niini "
+"imbis..."
 
 #: app/feed/routes.py:421 app/feed/routes.py:426
 msgid "This feed is only visible to logged in users."
 msgstr "Kini nga feed makita ra sa mga naka-log in."
 
 #: app/feed/routes.py:663
-#, fuzzy, python-format
+#, python-format
 msgid "You have left %(feed_title)s"
-msgstr "Ningbiya ka gikan sa %(feed_title)s"
+msgstr "Ningbiya ka sa %(feed_title)s"
 
 #: app/feed/routes.py:710
 #, python-format
@@ -3355,7 +3421,7 @@ msgid "Posts from %(instance)s"
 msgstr "Mga post gikan sa %(instance)s"
 
 #: app/instance/routes.py:243
-#, fuzzy, python-format
+#, python-format
 msgid "Content from %(instance_domain)s will be hidden."
 msgstr "Ang content gikan sa %(instance_domain)s pagatagoan."
 
@@ -3462,9 +3528,8 @@ msgid "What are your thoughts?"
 msgstr "Unsa man ang imong mga hunahuna?"
 
 #: app/post/forms.py:18
-#, fuzzy
 msgid "Distinguish as moderator comment"
-msgstr "Ibulag ang ingon-ani nga komento sa moderator"
+msgstr "Pag-ila sa komento sa moderator"
 
 #: app/post/forms.py:28 app/user/forms.py:166
 msgid "Breaks community rules"
@@ -3525,9 +3590,8 @@ msgid "Share"
 msgstr "I-share"
 
 #: app/post/forms.py:129
-#, fuzzy
 msgid "Community to move this post to"
-msgstr "Komunidad kung asa ibalhin ang pagpost"
+msgstr "Komunidad kung asa ibalhin ang pagpatik"
 
 #: app/post/forms.py:139 app/templates/community/community_move.html:16
 msgid "Move"
@@ -3547,9 +3611,9 @@ msgid "This post is only visible to logged in users."
 msgstr "Kini nga post makita ra sa mga naka-log in."
 
 #: app/post/routes.py:108 app/post/routes.py:442
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has indicated they made a mistake in this post."
-msgstr "[Gipakita sa] %(name)s nga nakahimo sila ug sayop sa niini nga post."
+msgstr "%(name)s nagpaila nga nakahimo sila ug sayop niini nga post."
 
 #: app/post/routes.py:140
 #, python-format
@@ -3579,7 +3643,6 @@ msgid "Choose an emoji"
 msgstr "Pili-a og usa ka emoji"
 
 #: app/post/routes.py:635
-#, fuzzy
 msgid "Vote has been cast."
 msgstr "Naka botar na."
 
@@ -3598,9 +3661,9 @@ msgid "Comments have been disabled."
 msgstr "Ang mga komento gi-disable."
 
 #: app/post/routes.py:818 app/post/routes.py:872
-#, fuzzy, python-format
+#, python-format
 msgid "You cannot reply to %(name)s"
-msgstr "Dili nimo mahimo pagtubag ang %(name)s"
+msgstr "Dili nimo mahimong magtubag sa %(name)s"
 
 #: app/post/routes.py:864
 msgid "You are not permitted to comment in this community"
@@ -3697,46 +3760,47 @@ msgstr "Ang mga post nga nag-link sa %(name)s pagatagoan."
 #: app/user/routes.py:1614
 #, python-format
 msgid "Content from %(name)s will be hidden."
-msgstr ""
+msgstr "Ang content gikan sa %(name) pagatagoan."
 
 #: app/post/routes.py:1501
 #, python-format
 msgid "%(name)s has been stickied."
-msgstr ""
+msgstr "%(name)s gi-stick."
 
 #: app/post/routes.py:1503
 #, python-format
 msgid "%(name)s has been un-stickied."
-msgstr ""
+msgstr "%(name)s gi-unstick."
 
 #: app/post/routes.py:1515
 #, python-format
 msgid "%(name)s has been stickied to the instance."
-msgstr ""
+msgstr "%(name)s gi-stikedi na sa instance."
 
 #: app/post/routes.py:1518
 #, python-format
 msgid "%(name)s has been un-stickied from the instance."
-msgstr ""
+msgstr "%(name)s gi-unstick gikan sa instance."
 
 #: app/post/routes.py:1536
 #, python-format
 msgid "%(name)s has been hidden."
-msgstr ""
+msgstr "%(name)s gitago na."
 
 #: app/post/routes.py:1538
 #, python-format
 msgid "%(name)s has been un-hidden."
-msgstr ""
+msgstr "%(name)s gi-unhide na."
 
 #: app/post/routes.py:1613
 #, python-format
 msgid "Set flair for %(post_title)s"
-msgstr ""
+msgstr "I-set ang Flair alang sa %(post_title)s"
 
 #: app/post/routes.py:1670 app/post/routes.py:2249
+#, fuzzy
 msgid "Could not find that community."
-msgstr ""
+msgstr "Dili makita kana nga Komunidad."
 
 #: app/post/routes.py:1673 app/templates/post/post_move.html:14
 #, python-format
@@ -3748,14 +3812,17 @@ msgid ""
 "Moderators have already assessed reports regarding this comment, no "
 "further reports are necessary."
 msgstr ""
+"Ang mga moderator na nagrepaso na sa mga report bahin niini nga komento, ug "
+"wala na’y kinahanglan pang magpasa og dugang nga mga report."
 
 #: app/post/routes.py:1735
 msgid "Comment has already been reported, thank you!"
-msgstr ""
+msgstr "Ang komento gisumite na ug report, salamat!"
 
 #: app/post/routes.py:1740
+#, fuzzy
 msgid "Comment has been reported, thank you!"
-msgstr ""
+msgstr "Ang komento gisumite na ug report, salamat!"
 
 #: app/post/routes.py:1745
 msgid "Report comment"
@@ -3764,7 +3831,7 @@ msgstr "Ireport ang komento"
 #: app/post/routes.py:1835 app/templates/post/_post_reply_source_swap.html:7
 #: app/templates/post/_post_source_swap.html:7
 msgid "Something went wrong and a comment could not be found."
-msgstr ""
+msgstr "Nay nahitabo nga sayop og wala makit’an ang usa ka komento."
 
 #: app/post/routes.py:1881
 msgid "Edit comment"
@@ -3772,7 +3839,7 @@ msgstr "I-edit ang komento"
 
 #: app/post/routes.py:1903
 msgid "Delete all my comments in this chain"
-msgstr ""
+msgstr "I-delete tanan kong komento sa niini nga chain"
 
 #: app/post/routes.py:1943
 #, fuzzy, python-format
@@ -3789,18 +3856,16 @@ msgid "Comment restored."
 msgstr "Gi-restore ang komento."
 
 #: app/post/routes.py:2049
-#, fuzzy
 msgid "Comment purged."
-msgstr "Gi-clear ang komento."
+msgstr "Gi-wagtang na ang komento."
 
 #: app/post/routes.py:2051
 msgid "Comments that have been replied to cannot be purged."
 msgstr "Ang mga komento nga gi-replyan dili na mahimong tangtangon."
 
 #: app/post/routes.py:2103
-#, fuzzy
 msgid "Image blocked. Now delete matching posts."
-msgstr "Nablock na ang hulagway. Karon idelete ang mga post nga parehas ani."
+msgstr "Gi-atangan na ang hulagway. Karon i-papas ang mga post nga parehas ani."
 
 #: app/post/routes.py:2110
 msgid "Are you sure you want to block this image?"
@@ -3865,7 +3930,6 @@ msgid "You have left the community"
 msgstr "Nibiya ka na sa komunidad"
 
 #: app/shared/community.py:73
-#, fuzzy
 msgid "You need to step down as moderator before unsubscribing."
 msgstr ""
 "Kinahanglan nimo nga moundang sa pagkamoderator una ka maka-unsubscribe."
@@ -3880,9 +3944,9 @@ msgid "Moderator added"
 msgstr "Gidugang sa moderator"
 
 #: app/shared/community.py:565
-#, fuzzy, python-format
+#, python-format
 msgid "You are now a moderator of %(name)s"
-msgstr "Karun ikaw kay moderator na sa %(name)s"
+msgstr "Ikaw na ang moderator karon sa %(name)s"
 
 #: app/shared/community.py:625
 msgid "Moderator removed"
@@ -3899,6 +3963,8 @@ msgid ""
 "You have unsubscribed from the %(feed_name)s feed, please allow a couple "
 "minutes for it to fully process"
 msgstr ""
+"Naka-unsubscribe na ka gikan sa %(feed_name)s nga feed, palihug tugoti ang "
+"pipila ka minuto aron mo-process na kini nga hingpit"
 
 #: app/shared/feed.py:148
 msgid "You cannot leave your own feed"
@@ -3920,9 +3986,8 @@ msgid "%(name)s has been moved."
 msgstr "Gibalhin na ang %(name)s."
 
 #: app/shared/reply.py:189
-#, fuzzy
 msgid "Your comment has been added."
-msgstr "Ang imong komento nadugang na."
+msgstr "Ang imong komento gidugang na."
 
 #: app/shared/reply.py:418
 msgid "Comment deleted."
@@ -3955,19 +4020,19 @@ msgstr "Dili nimo ma-unblock ang imong kaugalingon."
 
 #: app/shared/user.py:162
 msgid "Purged user was a remote instance admin."
-msgstr ""
+msgstr "Ang gi-tangtang nga user usa ka remote instance admin."
 
 #: app/shared/user.py:164
 msgid "Purged user with role permissions."
-msgstr ""
+msgstr "Ang gi-tangtang nga user adunay mga pagtugot sa papel."
 
 #: app/shared/user.py:171
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "%(actor)s has been banned, deleted and all their content deleted. This "
 "might take a few minutes."
 msgstr ""
-"Ang %(actor)s gi-ban, gi-delete, ug ang tanan nilang content gi-delete usab. "
+"Ang %(actor)s gi-ban, gi-delete, ug ang tanan nilang content gi-papas usab. "
 "Mahimong molungtad kini ug pipila ka minuto."
 
 #: app/shared/user.py:183
@@ -3981,7 +4046,7 @@ msgstr "Ang gi-ban nga user usa ka remote instance admin."
 
 #: app/shared/user.py:195
 msgid "Banned user with role permissions."
-msgstr ""
+msgstr "Ang naka-ban nga user nga adunay mga pagtugot sa papel."
 
 #: app/shared/user.py:197
 #, python-format
@@ -4015,7 +4080,7 @@ msgstr "Karon nga uso"
 #: app/templates/user/_read_posts_nav.html:9 app/user/forms.py:79
 #: app/user/forms.py:88
 msgid "Hot"
-msgstr ""
+msgstr "Hot"
 
 #: app/templates/_home_nav.html:6 app/templates/_home_nav.html:95
 #: app/templates/themes/dillo/_home_nav.html:9
@@ -4057,7 +4122,6 @@ msgstr "Daan"
 #: app/templates/themes/dillo/_home_nav.html:12
 #: app/templates/user/_read_posts_nav.html:14
 #: app/templates/user/_user_nav.html:7
-#, fuzzy
 msgid "Recently commented on"
 msgstr "Bag-ohay nga nagkomento sa"
 
@@ -4080,7 +4144,7 @@ msgstr "Aktibo"
 #: app/templates/_home_nav.html:15 app/templates/_home_nav.html:101
 #: app/templates/user/_user_nav.html:8 app/templates/user/_user_nav.html:9
 msgid "Trending in niche communities"
-msgstr ""
+msgstr "Uso sa niche nga komunidad"
 
 #: app/templates/_home_nav.html:16 app/templates/_home_nav.html:102
 #: app/user/forms.py:84
@@ -4201,6 +4265,9 @@ msgid ""
 "These links aim to encourage mindful and informed discussions rooted in "
 "awareness, critical thinking, and the well-being of the community."
 msgstr ""
+"Kining mga link nagtinguha aron awhagon ang mabinantayon ug nahibalo nga mga "
+"diskusyon nga nag-ugat sa pagpanamnon, kritikal nga paghunahuna, ug sa "
+"kaayohan sa komunidad."
 
 #: app/templates/_inoculation_links.html:4
 msgid "Rational Discourse Toolkit"
@@ -4219,13 +4286,13 @@ msgstr "Isulod ang hulagway"
 #: app/templates/auth/instance_chooser.html:160 app/templates/base.html:343
 #: app/templates/base.html:364
 msgid "Close"
-msgstr ""
+msgstr "Sirado"
 
 #: app/templates/_insert_image_dialog.html:10
 #: app/templates/user/file_upload.html:16 app/templates/user/files.html:20
 #: app/user/forms.py:272
 msgid "Upload"
-msgstr ""
+msgstr "Pag-upload"
 
 #: app/templates/_macros.html:40
 #: app/templates/post/add_reply_inline_result.html:22
@@ -4239,21 +4306,21 @@ msgstr "Bag-ong account"
 #: app/templates/post/post_embed.html:16
 #: app/templates/themes/dillo/_macros.html:19
 msgid "Bot account"
-msgstr ""
+msgstr "Account sa bot"
 
 #: app/templates/_macros.html:47
 #: app/templates/post/add_reply_inline_result.html:32
 #: app/templates/post/post_embed.html:23
 #: app/templates/themes/dillo/_macros.html:23
 msgid "Very low reputation. Beware."
-msgstr ""
+msgstr "Sobra ubos ang reputasyon. Mag-amping."
 
 #: app/templates/_macros.html:48
 #: app/templates/post/add_reply_inline_result.html:33
 #: app/templates/post/post_embed.html:24
 #: app/templates/themes/dillo/_macros.html:24
 msgid "Very low reputation. Beware!"
-msgstr ""
+msgstr "Sobra ubos ang reputasyon. Mag-amping!"
 
 #: app/templates/_macros.html:50
 #: app/templates/admin/approve_registrations.html:53
@@ -4261,14 +4328,14 @@ msgstr ""
 #: app/templates/post/post_embed.html:26
 #: app/templates/themes/dillo/_macros.html:26
 msgid "Low reputation."
-msgstr ""
+msgstr "Ubos nga reputasyon."
 
 #: app/templates/_macros.html:56
 #: app/templates/post/add_reply_inline_result.html:41
 #: app/templates/themes/dillo/_macros.html:32
 #, python-format
 msgid "User note: %(note)s"
-msgstr ""
+msgstr "Tala sa user: %(note)s"
 
 #: app/templates/_side_pane.html:11
 #: app/templates/community/_community_nav.html:190
@@ -4296,7 +4363,7 @@ msgstr "Biya"
 #: app/templates/list_communities.html:291
 #: app/templates/themes/dillo/_side_pane.html:10
 msgid "Pending"
-msgstr ""
+msgstr "Nagpaabot"
 
 #: app/templates/_side_pane.html:21
 #: app/templates/auth/instance_chooser.html:342
@@ -4357,7 +4424,7 @@ msgstr "Mga umaabot nga mga kalihokan"
 
 #: app/templates/_side_pane.html:82
 msgid "iCal feed"
-msgstr ""
+msgstr "iCal feed"
 
 #: app/templates/_side_pane.html:94
 msgid "This community does not federate with other instances."
@@ -4385,7 +4452,7 @@ msgstr "I-set akong flair"
 #: app/templates/community/community_modlog.html:18
 #: app/templates/themes/dillo/base.html:147
 msgid "Modlog"
-msgstr ""
+msgstr "Modlog"
 
 #: app/templates/_side_pane.html:119
 #: app/templates/community/_community_moderation_nav.html:11
@@ -4513,7 +4580,7 @@ msgstr[1] "%(count)s mga User/6 Buwan"
 #: app/templates/topic/show_topic.html:133
 #: app/templates/user/show_profile.html:247
 msgid "RSS feed"
-msgstr ""
+msgstr "RSS feed"
 
 #: app/templates/_side_pane.html:184
 #: app/templates/themes/dillo/_side_pane.html:70
@@ -4543,7 +4610,7 @@ msgstr "Mga post gikan sa mga komunidad nga imong gi-moderate"
 #: app/templates/communities_menu.html:24 app/templates/topics_menu.html:14
 #: app/user/forms.py:96
 msgid "Moderating"
-msgstr ""
+msgstr "Pagdumala"
 
 #: app/templates/_view_filter_nav.html:7 app/templates/_view_filter_nav.html:21
 #: app/templates/list_communities.html:72
@@ -4602,7 +4669,11 @@ msgid_plural ""
 "In <a href=\"/communities?home_select=local\">%(num)d communities</a> we "
 "discussed"
 msgstr[0] ""
+"Sa <a href=\"/communities?home_select=local\">%(num)d nga komunidad</a> "
+"atong gihisgutan"
 msgstr[1] ""
+"Sa <a href=\"/communities?home_select=local\">%(num)d nga mga komunidad</a> "
+"atong gihisgutan"
 
 #: app/templates/about.html:15
 #, python-format
@@ -4620,7 +4691,7 @@ msgstr[1] "ug naghimo ug %(num)d nga mga post"
 
 #: app/templates/about.html:17
 msgid "Team"
-msgstr ""
+msgstr "Team"
 
 #: app/templates/about.html:18
 msgid "This instance is administered by"
@@ -4632,7 +4703,7 @@ msgstr "Gi-moderate kini sa"
 
 #: app/templates/about.html:22
 msgid "Contact"
-msgstr ""
+msgstr "Kontak"
 
 #: app/templates/about.html:24
 msgid "About Us"
@@ -4644,20 +4715,20 @@ msgstr "Legal nga impormasyon"
 
 #: app/templates/about.html:34
 msgid "Our Privacy Policy"
-msgstr ""
+msgstr "Atong Palisiya ug Pribasiya"
 
 #: app/templates/base.html:63 app/templates/post/post_embed.html:52
 #: app/templates/themes/dillo/base.html:19
 msgid "PieFed"
-msgstr ""
+msgstr "PieFed"
 
 #: app/templates/base.html:145 app/templates/themes/dillo/base.html:36
 msgid "Skip to main content"
-msgstr ""
+msgstr "Laktaw ngadto sa main content"
 
 #: app/templates/base.html:146 app/templates/themes/dillo/base.html:37
 msgid "Go to side pane"
-msgstr ""
+msgstr "Adto sa side pane"
 
 #: app/templates/base.html:152 app/templates/themes/dillo/base.html:43
 msgid "To home page"
@@ -4683,7 +4754,7 @@ msgstr "Pagdonar"
 
 #: app/templates/base.html:215 app/templates/themes/dillo/base.html:128
 msgid "Account"
-msgstr ""
+msgstr "Account"
 
 #: app/templates/base.html:219 app/templates/themes/dillo/base.html:130
 #: app/templates/user/user_preview.html:55
@@ -4734,7 +4805,7 @@ msgstr "Mag-log out"
 #: app/templates/admin/_nav.html:39 app/templates/base.html:266
 #: app/templates/dev/tools.html:10 app/templates/themes/dillo/base.html:149
 msgid "Dev Tools"
-msgstr ""
+msgstr "Dev Tools"
 
 #: app/templates/base.html:273
 #, python-format
@@ -4775,7 +4846,7 @@ msgstr "Palisiya sa pribasiya"
 #: app/templates/base.html:320 app/templates/keyboard_shortcuts.html:10
 #: app/templates/themes/dillo/base.html:185
 msgid "Keyboard shortcuts"
-msgstr ""
+msgstr "Mga shortcut sa keyboard"
 
 #: app/templates/base.html:323 app/templates/themes/dillo/base.html:186
 #, python-format
@@ -4797,6 +4868,9 @@ msgid ""
 "This is how long you have spent using PieFed during this month. We hope "
 "this use of your time aligns with your priorities and values."
 msgstr ""
+"Kini ang gidugayon sa imong paggamit sa PieFed niining buwana. Naghinaot "
+"kami nga ang paggamit nimo sa imong oras mohaum sa imong mga prayoridad ug "
+"mga mithi."
 
 #: app/templates/base.html:342
 msgid "Voting Options"
@@ -4870,6 +4944,11 @@ msgid ""
 " are vital in supporting the PieFed development effort, allowing us to "
 "expand and enhance PieFed with new features."
 msgstr ""
+"Ang PieFed libre ug open-source nga software samtang naglihok nga walay "
+"bisan unsang advertising, pagpatubo sa salapi, o pagsalig sa venture "
+"capital. Ang imong mga donasyon importante kaayo sa pagsuporta sa "
+"paningkamot sa pagpalambo sa PieFed, nga nagtugot kanamo nga mapalapad ug "
+"mapauswag ang PieFed pinaagi sa bag-ong mga bahin."
 
 #: app/templates/donate.html:18
 msgid "Donation options"
@@ -4953,7 +5032,7 @@ msgstr ""
 #: app/templates/user/files.html:48 app/templates/user/hidden_posts.html:33
 #: app/templates/user/read_posts.html:32
 msgid "Pagination"
-msgstr ""
+msgstr "Pagination"
 
 #: app/templates/admin/activities.html:64
 #: app/templates/admin/communities.html:119 app/templates/admin/content.html:56
@@ -5117,6 +5196,10 @@ msgid ""
 "depend on which is the current post. The current post is determined by "
 "hovering with the mouse or the J and K keys."
 msgstr ""
+"Kung tan-aw nimo ang usa ka lista sa mga aksyon sa mga post sama sa pagboto "
+"o pag-adto sa usa ka post nagdepende kini kung unsa ang kasamtangang post. "
+"Ang kasamtangang post gitino pinaagi sa pagpa-hover gamit ang mouse o ang "
+"key nga J ug K."
 
 #: app/templates/admin/communities.html:29
 #: app/templates/list_communities.html:16
@@ -5147,9 +5230,8 @@ msgstr "Bisan unsa"
 #: app/templates/community/community_moderate.html:33
 #: app/templates/community/community_moderate_subscribers.html:127
 #: app/templates/list_communities.html:56
-#, fuzzy
 msgid "Remote"
-msgstr "Remote"
+msgstr "Lagyo"
 
 #: app/templates/list_communities.html:63
 msgid "Subscription Status"
@@ -5177,7 +5259,7 @@ msgstr "Pili og hilisgutan aron i-filter ang mga komunidad"
 
 #: app/templates/list_communities.html:126
 msgid "Feed"
-msgstr ""
+msgstr "Feed"
 
 #: app/templates/list_communities.html:129
 msgid "Choose a public feed to filter communities by"
@@ -5193,7 +5275,7 @@ msgstr "Ipakita ang mga komunidad nga NSFW"
 
 #: app/templates/list_communities.html:179
 msgid "Home instance"
-msgstr ""
+msgstr "Home instance"
 
 #: app/templates/list_communities.html:183
 msgid "e.g. piefed.social"
@@ -5336,11 +5418,11 @@ msgstr "Ipapas ang komento"
 
 #: app/templates/modlog.html:28
 msgid "user@instance"
-msgstr ""
+msgstr "user@instance"
 
 #: app/templates/modlog.html:42
 msgid "Moderator user@instance"
-msgstr ""
+msgstr "Moderator user@instance"
 
 #: app/templates/admin/activities.html:28
 #: app/templates/community/community_modlog.html:32
@@ -5357,7 +5439,7 @@ msgstr "Tigdumala"
 #: app/templates/modlog.html:92
 #, python-format
 msgid " in %(community_name)s"
-msgstr ""
+msgstr " sa %(community_name)s"
 
 #: app/templates/community/community_modlog.html:49
 #: app/templates/modlog.html:95
@@ -5366,7 +5448,7 @@ msgstr "Hinungdan:"
 
 #: app/templates/modlog.html:103
 msgid "There are no moderation actions to show."
-msgstr ""
+msgstr "Walay mga aksyon sa pag-moderate nga ipakita."
 
 #: app/templates/privacy.html:10
 msgid "Privacy"
@@ -5385,11 +5467,11 @@ msgstr ""
 #: app/templates/protocol_handler.html:13
 #, python-format
 msgid "Open web+ap links using %(domain)s"
-msgstr ""
+msgstr "Ablihi ang mga link sa web+ap gamit ang %(domain)s"
 
 #: app/templates/protocol_handler.html:14
 msgid "Un-register protocol handler"
-msgstr ""
+msgstr "Unregister ang handler sa protocol"
 
 #: app/templates/share.html:16
 #, python-format
@@ -5398,7 +5480,7 @@ msgstr "Ipaambit%(title)s"
 
 #: app/templates/share.html:18
 msgid "This link has already been shared in these communities:"
-msgstr ""
+msgstr "Kini nga link gipaambit na sa mga komunidad niini:"
 
 #: app/templates/translation.html:1
 msgid "Are you sure?"
@@ -5410,12 +5492,12 @@ msgstr "Pag-navigate sa admin"
 
 #: app/templates/admin/_nav.html:3
 msgid "Admin home"
-msgstr ""
+msgstr "Admin home"
 
 #: app/templates/admin/_nav.html:16 app/templates/admin/_tabbed_nav.html:20
 #: app/templates/admin/content.html:17
 msgid "Content"
-msgstr ""
+msgstr "Content"
 
 #: app/templates/admin/_nav.html:19
 msgid "Registration applications"
@@ -5436,7 +5518,7 @@ msgstr "Pederasyon"
 #: app/templates/admin/_nav.html:28 app/templates/admin/_tabbed_nav.html:30
 #: app/templates/admin/newsletter.html:15
 msgid "Newsletter"
-msgstr ""
+msgstr "Newsletter"
 
 #: app/templates/admin/_nav.html:29 app/templates/admin/_tabbed_nav.html:31
 #: app/templates/admin/activities.html:14
@@ -5450,11 +5532,11 @@ msgstr "Pagtugot"
 
 #: app/templates/admin/_tabbed_nav.html:5
 msgid "Site"
-msgstr ""
+msgstr "Site"
 
 #: app/templates/admin/_tabbed_nav.html:6
 msgid "Misc"
-msgstr ""
+msgstr "Nagkalain-lain"
 
 #: app/templates/admin/_tabbed_nav.html:7
 msgid "Chooser"
@@ -5473,7 +5555,7 @@ msgstr "Mga Panid"
 #: app/templates/admin/activities.html:15
 #: app/templates/admin/communities.html:22
 msgid "Result Filter"
-msgstr ""
+msgstr "Resulta nga Filter"
 
 #: app/templates/admin/activities.html:17
 msgid "Failure"
@@ -5492,9 +5574,8 @@ msgid "Processing"
 msgstr "Nagproseso"
 
 #: app/templates/admin/activities.html:21
-#, fuzzy
 msgid "Direction Filter"
-msgstr "Filter sa Direksyon"
+msgstr "Direction Filter"
 
 #: app/templates/admin/activities.html:22
 msgid "Both"
@@ -5515,7 +5596,7 @@ msgstr "Direksyon"
 
 #: app/templates/admin/activities.html:30
 msgid "ID"
-msgstr ""
+msgstr "ID"
 
 #: app/templates/admin/activities.html:31
 #: app/templates/chat/ban_from_mod.html:30
@@ -5552,7 +5633,7 @@ msgstr "Pagdugang og bag-ong user"
 #: app/templates/community/community_edit.html:40
 #: app/templates/user/edit_profile.html:83
 msgid "Provide a square image that looks good when small."
-msgstr ""
+msgstr "Hatagi og square nga hulagway nga nindot tan-awon bisan kung gamay."
 
 #: app/templates/admin/add_user.html:30
 #: app/templates/admin/edit_community.html:38
@@ -5561,7 +5642,7 @@ msgstr ""
 #: app/templates/feed/feed_copy.html:31 app/templates/feed/feed_edit.html:36
 #: app/templates/feed/feed_new.html:31 app/templates/user/edit_profile.html:94
 msgid "Provide a wide image - letterbox orientation."
-msgstr ""
+msgstr "Hatagi og lapad nga hulagway—orientation nga letterbox."
 
 #: app/templates/admin/approve_registrations.html:15
 msgid "Registrations"
@@ -5580,7 +5661,7 @@ msgstr "Na-verify na ang email"
 #: app/templates/admin/approve_registrations.html:27
 #: app/templates/admin/approve_registrations.html:83
 msgid "Applied"
-msgstr ""
+msgstr "Giaplay"
 
 #: app/templates/admin/approve_registrations.html:28
 #: app/templates/admin/approve_registrations.html:84
@@ -5620,6 +5701,7 @@ msgstr "Mga Aksyon"
 #: app/templates/admin/approve_registrations.html:41
 msgid "Throwaway email account, the kind spammers and trolls use."
 msgstr ""
+"Throwaway nga email account, mao na ang gigamit sa mga spammer ug trolls."
 
 #: app/templates/admin/approve_registrations.html:61
 msgid "Approve"
@@ -5641,7 +5723,7 @@ msgstr "Bag-o lang gi-aprobahan"
 #: app/templates/admin/blocked_images.html:20
 #: app/templates/admin/blocked_images.html:27
 msgid "File"
-msgstr ""
+msgstr "File"
 
 #: app/templates/admin/blocked_images.html:29
 #: app/templates/admin/cms_pages.html:39
@@ -5704,13 +5786,12 @@ msgid "Page Details"
 msgstr "Mga Detalye sa Pahina"
 
 #: app/templates/admin/cms_page_delete.html:29
-#, fuzzy
 msgid "Title:"
-msgstr "Pamagat:"
+msgstr "Taytol:"
 
 #: app/templates/admin/cms_page_delete.html:30
 msgid "URL:"
-msgstr ""
+msgstr "URL:"
 
 #: app/templates/admin/cms_page_delete.html:31
 msgid "Last edited by:"
@@ -5726,7 +5807,7 @@ msgstr "Gihimo:"
 
 #: app/templates/admin/cms_page_delete.html:36
 msgid "Content preview:"
-msgstr ""
+msgstr "Preview sa content:"
 
 #: app/templates/admin/cms_page_delete.html:46
 msgid "Yes, Delete This Page"
@@ -5757,16 +5838,14 @@ msgid "Preview"
 msgstr "Pagtan-aw daan"
 
 #: app/templates/admin/cms_page_edit.html:54
-#, fuzzy
 msgid "Markdown Help"
-msgstr "Tabang sa Markdown"
+msgstr "Markdown Help"
 
 #: app/templates/admin/cms_page_edit.html:57
 msgid "Basic formatting:"
 msgstr "Basic nga pag-format:"
 
 #: app/templates/admin/cms_page_edit.html:66
-#, fuzzy
 msgid "Lists, tables, and other Markdown features are supported."
 msgstr "Ang mga lista, tables, ug uban pang mga feature sa Markdown suportado."
 
@@ -5807,11 +5886,11 @@ msgstr "Mga Miyembro"
 #: app/templates/admin/communities.html:63
 #: app/templates/admin/communities.html:102
 msgid "Content retention duration"
-msgstr ""
+msgstr "Panahon sa pagtipig sa content"
 
 #: app/templates/admin/communities.html:64
 msgid "Retention"
-msgstr ""
+msgstr "Pagtipig"
 
 #: app/templates/admin/communities.html:70
 #: app/templates/admin/communities.html:104
@@ -5843,7 +5922,7 @@ msgstr "Katapusang kalihokan"
 #: app/templates/community/_community_nav.html:213
 #: app/templates/themes/dillo/_side_pane.html:93
 msgid "Moderate"
-msgstr ""
+msgstr "Pagdumala"
 
 #: app/templates/admin/community_move.html:12
 #: app/templates/community/community_move.html:20
@@ -5856,7 +5935,6 @@ msgid "Trash"
 msgstr "Basura"
 
 #: app/templates/admin/content.html:21
-#, fuzzy
 msgid "Spammy"
 msgstr "Spammy"
 
@@ -5930,12 +6008,10 @@ msgid "receive newsletter"
 msgstr "dawat og newsletter"
 
 #: app/templates/admin/edit_user.html:47
-#, fuzzy
 msgid "searchable"
 msgstr "mahibal-an pinaagi sa pagpangita"
 
 #: app/templates/admin/edit_user.html:48
-#, fuzzy
 msgid "indexable"
 msgstr "mahibal-an sa search engine"
 
@@ -5949,7 +6025,6 @@ msgid "Add new emoji"
 msgstr "Dugang bag-ong emoji"
 
 #: app/templates/admin/emoji.html:24
-#, fuzzy
 msgid "Token"
 msgstr "Token"
 
@@ -5959,7 +6034,7 @@ msgstr "Token"
 #: app/templates/user/user_feeds.html:25
 #: app/templates/user/user_preview.html:13
 msgid "Instance"
-msgstr ""
+msgstr "Instance"
 
 #: app/templates/admin/emoji.html:49
 msgid "No emoji have been created yet."
@@ -5967,7 +6042,6 @@ msgstr "Wala pa’y emoji nga gihimo."
 
 #: app/templates/admin/federation.html:22
 #: app/templates/admin/federation.html:23
-#, fuzzy
 msgid "Import / Export Bans"
 msgstr "Mga Pagdili sa Pag-import / Pag-export"
 
@@ -5997,7 +6071,7 @@ msgstr ""
 
 #: app/templates/admin/federation_ban_lists.html:17
 msgid "JSON format"
-msgstr ""
+msgstr "Format sa JSON"
 
 #: app/templates/admin/federation_ban_lists.html:27
 msgid ""
@@ -6019,6 +6093,13 @@ msgid ""
 "Communities with less than 100 posts and less than 500 active users in "
 "the past week are excluded."
 msgstr ""
+"Gamit kini aron i-“pre-load” ang nailhan nga mga threadiverse nga komunidad, "
+"base sa pagranggo pinaagi sa mga post ug kalihokan. Ang lista sa mga "
+"komunidad gikuha gikan sa parehas nga lista sama sa <a href=\"https://"
+"lemmyverse.net/communities\">LemmyVerse</a>. Ang mga komunidad nga NSFW ug "
+"ang mga komunidad gikan sa mga gidili nga instance wala gilakip. Ang mga "
+"komunidad nga adunay kulang pa sa 100 nga mga post ug kulang pa sa 500 nga "
+"aktibo nga mga user sa miaging semana wala usab gilakip."
 
 #: app/templates/admin/federation_preload.html:18
 #: app/templates/admin/federation_remote_scan.html:19
@@ -6039,6 +6120,10 @@ msgid ""
 "communities, as ranked by posts and activity. NSFW communities and "
 "communities from banned instances are excluded."
 msgstr ""
+"Gamita kini aron i-scan ang usa ka remote nga PieFed o Lemmy server ug \"pre-"
+"load\" ang mga komunidad niini, sumala sa pagkapili pinaagi sa mga pagpatik "
+"ug kalihokan. Ang mga komunidad nga NSFW ug mga komunidad gikan sa mga "
+"nakabanned nga instance wa gilakip."
 
 #: app/templates/admin/federation_remote_scan.html:17
 msgid "Input should be in the form of <strong>https://server-name.tld</strong>"
@@ -6046,16 +6131,18 @@ msgstr ""
 "Ang input kinahanglan nga porma sa <strong>https://server-name.tld</strong>"
 
 #: app/templates/admin/home.html:18
+#, fuzzy
 msgid "Resource usage"
-msgstr ""
+msgstr "Paggamit sa kapanguhaan"
 
 #: app/templates/admin/home.html:19
 msgid "Load average: "
 msgstr "Ang kasagaran sa load: "
 
 #: app/templates/admin/home.html:38
+#, fuzzy
 msgid "Post translation available:"
-msgstr ""
+msgstr "Naa'y post translation:"
 
 #: app/templates/admin/home.html:50
 msgid "Installed Plugins"
@@ -6096,11 +6183,11 @@ msgid "CPU speed test"
 msgstr "Pagsulay sa katulin sa CPU"
 
 #: app/templates/admin/home.html:106
+#, fuzzy
 msgid "Run test"
-msgstr ""
+msgstr "Sugdi ang pagsulay"
 
 #: app/templates/admin/instance_chooser.html:14
-#, fuzzy
 msgid "Instance chooser settings"
 msgstr "Mga setting sa tigpili sa instance"
 
@@ -6124,10 +6211,9 @@ msgstr ""
 
 #: app/templates/admin/instance_chooser.html:22
 msgid "Instance strength / maturity"
-msgstr ""
+msgstr "Kusog / kahinog sa instance"
 
 #: app/templates/admin/instance_chooser.html:23
-#, fuzzy
 msgid ""
 "These are used to create the Maturity indicator. More is better but none "
 "are required."
@@ -6141,7 +6227,7 @@ msgstr "Paghimo og offline nga instance"
 
 #: app/templates/admin/instances.html:22
 msgid "Status Filter"
-msgstr ""
+msgstr "Kahimtang sa filter"
 
 #: app/templates/admin/instances.html:28
 #: app/templates/instance/list_instances.html:69
@@ -6153,13 +6239,13 @@ msgstr "Gi-block"
 #: app/templates/admin/instances.html:86 app/templates/domain/domains.html:37
 #: app/templates/domain/domains_blocked.html:37
 msgid "Domain"
-msgstr ""
+msgstr "Domain"
 
 #: app/templates/admin/instances.html:38 app/templates/admin/instances.html:39
 #: app/templates/admin/instances.html:87
 #: app/templates/instance/list_instances.html:144
 msgid "Software"
-msgstr ""
+msgstr "Software"
 
 #: app/templates/admin/instances.html:49 app/templates/admin/instances.html:89
 msgid "Known Communities"
@@ -6178,7 +6264,6 @@ msgid "Seen"
 msgstr "Nakita"
 
 #: app/templates/admin/instances.html:65
-#, fuzzy
 msgid "When we successfully sent them an Activity"
 msgstr "Kung malampuson namo silang naipadala ug usa ka Activity"
 
@@ -6216,7 +6301,6 @@ msgid "Content settings"
 msgstr "Mga setting sa content"
 
 #: app/templates/admin/misc.html:25
-#, fuzzy
 msgid "CSS in this field will be added to every page."
 msgstr "Ang CSS sa kini nga lugar igadugang sa matag panid."
 
@@ -6225,13 +6309,14 @@ msgid ""
 "JavaScript in this field will be added to every page. Do not include "
 "&lt;script&gt; tags."
 msgstr ""
+"Ang JavaScript sa kini nga lugar igadugang sa matag panid. Ayaw iapil ang "
+"mga tag nga &lt;script&gt;."
 
 #: app/templates/admin/misc.html:29
-#, fuzzy
 msgid "This is for anonymous users. Logged-in users always default to Subscribed"
 msgstr ""
 "Kini para sa mga anonymous nga user. Ang mga naka-log in kanunay nga nag-"
-"default sa Naka-subscribe"
+"default mga naka-subscribe"
 
 #: app/templates/admin/misc.html:40
 msgid ""
@@ -6261,11 +6346,9 @@ msgid "PieFed instances only. One per line, no https:// on the front."
 msgstr "Mga instance ra sa PieFed. Usa ra kada linya, walay https:// sa unahan."
 
 #: app/templates/admin/misc.html:62
-#, fuzzy
 msgid "This will be sent after their application is approved. Use markdown."
 msgstr ""
-"Kini ipadala human maaprubahan ang ilang aplikasyon. **Gamiton ang "
-"Markdown.**"
+"Kini ipadala human maaprubahan ang ilang aplikasyon. Gamiton ang Markdown."
 
 #: app/templates/admin/misc.html:64
 msgid "Other random stuff"
@@ -6276,14 +6359,15 @@ msgid ""
 "Turn this off to save storage and reduce server load. Increases load on "
 "clients."
 msgstr ""
+"I-turn kini off aron masave og storage ug makamenos sa karga sa server. "
+"Nagdugang kini sa karga sa mga client."
 
 #: app/templates/admin/misc.html:88
-#, fuzzy
 msgid "Danger Zone! - Instance Deletion"
 msgstr "Danger Zone! - Pagwagtang sa Instance"
 
 #: app/templates/admin/misc.html:94
-#, fuzzy, python-format
+#, python-format
 msgid "You are about to close the instance \"<strong>%(domain)s</strong>.\""
 msgstr ""
 "Mahimong isira na nimo ang instance nga \"<strong>%(domain)s</strong>.\""
@@ -6294,12 +6378,18 @@ msgid ""
 " new user registration will be closed and an announcement added to the "
 "home page."
 msgstr ""
+"Kung i-klik nimo ang pag-isira, ang tanan nga ubang mga instance mohunong sa "
+"pagpadala og content dinhi, isara ang pagrehistro sa bag-ong user ug "
+"makadugang og announcement sa home page."
 
 #: app/templates/admin/misc.html:96
 msgid ""
 "This action should be taken a few days before going offline and only "
 "after plenty of earlier warning, so communities have time to move, etc."
 msgstr ""
+"Kini nga aksyon kinahanglan himuon pipila ka adlaw sa wala pa ma-offline ug "
+"pagkahuman ra sa daghang pahimangno, aron adunay panahon ang mga komunidad "
+"sa pagbalhin, ug uban pa."
 
 #: app/templates/admin/misc.html:97 app/templates/user/delete_account.html:23
 #: app/templates/user/edit_profile.html:149
@@ -6307,10 +6397,12 @@ msgid ""
 "Remember, once you do this, there's no going back. Are you sure you want "
 "to continue?"
 msgstr ""
+"Hinumdumi, sa higayon nga buhaton nimo kini, walay na’y pagbalik. Sigurado "
+"ba ka nga gusto nimo nga magpadayon?"
 
 #: app/templates/admin/permissions.html:23
 msgid "User ID #1"
-msgstr ""
+msgstr "User ID #1"
 
 #: app/templates/admin/reports.html:17
 msgid "Query"
@@ -6322,16 +6414,23 @@ msgid ""
 "basic info for the sidebar and a logo. This information appears in link "
 "previews in social media."
 msgstr ""
+"I-configure ang flair sa instance, pinaagi sa paghatag niini ug usa ka "
+"ngalan, mubo nga slogan, impormasyon para sa sidebar ug usa ka logo. Kini "
+"nga impormasyon makita sa link previews sa social media."
 
 #: app/templates/admin/site.html:27
 msgid "Provide a square image, minimum 50 pixels wide but ideally 152+ pixels."
 msgstr ""
+"Hatagi ug square nga hulagway, labing menos 50 pixels ang gilapdon pero sa "
+"kasagaran mas maayo ang 152+ pixels."
 
 #: app/templates/admin/site.html:28
 msgid ""
 "It is best to use the PNG file format as that is most widely compatible "
 "for PWA icons."
 msgstr ""
+"Mas maayo nga gamiton ang format sa file nga PNG kay mao kana ang labing "
+"lapad nga nahiangay alang sa mga PWA nga icon."
 
 #: app/templates/admin/site.html:29
 msgid "About this instance"
@@ -6343,9 +6442,11 @@ msgid ""
 "address and provide legal information. This information appears on the <a"
 " href=\"/about\">about</a> page."
 msgstr ""
+"Maghatag ug mas halapad nga paghulagway sa instance, magbutang ug address sa "
+"kontak ug maghatag ug legal nga impormasyon. Kini nga impormasyon makita sa "
+"<a href=\"/about\">mahitungod</a> nga panid."
 
 #: app/templates/admin/site.html:37
-#, fuzzy
 msgid "Create a page in the \"Pages\" area then put it's address in here."
 msgstr ""
 "Paghimo og usa ka panid sa seksyon nga \"Pages\" dayon ibutang ang iyang "
@@ -6373,7 +6474,7 @@ msgstr "30 ka adlaw"
 
 #: app/templates/admin/users.html:40
 msgid "Email verified?"
-msgstr ""
+msgstr "Na-verify ba ang email?"
 
 #: app/templates/admin/users.html:53
 msgid "Display name."
@@ -6384,13 +6485,14 @@ msgid "This user has been banned."
 msgstr "Ang user na kini gi-ban na."
 
 #: app/templates/admin/users.html:65
-#, fuzzy
 msgid "How often a user has been reported."
-msgstr "Kanunay gi-report ang usa ka user."
+msgstr "Pipila ka higayon nga gi-report ang usa ka user."
 
 #: app/templates/admin/users.html:71
 msgid "Attitude: Percentage of up votes vs. down votes the account made."
 msgstr ""
+"Kinaiya: Porsiyento sa mga up vote kumpara sa mga down vote nga gihimo sa "
+"account."
 
 #: app/templates/admin/users.html:72 app/templates/admin/users.html:105
 #: app/templates/user/show_profile.html:150
@@ -6400,12 +6502,11 @@ msgstr "Kinaiya"
 
 #: app/templates/admin/users.html:77 app/templates/user/show_profile.html:151
 #: app/templates/user/user_preview.html:25
-#, fuzzy
 msgid ""
 "Reputation: The Karma of the account. Total up votes minus down votes "
 "they got."
 msgstr ""
-"Reputasyon: Ang karma sa account. I-total ang mga upvote minus sa mga "
+"Reputasyon: Ang karma sa account. Tanang mga upvote nga gikuha-an sa mga "
 "downvote nga ilang nakadawat."
 
 #: app/templates/admin/users.html:78 app/templates/admin/users.html:106
@@ -6441,7 +6542,7 @@ msgstr "Gi-report ang komento"
 
 #: app/templates/admin/reports/comment_report.html:12
 msgid "Original Comment Body"
-msgstr ""
+msgstr "Orihinal nga Comment Body"
 
 #: app/templates/admin/reports/comment_report.html:20
 #: app/templates/admin/reports/post_report.html:28
@@ -6452,7 +6553,7 @@ msgstr "Kadudahang User"
 #: app/templates/admin/reports/comment_report.html:29
 #: app/templates/admin/reports/user_report.html:21
 msgid "Suspect User Instance"
-msgstr ""
+msgstr "Suspect User Instance"
 
 #: app/templates/admin/reports/comment_report.html:38
 #: app/templates/admin/reports/post_report.html:46
@@ -6483,15 +6584,15 @@ msgstr "Gireport nga post"
 
 #: app/templates/admin/reports/post_report.html:12
 msgid "Original Post Title"
-msgstr ""
+msgstr "Orihinal nga Taytol sa Post"
 
 #: app/templates/admin/reports/post_report.html:20
 msgid "Original Post Body"
-msgstr ""
+msgstr "Orihinal nga Post Body"
 
 #: app/templates/admin/reports/post_report.html:37
 msgid "Source Instance"
-msgstr ""
+msgstr "Source sa Instance"
 
 #: app/templates/admin/reports/user_report.html:5
 #: app/templates/user/notifs/20.html:32
@@ -6644,9 +6745,8 @@ msgid "Age"
 msgstr "Edad"
 
 #: app/templates/auth/instance_chooser.html:113
-#, fuzzy
 msgid "Uptime"
-msgstr "Pagkaanaa sa serbisyo (Uptime)"
+msgstr "Uptime"
 
 #: app/templates/auth/instance_chooser.html:114
 #: app/templates/auth/instance_chooser.html:354
@@ -6675,36 +6775,49 @@ msgid ""
 "your subscriptions and settings and import then into another server if "
 "your original choice doesn't work out."
 msgstr ""
+"Dili kaayo dako ang risgo nga nalambigit sa desisyong ini—mahimo nimo "
+"kanunay i-export ang imong mga subscription ug settings, ug dayon i-import "
+"kini sa lain nga server kung dili mo-ubra ang imong orihinal nga gipili."
 
 #: app/templates/auth/instance_chooser.html:150
 msgid ""
 "The servers are listed in order of how fast they are - look for ones with"
 " a rocket or lightning icon."
 msgstr ""
+"Ang mga server gilista sunod-sunod base sa kung unsa ka kapaspas sila—tan-"
+"awa ang mga adunay icon nga rocket o kidlat."
 
 #: app/templates/auth/instance_chooser.html:151
 msgid ""
 "Stability is a rough measure of how organized the admin team is and how "
 "much support they have, not uptime."
 msgstr ""
+"Ang Stability kay usa ka kasarangan nga sukod kon unsa ka-organisa ang admin "
+"team ug pila kadaghan ang ilang suportang makuha, dili ang uptime."
 
 #: app/templates/auth/instance_chooser.html:152
 msgid ""
 "Newbie friendly servers have set up some starter-packs to help you find "
 "interesting communities more easily."
 msgstr ""
+"Ang mga server nga newbie-friendly nakahimo na og pipila ka starter-pack "
+"aron matabangan ka nga mas dali makakaplag ug mga makalingaw nga komunidad."
 
 #: app/templates/auth/instance_chooser.html:153
 msgid ""
 "Age is how long the server has been online for. Generally older ones are "
 "more likely to be around for the long term."
 msgstr ""
+"Ang edad mao kung unsa ka dugay nga online ang server. Sa kasagaran, ang mas "
+"karaan mas lagmit nga mopadayon gihapon sa dugay nga panahon."
 
 #: app/templates/auth/instance_chooser.html:154
 msgid ""
 "The language of the server only matters when need to communicate with the"
 " admins."
 msgstr ""
+"Ang pinulongan sa server kay maoy importante ra kung kinahanglan nimo makig-"
+"communicate sa mga admin."
 
 #: app/templates/auth/instance_chooser.html:155
 msgid "Click 'more' on a server to read a longer description of it."
@@ -6764,7 +6877,7 @@ msgstr "I-reset kini"
 
 #: app/templates/auth/mastodon_authorize.html:14
 msgid "Fill Mastodon data"
-msgstr ""
+msgstr "Punoha ang data sa Mastodon"
 
 #: app/templates/auth/permission_denied.html:16
 msgid "Your account does not have access to that area."
@@ -6775,12 +6888,11 @@ msgid "Thanks for registering"
 msgstr "Salamat sa pagrehistro"
 
 #: app/templates/auth/please_wait.html:13
-#, fuzzy
 msgid ""
 "We are reviewing your application and will email you once it has been "
 "accepted."
 msgstr ""
-"Gi-review namo ang imong aplikasyon ug i-email namo kamo sa higayon nga "
+"Gi-review namo ang imong aplikasyon og i-email namo kamo sa higayon nga "
 "madawat na kini."
 
 #: app/templates/auth/register.html:15
@@ -6796,17 +6908,15 @@ msgid "or use a username and password:"
 msgstr "o gamita ang username ug password:"
 
 #: app/templates/auth/register.html:74
-#, fuzzy
 msgid "Registration is closed. Only admins can create accounts."
 msgstr "Sirado ang pagrehistro. Ang mga admin ra ang makakahimo og mga account."
 
 #: app/templates/auth/register.html:75
-#, fuzzy
 msgid ""
 "If you would like to sign up for PieFed, choose one of the other "
 "instances in our network:"
 msgstr ""
-"Kung gusto nimo magparehistro sa PieFed, pili ug usa sa ubang mga instance "
+"Kung gusto nimo magparehistro sa PieFed, pili og usa sa ubang mga instance "
 "sa among network:"
 
 #: app/templates/auth/register.html:77 app/templates/auth/register.html:79
@@ -6936,7 +7046,7 @@ msgstr ""
 #: app/templates/user/show_upvoted.html:42
 #: app/templates/user/show_upvoted.html:71
 msgid "Breadcrumbs"
-msgstr ""
+msgstr "Breadcrumbs"
 
 #: app/templates/chat/conversation.html:42
 #: app/templates/instance/list_instances.html:165
@@ -6955,11 +7065,11 @@ msgstr "Mga tawo"
 #: app/templates/chat/conversation.html:61
 #, python-format
 msgid "Messages with %(name)s"
-msgstr ""
+msgstr "Mga mensahe uban ang %(name)s"
 
 #: app/templates/chat/conversation.html:62
 msgid "Messages with: "
-msgstr ""
+msgstr "Mga mensahe uban ang: "
 
 #: app/templates/chat/conversation.html:83
 #: app/templates/community/_community_nav.html:122
@@ -6977,6 +7087,8 @@ msgid ""
 "You have not been using PieFed long enough to be allowed to send messages"
 " to people."
 msgstr ""
+"Wala pa nimo naggamit ang PieFed sulod sa igo nga panahon aron tugotan ka "
+"nga makapadala og mga mensahe sa ubang mga tawo."
 
 #: app/templates/chat/empty.html:13
 msgid "No chats"
@@ -6987,11 +7099,13 @@ msgid ""
 "There are no chats involving you, yet. Start a conversation using the "
 "\"Send message\" button on someone's profile."
 msgstr ""
+"Wala pa’y mga chat nga naglakip kanimo. Sugdi ang usa ka panag-istorya "
+"pinaagi sa button nga \"Padala og mensahe\" sa profile sa usa ka tawo."
 
 #: app/templates/chat/report.html:14
 #, python-format
 msgid "Report conversation with \"%(member_names)s\""
-msgstr ""
+msgstr "I-report ang panag-istorya uban ang \" %(member_names)s\""
 
 #: app/templates/community/_body_edit_preview.html:27
 #: app/templates/post/add_reply.html:49 app/templates/post/post.html:160
@@ -7007,7 +7121,7 @@ msgstr "I-enable ang markdown editor"
 #: app/templates/community/_community_nav.html:421
 #: app/templates/feed/_feed_nav.html:9 app/templates/feed/_feed_nav.html:63
 msgid "Sort by hot"
-msgstr ""
+msgstr "Paghan-ay base sa Hot"
 
 #: app/templates/community/_community_moderation_nav.html:14
 #: app/templates/community/community_moderate_subscribers.html:23
@@ -7019,7 +7133,7 @@ msgstr "Mga subscriber"
 #: app/templates/community/community_wiki_list.html:17
 #: app/templates/community/community_wiki_revisions.html:18
 msgid "Wiki"
-msgstr ""
+msgstr "Wiki"
 
 #: app/templates/community/_community_moderation_nav.html:23
 msgid "Appeals"
@@ -7027,7 +7141,7 @@ msgstr "Mga apela"
 
 #: app/templates/community/_community_moderation_nav.html:29
 msgid "Mod log"
-msgstr ""
+msgstr "Mod log"
 
 #: app/templates/community/_community_nav.html:8
 #: app/templates/community/_community_nav.html:239
@@ -7066,51 +7180,51 @@ msgstr "Paghan-ay pinaagi sa aktibo"
 #: app/templates/community/_community_nav.html:264
 #: app/templates/feed/_feed_nav.html:30
 msgid "Top 12 hours"
-msgstr ""
+msgstr "Top sa 12 oras"
 
 #: app/templates/community/_community_nav.html:38
 #: app/templates/community/_community_nav.html:269
 #: app/templates/feed/_feed_nav.html:35
 msgid "Top Day"
-msgstr ""
+msgstr "Top nga adlaw"
 
 #: app/templates/community/_community_nav.html:43
 #: app/templates/community/_community_nav.html:274
 #: app/templates/feed/_feed_nav.html:40
 msgid "Top Week"
-msgstr ""
+msgstr "Top nga semana"
 
 #: app/templates/community/_community_nav.html:48
 #: app/templates/community/_community_nav.html:279
 #: app/templates/feed/_feed_nav.html:45
 msgid "Top Month"
-msgstr ""
+msgstr "Top nga bulan"
 
 #: app/templates/community/_community_nav.html:53
 #: app/templates/community/_community_nav.html:284
 #: app/templates/feed/_feed_nav.html:50
 msgid "Top Year"
-msgstr ""
+msgstr "Top nga tuig"
 
 #: app/templates/community/_community_nav.html:58
 #: app/templates/community/_community_nav.html:289
 #: app/templates/feed/_feed_nav.html:55
 msgid "Top All Time"
-msgstr ""
+msgstr "Top sa tanan nga panahon"
 
 #: app/templates/community/_community_nav.html:157
 #: app/templates/community/_community_nav.html:366
 #: app/templates/community/_community_nav.html:496
 #: app/templates/feed/_feed_nav.html:130 app/templates/feed/_feed_nav.html:193
 msgid "Tile"
-msgstr ""
+msgstr "Tile"
 
 #: app/templates/community/_community_nav.html:160
 #: app/templates/community/_community_nav.html:369
 #: app/templates/community/_community_nav.html:499
 #: app/templates/feed/_feed_nav.html:135 app/templates/feed/_feed_nav.html:196
 msgid "Wide tile"
-msgstr ""
+msgstr "Wide tile"
 
 #: app/templates/community/_community_nav.html:166
 #: app/templates/community/_community_nav.html:375
@@ -7175,7 +7289,6 @@ msgstr ""
 "taas ang trapiko!"
 
 #: app/templates/community/_notification_toggle.html:12
-#, fuzzy
 msgid "Favorite this community to put it on the Explore menu"
 msgstr "I-favorite kini nga komunidad aron makita kini sa menu nga Explore"
 
@@ -7185,12 +7298,16 @@ msgid ""
 "This is shown above the field where people compose their content. Only "
 "use this if really necessary."
 msgstr ""
+"Kini gipakita sa ibabaw sa field diin ang mga tawo nag-compose sa ilang "
+"content. Gamita ra kini kung gikinahanglan gyud kaayo."
 
 #: app/templates/community/add_local.html:27
 #: app/templates/feed/feed_copy.html:29 app/templates/feed/feed_edit.html:34
 #: app/templates/feed/feed_new.html:29
 msgid "Provide a square image that looks good when small. SVG is allowed."
 msgstr ""
+"Panghatag ug usa ka square nga hulagway nga nindot tan-awon bisan kung gamay "
+"ra. Gitugotan ang SVG."
 
 #: app/templates/community/add_local.html:31
 #: app/templates/community/community_edit.html:61
@@ -7205,20 +7322,20 @@ msgstr "kat-on unsaon pagbuhat niini dinhi "
 #: app/templates/community/add_local.html:31
 #: app/templates/community/community_edit.html:61
 msgid "and propose it to our "
-msgstr ""
+msgstr "ug isugyot kini sa among "
 
 #: app/templates/community/add_local.html:31
 #: app/templates/community/community_edit.html:61
 msgid "Codeberg repository"
-msgstr ""
+msgstr "Codeberg repository"
 
 #: app/templates/community/add_local.html:34
 msgid "Do not publicize test communities."
-msgstr ""
+msgstr "Ayaw i-public ang mga test community."
 
 #: app/templates/community/add_local.html:36
 msgid "Comments can be designated as the answer."
-msgstr ""
+msgstr "Ang mga komento mahimong itudlo nga mao ang tubag."
 
 #: app/templates/community/add_local.html:39
 #: app/templates/community/community_edit.html:76
@@ -7233,7 +7350,7 @@ msgstr "Ang naggamit lang ug %(name)s ang maka-post o maka-reply"
 #: app/templates/community/add_local.html:46
 #: app/templates/community/community_edit.html:82
 msgid "Private communities do not federate and are only visible to members"
-msgstr ""
+msgstr "Ang mga pribadong komunidad dili motakdo ug makita ra sa mga myembro"
 
 #: app/templates/community/add_post.html:8
 msgid "Type of post"
@@ -7252,13 +7369,11 @@ msgid "Share an image"
 msgstr "Ipaambit ang hulagway"
 
 #: app/templates/community/add_post.html:16
-#, fuzzy
 msgid "Share a video"
 msgstr "Ipaambit ang video"
 
 #: app/templates/community/add_post.html:18
 #: app/templates/community/add_post.html:20
-#, fuzzy
 msgid "Create a poll"
 msgstr "Paghimo og usa ka botohan"
 
@@ -7295,21 +7410,21 @@ msgstr ""
 #: app/templates/community/add_remote.html:22
 msgid "Or just start typing to see potential matching communities."
 msgstr ""
+"O magsugod ug pagsulat lang aron makita ang mga posibleng parehas nga "
+"komunidad."
 
 #: app/templates/community/add_remote.html:44
 #: app/templates/community/lookup_remote.html:15
 msgid "Found a community:"
-msgstr ""
+msgstr "Nakaplagan ang komunidad:"
 
 #: app/templates/community/check_url_posted.html:3
-#, fuzzy
 msgid "This link has already been posted elsewhere:"
-msgstr "Kini nga link gisumite na sa lain nga lugar na:"
+msgstr "Kini nga link gisumite na sa lain nga lugar:"
 
 #: app/templates/community/check_url_posted.html:8
-#, fuzzy
 msgid "Post Title"
-msgstr "Pamagat sa Post"
+msgstr "Titulo sa Post"
 
 #: app/templates/community/community.html:39
 #: app/templates/community/community.html:76
@@ -7317,14 +7432,12 @@ msgstr "Pamagat sa Post"
 #: app/templates/post/_post_full.html:40
 #: app/templates/post/post_teaser/_macros.html:56
 #: app/templates/themes/dillo/post/post_teaser/_macros.html:42
-#, fuzzy
 msgid "Not safe for work"
 msgstr "Dili luwas alang sa trabaho (NSFW)"
 
 #: app/templates/community/community.html:42
 #: app/templates/community/community.html:79
 #: app/templates/community/community.html:113
-#, fuzzy
 msgid "Not safe for life"
 msgstr "Dili luwas alang sa kinabuhi"
 
@@ -7353,7 +7466,6 @@ msgid "Delete \"%(community_title)s\""
 msgstr "I-delete ang \"%(community_title)s\""
 
 #: app/templates/community/community_delete.html:15
-#, fuzzy
 msgid ""
 "Are you sure you want to delete this community? This is irreversible and "
 "will delete all posts and comments associated with it."
@@ -7407,16 +7519,14 @@ msgstr "I-delete ang hulagway"
 #: app/templates/user/show_upvoted.html:34
 #: app/templates/user/show_upvoted.html:51
 #: app/templates/user/show_upvoted.html:58
-#, fuzzy
 msgid "Profile pic"
 msgstr "Hulagway sa profile"
 
 #: app/templates/community/community_edit.html:73
-#, fuzzy
 msgid "Some languages, e.g. Japanese, do not work well with friendly urls."
 msgstr ""
 "Ang pipila ka mga pinulongan, pananglitan ang Hapon, dili mugana sa mga "
-"friendly nga URL."
+"friendly nga url."
 
 #: app/templates/community/community_find_moderator.html:26
 msgid "Found some people:"
@@ -7467,9 +7577,8 @@ msgstr ""
 "%(community)s"
 
 #: app/templates/community/community_moderate.html:68
-#, fuzzy
 msgid "Escalate"
-msgstr "I-escalate"
+msgstr "Ipasaka"
 
 #: app/templates/community/community_moderate.html:69
 msgid "Resolve"
@@ -7484,7 +7593,7 @@ msgid "No reports yet"
 msgstr "Wala pa’y mga report"
 
 #: app/templates/community/community_moderate_comments.html:30
-#, fuzzy, python-format
+#, python-format
 msgid "Review comments in %(community)s"
 msgstr "I-review ang mga komento sa %(community)s"
 
@@ -7560,7 +7669,7 @@ msgid "Ban a user"
 msgstr "I-ban ang user"
 
 #: app/templates/community/community_moderate_subscribers.html:168
-#, fuzzy, python-format
+#, python-format
 msgid "Create a ban from %(community)s"
 msgstr "Paghimo og ban gikan sa %(community)s"
 
@@ -7570,7 +7679,6 @@ msgid "Moderation actions in %(community)s"
 msgstr "Mga aksyon sa pag-moderate sa %(community)s"
 
 #: app/templates/community/community_modlog.html:26
-#, fuzzy
 msgid "See things moderators have done in this community."
 msgstr ""
 "Tan-awa ang mga butang nga nahimo sa mga moderator sa kini nga komunidad."
@@ -7580,7 +7688,6 @@ msgid "This community has had no moderation actions yet."
 msgstr "Wala pa’y aksyon sa pag-moderate nga nahimo sa kini nga komunidad."
 
 #: app/templates/community/community_move.html:22
-#, fuzzy
 msgid "The process to move a community to this instance is:"
 msgstr "Ang proseso sa pagbalhin sa komunidad ngadto sa instance mao ang:"
 
@@ -7591,15 +7698,19 @@ msgid ""
 "            will not copy posts so having an account on this instance "
 "subscribed to it for a while is the only way to get old posts here."
 msgstr ""
+"Siguruha nga ang kopya sa komunidad sa niini nga instance aktibo na sukad "
+"nang igo na igo nga makadawat og daghang mga post. Ang proseso sa pagbalhin\n"
+"            dili makopya og mga post, mao nga ang pagkahimog account sa "
+"niini nga instance nga naka-subscribe niini sulod sa usa ka panahon mao ra "
+"ang paagi aron makuha ang mga karaang post dinhi."
 
 #: app/templates/community/community_move.html:26
-#, fuzzy
 msgid ""
 "Lock the old community by setting it to 'moderators only' so no one else "
 "can post in it."
 msgstr ""
-"I-lock ang karaang komunidad pinaagi sa pagbutang niini sa “mga moderator ra”"
-" aron walay lain nga maka-post niini."
+"I-lock ang karaang komunidad pinaagi sa pagbutang niini sa “mga moderator ra"
+"” aron walay lain nga maka-post niini."
 
 #: app/templates/community/community_move.html:27
 #, python-format
@@ -7607,13 +7718,16 @@ msgid ""
 "Create a post in the old community announcing the impending move to "
 "%(instance_domain)s. Paste the url of that post into the field below."
 msgstr ""
+"Paghimo og usa ka post sa daang komunidad aron i-anunsyo ang umaabot nga "
+"pagbalhin ngadto sa %(instance_domain)s. I-paste ang url sa maong post "
+"ngadto sa field sa ubos."
 
 #: app/templates/community/community_move.html:28
-#, fuzzy, python-format
+#, python-format
 msgid "Submit the form to send the request to %(instance_domain)s admins."
 msgstr ""
-"Isumite ang porma aron ipadala ang hangyo sa mga admin sa "
-"%(instance_domain)s."
+"Isumite ang porma aron ipadala ang hangyo sa mga admin sa %(instance_domain)"
+"s."
 
 #: app/templates/community/community_move.html:29
 #, python-format
@@ -7630,6 +7744,9 @@ msgid ""
 "Update your announcement post in the old community to encourage people to"
 " join the new community at<br>!%(community_name)s@%(instance_domain)s."
 msgstr ""
+"I-update ang imong post sa anunsyo sa daang komunidad aron dasigon ang mga "
+"tawo nga moapil sa bag-ong komunidad sa<br>!%(community_name)s@%"
+"(instance_domain)s."
 
 #: app/templates/community/community_wiki_edit.html:28
 #: app/templates/post/add_reply_inline.html:92 app/templates/post/post.html:39
@@ -7676,7 +7793,6 @@ msgstr "Palihog pili-a ang file sa hulagway."
 #: app/templates/community/community_wiki_edit.html:37
 #: app/templates/post/add_reply_inline.html:101 app/templates/post/post.html:48
 #: app/templates/post/post_edit.html:110
-#, fuzzy
 msgid "Uploading..."
 msgstr "Uploading..."
 
@@ -7718,12 +7834,12 @@ msgstr "Idugang og link sa wiki sa paghulagway sa komunidad."
 
 #: app/templates/community/community_wiki_list.html:66
 msgid "There are no wiki pages in this community."
-msgstr ""
+msgstr "Walay mga pahina sa wiki niini nga komunidad."
 
 #: app/templates/community/community_wiki_revisions.html:24
 #, python-format
 msgid "Revisions of %(title)s"
-msgstr ""
+msgstr "Mga revision sa %(title)s"
 
 #: app/templates/community/community_wiki_revisions.html:31
 #: app/templates/post/add_reply_inline_result.html:10
@@ -7738,20 +7854,22 @@ msgid "Revert"
 msgstr "Balihon"
 
 #: app/templates/community/invite.html:20
-#, fuzzy, python-format
+#, python-format
 msgid "Invite to %(name)s"
-msgstr "Dapiton sa%(name)s"
+msgstr "Ipa-dapit sa %(name)s"
 
 #: app/templates/community/invite.html:25
 msgid ""
 "Start fediverse handles with '@' to differentiate them from email "
 "addresses."
 msgstr ""
+"Sugdi og '@' ang mga fediverse handle aron mailhan kini gikan sa mga email "
+"address."
 
 #: app/templates/community/retrieve_remote_post.html:15
 #, python-format
 msgid "Enter the full URL of the post submitted to %(community_name)s"
-msgstr ""
+msgstr "Ibutang ang tibu-ok nga URL sa %(community_name)s"
 
 #: app/templates/community/retrieve_remote_post.html:17
 msgid "Enter the full URL of the post"
@@ -7762,6 +7880,8 @@ msgid ""
 "Note: URL needs to match the one from the post author's instance (which "
 "may be different from the community's instance)"
 msgstr ""
+"Pahimangno: Ang URL kinahanglan motakdo sa gikan sa instance sa tagsulat sa "
+"post (nga mahimong lahi sa instance sa komunidad)"
 
 #: app/templates/community/retrieve_remote_post.html:30
 msgid "Found a post:"
@@ -7776,9 +7896,8 @@ msgstr ""
 "topic ug komunidad nga gamiton sa panahon sa development."
 
 #: app/templates/dev/tools.html:16
-#, fuzzy
 msgid "Add Dev Communities"
-msgstr "Dugang Dev Communities"
+msgstr "Ipadugang ang mga Komunidad sa Dev"
 
 #: app/templates/dev/tools.html:26
 msgid "Add Dev Topics"
@@ -7789,16 +7908,15 @@ msgid "Delete Dev Communities"
 msgstr "I-delete ang mga Dev Communities"
 
 #: app/templates/dev/tools.html:48
-#, fuzzy
 msgid "Delete Dev Topics"
-msgstr "I-delete ang Dev Topics"
+msgstr "Ipapas ang mga Hilisgutan sa Dev"
 
 #: app/templates/domain/domain.html:16 app/templates/domain/domains.html:12
 #: app/templates/domain/domains.html:21
 #: app/templates/domain/domains_blocked.html:21
 #: app/templates/user/filters.html:81
 msgid "Domains"
-msgstr ""
+msgstr "Domains"
 
 #: app/templates/domain/domain.html:33
 msgid "No posts in this domain yet."
@@ -7824,9 +7942,9 @@ msgid "Ban instance-wide"
 msgstr "I-ban ang tibuok instance"
 
 #: app/templates/domain/domains.html:14
-#, fuzzy, python-format
+#, python-format
 msgid "Domains containing \"%(search)s\""
-msgstr "Mga domain nga naglangkob sa \"\"%(search)s\""
+msgstr "Mga domain nga naglangkob sa \"%(search)s\""
 
 #: app/templates/domain/domains.html:24
 #: app/templates/domain/domains_blocked.html:12
@@ -7835,9 +7953,8 @@ msgid "Banned domains"
 msgstr "Mga gi-ban nga domain"
 
 #: app/templates/domain/domains.html:38
-#, fuzzy
 msgid "How many times has something on this domain been posted"
-msgstr "Pila ka higayon nga may anaa niining domain"
+msgstr "Pipila ka higayon nga may anaa niining domain ang gipost"
 
 #: app/templates/domain/domains_blocked.html:14
 #, python-format
@@ -7848,8 +7965,8 @@ msgstr "Mga gi-ban nga domain nga adunay \"%(search)s\""
 #, fuzzy
 msgid "Unbanning this domain allows future posts linking to that domain."
 msgstr ""
-"Ang unban sa maong domain magtugot nga ang mga sunod nga post nga mo-link "
-"niini himoon."
+"Ang pag-unban sa maong domain magtugot nga ang mga sunod nga post nga mo-"
+"link niini himoon."
 
 #: app/templates/errors/401.html:12
 msgid "Sorry, access is denied"
@@ -7869,9 +7986,8 @@ msgid "Ooops, something is broken!"
 msgstr "Oopps, naa'y naguba!"
 
 #: app/templates/errors/404.html:3
-#, fuzzy
 msgid "The page your browser tried to load could not be found."
-msgstr "Ang panid nga gisulayan sa imong browser nga i-load wala mahibaw-i."
+msgstr "Ang panid nga gisulayan sa imong browser nga i-load dili makita."
 
 #: app/templates/errors/429.html:12
 msgid "429 - Too Many Requests"
@@ -7882,6 +7998,8 @@ msgid ""
 "You have been temporarily rate-limited. Please wait a while before making"
 " more requests."
 msgstr ""
+"Temporaryong gilimitahan ka sa pag-rate. Palihug hulata gamay sa dili pa "
+"paghimo ug dugang panghangyo."
 
 #: app/templates/errors/429.html:16
 msgid "Request limit:"
@@ -7904,7 +8022,6 @@ msgstr ""
 "namo kini, ma-repair namo, ug mapauswag ang PieFed para sa tanan."
 
 #: app/templates/errors/500.html:12
-#, fuzzy
 msgid "An unexpected error has occurred"
 msgstr "Nahitabo ang usa ka dili gilauman nga sayop"
 
@@ -7913,6 +8030,9 @@ msgid ""
 "Sorry for the inconvenience! Please let us know about this, so we can "
 "repair it and make PieFed better for everyone."
 msgstr ""
+"Pasayloa kami sa kasamok! Palihog ipahibalo kanamo kining mahitungod niini, "
+"aron mahimo namo kini ayohon ug himuon nga mas maayo ang PieFed para sa "
+"tanan."
 
 #: app/templates/errors/alt_profile.html:3
 msgid ""
@@ -7920,6 +8040,9 @@ msgid ""
 "for private voting). You are viewing the alternative profile of an "
 "account."
 msgstr ""
+"Sa PieFed, ang mga account adunay main nga profile ug alternative nga "
+"profile (gigamit alang sa pribadong pagboto). Nagtan-aw ka sa alternative "
+"nga profile sa usa ka account."
 
 #: app/templates/errors/alt_profile.html:4
 #: app/templates/post/post_mea_culpa.html:18
@@ -7948,7 +8071,6 @@ msgstr "Kopya"
 #: app/templates/feed/public_feeds.html:36
 #: app/templates/feed/public_feeds.html:39
 #: app/templates/feed/show_feed.html:148
-#, fuzzy
 msgid "Subscribe"
 msgstr "Mag-subscribe"
 
@@ -8051,7 +8173,7 @@ msgstr "Wala pa’y mga post sa niini nga feed."
 
 #: app/templates/feed/show_feed.html:187
 msgid "Feed communities"
-msgstr ""
+msgstr "Feed sa mga komunidad"
 
 #: app/templates/feed/show_feed.html:191
 msgid "Curated by "
@@ -8069,7 +8191,7 @@ msgstr "I-clear ang mga filter"
 
 #: app/templates/instance/list_instances.html:34
 msgid "Online Status"
-msgstr ""
+msgstr "Online nga Kahimtang"
 
 #: app/templates/instance/list_instances.html:38
 msgid "Online instances"
@@ -8077,7 +8199,7 @@ msgstr "Mga online nga instance"
 
 #: app/templates/instance/list_instances.html:43
 msgid "Dormant instances"
-msgstr ""
+msgstr "Mga dormant nga instance"
 
 #: app/templates/instance/list_instances.html:48
 msgid "Gone forever instances"
@@ -8116,7 +8238,7 @@ msgstr "Na-federate"
 
 #: app/templates/instance/list_instances.html:87
 msgid "Silenced instances"
-msgstr ""
+msgstr "Mga gi-silence nga instance"
 
 #: app/templates/instance/list_instances.html:150
 msgid "Heard from"
@@ -8131,9 +8253,9 @@ msgid "No results to show."
 msgstr "Walay makita nga mga resulta."
 
 #: app/templates/instance/overview.html:19
-#, fuzzy, python-format
+#, python-format
 msgid "This is a %(software)s instance."
-msgstr "Kini usa ka %(software)s ka-instance."
+msgstr "Kini usa ka %(software)s instance."
 
 #: app/templates/instance/overview.html:33
 msgid "Go to instance"
@@ -8182,7 +8304,7 @@ msgstr "Wala pa’y mga post gikan sa maong instance."
 #: app/templates/post/post_reply_options.html:91
 #: app/templates/post/post_reply_options.html:97
 msgid "Bookmark"
-msgstr ""
+msgstr "Bookmark"
 
 #: app/templates/post/_add_remove_bookmark.html:5
 #: app/templates/post/_add_remove_bookmark.html:6
@@ -8229,7 +8351,7 @@ msgstr "Buton sa DownVote."
 
 #: app/templates/post/_flair_choices.html:13
 msgid "NSFL"
-msgstr ""
+msgstr "NSFL"
 
 #: app/templates/post/_post_full.html:17 app/templates/post/_post_full.html:58
 #: app/templates/post/post_teaser/_macros.html:60
@@ -8245,7 +8367,6 @@ msgstr "gipapas"
 #: app/templates/post/_post_full.html:41
 #: app/templates/post/post_teaser/_macros.html:56
 #: app/templates/themes/dillo/post/post_teaser/_macros.html:42
-#, fuzzy
 msgid "nsfw"
 msgstr "nsfw"
 
@@ -8271,7 +8392,6 @@ msgstr "Ang kani nga post adunay sulod nga gihimo gamit ang AI"
 #: app/templates/post/_post_full.html:51
 #: app/templates/post/post_teaser/_macros.html:58
 #: app/templates/themes/dillo/post/post_teaser/_macros.html:44
-#, fuzzy
 msgid "AI"
 msgstr "AI"
 
@@ -8326,7 +8446,6 @@ msgid "The poll has finished, yet no votes were cast."
 msgstr "Nahuman na ang botohan, apan walay bisan kinsa nga mibotar."
 
 #: app/templates/post/_post_full.html:309
-#, fuzzy
 msgid "No votes have been cast yet."
 msgstr "Walay mga botante nga nakabotar pa."
 
@@ -8588,15 +8707,15 @@ msgstr "Tan-awa ang mga komento"
 #, python-format
 msgid "UpVote button, %(num)d upvote so far."
 msgid_plural "UpVote button, %(num)d upvotes so far."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "UpVote button, %(num)d nga upvote pa karon."
+msgstr[1] "UpVote button, %(num)d nga mga upvote pa karon."
 
 #: app/templates/post/_post_voting_buttons.html:10
 #, python-format
 msgid "DownVote button, %(num)d downvote so far."
 msgid_plural "DownVote button, %(num)d downvotes so far."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "DownVote button, %(num)d downvote pa karon."
+msgstr[1] "DownVote button, %(num)d mga downvote pa karon."
 
 #: app/templates/post/_post_voting_buttons_masonry.html:3
 msgid "UpVote"
@@ -8604,16 +8723,15 @@ msgstr "I-upvote"
 
 #: app/templates/post/_post_voting_buttons_masonry.html:10
 msgid "DownVote"
-msgstr ""
+msgstr "DownVote"
 
 #: app/templates/post/add_reply.html:13
 #: app/templates/post/post_reply_edit.html:13
 msgid "Original post"
-msgstr ""
+msgstr "Orihinal nga post"
 
 #: app/templates/post/add_reply.html:17
 #: app/templates/post/post_reply_edit.html:18
-#, fuzzy
 msgid "Comment you are replying to"
 msgstr "Komento nga imong tubagon sa"
 
@@ -8851,9 +8969,8 @@ msgid "Written by AI?"
 msgstr "Gisulat ba sa AI?"
 
 #: app/templates/post/post_options.html:135
-#, fuzzy
 msgid "Stop hiding this post from me"
-msgstr "Ihunong ang pagtago sa post gikan nako"
+msgstr "Ihunong ang pagtago sa post gikan kanako"
 
 #: app/templates/post/post_options.html:142
 msgid "Hide this post from me"
@@ -9204,8 +9321,8 @@ msgid ""
 "PieFed the search is just for searching."
 msgstr ""
 "Sa daghang klase sa federated nga mga plataporma, mahimo nimo ibutang ang "
-"usa ka URL sa usa ka post o komunidad sa pagpangita aron madugang kini sa "
-"imong lokal nga instance. Sa PieFed, ang pagpangita kay para ra sa "
+"usa ka URL sa usa ka pagpatik o komunidad sa pagpangita aron madugang kini "
+"sa imong lokal nga instance. Sa PieFed, ang pagpangita kay alang lamang sa "
 "pagpangita."
 
 #: app/templates/search/start.html:43
@@ -9645,7 +9762,7 @@ msgstr "I-filter sa niining mga lugar"
 
 #: app/templates/user/edit_filters.html:39
 msgid "One per line. Case does not matter."
-msgstr ""
+msgstr "Usa matag linya. Dili magtag-an ang hulma sa kaso."
 
 #: app/templates/user/edit_filters.html:41
 msgid "Stop applying this filter after this date. Optional."
@@ -9669,6 +9786,8 @@ msgid ""
 "This note appears next to their username. It's meant just for you and not"
 " displayed to anyone else."
 msgstr ""
+"Nakita kini nga pahibalo tupad sa ilang username. Gituyo lang ni para kanimo "
+"ug dili gipakita sa bisan kinsa pa."
 
 #: app/templates/user/edit_profile.html:23
 #, python-format
@@ -9684,8 +9803,11 @@ msgid "Your homepage, pronouns, age, etc."
 msgstr "Ang imong homepage, pronouns, edad, ug uban pa"
 
 #: app/templates/user/edit_profile.html:80
+#, fuzzy
 msgid "e.g. @something:matrix.org. Include leading @ and use : before server"
 msgstr ""
+"pananglitan @something:matrix.org. Isulod ang una nga @ ug gamita ang : sa "
+"wala pa ang server"
 
 #: app/templates/user/edit_profile.html:81
 msgid "Profile Images"
@@ -9726,8 +9848,9 @@ msgid "Mail Settings"
 msgstr "Mga Setting sa Mail"
 
 #: app/templates/user/edit_settings.html:28 app/templates/user/filters.html:23
+#, fuzzy
 msgid "Visibility"
-msgstr ""
+msgstr "Pagkakita"
 
 #: app/templates/user/edit_settings.html:34
 msgid "User interface"
@@ -9820,12 +9943,11 @@ msgid "Follow on remote instance"
 msgstr "Sundi sa remote instance"
 
 #: app/templates/user/fediverse_redirect.html:21
-#, fuzzy
 msgid ""
 "We are about to send you to your instance where you will then need to "
 "click the \"Follow\" button."
 msgstr ""
-"Paduol na mi sa pagpadala kanimo sa imong instance diin kinahanglan nimo "
+"Padulong na mi sa pagpadala kanimo sa imong instance diin kinahanglan nimo "
 "dayon i-klik ang button nga \"Follow\"."
 
 #: app/templates/user/file_delete.html:15
@@ -9852,7 +9974,6 @@ msgstr ""
 "lista sa mga url o pag-upload niini gikan sa imong device."
 
 #: app/templates/user/file_upload.html:27
-#, fuzzy
 msgid ""
 "Files added via url do not consume your quota as they are not copied into"
 " PieFed."
@@ -9863,21 +9984,19 @@ msgstr ""
 #: app/templates/user/files.html:24
 #, python-format
 msgid "You are using %(size)s out of a quota of %(max_size)s"
-msgstr ""
+msgstr "Gigamit nimo ang %(size)s nga labaw pa sa usa ka quota nga %(max_size)s"
 
 #: app/templates/user/files.html:43
 msgid "No media has been uploaded yet."
 msgstr "Wala pa’y gi-upload nga media."
 
 #: app/templates/user/filters.html:29
-#, fuzzy
 msgid "Collapse replies with a score at or below this level - click to view."
 msgstr ""
 "I-collapse ang mga tubag nga adunay score nga ubos o niini nga lebel - i-"
 "klik aron makita."
 
 #: app/templates/user/filters.html:31
-#, fuzzy
 msgid "Hide replies with a score at or below this level."
 msgstr "Itago ang mga tubag nga adunay iskor nga niabot o ubos niini nga lebel."
 
@@ -9894,6 +10013,8 @@ msgid ""
 "Filters can hide posts that contain keywords you specify, either by "
 "making them less noticeable or invisible."
 msgstr ""
+"Mahimo itago sa mga filter ang mga post nga adunay mga keyword nga imong "
+"gipili, pinaagi sa paghimo niini nga dili kaayo mamatikdan o dili na makita."
 
 #: app/templates/user/filters.html:50
 msgid "Expires"
@@ -9930,10 +10051,12 @@ msgid ""
 "Add new blocks when you see content you don't like - click the 3 dot menu"
 " on the post or comment to see blocking options."
 msgstr ""
+"Magdugang ug bag-ong mga block kon makakita ka og content nga dili nimo "
+"ganahan - i-klik ang menu nga 3 tuldok sa post o komento aron makita ang mga "
+"opsyon sa pag-block."
 
 #: app/templates/user/filters.html:89 app/templates/user/filters.html:110
 #: app/templates/user/filters.html:131 app/templates/user/filters.html:152
-#, fuzzy
 msgid "Add block"
 msgstr "Dugang og pag-block"
 
@@ -9977,7 +10100,6 @@ msgid "Export community subscriptions and user settings"
 msgstr "I-export ang mga subscription sa komunidad ug mga setting sa user"
 
 #: app/templates/user/newsletter_unsubscribed.html:14
-#, fuzzy
 msgid ""
 "You have unsubscribed from the email newsletter. We might email you for "
 "other reasons, though."
@@ -10021,6 +10143,8 @@ msgid ""
 "These notifications only include replies, mentions, and posts <a "
 "href=\"/alerts\">you subscribe to</a>."
 msgstr ""
+"Kini nga mga pahibalo naglakip ra sa mga tubag, paghisgot, ug mga post <a "
+"href=\"/alerts\">nga imo gisubscribe sa</a>."
 
 #: app/templates/user/notifications.html:78
 #: app/templates/user/show_profile.html:425
@@ -10030,7 +10154,7 @@ msgstr "Miyembro sa"
 #: app/templates/user/notifications.html:88
 #: app/templates/user/show_profile.html:435
 msgid "Moderates"
-msgstr ""
+msgstr "Moderates"
 
 #: app/templates/user/notifications.html:103
 #: app/templates/user/show_profile.html:450
@@ -10079,7 +10203,7 @@ msgstr "Naka-iskedyul para"
 #: app/templates/user/scheduled_posts.html:28
 #: app/templates/user/scheduled_posts.html:36
 msgid "Frequency"
-msgstr ""
+msgstr "Frequency"
 
 #: app/templates/user/scheduled_posts.html:44
 msgid "Only once"
@@ -10163,6 +10287,7 @@ msgstr "Referer"
 #: app/templates/user/show_profile.html:156
 msgid "Which website linked to PieFed when the user initially registered."
 msgstr ""
+"Sa unsang website gina-link sa PieFed sa dihang unang nagrehistro ang user."
 
 #: app/templates/user/show_profile.html:157
 msgid "IP address of last interaction."
@@ -10173,7 +10298,6 @@ msgid "Donor"
 msgstr "Magdonar"
 
 #: app/templates/user/show_profile.html:184
-#, fuzzy
 msgid "Overview"
 msgstr "Overview"
 
@@ -10194,7 +10318,7 @@ msgstr "Mga post ug mga komento ni %(user_name)s"
 
 #: app/templates/user/show_profile.html:225
 msgid "Overview pagination"
-msgstr ""
+msgstr "Overview pagination"
 
 #: app/templates/user/show_profile.html:240
 msgid "No posts or comments yet."
@@ -10207,7 +10331,7 @@ msgstr "Mga post ni %(user_name)s"
 
 #: app/templates/user/show_profile.html:256
 msgid "Post pagination"
-msgstr ""
+msgstr "Post pagination"
 
 #: app/templates/user/show_profile.html:277
 #, python-format
@@ -10254,6 +10378,8 @@ msgstr "Palihug hulata..."
 #: app/templates/user/stripe_redirect.html:11
 msgid "You are being sent to our payment system, please wait a moment."
 msgstr ""
+"Gipadala ka sa among sistema sa pagbayad, palihug hulata ang gamay nga "
+"higayon."
 
 #: app/templates/user/stripe_result.html:10
 msgid "Payment result"
@@ -10286,14 +10412,13 @@ msgstr "Bag-ong feed"
 
 #: app/templates/user/user_feeds.html:20
 msgid "Parent Feed"
-msgstr ""
+msgstr "Parent Feed"
 
 #: app/templates/user/user_feeds.html:38
 msgid "You do not have any Feeds yet.."
 msgstr "Wala ka pa’y bisan unsang Feed.."
 
 #: app/templates/user/user_preview.html:15
-#, fuzzy
 msgid "Roles"
 msgstr "Mga papel"
 
@@ -10335,6 +10460,9 @@ msgid ""
 "You have not subscribed to an alert for new content in any communities. "
 "Use the bell icon in each community to do so."
 msgstr ""
+"Wala ka nagsubscribe sa usa ka pahibalo alang sa bag-ong content sa bisan "
+"unsang mga komunidad. Gamita ang icon sa kampana sa matag komunidad aron "
+"buhaton kini."
 
 #: app/templates/user/alerts/_feeds.html:2
 msgid "You will be notified of new posts in communities covered by these feeds"
@@ -10363,7 +10491,6 @@ msgid "Others"
 msgstr "Uban pa"
 
 #: app/templates/user/alerts/_posts.html:3
-#, fuzzy
 msgid "You will be notified of top-level replies to these posts"
 msgstr "Makabaton ka og pahibalo sa mga top-level nga tubag sa mga post niini"
 
@@ -10395,21 +10522,24 @@ msgstr ""
 
 #: app/templates/user/alerts/_users.html:2
 msgid "You will be notified of new posts by these users"
-msgstr ""
+msgstr "Ma-notify ka sa mga bag-ong post gikan niini nga mga user"
 
 #: app/templates/user/alerts/_users.html:7
 msgid "Visit User"
-msgstr ""
+msgstr "Bisitaha ang User"
 
 #: app/templates/user/alerts/_users.html:15
 msgid ""
 "You have not subscribed to an alert for new content from any users. Use "
 "the bell icon on each person to do so."
 msgstr ""
+"Wala ka nag-subscribe sa usa ka alerto alang sa bag-ong sulod gikan sa bisan "
+"kinsa nga mga user. Gamita ang icon sa kampanilya sa matag tawo aron buhaton "
+"kini."
 
 #: app/templates/user/notifs/0.html:11
 msgid "New post by followed user "
-msgstr "Bag-ong post sa gisundang tigggamit "
+msgstr "Bag-ong pagpatik sa gisundang tiggamit "
 
 #: app/templates/user/notifs/1.html:11
 msgid "New Post in followed community "
@@ -10417,7 +10547,7 @@ msgstr "Bag-ong post sa gisundang komunidad "
 
 #: app/templates/user/notifs/12.html:8
 msgid "chose your answer to this question: "
-msgstr ""
+msgstr "pili-a ang imong tubag sa pangutana: "
 
 #: app/templates/user/notifs/2.html:11
 msgid "New Post in followed topic "
@@ -10425,23 +10555,23 @@ msgstr "Bag-ong post sa gisundang hilisgutan "
 
 #: app/templates/user/notifs/20.html:16 app/templates/user/notifs/20.html:46
 msgid "Post details"
-msgstr ""
+msgstr "Mga detalye sa post"
 
 #: app/templates/user/notifs/20.html:35
 msgid "Username"
-msgstr ""
+msgstr "Username"
 
 #: app/templates/user/notifs/20.html:72
 msgid "Comment details"
-msgstr ""
+msgstr "Mga detalye sa komento"
 
 #: app/templates/user/notifs/20.html:88
 msgid "Post From Suspicious Domain"
-msgstr ""
+msgstr "Mga Post Gikan sa Suspicious Domain"
 
 #: app/templates/user/notifs/20.html:116
 msgid "Post With Suspicious Image"
-msgstr ""
+msgstr "Post nga adunay kadudahan nga hulagway"
 
 #: app/templates/user/notifs/3.html:8
 msgid "replied to post"
@@ -10449,13 +10579,13 @@ msgstr "mitubag sa post"
 
 #: app/templates/user/notifs/3.html:19 app/templates/user/notifs/4.html:19
 msgid "Reply Details"
-msgstr ""
+msgstr "Mga detalye sa tubag"
 
 #: app/templates/user/notifs/3.html:22 app/templates/user/notifs/4.html:22
 #: app/templates/user/notifs/6.html:18 app/templates/user/notifs/6.html:41
 #: app/templates/user/notifs/6.html:55
 msgid "Go to..."
-msgstr ""
+msgstr "Adto sa..."
 
 #: app/templates/user/notifs/4.html:8
 msgid "replied to comment"
@@ -10463,31 +10593,31 @@ msgstr "mitubag sa komento"
 
 #: app/templates/user/notifs/5.html:11
 msgid "New Post in followed feed "
-msgstr ""
+msgstr "Bag-ong post sa gisundan nga feed "
 
 #: app/templates/user/notifs/6.html:4
 msgid "You have been mentioned by"
-msgstr ""
+msgstr "Gihisgutan ka sa"
 
 #: app/templates/user/notifs/6.html:15
 msgid "Comment Details"
-msgstr ""
+msgstr "Mga detalye sa komento"
 
 #: app/templates/user/notifs/6.html:29
 msgid "Post title: "
-msgstr ""
+msgstr "Titulo sa post: "
 
 #: app/templates/user/notifs/6.html:38
 msgid "Post Details"
-msgstr ""
+msgstr "Mga detalye sa post"
 
 #: app/templates/user/notifs/6.html:52
 msgid "This is a request to move the community"
-msgstr ""
+msgstr "Kini usa ka hangyo sa pagbalhin sa komunidad"
 
 #: app/templates/user/notifs/_time_and_buttons.html:10
 msgid "Mark as read"
-msgstr ""
+msgstr "Markahi nga nabasa"
 
 #: app/templates/user/notifs/_time_and_buttons.html:18
 msgid "Mark as unread"
@@ -10503,122 +10633,124 @@ msgstr "Bag-ong ngalan sa hilisgutan dinhi..."
 
 #: app/topic/forms.py:10
 msgid "Suggested communities"
-msgstr ""
+msgstr "Gisugyot nga mga komunidad"
 
 #: app/topic/forms.py:11
 msgid "Comma seperated list of community suggestions"
 msgstr ""
+"Lista nga bulag-bulag pinaagi sa kwit (comma) sa mga gisugyot nga komunidad"
 
 #: app/topic/routes.py:315
 #, python-format
 msgid "New topic suggestion from %(site_name)s"
-msgstr ""
+msgstr "Bag-ong suhestiyon sa hilisgutan gikan sa %(site_name)s"
 
 #: app/topic/routes.py:320
 msgid ""
 "Thank you for the topic suggestion, it has been sent to the site "
 "administrator(s)."
 msgstr ""
+"Salamat sa gisugyot nga topic; gipadala na kini sa mga administrator sa site."
 
 #: app/user/forms.py:12
 msgid "Display name"
-msgstr ""
+msgstr "Ngalan nga ipakita"
 
 #: app/user/forms.py:14
 msgid "Set new password"
-msgstr ""
+msgstr "I-set ang password"
 
 #: app/user/forms.py:17
 msgid "Extra field 1 - label"
-msgstr ""
+msgstr "Extra nga field 1 - label"
 
 #: app/user/forms.py:18
 msgid "e.g. Pronouns"
-msgstr ""
+msgstr "pananglitan, Mga pronoun"
 
 #: app/user/forms.py:19
 msgid "Extra field 1 - text"
-msgstr ""
+msgstr "Extra nga field 1 - text"
 
 #: app/user/forms.py:20
 msgid "he/him, she/her, they/them, etc"
-msgstr ""
+msgstr "he/him, she/her, they/them, etc"
 
 #: app/user/forms.py:21
 msgid "Extra field 2 - label"
-msgstr ""
+msgstr "Extra nga field 1 - label"
 
 #: app/user/forms.py:22
 msgid "What I care about"
-msgstr ""
+msgstr "Unsa ang akong gipasigarbo"
 
 #: app/user/forms.py:23
 msgid "Extra field 2 - text"
-msgstr ""
+msgstr "Extra field 2 - teksto"
 
 #: app/user/forms.py:24
 msgid "Cats, Peace, Family"
-msgstr ""
+msgstr "Mga iring, Kalinaw, Pamilya"
 
 #: app/user/forms.py:25
 msgid "Extra field 3 - label"
-msgstr ""
+msgstr "Extra field 3 - label"
 
 #: app/user/forms.py:26
 msgid "People who influence me"
-msgstr ""
+msgstr "Mga tawo nga nakaimpluwensya kanako"
 
 #: app/user/forms.py:27
 msgid "Extra field 3 - text"
-msgstr ""
+msgstr "Extra field 3 - teksto"
 
 #: app/user/forms.py:28
 msgid "Extra field 4 - label"
-msgstr ""
+msgstr "Extra field 4 - label"
 
 #: app/user/forms.py:29
 msgid "Things I've changed my mind about"
-msgstr ""
+msgstr "Mga butang nga nausab akong hunahuna"
 
 #: app/user/forms.py:30
 msgid "Extra field 4 - text"
-msgstr ""
+msgstr "Extra field 4 - teksto"
 
 #: app/user/forms.py:37
 msgid "Save profile"
-msgstr ""
+msgstr "I-save ang profile"
 
 #: app/user/forms.py:45
 msgid "That email address is already in use by another account"
-msgstr ""
+msgstr "Ang adres sa email nga ingoniana gigamit na sa laing account"
 
 #: app/user/forms.py:49
 msgid "Matrix user ids start with @"
-msgstr ""
+msgstr "Ang mga Matrix user ID magsugod sa @"
 
 #: app/user/forms.py:53
 msgid "Invalid display name"
-msgstr ""
+msgstr "Dili balido nga display name"
 
 #: app/user/forms.py:57
 msgid "Interface language"
-msgstr ""
+msgstr "Pinulongan sa interface"
 
 #: app/user/forms.py:59
 msgid "Content language"
-msgstr ""
+msgstr "Pinulongan sa content"
 
 #: app/user/forms.py:62
 msgid "Receive email about missed notifications"
-msgstr ""
+msgstr "Tugoti ang pagdawat og email mahitungod sa napalampas nga mga pahibalo"
 
 #: app/user/forms.py:66 app/user/forms.py:213
 msgid "Reply collapse threshold"
-msgstr ""
+msgstr "Limitasyon sa pag-collapse sa mga tugon"
 
 #: app/user/forms.py:67 app/user/forms.py:214
 msgid "Reply hide threshold"
-msgstr ""
+msgstr "Limit sa pagtago sa tubag"
 
 #: app/user/forms.py:68
 msgid "Posts per page"
@@ -10626,7 +10758,7 @@ msgstr "Mga post kada panid"
 
 #: app/user/forms.py:69
 msgid "Use markdown editor GUI when writing"
-msgstr ""
+msgstr "Gamit ug markdown editor GUI kung nagsulat"
 
 #: app/user/forms.py:71
 msgid "Show profile in user list"
@@ -10641,86 +10773,88 @@ msgid ""
 "Do not display posts with which I have already interacted "
 "(opened/upvoted/downvoted)"
 msgstr ""
+"Ayaw ipakita ang mga post nga akong na-interact na (gi-buksan/nag-upvote/nag-"
+"downvote)"
 
 #: app/user/forms.py:74
 msgid "Show communities I've joined on my profile"
-msgstr ""
+msgstr "Ipakita ang mga komunidad nga akong giapil sa akong profile"
 
 #: app/user/forms.py:75
 msgid "Manually approve followers"
-msgstr ""
+msgstr "Manwal nga pag-aprubar sa mga followers"
 
 #: app/user/forms.py:76
 msgid "Federate votes"
-msgstr ""
+msgstr "I-federate ang mga boto"
 
 #: app/user/forms.py:77
 msgid "Enable Automatic Follow of Feed Communities."
-msgstr ""
+msgstr "Pag-aktibo sa awtomatikong pag-follow sa mga komunidad sa feed."
 
 #: app/user/forms.py:78
 msgid "Enable Automatic Leave of Feed Communities."
-msgstr ""
+msgstr "Pag-aktibo sa awtomatikong pagbiya sa mga komunidad sa feed."
 
 #: app/user/forms.py:86
 msgid "Default post sort"
-msgstr ""
+msgstr "Default nga paghan-ay sa post"
 
 #: app/user/forms.py:93
 msgid "Default comment sort"
-msgstr ""
+msgstr "Default nga paghan-ay sa mga komentaryo"
 
 #: app/user/forms.py:103
 msgid "Theme"
-msgstr ""
+msgstr "Tema"
 
 #: app/user/forms.py:105
 msgid "Not compact - expand images"
-msgstr ""
+msgstr "Dili compact - palapdon ang mga hulagway"
 
 #: app/user/forms.py:106
 msgid "More compact - only thumbnails for images"
-msgstr ""
+msgstr "Mas compact - mga thumbnail lang para sa mga hulagway"
 
 #: app/user/forms.py:107
 msgid "Most compact - no images, only text"
-msgstr ""
+msgstr "Pinaka compact - wala’y mga hulagway, teksto ra"
 
 #: app/user/forms.py:109
 msgid "Compact UI"
-msgstr ""
+msgstr "Compact UI"
 
 #: app/user/forms.py:110
 msgid "Theme default - fastest"
-msgstr ""
+msgstr "Tema default - pinakapaspas"
 
 #: app/user/forms.py:111
 msgid "Atkinson Hyperlegible - low vision"
-msgstr ""
+msgstr "Atkinson Hyperlegible - low vision"
 
 #: app/user/forms.py:112
 msgid "Inter - pretty"
-msgstr ""
+msgstr "Inter - pretty"
 
 #: app/user/forms.py:113
 msgid "Roboto - pretty"
-msgstr ""
+msgstr "Roboto - pretty"
 
 #: app/user/forms.py:115
 msgid "Font"
-msgstr ""
+msgstr "Font"
 
 #: app/user/forms.py:117
 msgid "Allow community themes"
-msgstr ""
+msgstr "Togti ang tema sa komunidad"
 
 #: app/user/forms.py:120
 msgid "Code syntax highlighting color scheme"
-msgstr ""
+msgstr "Code syntax highlighting color scheme"
 
 #: app/user/forms.py:126
 msgid "All instances"
-msgstr ""
+msgstr "Tanan nga instance"
 
 #: app/user/forms.py:128
 msgid "Accept private messages from"
@@ -10734,7 +10868,7 @@ msgstr ""
 
 #: app/user/forms.py:130
 msgid "When changes to this limit will be possible"
-msgstr ""
+msgstr "Kanus-a mahimong usbon ang mga pagbag-o niini nga limit"
 
 #: app/user/forms.py:132
 msgid "Anytime"
@@ -10754,11 +10888,12 @@ msgstr "Sa 2 ka bulan"
 
 #: app/user/forms.py:140 app/user/forms.py:216
 msgid "Save settings"
-msgstr ""
+msgstr "I-save setting"
 
 #: app/user/forms.py:144
 msgid "Import community subscriptions and user blocks from Lemmy"
 msgstr ""
+"I-import ang mga subscription sa komunidad ug mga user block gikan sa Lemmy"
 
 #: app/user/forms.py:150
 msgid "Yes, delete my account"
@@ -10771,35 +10906,36 @@ msgstr ""
 
 #: app/user/forms.py:159
 msgid "Ban IP address"
-msgstr ""
+msgstr "I-ban ang IP address"
 
 #: app/user/forms.py:160
 msgid "Delete all content by this account"
-msgstr ""
+msgstr "Delete ang tanan nga content niini nga account"
 
 #: app/user/forms.py:161
 msgid "Flush CDN cache when deleting (slow)"
-msgstr ""
+msgstr "I-clear ang CDN cache kung mag-delete (hinay)"
 
 #: app/user/forms.py:173
 msgid "Malicious reporting"
-msgstr ""
+msgstr "Malisyosong pagreport"
 
 #: app/user/forms.py:196
 msgid "Hide posts in communities with these words in their name"
 msgstr ""
+"Itago ang mga post sa mga komunidad uban niining mga pulong sa ilang ngalan"
 
 #: app/user/forms.py:215
 msgid "Hide posts in low quality communities"
-msgstr ""
+msgstr "Itago ang mga post sa mga komunidad nga ubos ug kalidad"
 
 #: app/user/forms.py:221
 msgid "Home feed"
-msgstr ""
+msgstr "Home feed"
 
 #: app/user/forms.py:222
 msgid "Posts in communities"
-msgstr ""
+msgstr "Mga post sa mga komunidad"
 
 #: app/user/forms.py:223
 msgid "Comments on posts"
@@ -10807,253 +10943,259 @@ msgstr "Mga komentaryo sa mga post"
 
 #: app/user/forms.py:225
 msgid "Action to take"
-msgstr ""
+msgstr "Aksyon nga buhaton"
 
 #: app/user/forms.py:226
 msgid "Keywords that trigger this filter"
-msgstr ""
+msgstr "Mga keyword nga mopadasig niini nga filter"
 
 #: app/user/forms.py:229
 msgid "Expire after"
-msgstr ""
+msgstr "Mag-expire human"
 
 #: app/user/forms.py:234
 msgid "Your remote instance:"
-msgstr ""
+msgstr "Ang imong remote nga instance:"
 
 #: app/user/forms.py:237
 msgid "Mastodon, Misskey, Akkoma, Iceshrimp and friends"
-msgstr ""
+msgstr "Mastodon, Misskey, Akkoma, Iceshrimp ug mga kauban"
 
 #: app/user/forms.py:238
 msgid "Friendica"
-msgstr ""
+msgstr "Friendica"
 
 #: app/user/forms.py:239
 msgid "Hubzilla"
-msgstr ""
+msgstr "Hubzilla"
 
 #: app/user/forms.py:240
 msgid "Lemmy"
-msgstr ""
+msgstr "Lemmy"
 
 #: app/user/forms.py:241
 msgid "Pixelfed"
-msgstr ""
+msgstr "Pixelfed"
 
 #: app/user/forms.py:244
-#, fuzzy
 msgid "Instance type"
 msgstr "Matang sa instance"
 
 #: app/user/forms.py:245
 msgid "View profile on remote instance"
-msgstr ""
+msgstr "Tan-awa ang profile sa remote nga instance"
 
 #: app/user/forms.py:250
 msgid "Save note"
-msgstr ""
+msgstr "I-save ang nota"
 
 #: app/user/forms.py:260
 msgid "URLs to files (one per line)"
-msgstr ""
+msgstr "Mga URL ngadto sa mga file (usa matag linya)"
 
 #: app/user/forms.py:261
 msgid "File 1"
-msgstr ""
+msgstr "File 1"
 
 #: app/user/forms.py:262
 msgid "File 2"
-msgstr ""
+msgstr "File 2"
 
 #: app/user/forms.py:263
 msgid "File 3"
-msgstr ""
+msgstr "File 3"
 
 #: app/user/forms.py:264
 msgid "File 4"
-msgstr ""
+msgstr "File 4"
 
 #: app/user/forms.py:265
 msgid "File 5"
-msgstr ""
+msgstr "File 5"
 
 #: app/user/forms.py:266
 msgid "File 6"
-msgstr ""
+msgstr "File 6"
 
 #: app/user/forms.py:267
 msgid "File 7"
-msgstr ""
+msgstr "File 7"
 
 #: app/user/forms.py:268
 msgid "File 8"
-msgstr ""
+msgstr "File 8"
 
 #: app/user/forms.py:269
 msgid "File 9"
-msgstr ""
+msgstr "File 9"
 
 #: app/user/forms.py:270
 msgid "File 10"
-msgstr ""
+msgstr "File 10"
 
 #: app/user/forms.py:276
 msgid "Username or ActivityPub ID"
-msgstr ""
+msgstr "Username o ActivityPub ID"
 
 #: app/user/forms.py:277
 msgid "e.g. @user@example.com or user"
-msgstr ""
+msgstr "pananglitan: @user@example.com o user"
 
 #: app/user/forms.py:282
 msgid "Community name or ActivityPub ID"
-msgstr ""
+msgstr "Ngalan sa Komunidad o ActivityPub ID"
 
 #: app/user/forms.py:283
 msgid "e.g. !community@example.com or community"
-msgstr ""
+msgstr "pananglitan: !community@example.com o community"
 
 #: app/user/forms.py:288
 msgid "Domain name"
-msgstr ""
+msgstr "Ngalan sa domain"
 
 #: app/user/forms.py:289
 msgid "e.g. example.com"
-msgstr ""
+msgstr "pananglitan: example.com"
 
 #: app/user/forms.py:294
 msgid "Instance domain"
-msgstr ""
+msgstr "Instance domain"
 
 #: app/user/forms.py:295
 msgid "e.g. lemmy.example.com"
-msgstr ""
+msgstr "pananglitan: lemmy.example.com"
 
 #: app/user/routes.py:69
 msgid "This user has been deleted."
-msgstr ""
+msgstr "Ang user na kini na-delete na."
 
 #: app/user/routes.py:185
 msgid ""
 "You have changed your email address so we need to verify it. Please check"
 " your email inbox for a verification link."
 msgstr ""
+"Nabag-o nimo ang imong email address mao nga kinahanglan namo kini i-verify. "
+"Palihog susiha ang imong email inbox alang sa verification link."
 
 #: app/user/routes.py:292
 msgid "Avatar removed!"
-msgstr ""
+msgstr "Nangtangtang ang avatar!"
 
 #: app/user/routes.py:469
 msgid "Auto-detect"
-msgstr ""
+msgstr "Awtomatikong pag-ila"
 
 #: app/user/routes.py:470
 msgid "Basque"
-msgstr ""
+msgstr "Basque"
 
 #: app/user/routes.py:471
 msgid "Catalan"
-msgstr ""
+msgstr "Catalan"
 
 #: app/user/routes.py:472
 msgid "Chinese"
-msgstr ""
+msgstr "Intsik"
 
 #: app/user/routes.py:473
 msgid "English"
-msgstr ""
+msgstr "Iningles"
 
 #: app/user/routes.py:474
 msgid "Finnish"
-msgstr ""
+msgstr "Finnish"
 
 #: app/user/routes.py:475
 msgid "French"
-msgstr ""
+msgstr "Pranses"
 
 #: app/user/routes.py:476
 msgid "German"
-msgstr ""
+msgstr "German"
 
 #: app/user/routes.py:477
 msgid "Hindi"
-msgstr ""
+msgstr "Hindi"
 
 #: app/user/routes.py:478
 msgid "Japanese"
-msgstr ""
+msgstr "Hapon"
 
 #: app/user/routes.py:479
 msgid "Spanish"
-msgstr ""
+msgstr "Espanyol"
 
 #: app/user/routes.py:480
 msgid "Polish"
-msgstr ""
+msgstr "Polako"
 
 #: app/user/routes.py:481
 msgid "Ukrainian"
-msgstr ""
+msgstr "Ukrainiano"
 
 #: app/user/routes.py:544
 #, python-format
 msgid "You cannot change the daily usage limit until %(date)s"
 msgstr ""
+"Dili nimo mausab ang adlaw-adlaw nga limitasyon sa paggamit hangtod %(date)s"
 
 #: app/user/routes.py:641
 #, python-format
 msgid "Your %(provider)s account has been disconnected."
-msgstr ""
+msgstr "Ang imong %(provider)s nga account nadiskonekta na."
 
 #: app/user/routes.py:663
 msgid "Export Complete."
-msgstr ""
+msgstr "Eksport kompleto."
 
 #: app/user/routes.py:686
 msgid ""
 "Your subscriptions and blocks are being imported. If you have many it "
 "could take a few minutes."
 msgstr ""
+"Gina-import ang imong mga subscription ug mga block. Kung daghan ka niini, "
+"mahimo’g molungtad ug pipila ka minuto."
 
 #: app/user/routes.py:719
 msgid "You cannot ban yourself."
-msgstr ""
+msgstr "Dili ka maka-ban sa imong kaugalingon."
 
 #: app/user/routes.py:757
 msgid "You cannot unban yourself."
-msgstr ""
+msgstr "Dili ka maka-unban sa imong kaugalingon."
 
 #: app/user/routes.py:760
 #, python-format
 msgid "%(actor)s has been unbanned."
-msgstr ""
+msgstr "%(actor)s na-unban na."
 
 #: app/user/routes.py:795
 #, python-format
 msgid "%(actor)s has been blocked."
-msgstr ""
+msgstr "%(actor)s gi-block na."
 
 #: app/user/routes.py:866
 #, python-format
 msgid "%(actor)s has been unblocked."
-msgstr ""
+msgstr "%(actor)s na-unblock na."
 
 #: app/user/routes.py:892
 msgid ""
 "Moderators have already assessed reports regarding this person, no "
 "further reports are necessary."
 msgstr ""
+"Ang mga moderator na nagrepaso na sa mga report bahin niining tawhana, ug "
+"wala na’y kinahanglan pang magpasa og dugang nga mga report."
 
 #: app/user/routes.py:899
 #, python-format
 msgid "%(user_name)s has already been reported, thank you!"
-msgstr ""
+msgstr "%(user_name)s kay gi report na, salamat!"
 
 #: app/user/routes.py:938
 #, python-format
 msgid "%(user_name)s has been reported, thank you!"
-msgstr ""
+msgstr "%(user_name)s gi-report na, salamat!"
 
 #: app/user/routes.py:944
 msgid "Report user"
@@ -11065,102 +11207,104 @@ msgstr "Dili nimo mahimong i-delete ang imong kaugalingon."
 
 #: app/user/routes.py:974
 msgid "Deleted user was a remote instance admin."
-msgstr ""
+msgstr "Ang gi-delete nga user usa ka remote instance admin."
 
 #: app/user/routes.py:976
 msgid "Deleted user with role permissions."
-msgstr ""
+msgstr "Gidelete nga user nga adunay papel sa pagtugot."
 
 #: app/user/routes.py:977
 #, python-format
 msgid "%(actor)s has been deleted."
-msgstr ""
+msgstr "%(actor)s gi-delete na."
 
 #: app/user/routes.py:994
 #, python-format
 msgid "%(community_name)s has been unblocked."
-msgstr ""
+msgstr "%(community_name)s na-unblock na."
 
 #: app/user/routes.py:1038
 msgid "Account deletion in progress. Give it a few minutes."
-msgstr ""
+msgstr "Nagpadayon ang pagtangtang sa account. Hatagi kini ug pipila ka minuto."
 
 #: app/user/routes.py:1045
 msgid "Delete my account"
-msgstr ""
+msgstr "I-delete akong account"
 
 #: app/user/routes.py:1200
 msgid "All notifications marked as read."
-msgstr ""
+msgstr "Ang tanan nga mga pahibalo minarkahan na’g nabasa."
 
 #: app/user/routes.py:1349
 msgid "NSFW content will be hidden due to legal restrictions in your country."
 msgstr ""
+"Ang content nga NSFW pagatagoan tungod sa mga legal nga pagdili sa imong "
+"nasud."
 
 #: app/user/routes.py:1467
 msgid "Filter deleted."
-msgstr ""
+msgstr "Nadelete na ang filter"
 
 #: app/user/routes.py:1492
 #, python-format
 msgid "User not found: %(username)s"
-msgstr ""
+msgstr "Wala makit-i ang user: %(username)s"
 
 #: app/user/routes.py:1502 app/user/routes.py:1547 app/user/routes.py:1581
 #, python-format
 msgid "%(name)s is already blocked."
-msgstr ""
+msgstr "%(name)s gi-block na."
 
 #: app/user/routes.py:1541
 #, python-format
 msgid "Community not found: %(name)s"
-msgstr ""
+msgstr "Wala makit-i ang komunidad: %(name)s"
 
 #: app/user/routes.py:1608
 #, python-format
 msgid "Instance not found: %(domain)s"
-msgstr ""
+msgstr "Wala makit-i ang instance: %(domain)s"
 
 #: app/user/routes.py:1616
 #, python-format
 msgid "Error blocking instance: %(error)s"
-msgstr ""
+msgstr "Sayop sa pag-block sa instance: %(error)s"
 
 #: app/user/routes.py:1686
 msgid "Comment bookmarks"
-msgstr ""
+msgstr "Mga bookmark sa komento"
 
 #: app/user/routes.py:1714
 msgid "Reply Alerts"
-msgstr ""
+msgstr "Mga reply alert"
 
 #: app/user/routes.py:1736
 msgid "Community Alerts"
-msgstr ""
+msgstr "Mga alert sa komunidad"
 
 #: app/user/routes.py:1742
 msgid "Topic Alerts"
-msgstr ""
+msgstr "Mga topic alert"
 
 #: app/user/routes.py:1748
 msgid "Feed Alerts"
-msgstr ""
+msgstr "Mga feed alert"
 
 #: app/user/routes.py:1756
 msgid "User Alerts"
-msgstr ""
+msgstr "Mga user alert"
 
 #: app/user/routes.py:1772
 msgid "Post Alerts"
-msgstr ""
+msgstr "Mga post alert"
 
 #: app/user/routes.py:1827
 msgid "Lemmy can't follow profiles, sorry"
-msgstr ""
+msgstr "Pasayloa, dili maka-follow ang Lemmy sa mga profile"
 
 #: app/user/routes.py:1900
 msgid "Reading history has been deleted"
-msgstr ""
+msgstr "Ang history sa pagbasa gi-delete na"
 
 #: app/user/routes.py:1971
 msgid "Follow request sent."
@@ -11168,26 +11312,28 @@ msgstr "Gipadala na ang hangyo sa pagsunod."
 
 #: app/user/routes.py:1994
 msgid "Unfollowed."
-msgstr ""
+msgstr "I-unfollow"
 
 #: app/user/routes.py:2014
 msgid ""
 "Bot challenge was sent. If they do not respond within 48 hours their "
 "account will be flagged as a bot."
 msgstr ""
+"Nagasend og bot challenge. Kung dili sila motubag sulod sa 48 ka oras, ang "
+"ilang account i-flag isip bot."
 
 #: app/user/routes.py:2040
 #, python-format
 msgid "That person could not be retrieved or is banned from %(site)s."
-msgstr ""
+msgstr "Kana nga tawo dili na maretrive o gi-ban siya gikan sa %(site)s."
 
 #: app/user/routes.py:2050
 msgid "Searching for remote people requires login"
-msgstr ""
+msgstr "Ang pagpangita og tawo sa remote nanginahanglan og pag-login"
 
 #: app/user/routes.py:2268
 msgid "You have exceeded your storage quota."
-msgstr ""
+msgstr "Nalapas na nimo ang limit sa imong storage."
 
 #: app/user/subscription.py:18
 #, python-format
@@ -11208,17 +11354,18 @@ msgid ""
 "Log in to donate to %(instance_name)s or donate to the PieFed project "
 "using the button below."
 msgstr ""
+"Mag-log in aron mo-donate sa %(instance_name)s o mo-donate sa proyekto nga "
+"PieFed gamit ang buton sa ubos."
 
 #: app/user/subscription.py:156
 msgid "You are not donating"
-msgstr ""
+msgstr "Wala ka nagadonate"
 
 #: app/user/subscription.py:156
 msgid "There are no regular donations set to occur in the future."
 msgstr "Walay mga regular nga donasyon nga gitakda nga mahitabo sa umaabot."
 
 #: app/user/subscription.py:162
-#, fuzzy
 msgid "Regular donation cancelled"
 msgstr "Ang regular nga donasyon gi-cancel"
 
