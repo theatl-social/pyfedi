@@ -569,8 +569,6 @@ def save_icon_file(icon_file, directory='communities') -> File:
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
-    elif file_ext.lower() == '.avif':
-        import pillow_avif  # NOQA
 
     # resize if necessary or if using MEDIA_IMAGE_FORMAT
     if file_ext.lower() in allowed_extensions:
@@ -618,9 +616,6 @@ def save_icon_file(icon_file, directory='communities') -> File:
 
             final_ext = file_ext.lower()
             thumbnail_ext = file_ext.lower()
-
-            if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
-                import pillow_avif  # NOQA
 
             if img.width > 250 or img.height > 250 or image_format or thumbnail_image_format:
                 img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
@@ -724,8 +719,6 @@ def save_banner_file(banner_file, directory='communities') -> File:
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
-    elif file_ext.lower() == '.avif':
-        import pillow_avif  # NOQA
 
     # resize if necessary
     Image.MAX_IMAGE_PIXELS = 89478485
@@ -742,9 +735,6 @@ def save_banner_file(banner_file, directory='communities') -> File:
         thumbnail_ext = file_ext.lower()
         img_width = img.width
         img_height = img.height
-
-        if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
-            import pillow_avif  # NOQA
 
         if img.width > 1600 or img.height > 600 or image_format or thumbnail_image_format:
             img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')

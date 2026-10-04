@@ -26,7 +26,6 @@ flask-caching~=2.3.0
 flask-compress~=1.24
 Pillow
 pillow-heif
-pillow-avif-plugin
 feedgen==0.9.0
 celery==5.3.6
 redis~=5.2.0

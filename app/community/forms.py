@@ -318,11 +318,9 @@ class CreateImageForm(CreatePostForm):
 
             if site.enable_chan_image_filter:
                 # Do not allow fascist meme content
-                if current_app.config['LOCAL_4CHAN_DETECTION'] and current_app.config['CHAN_DETECTION_ENDPOINT'] == '':
+                if current_app.config['CHAN_DETECTION_ENDPOINT'] == '':
                     import pytesseract
                     try:
-                        if '.avif' in uploaded_file.filename:
-                            import pillow_avif  # NOQA
                         image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
                     except FileNotFoundError:
                         image_text = ''

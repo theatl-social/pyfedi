@@ -499,8 +499,6 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
 
         if final_ext == '.heic':
             register_heif_opener()
-        if final_ext == '.avif':
-            import pillow_avif  # NOQA  # do not remove
         if final_ext == '.svg':
             sanitize_svg(final_place)
 
@@ -510,9 +508,6 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         image_max_dimension = current_app.config['MEDIA_IMAGE_MAX_DIMENSION']
         image_format = current_app.config['MEDIA_IMAGE_FORMAT']
         image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
-
-        if image_format == 'AVIF':
-            import pillow_avif  # NOQA  # do not remove
 
         if not final_place.endswith('.svg') and not final_place.endswith('.gif') and not is_video_url(final_place):
             img = Image.open(final_place)
@@ -730,8 +725,6 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
                     # Handle special formats
                     if final_ext == '.heic':
                         register_heif_opener()
-                    if final_ext == '.avif':
-                        import pillow_avif
 
                     Image.MAX_IMAGE_PIXELS = 89478485
                     image_max_dimension = current_app.config['MEDIA_IMAGE_MAX_DIMENSION']

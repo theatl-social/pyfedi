@@ -2414,9 +2414,6 @@ def url_to_thumbnail_file(filename) -> File:
 
                 final_ext = file_extension.lower()
 
-                if medium_image_format == 'AVIF':
-                    import pillow_avif  # NOQA
-
                 Image.MAX_IMAGE_PIXELS = 89478485
                 with Image.open(temp_file_path) as img:
                     img = ImageOps.exif_transpose(img)
