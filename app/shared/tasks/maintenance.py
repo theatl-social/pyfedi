@@ -160,7 +160,7 @@ def remove_old_community_content():
 
 
 def remove_old_bot_content():
-    """Remove old posts by bots with no replies"""
+    """Remove old posts by bots with no replies. Also microblogs"""
     session = get_task_session()
     try:
 
@@ -173,6 +173,26 @@ def remove_old_bot_content():
                     deleted=False,
                     sticky=False,
                     from_bot=True,
+                    reply_count=0
+                ).filter(Post.posted_at < cut_off).all()]
+
+                # Process posts in batches of 100
+                batch_size = 100
+                for i in range(0, len(post_ids), batch_size):
+                    batch_ids = post_ids[i:i + batch_size]
+                    posts = session.query(Post).filter(Post.id.in_(batch_ids)).all()
+
+                    for post in posts:
+                        delete_post(post.id, post.author.is_local(), SRC_WEB, None)
+
+            microblog_retention = current_app.config['MICROBLOG_CONTENT_RETENTION']
+            if microblog_retention > 0:
+                cut_off = utcnow() - timedelta(days=28 * microblog_retention)
+                # First, fetch just the post IDs (lightweight query)
+                post_ids = [p[0] for p in session.query(Post.id).filter_by(
+                    deleted=False,
+                    sticky=False,
+                    microblog=True,
                     reply_count=0
                 ).filter(Post.posted_at < cut_off).all()]
 
