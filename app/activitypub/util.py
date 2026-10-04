@@ -3468,6 +3468,10 @@ def process_microblog_announce(request_json, id, store_ap_json):
 def lemmy_site_data():
     site = g.site
     logo = site.logo if site.logo else '/static/images/piefed_logo_icon_t_75.png'
+    if site.registration_mode == 'RequireApplication' or site.registration_mode == 'Open':  # spammers crawl /api/v3/site looking for open instances
+        registration_mode = 'RequireApplication'                                            # so never identify ourselves as open
+    else:
+        registration_mode = site.registration_mode
     data = {
         "site_view": {
             "site": {
@@ -3506,7 +3510,7 @@ def lemmy_site_data():
                 "captcha_difficulty": "medium",
                 "published": site.created_at.isoformat(),
                 "updated": site.updated.isoformat(),
-                "registration_mode": site.registration_mode,
+                "registration_mode": registration_mode,
                 "reports_email_admins": site.reports_email_admins
             },
             "local_site_rate_limit": {
