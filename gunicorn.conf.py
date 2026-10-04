@@ -21,7 +21,11 @@ worker_class = 'gthread'
 accesslog = '-'
 errorlog = '-'
 
-max_requests = 20000
+if gunicorn_max_requests := os.environ.get('GUNICORN_MAX_REQUESTS'):
+    max_requests = int(gunicorn_max_requests)
+else:
+    max_requests = 2000
+
 max_requests_jitter = 50
 
 keepalive = 20
