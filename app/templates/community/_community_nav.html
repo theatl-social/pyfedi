@@ -432,7 +432,7 @@
 
 <div class="d-xl-flex justify-content-between d-none my-1"><!-- desktop -->
     <div class="btn-group me-lg-1">
-        <a href="?sort=hot&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" type="button" rel="nofollow noindex">
+        <a href="?sort=hot&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" type="button" rel="nofollow noindex">
             {{ _('Hot') }}
         </a>
         <div class="btn-group" role="group">
@@ -441,44 +441,44 @@
             </button>
             <ul class="dropdown-menu" aria-labelledby="top_sort_button">
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}" href="?sort=top_12h&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}" href="?sort=top_12h&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('12 hours') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}" href="?sort=top&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}" href="?sort=top&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('Day') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}" href="?sort=top_1w&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}" href="?sort=top_1w&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('Week') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}" href="?sort=top_1m&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}" href="?sort=top_1m&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('Month') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}" href="?sort=top_1y&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}" href="?sort=top_1y&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('Year') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}" href="?sort=top_all&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}" href="?sort=top_all&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('All Time') }}
                     </a>
                 </li>
             </ul>
         </div>
-        <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('New') }}
         </a>
-        <a href="?sort=old&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=old&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Old') }}
         </a>
-        <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Active') }}
         </a>
     </div>
@@ -514,13 +514,13 @@
     {% endif -%}
     {% if post_layout != '' and post_layout is not none %}
         <div class="btn-group me-lg-1 layout_switcher">
-            <a href="?layout=list&sort={{ sort }}&content_type={{ content_type }}&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            <a href="?layout=list&sort={{ sort }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                 {{ _('List') }}
             </a>
-            <a href="?layout=masonry&sort={{ sort }}&content_type=posts&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            <a href="?layout=masonry&sort={{ sort }}&content_type=posts&flair={{ flair }}&microblog_mode={{ microblog_mode }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                 {{ _('Tile') }}
             </a>
-            <a href="?layout=masonry_wide&sort={{ sort }}&content_type=posts&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            <a href="?layout=masonry_wide&sort={{ sort }}&content_type=posts&flair={{ flair }}&microblog_mode={{ microblog_mode }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                 {{ _('Wide tile') }}
             </a>
         </div>

@@ -98,7 +98,7 @@
                     <td><span title="{{ _('Name') }}">{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</span></td>
                     <td><span title="{{ _('Banned') }}">
                         {% if user.banned %}<span class="red">{{ _('Banned') }}</span>{% endif %}
-                        {% if user.ban_posts %}<span class="red">{{ _('Banned posts') }}</span>{% endif %}
+                        {% if user.ban_posts %}<span class="red">{% if user.is_local() %}{{ _('Posts require approval') }}{% else %}{{ _('Banned posts') }}{% endif %}</span>{% endif %}
                         {% if user.ban_comments %}<span class="red">{{ _('Banned comments') }}</span>{% endif %}
                     </span></td>
                     <td><span title="{{ _('Reports') }}">{{ user.reports if user.reports > 0 }}</span></td>
