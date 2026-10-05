@@ -181,6 +181,7 @@ class EditCommunityForm(FlaskForm):
                ('masonry_wide', _l('Wide masonry'))]
     default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()], render_kw={'class': 'form-select'})
     posting_warning = StringField(_l('Posting warning'), validators=[Optional(), Length(min=3, max=512)])
+    posting_warning_override = StringField(_l('Posting warning override'), validators=[Optional(), Length(min=0, max=512)])
     languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     ignore_remote_language = BooleanField(_l('Override remote language setting'))
     ignore_remote_gen_ai = BooleanField(_l('Override remote AI content setting'))

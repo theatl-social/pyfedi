@@ -1157,8 +1157,11 @@ def add_post(actor, type=None):
         elif post_type == POST_TYPE_EVENT:
             form.online.data = True
             form.event_timezone.data = current_user.timezone
-        if community.posting_warning:
-            flash(community.posting_warning)
+        if community.posting_warning or community.posting_warning_override:
+            if community.posting_warning_override:
+                flash(community.posting_warning_override)
+            else:
+                flash(community.posting_warning)
         if community.instance.posting_warning:
             flash(community.instance.posting_warning)
 

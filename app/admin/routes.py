@@ -1316,6 +1316,7 @@ def admin_community_edit(community_id):
         community.topic_id = form.topic.data if form.topic.data > 0 else None
         community.default_layout = form.default_layout.data
         community.posting_warning = form.posting_warning.data
+        community.posting_warning_override = form.posting_warning_override.data
         community.ignore_remote_language = form.ignore_remote_language.data
         community.ignore_remote_gen_ai = form.ignore_remote_gen_ai.data
         community.always_translate = form.always_translate.data
@@ -1377,6 +1378,7 @@ def admin_community_edit(community_id):
         form.topic.data = community.topic_id if community.topic_id else None
         form.default_layout.data = community.default_layout
         form.posting_warning.data = community.posting_warning
+        form.posting_warning_override.data = community.posting_warning_override
         form.languages.data = community.language_ids()
         form.ignore_remote_language.data = community.ignore_remote_language
         form.ignore_remote_gen_ai.data = community.ignore_remote_gen_ai

@@ -757,7 +757,8 @@ def refresh_community_profile_task(community_id, activity_json):
                     community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
                     community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
                     community.question_answer = activity_json['questionAnswer'] if 'questionAnswer' in activity_json else False
-                    community.default_post_type = activity_json['defaultPostType'] if 'default_post_type' in activity_json else 'link'
+                    community.default_post_type = activity_json['defaultPostType'] if 'defaultPostType' in activity_json else 'link'
+                    community.default_hashtag = activity_json['defaultHashtag'] if 'defaultHashtag' in activity_json else ''
                     community.ap_moderators_url = mods_url
                     if 'followers' in activity_json:
                         community.ap_followers_url = activity_json['followers']
