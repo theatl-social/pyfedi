@@ -116,6 +116,7 @@ class EditCommunityForm(FlaskForm):
     topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
                                    render_kw={'class': 'form-multicheck-columns'})
+    default_hashtag = StringField(_l('Default hashtag on new posts'), validators=[Optional(), Length(max=75)])
     layouts = [('', _l('List')),
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]

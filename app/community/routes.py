@@ -1165,6 +1165,9 @@ def add_post(actor, type=None):
         form.timezone.data = current_user.timezone
         form.language_id.data = current_user.language_id or g.site.language_id
 
+        if community.default_hashtag:
+            form.tags.data = community.default_hashtag
+
         # The source query parameter is used when cross-posting - load the source post's content into the form
         if (post_type == POST_TYPE_LINK or post_type == POST_TYPE_VIDEO) and request.args.get('source'):
             source_post = Post.query.get(request.args.get('source'))
@@ -1287,6 +1290,7 @@ def community_edit(community_id: int):
             community.downvote_accept_mode = form.downvote_accept_mode.data
             community.post_url_type = form.post_url_type.data
             community.question_answer = form.question_answer.data
+            community.default_hashtag = form.default_hashtag.data
 
             icon_file = request.files['icon_file']
             if icon_file and icon_file.filename != '':
@@ -1360,6 +1364,7 @@ def community_edit(community_id: int):
             form.downvote_accept_mode.data = community.downvote_accept_mode
             form.post_url_type.data = community.post_url_type if community.post_url_type else 'friendly'
             form.question_answer.data = community.question_answer
+            form.default_hashtag.data = community.default_hashtag
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
                                current_app=current_app, current="edit_settings",
                                community=community)

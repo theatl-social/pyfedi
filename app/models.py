@@ -603,6 +603,7 @@ class Community(db.Model):
     post_url_type = db.Column(db.String(15))
     question_answer = db.Column(db.Boolean, default=False)     # if this is a stackoverflow-style question and answer community
     first_federated_at = db.Column(db.DateTime, index=True, default=utcnow)
+    default_hashtag = db.Column(db.String(75), default='')
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
@@ -4196,6 +4197,7 @@ class CommunityFlair(db.Model):
     background_color = db.Column(db.String(50))
     blur_images = db.Column(db.Boolean, default=False)
     ap_id = db.Column(db.String(255), index=True, unique=True)
+    default_hashtag = db.Column(db.String(75), default='')
 
     def get_ap_id(self):
         if self.ap_id:
