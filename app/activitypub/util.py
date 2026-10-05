@@ -1718,7 +1718,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                                 resp = get_request(f'{current_app.config["CHAN_DETECTION_ENDPOINT"]}?url={file.source_url}')
                                                 result = resp.json()
                                                 resp.close()
-                                                if result['confidence'] > 0.8 and result['label'] == 'greentext':
+                                                if 'confidence' in result and result['confidence'] > 0.8 and result['label'] == 'greentext':
                                                     if post := session.query(Post).filter_by(image_id=file.id).first():
                                                         targets_data = {'gen': '0',
                                                                         'post_id': post.id,
