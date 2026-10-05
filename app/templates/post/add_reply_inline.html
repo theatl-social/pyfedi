@@ -12,10 +12,10 @@
                     {{ _('The person you are replying to has been banned so they might not see your reply.') }}
                 </div>
             {% endif -%}
-            {% if in_reply_to_community.posting_warning_override %}
-                {% set warning = in_reply_to_community.posting_warning_override %}
-            {% elif in_reply_to_community.posting_warning %}
-                {% set warning = in_reply_to_community.posting_warning %}
+            {% if in_reply_to.community.posting_warning_override %}
+                {% set warning = in_reply_to.community.posting_warning_override %}
+            {% elif in_reply_to.community.posting_warning %}
+                {% set warning = in_reply_to.community.posting_warning %}
             {% endif %}
             <textarea name="body" id="textarea_in_reply_to_{{ comment_id }}" class="form-control autoresize" rows="5"
                     autofocus="autofocus" required="required" aria-required="true"

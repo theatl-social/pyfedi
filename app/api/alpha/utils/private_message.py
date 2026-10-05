@@ -40,7 +40,10 @@ def get_private_message_list(auth, data):
 
     pm_list = []
     for private_message in private_messages.items:
-        pm_list.append(private_message_view(private_message, variant=1))
+        try:
+            pm_list.append(private_message_view(private_message, variant=1))
+        except AttributeError:
+            pass
 
     pm_json = {
         "private_messages": pm_list,
