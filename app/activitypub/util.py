@@ -1989,7 +1989,7 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
             community.is_moderator(deletor) or
             community.is_instance_admin(deletor)):
         if isinstance(to_delete, Post):
-            with redis_client.lock(f"lock:post:{to_delete.id}", timeout=10, blocking_timeout=6):
+            with redis_client.lock(f"lock:post:{to_delete.id}", timeout=20, blocking_timeout=20):
                 to_delete.deleted = True
                 to_delete.deleted_by = deletor.id
                 db.session.commit()
