@@ -143,9 +143,10 @@ class RSSFeed:
 
         if post.community:
             fe.category(term=post.community.name)
-        for cat in set([flair.flair for flair in post.flair] + [tag.display_as for tag in post.tags]):
-            if cat:
-                fe.category(term=cat, scheme='flair/tag')
+        for flair in set([flair.flair for flair in post.flair]):
+            fe.category(term=flair, scheme='flair')
+        for tag in set([tag.display_as for tag in post.tags]):
+            fe.category(term=tag, scheme='tag')
 
     @staticmethod
     def _email_from_public_url(url):

@@ -1290,7 +1290,7 @@ def index_rss(feed_type=None):
 
     server_url = current_app.config['SERVER_URL']
     description = shorten_string(g.site.description, 150) if g.site.description else ' '
-    image = g.site.logo if g.site.logo\
+    image = f"{server_url}{g.site.logo}" if g.site.logo\
                       else f"{server_url}/static/images/apple-touch-icon.png"
     feed = RSSFeed(title = f'{g.site.name} - {feed_type.capitalize()}',
                    link = server_url,
