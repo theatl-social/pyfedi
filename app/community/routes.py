@@ -1138,7 +1138,7 @@ def add_post(actor, type=None):
             sticky_post(post.id, True, SRC_WEB)  # federating post's stickiness is separate from creating it
 
         if post.status == POST_STATUS_REVIEWING:
-            flash(_('Because your account is new we will review your post before allowing it to be published. Please wait.'))
+            flash(_('Because your account has not posted before we will review your post before allowing it to be published. Please wait.'), 'warning')
             notify_admins_of_post_needing_approval(post)
 
         flash(Markup(_('Your post has been created. <a href="/post/%(post_id)d/edit">Edit it</a> if you notice any typos!', post_id=post.id)))

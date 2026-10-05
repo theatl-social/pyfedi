@@ -2639,6 +2639,27 @@ class Post(db.Model):
         seconds = self.epoch_seconds(post_date) - 1685766018
         return round(sign * order + seconds / 45000, 7)
 
+    # Make 'hot' sort more spicy by amplifying the effect of early votes.
+    def spicy_score(self) -> float:
+        total_votes = self.up_votes + self.down_votes
+        if total_votes == 0:
+            return self.score
+        config = current_app.config
+
+        up_bands = [(10, config['SPICY_UNDER_10']), (30, config['SPICY_UNDER_30']), (60, config['SPICY_UNDER_60'])]
+        down_bands = [(30, config['SPICY_UNDER_30']), (60, config['SPICY_UNDER_60'])]
+
+        def extra_per_vote(bands):
+            extra = 0.0
+            band_start = 0
+            for band_end, multiplier in bands:
+                votes_in_band = max(0, min(total_votes, band_end + 1) - band_start)
+                extra += votes_in_band * (multiplier - 1)
+                band_start = band_end + 1
+            return extra / total_votes
+
+        return self.score + self.up_votes * extra_per_vote(up_bands) - self.down_votes * extra_per_vote(down_bands)
+
     def vote(self, user: User, vote_direction: str, emoji: str | None):
         from app import redis_client
         if vote_direction == 'downvote':
@@ -2707,26 +2728,12 @@ class Post(db.Model):
             else:
                 if vote_direction == 'upvote':
                     effect = 1.0
-                    spicy_effect = effect
-                    # Make 'hot' sort more spicy by amplifying the effect of early upvotes
-                    if self.up_votes + self.down_votes <= 10:
-                        spicy_effect = effect * current_app.config['SPICY_UNDER_10']
-                    elif self.up_votes + self.down_votes <= 30:
-                        spicy_effect = effect * current_app.config['SPICY_UNDER_30']
-                    elif self.up_votes + self.down_votes <= 60:
-                        spicy_effect = effect * current_app.config['SPICY_UNDER_60']
                     self.up_votes += 1
-                    self.score += spicy_effect  # score + (+1) = score+1
+                    self.score += effect  # score + (+1) = score+1
                 else:
                     effect = -1.0
-                    spicy_effect = effect
                     self.down_votes += 1
-                    # Make 'hot' sort more spicy by amplifying the effect of early downvotes
-                    if self.up_votes + self.down_votes <= 30:
-                        spicy_effect *= current_app.config['SPICY_UNDER_30']
-                    elif self.up_votes + self.down_votes <= 60:
-                        spicy_effect *= current_app.config['SPICY_UNDER_60']
-                    self.score += spicy_effect  # score + (-1) = score-1
+                    self.score += effect  # score + (-1) = score-1
                 vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
                                 effect=effect, emoji=emoji)
                 # upvotes do not increase reputation in low quality communities
@@ -2750,7 +2757,7 @@ class Post(db.Model):
                 self.update_reaction_cache()
 
             # Calculate new ranking values
-            self.ranking = self.post_ranking(self.score + self.reply_count, self.created_at)
+            self.ranking = self.post_ranking(self.spicy_score() + self.reply_count, self.created_at)
             self.ranking_scaled = self.ranking + self.community.scale_by()
 
             db.session.commit()
