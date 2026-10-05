@@ -2,6 +2,7 @@ from datetime import timezone
 from urllib.parse import urlsplit
 
 from feedgen.feed import FeedGenerator
+# not needed ATM from app.constants import POST_TYPE_GALLERY
 from app.utils import mimetype_from_url
 # could be used later for instance checks: from app.models import User, Community, Post, PostReply
 
@@ -127,9 +128,7 @@ class RSSFeed:
         fe.guid(post.profile_id(), permalink=True)
 
         fe.content(content, type='CDATA')  # feedgen takes care if this is empty
-        medium = cls._media_content(post.url, post.image)
-        if medium:
-            fe.media.content(medium)
+        cls._add_media_content(post, fe)
 
         if post.author:
             fe.author(email=cls._email_from_public_url(post.author.public_url()))
@@ -154,8 +153,8 @@ class RSSFeed:
         return f"{user}@{comps.netloc}"
 
     @staticmethod
-    def _media_content(url, image):
-        """ Return a dictionary of fields for media:content, or None when that's not possible.
+    def _add_media_content(post, fe):
+        """ Add links from post as media:content to fe.
 
         For better user experience, we attach post.url even when its type is unknown.
         Since MIME type determination is tricky (*mimetype_from_url* uses the path suffix only,
@@ -165,18 +164,33 @@ class RSSFeed:
 
         We make best effort guesses to fill in other fields.
 
-        :url    string, or None
-        :image  File (from post.image), or None
-        :return dict or None. The dictionary has fields intended for feedgen's media extension
-        """
-        if not url:
-            return None
-        medium = {'url': url}
+        @see https://www.rssboard.org/media-rss
 
+        :post    Post
+        :fe      FeedEntry object
+        """
+        gallery = post.gallery if post.gallery else []
+        for file in gallery:
+            url = file.source_url
+            medium = {'url': url}
+            type = mimetype_from_url(url)
+            if type:
+                medium['type'] = type
+            size = file.filesize(False)
+            if size > 0:
+                medium['fileSize'] = str(size)
+
+            fe.media.content(medium, group=url)  # without group parameter, all media:content would go into the same media:group
+
+        url = post.url
+        if not url:
+            return
+        medium = {'url': url}
         type = mimetype_from_url(url)
         if type:
             medium['type'] = type
 
+        image = post.image
         if image and url == image.source_url:
             if not type:  # may be None, e.g. for lemmy's image_proxy URLs
                 medium['medium'] = 'image'
@@ -184,4 +198,4 @@ class RSSFeed:
             if size > 0:
                 medium['fileSize'] = str(size)
 
-        return medium
+        fe.media.content(medium, group=url)  # see above
