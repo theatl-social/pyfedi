@@ -22,6 +22,7 @@
             {{ form.csrf_token() }}
             <h5>{{ _('Visibility') }}</h5>
             {{ render_field(form.ignore_bots) }}
+            <small class="field_hint">{{ _('Bots automatically create posts from major news organisations, etc which can be annoying.') }}</small>
             {{ render_field(form.hide_nsfw) }}
             {{ render_field(form.hide_nsfl) }}
             {{ render_field(form.hide_gen_ai) }}

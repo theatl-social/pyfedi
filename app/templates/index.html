@@ -101,6 +101,23 @@
         </div>
         {% endif -%}
 
+        {% if tags and tags|length > 0 -%}
+        <div id="recent_tags_card" class="card mt-3" id="recent_tags">
+            <div class="card-header">
+                <h2>{{ _('Recent tags') }}</h2>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for tag in tags -%}
+                        <li class="list-group-item">
+                            <span class="post_tag" style="font-size: {{ tag.font_size }}px"><a href="{{ url_for('tag.show_tag', tag=tag.name) }}">#{{ tag.display_as }}</a></span>
+                        </li>
+                    {% endfor -%}
+                </ul>
+            </div>
+        </div>
+        {% endif -%}
+
         <div id="about_card" class="card mt-3">
             <div class="card-header">
                  <h2>{{ _('About %(site_name)s', site_name=g.site.name) }}</h2>

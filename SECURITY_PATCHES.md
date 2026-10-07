@@ -493,6 +493,64 @@ Any failure means a patch has regressed and must be re-applied before the merge 
   NULL means "no `manuallyApprovesFollowers` seen in their actor JSON", which
   is not the same as False.
 
+### SP-031 — Federated gallery attachments could read local image files
+
+- **Origin:** upstream v1.8.0 gallery thumbnails.
+- **Files:** `app/shared/post.py`, `app/models.py`, `app/activitypub/util.py`.
+- **Fix:** validate all gallery URLs before processing. Only remote HTTP(S)
+  attachments are accepted, and fetching uses the existing SSRF-protected
+  `get_request`; absolute/relative filesystem paths and `file:` URLs are rejected.
+- **Tests:** `tests/security/test_upstream_v180_safety.py`,
+  `test_federated_gallery_rejects_local_image_paths`.
+
+### SP-032 — RSS service identity was inferred from an ordinary username
+
+- **Origin:** upstream v1.8.0 RSS posting privilege bypass.
+- **Files:** `app/models.py`, `app/utils.py`, `app/cli.py`.
+- **Fix:** the RSS bot must be local and carry the admin-only provisioning note.
+  Restricted-community posting additionally requires a configured RSS feed;
+  explicit posting and community bans still apply. The CLI refuses an existing
+  unprovisioned `feed_bot` before issuing a JWT.
+- **Tests:** `tests/security/test_upstream_v180_safety.py`, impersonation,
+  configured-feed/ban cases and CLI account-collision coverage.
+
+### SP-033 — Gallery form ignored CSRF and superclass validation failures
+
+- **Origin:** upstream v1.8.0 `CreateGalleryForm.validate`.
+- **File:** `app/community/forms.py`.
+- **Fix:** propagate parent validation failure. Child image forms omit redundant
+  CSRF tokens while the outer form remains protected; title and alt-text bounds
+  remain enforced.
+- **Tests:** `tests/security/test_upstream_v180_safety.py`,
+  `test_gallery_form_preserves_outer_validation` (missing/invalid CSRF, title,
+  alt text and valid outer-token cases).
+
+### SP-034 — Public recent hashtags included private and unpublished posts
+
+- **Origin:** upstream v1.8.0 homepage tag cloud.
+- **File:** `app/community/util.py`.
+- **Fix:** aggregation joins communities and admits only published, undeleted
+  public posts in public, unbanned communities. The query works with both
+  PostgreSQL and SQLite, allowing real stored-row privacy regression coverage.
+- **Tests:** `tests/security/test_upstream_v180_safety.py`,
+  `test_recent_hashtags_include_only_published_public_content`.
+
+### SP-035 — Gallery retirement interpreted remote URLs as owned local files
+
+- **Origin:** upstream v1.8.0 exposes pre-existing `File.delete_from_disk` URL
+  deletion through gallery retirement and purge.
+- **Files:** `app/models.py`, `app/shared/post.py`.
+- **Fix:** never derive local or S3 deletion targets from `source_url`, which
+  remote actors control. Delete only recorded storage paths. Incoming attachment
+  metadata cannot assign local file paths; locally generated uploads/composites
+  retain explicit owned paths. An additive `file.original_path` column records
+  uploaded originals independently of resized cache paths; historical URL-only
+  originals are left untouched because their ownership cannot be inferred. SVG sanitization failures reject and remove the
+  upload, and originals remain until composite generation has succeeded.
+- **Tests:** `tests/security/test_upstream_v180_safety.py`, remote local-origin
+  URL/traversal sentinels, failed sanitizer, failed composite, and successful
+  replacement/purge coverage.
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.

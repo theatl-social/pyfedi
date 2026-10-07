@@ -47,8 +47,6 @@ def process_upload(image_file, destination='posts', user: User | None = None):
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
-    if file_ext.lower() == '.avif':
-        import pillow_avif  # NOQA
 
     Image.MAX_IMAGE_PIXELS = 89478485
 
@@ -56,9 +54,6 @@ def process_upload(image_file, destination='posts', user: User | None = None):
     image_max_dimension = current_app.config['MEDIA_IMAGE_MAX_DIMENSION']
     image_format = current_app.config['MEDIA_IMAGE_FORMAT']
     image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
-
-    if image_format == 'AVIF':
-        import pillow_avif  # NOQA
 
     if not final_place.endswith('.svg') and not final_place.endswith('.gif') and not is_video_url(final_place):
         img = Image.open(final_place)
@@ -106,7 +101,7 @@ def process_upload(image_file, destination='posts', user: User | None = None):
 
     # associate file with uploader. Only provide user_id to this function when the image is not being used for a community icon, user avatar, etc where there is some other way to associate the image with the user.
     if user:
-        file = File(source_url=url)
+        file = File(source_url=url, original_path=url if store_files_in_s3() else final_place)
         db.session.add(file)
         db.session.commit()
         db.session.execute(text('INSERT INTO "user_file" (file_id, user_id, size) VALUES (:file_id, :user_id, :size)'),

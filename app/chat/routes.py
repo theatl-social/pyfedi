@@ -141,12 +141,8 @@ def new_message(to):
         recipient=recipient, sender=current_user
     )
     if existing_conversation:
-        members = db.session.execute(
-            text(
-                "SELECT user_id FROM conversation_member WHERE joined = :state AND conversation_id = :conversation_id"
-            ),
-            {"state": True, "conversation_id": existing_conversation.id},
-        ).all()
+        members = list(db.session.execute(text("SELECT user_id FROM conversation_member WHERE joined = :state AND conversation_id = :conversation_id"),
+                                         {"state": True, "conversation_id": existing_conversation.id}).scalars())
         if current_user.id in members and recipient.id in members:
             return redirect(
                 url_for(

@@ -19,13 +19,13 @@ from wtforms.fields import Label
 
 from app import db, constants, cache, limiter, get_locale
 from app.activitypub.signature import default_context, send_post_request
-from app.activitypub.util import update_post_from_activity
+from app.activitypub.util import update_post_from_activity, notify_about_post
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm, \
-    CreateEventForm
+    CreateEventForm, CreateGalleryForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community, \
     search_for_community
 from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    POST_TYPE_EVENT, NOTIF_MENTION, NOTIF_ANSWER, SRC_API
+    POST_TYPE_EVENT, NOTIF_MENTION, NOTIF_ANSWER, SRC_API, POST_TYPE_GALLERY
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -34,13 +34,13 @@ from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
     PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language, Event, \
-    Reminder, Emoji
+    Reminder, Emoji, post_file
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm, NewReminderForm, \
     ShareMastodonForm, ChooseEmojiForm, MovePostForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
-    generate_archive_link, body_has_no_archive_link, retrieve_archived_post
+    generate_archive_link, body_has_no_archive_link, retrieve_archived_post, user_flair_on_post, user_pronouns_on_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
     vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post, \
@@ -62,12 +62,13 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
-    site_language_code, block_honey_pot, joined_communities, moderating_communities, user_pronouns, \
+    site_language_code, block_honey_pot, joined_communities, moderating_communities, \
     instance_sticky_posts, instance_sticky_post_ids, user_access, show_reason_why_no_federation, \
     community_membership_private, user_ip_banned
 
 
 @login_required_if_private_instance
+
 def show_post(post_id: int, sort, low_bandwidth, autoplay):
     with limiter.limit('30/minute'):
         post = Post.query.get_or_404(post_id)
@@ -81,7 +82,7 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                     flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
                 else:
                     abort(404)
-        
+
         if current_user.is_anonymous:
             if current_app.config['CONTENT_WARNING']:
                 if post.nsfl:
@@ -182,9 +183,7 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                 form.language_id.data = current_user.language_id or g.site.language_id
 
             # user flair
-            user_flair = {}
-            for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id):
-                user_flair[u_flair.user_id] = u_flair.flair
+            user_flair = user_flair_on_post(post)
 
         og_image = post.image.source_url if post.image_id else None
         description = shorten_string(markdown_to_text(post.body), 150) if post.body else None
@@ -341,7 +340,7 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                                    recipient_language_code=recipient_language_code,
                                    recipient_language_name=recipient_language_name,
                                    author_banned=author_banned,
-                                   user_pronouns=user_pronouns(),
+                                   user_pronouns=user_pronouns_on_post(post),
                                    hide_community_actions = community.name == 'microblogs',
                                    )
         response.headers.set('Link',
@@ -369,9 +368,7 @@ def post_lazy_replies(post_id, nonce):
     user = current_user if current_user.is_authenticated else None
 
     # user flair
-    user_flair = {}
-    for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id):
-        user_flair[u_flair.user_id] = u_flair.flair
+    user_flair = user_flair_on_post(post)
 
     # Voting history
     if current_user.is_authenticated:
@@ -382,10 +379,10 @@ def post_lazy_replies(post_id, nonce):
         recently_upvoted_replies = []
         recently_downvoted_replies = []
         reply_collapse_threshold = -10
-    
+
     # Get necessary data for comment rendering
     communities_banned_from_list = communities_banned_from(current_user.get_id()) if current_user.is_authenticated else []
-    
+
     replies = post_replies(post, sort, current_user if current_user.is_authenticated else None)
     more_replies = defaultdict(list)
     if post.cross_posts:
@@ -400,12 +397,12 @@ def post_lazy_replies(post_id, nonce):
                                                     current_user if current_user.is_authenticated else None)
                 if len(cross_posted_replies):
                     more_replies[cross_posted_post.community].extend(cross_posted_replies)
-    
-    return render_template('post/post_reply_lazy.html', 
-                           replies=replies, 
+
+    return render_template('post/post_reply_lazy.html',
+                           replies=replies,
                            more_replies=more_replies,
-                           post=post, 
-                           community=post.community, 
+                           post=post,
+                           community=post.community,
                            nonce=nonce,
                            THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
                            reply_collapse_threshold=reply_collapse_threshold,
@@ -418,7 +415,7 @@ def post_lazy_replies(post_id, nonce):
                            show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff() if current_user.is_authenticated else False,
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                            user_flair=user_flair if current_user.is_authenticated else {},
-                           user_pronouns=user_pronouns(),
+                           user_pronouns=user_pronouns_on_post(post),
                            upvoted_class='',
                            downvoted_class='')
 
@@ -647,6 +644,7 @@ def poll_vote(post_id):
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>')
 @login_required_if_private_instance
+
 def continue_discussion(post_id, comment_id):
     block_honey_pot()
 
@@ -706,7 +704,7 @@ def continue_discussion(post_id, comment_id):
     event = None
     if post.type == POST_TYPE_EVENT:
         event = Event.query.filter_by(post_id=post.id).first()
-    
+
     parent_id = None
     if comment.parent_id:
         parent_comment = PostReply.query.get(comment.parent_id)
@@ -714,9 +712,7 @@ def continue_discussion(post_id, comment_id):
             parent_id = comment.parent_id
 
     # user flair
-    user_flair = {}
-    for u_flair in UserFlair.query.filter(UserFlair.community_id == post.community_id):
-        user_flair[u_flair.user_id] = u_flair.flair
+    user_flair = user_flair_on_post(post)
 
     description = shorten_string(markdown_to_text(comment.body), 200) if comment.body else None
     og_image = post.image.source_url if post.image_id else None
@@ -734,7 +730,7 @@ def continue_discussion(post_id, comment_id):
                                community=post.community, parent_id=parent_id,
                                community_flair=get_comm_flair_list(post.community),
                                user_notes=user_notes(current_user.get_id()) if current_user.is_authenticated else {},
-                               user_pronouns = user_pronouns(), user_flair=user_flair,
+                               user_pronouns = user_pronouns_on_post(post), user_flair=user_flair,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
 
@@ -761,9 +757,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
     replies = get_comment_branch(post, comment.id, 'top', current_user if current_user.is_authenticated else None)
 
     # user flair
-    user_flair = {}
-    for u_flair in UserFlair.query.filter(UserFlair.community_id == post.community.id):
-        user_flair[u_flair.user_id] = u_flair.flair
+    user_flair = user_flair_on_post(post)
 
     # Voting history
     if current_user.is_authenticated:
@@ -794,7 +788,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
                                show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff() if current_user.is_authenticated else False,
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                                user_flair=user_flair if current_user.is_authenticated else {},
-                               user_pronouns=user_pronouns(),
+                               user_pronouns=user_pronouns_on_post(post),
                                upvoted_class='',
                                downvoted_class='')
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
@@ -902,7 +896,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                recipient_language_code=recipient_language_code,
                                recipient_language_name=recipient_language_name,
                                in_reply_to=in_reply_to, author_banned=author_banned,
-                               user_pronouns=user_pronouns(),
+                               user_pronouns=user_pronouns_on_post(post),
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
     else:
         content = request.form.get('body', '').strip()
@@ -983,14 +977,14 @@ def post_source(post_id: int, state: str):
     # This should just be accessed by htmx
     if not request.headers.get('HX-Request'):
         abort(400)
-    
+
     post = Post.query.get(post_id)
 
     if not post or state not in ['show', 'hide'] or (post.deleted and not current_user.is_admin()):
         post_body = markdown_to_html(_("Something went wrong and a post could not be found."))
-        
+
         return render_template("post/_post_source_swap.html", post_body=post_body, state="hide", post_id=post_id)
-    
+
     if state == "show":
         if '````' in post.body:
             post_body = '<pre><code>' + str(escape(post.body)) + '</code></pre>'
@@ -998,9 +992,9 @@ def post_source(post_id: int, state: str):
             post_body = markdown_to_html("````md\n" + post.body + "\n````")
         else:
             post_body = markdown_to_html("```md\n" + post.body + "\n```")
-        
+
         return render_template("post/_post_source_swap.html", post_body=post_body, state="show", post_id=post_id)
-    
+
     elif state == "hide":
         post_body = post.body_html
 
@@ -1033,6 +1027,8 @@ def post_edit(post_id: int):
         del form.finish_in
     elif post.type == POST_TYPE_EVENT:
         form = CreateEventForm()
+    elif post.type == POST_TYPE_GALLERY:
+        form = CreateGalleryForm()
     else:
         abort(404)
 
@@ -1070,7 +1066,9 @@ def post_edit(post_id: int):
         if form.validate_on_submit():
             try:
                 uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE or post_type == POST_TYPE_EVENT or post_type == POST_TYPE_VIDEO else None
-                edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file)
+                edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file,
+                          uploaded_files=[entry.image_file.data for entry in form.images] if post_type == POST_TYPE_GALLERY else None,
+                          image_alt_texts=[entry.alt_text.data for entry in form.images] if post_type == POST_TYPE_GALLERY else None)
                 flash(Markup(_('Your changes have been saved. <a href="/post/%(post_id)d/edit">Edit it</a> if you notice any typos!', post_id=post.id)))
             except Exception as ex:
                 flash(_('Your edit was not accepted because %(reason)s', reason=str(ex)), 'error')
@@ -1116,6 +1114,16 @@ def post_edit(post_id: int):
 
             elif post_type == POST_TYPE_VIDEO:
                 form.video_url.data = post.url
+            elif post_type == POST_TYPE_GALLERY:
+                # Pre-populate gallery form with existing images, sorted by weight
+                # Query gallery files with their weights from the post_file table
+                existing_images = db.session.query(File).join(
+                    post_file, (post_file.c.file_id == File.id) & (post_file.c.post_id == post.id)
+                ).order_by(post_file.c.weight).all()
+                for i, entry in enumerate(form.images):
+                    if i < len(existing_images):
+                        # Set the alt text for existing images
+                        entry.alt_text.data = existing_images[i].alt_text
             elif post_type == POST_TYPE_POLL:
                 poll = Poll.query.filter_by(post_id=post.id).first()
                 form.mode.data = poll.mode
@@ -1519,7 +1527,7 @@ def post_sticky(post_id: int, mode):
 @login_required
 def post_instance_sticky(post_id: int, mode):
     post = Post.query.get_or_404(post_id)
-    
+
     if current_user.is_admin():
         if mode == 'yes':
             post.instance_sticky = True
@@ -1527,11 +1535,11 @@ def post_instance_sticky(post_id: int, mode):
         else:
             post.instance_sticky = False
             flash(_('%(name)s has been un-stickied from the instance.', name=post.title))
-        
+
         cache.delete_memoized(instance_sticky_posts)
         cache.delete_memoized(instance_sticky_post_ids)
         db.session.commit()
-    
+
     return redirect(referrer(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id)))
 
 
@@ -1542,7 +1550,7 @@ def post_hide(post_id: int, mode):
     hide_post(post.id, mode == 'yes', SRC_WEB)
 
     # todo: remove post.id from redis cache used by get_deduped_post_ids() if "result_id" is in referrer()
-    
+
     if mode == 'yes':
         flash(_('%(name)s has been hidden.', name=post.title))
     else:
@@ -1650,6 +1658,25 @@ def post_flair_list(post_id):
         abort(401)
 
 
+@bp.route('/post/<int:post_id>/approve', methods=['POST'])
+@login_required
+@permission_required('administer all communities')
+def post_approve(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin():
+        post.status = POST_STATUS_PUBLISHED
+        post.posted_at = utcnow()
+        post.author.ban_posts = False
+        db.session.commit()
+
+        # Federate post
+        task_selector('make_post', post_id=post.id)
+
+        notify_about_post(post)
+
+        return _('Done')
+
+
 @bp.route('/post/<int:post_id>/lock/<mode>', methods=['POST'])
 @login_required
 def post_lock(post_id: int, mode):
@@ -1705,7 +1732,7 @@ def post_search_community_suggestions():
     moderating = moderating_communities(current_user.get_id())
     comms = []
     already_added = set()
-    
+
     for c in moderating:
         if c.id not in already_added:
             if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
@@ -1847,15 +1874,15 @@ def post_reply_source(post_id: int, comment_id: int, state: str):
     # This should just be accessed by htmx
     if not request.headers.get('HX-Request'):
         abort(400)
-    
+
     post_reply = PostReply.query.get(comment_id)
 
     if not post_reply or state not in ['show', 'hide'] or (post_reply.deleted and not current_user.is_admin()):
         reply_body = markdown_to_html(_("Something went wrong and a comment could not be found."))
-        
+
         return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="hide",
                                comment_id=comment_id, post_id=post_id)
-    
+
     if state == "show":
         if '````' in post_reply.body:
             reply_body = '<pre><code>' + str(escape(post_reply.body)) + '</code></pre>'
@@ -1863,10 +1890,10 @@ def post_reply_source(post_id: int, comment_id: int, state: str):
             reply_body = markdown_to_html("````md\n" + post_reply.body + "\n````")
         else:
             reply_body = markdown_to_html("```md\n" + post_reply.body + "\n```")
-        
+
         return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="show",
                                comment_id=comment_id, post_id=post_id)
-    
+
     elif state == "hide":
         reply_body = post_reply.body_html
 
@@ -2094,6 +2121,7 @@ def post_reply_notification(post_reply_id: int):
 
 @bp.route('/post/<int:post_id>/cross_posts', methods=['GET'])
 @login_required_if_private_instance
+
 def post_cross_posts(post_id: int):
     post = Post.query.get_or_404(post_id)
     if post.cross_posts:
@@ -2310,13 +2338,13 @@ def preview():
     elif preview_type == "post" or preview_type == "wiki":
         oob_target = "post_preview_btn"
         target_id = "#preview"
-    
+
     if preview_id:
         oob_target = oob_target + preview_id
-    
+
     if preview_type == "comment" and not preview_top:
         additional_classes = "mt-2"
-    
+
     preview_url = url_for('post.preview', type=preview_type, id=preview_id, top=preview_top)
 
     html_preview = markdown_to_html(request.form.get('body'))

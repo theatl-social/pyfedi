@@ -22,6 +22,8 @@ Two properties are asserted here:
 """
 
 import pathlib
+import os
+import subprocess
 
 import pytest
 
@@ -269,7 +271,24 @@ def test_celery_entrypoint_keeps_worker_arguments():
     for arg in (
         "-A celery_worker_docker.celery",
         "worker",
-        "--concurrency=4",
+        "--concurrency=${CELERY_CONCURRENCY:-4}",
         "--queues=celery,background,send",
     ):
         assert arg in script, f"entrypoint_celery.sh lost worker argument {arg!r}"
+
+
+@pytest.mark.parametrize("override,expected", [(None, "4"), ("7", "7")])
+def test_celery_worker_concurrency_expands_default_and_override(override, expected):
+    command = next(line for line in ENTRYPOINT_CELERY.read_text().splitlines() if line.startswith("exec gosu "))
+    environment = dict(os.environ)
+    environment.pop("CELERY_CONCURRENCY", None)
+    if override is not None:
+        environment["CELERY_CONCURRENCY"] = override
+    # Expand the real worker command as shell arguments without starting services.
+    arguments = subprocess.check_output(
+        ["bash", "-c", 'set -- ' + command + '; printf "%s\\n" "$@"'],
+        env=environment, text=True,
+    ).splitlines()
+    assert "--concurrency=" + expected in arguments
+    assert arguments[:6] == ["exec", "gosu", "python", "uv", "run", "--no-sync"]
+    assert "--queues=celery,background,send" in arguments

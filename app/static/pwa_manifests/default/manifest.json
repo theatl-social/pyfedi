@@ -39,12 +39,12 @@
     },
     "shortcuts": [
       {
-        "name": "Topics",
-        "url": "/topics"
+        "name": "Communities",
+        "url": "/communities"
       },
       {
-        "name": "Feeds",
-        "url": "/feeds"
+        "name": "Explore",
+        "url": "/topics"
       },
       {
         "name": "Notifications",
@@ -53,6 +53,12 @@
       {
         "name": "Donate",
         "url": "/donate"
+      }
+    ],
+    "protocol_handlers": [
+      {
+        "protocol": "web+ap",
+        "url": "/protocol_handler?to=%s"
       }
     ],
     "prefer_related_applications": false

@@ -10,7 +10,7 @@ from app.api.alpha.views import post_view, post_report_view, reply_view, communi
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
 from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply, PostVote, \
-    CommunityFlair, read_posts, Poll, Report
+    CommunityFlair, read_posts, Poll, Report, hidden_posts
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read, \
     vote_for_poll, hide_post
@@ -163,7 +163,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             join(Community, Community.id == Post.community_id).filter(Community.show_popular == True, Post.score > 100,
                                                                       Community.instance_id.not_in(
                                                                           blocked_instance_ids))
-        
+
         post_query_criteria.append('score > 100')
         post_query_criteria.append('show_popular is true')
 
@@ -177,7 +177,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                                                user_id=user_id). \
             join(Community, Community.id == CommunityMember.community_id).filter(
             Community.instance_id.not_in(blocked_instance_ids))
-        
+
         post_query_criteria.append('community_id IN (SELECT community_id FROM community_member WHERE user_id = :user_id AND is_banned = FALSE)')
         post_query_parameters['user_id'] = user_id
 
@@ -190,7 +190,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                                                is_moderator=True). \
             join(Community, Community.id == CommunityMember.community_id).filter(
             Community.instance_id.not_in(blocked_instance_ids))
-        
+
         post_query_criteria.append('community_id IN (SELECT community_id FROM community_member WHERE user_id = :user_id AND is_moderator = TRUE)')
         post_query_parameters['user_id'] = user_id
 
@@ -217,7 +217,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 'community_name': name,
                 'ap_domain': ap_domain
             })
-            
+
             content_filters = user_filters_posts(user_id) if user_id else {}
         elif community_id:
             use_faster_query = False
@@ -230,11 +230,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 join(Community, Community.id == Post.community_id).filter(Community.id == community_id,
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
-            
+
             # Build SQL query for materialized view - community_id
             post_query_criteria.append('community_id = :community_id')
             post_query_parameters['community_id'] = community_id
-            
+
             content_filters = user_filters_posts(user_id) if user_id else {}
         elif feed_id:
             use_faster_query = False
@@ -261,12 +261,12 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 join(Community, Community.id == Post.community_id).filter(Community.id.in_(feed_community_ids),
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
-            
+
             # Build SQL query for materialized view - feed_id
             if feed_community_ids:
                 post_query_criteria.append('community_id IN :feed_community_ids')
                 post_query_parameters['feed_community_ids'] = tuple(feed_community_ids)
-            
+
             content_filters = user_filters_posts(user_id) if user_id else {}
         elif topic_id:
             use_faster_query = False
@@ -293,12 +293,12 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 join(Community, Community.id == Post.community_id).filter(Community.id.in_(topic_community_ids),
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
-            
+
             # for materialized view - topic_id
             if topic_community_ids:
                 post_query_criteria.append('community_id IN :topic_community_ids')
                 post_query_parameters['topic_community_ids'] = tuple(topic_community_ids)
-            
+
             content_filters = user_filters_posts(user_id) if user_id else {}
         elif person_id:
             use_faster_query = False
@@ -309,7 +309,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                       Post.instance_id.not_in(blocked_instance_ids), Post.user_id == person_id). \
                 join(Community, Community.id == Post.community_id).filter(
                 Community.instance_id.not_in(blocked_instance_ids))
-            
+
             # for materialized view - person_id
             post_query_criteria.append('user_id = :person_id')
             post_query_parameters['person_id'] = person_id
@@ -323,13 +323,13 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
-            
+
             post_query_criteria.append('show_all is true')
-            
+
             content_filters = user_filters_home(user_id) if user_id else {}
 
     posts = posts.filter(or_(Community.private == False, Community.id.in_(private_community_ids)))
-    
+
     # for materialized view - private community filtering
     if private_community_ids:
         post_query_criteria.append('(c.private is false OR community_id IN :private_community_ids)')
@@ -349,7 +349,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             segregate_instance_stickies = False
             upvoted_post_ids = recently_upvoted_posts(user_id)
             posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
-            
+
             # SQL query building for liked_only
             post_query_criteria.append('post_id IN :upvoted_post_ids')
             post_query_criteria.append('user_id != :user_id')
@@ -361,7 +361,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             bookmarked_post_ids = tuple(db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
                                                      {"user_id": user_id}).scalars())
             posts = posts.filter(Post.id.in_(bookmarked_post_ids))
-            
+
             # SQL query building for saved_only
             post_query_criteria.append('post_id IN :bookmarked_post_ids')
             post_query_parameters['bookmarked_post_ids'] = bookmarked_post_ids
@@ -407,6 +407,29 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                     post_query_criteria.append('p.id NOT IN :read_post_ids')
                     post_query_parameters['read_post_ids'] = tuple(u_rp_ids)
 
+            # exclude hidden posts
+            if not query:
+                hidden_ids = tuple(
+                    db.session.execute(text('SELECT hidden_post_id FROM "hidden_posts" WHERE user_id = :user_id'),
+                                       {"user_id": user_id}).scalars())
+                if len(hidden_ids) > 0:
+                    # Alias the hidden_posts table
+                    hp = hidden_posts.alias()
+
+                    # Filter posts that the user has NOT read, using ~exists
+                    posts = posts.filter(
+                        ~exists().where(
+                            and_(
+                                hp.c.user_id == user_id,
+                                hp.c.hidden_post_id == Post.id
+                            )
+                        )
+                    )
+                    # SQL query building for hide_read_posts
+
+                    post_query_criteria.append('p.id NOT IN :hidden_post_ids')
+                    post_query_parameters['hidden_post_ids'] = tuple(hidden_ids)
+
         filtered_out_community_ids = filtered_out_communities(user)
         if len(filtered_out_community_ids):
             posts = posts.filter(Post.community_id.not_in(filtered_out_community_ids))
@@ -426,11 +449,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         posts = posts.filter(Post.up_votes - Post.down_votes >= minimum_upvotes)
         post_query_criteria.append('score >= :minimum_upvotes')
         post_query_parameters['minimum_upvotes'] = minimum_upvotes
-    
+
     if search_by_community and not ignore_sticky:
         posts = posts.order_by(desc(Post.sticky))
         sql_order_by.append('sticky DESC')
-    
+
     if segregate_instance_stickies and not ignore_sticky:
         posts = posts.order_by(desc(Post.instance_sticky))
         sql_order_by.append('instance_sticky DESC')
@@ -580,7 +603,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             usernotes = {note[0]: note[1] for note in usernotes_query}
         else:
             usernotes = None
-        
+
         user_votes = get_post_votes_for_posts(user_id, post_ids)
         unread_counts = get_post_unread_counts(user_id, post_ids)
         interacted_at = get_post_interacted_at(user_id, post_ids)
@@ -600,7 +623,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     for post in posts:
         # Get the pre-fetched vote, default to 0 if not found
         my_vote = user_votes.get(post.id, 0)
-        
+
         postlist.append(post_view(post=post, variant=2, stub=False, user_id=user_id,
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
@@ -626,12 +649,12 @@ def get_post_votes_for_posts(user_id, post_ids):
     """Pre-fetch user votes for a list of posts to avoid N+1 queries in post_view()"""
     if not user_id or not post_ids:
         return {}
-    
+
     votes = db.session.execute(
         text('SELECT post_id, effect FROM "post_vote" WHERE user_id = :user_id AND post_id IN :post_ids'),
         {'user_id': user_id, 'post_ids': tuple(post_ids)}
     ).all()
-    
+
     # Convert to a dictionary for O(1) lookup
     return {vote[0]: vote[1] for vote in votes}
 
@@ -982,10 +1005,10 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
 
     if minimum_upvotes:
         posts = posts.filter(Post.up_votes - Post.down_votes >= minimum_upvotes)
-    
+
     if search_by_community and not ignore_sticky:
         posts = posts.order_by(desc(Post.sticky))
-    
+
     if segregate_instance_stickies and not ignore_sticky:
         posts = posts.order_by(desc(Post.instance_sticky))
 
@@ -1143,7 +1166,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
 
         communities_moderating = moderating_communities_ids_all_users()
         communities_joined = joined_or_modding_communities(user.id)
-        
+
         # Pre-fetch user votes to avoid N+1 queries in post_view()
         # posts.items contains Post objects directly
         post_objects = list(posts.items)
@@ -1162,7 +1185,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
     for post in posts.items:
         # Get the pre-fetched vote, default to 0 if not found
         my_vote = user_votes.get(post.id, 0)
-        
+
         postlist.append(post_view(post=post, variant=2, stub=False, user_id=user_id,
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
@@ -1434,7 +1457,7 @@ def post_post(auth, data):
     language_id = data['language_id'] if 'language_id' in data else site_language_id()
     if language_id < 2:
         language_id = site_language_id()
-    
+
     user_id = authorise_api_user(auth)
 
     # Determine post type based on data provided
@@ -1601,10 +1624,10 @@ def get_post_report_list(auth, data):
             reports = Report.query.filter(Report.suspect_post_id != None,
                                           Report.in_community_id.in_(modded_comm_ids),
                                           Report.suspect_post_reply_id == None)
-    
+
     if unresolved_only:
         reports = reports.filter(Report.status < REPORT_STATE_RESOLVED)
-    
+
     reports = reports.paginate(page=page, per_page=limit, error_out=False)
 
     report_list = []
@@ -1613,7 +1636,7 @@ def get_post_report_list(auth, data):
                                              post_id=report.suspect_post_id,
                                              user_id=user.id,
                                              variant=2))
-    
+
     reply_json = dict()
     reply_json['post_reports'] = report_list
     reply_json['next_page'] = str(reports.next_num) if reports.next_num else None
@@ -1629,12 +1652,12 @@ def put_post_report_resolve(auth, data):
 
     if not user:
         raise Exception("incorrect login")
-    
+
     report = Report.query.get(report_id)
-    
+
     if not report.suspect_post_id and report.suspect_post_reply_id:
         raise Exception("invalid target of resolution")
-    
+
     community = Community.query.get(report.in_community_id)
     mods = community.moderators()
     mod_ids = [mod.user_id for mod in mods]
@@ -1648,7 +1671,7 @@ def put_post_report_resolve(auth, data):
         db.session.commit()
     else:
         raise Exception("incorrect login")
-    
+
     reply_json = post_report_view(report=report, post_id=report.suspect_post_id, user_id=user.id)
     return reply_json
 
@@ -1684,7 +1707,7 @@ def post_post_feature(auth, data):
         user = authorise_api_user(auth, 'model')
         user_id = user.id
         post = Post.query.get(post_id)
-        
+
         if user.is_admin():
             post.instance_sticky = featured
 
@@ -1768,7 +1791,7 @@ def put_post_set_flair(auth, data):
 
     post = Post.query.get(post_id)
     user = authorise_api_user(auth, return_type='model')
-    
+
     if post.community.is_moderator(user) or user.is_admin_or_staff() or post.user_id == user.id:
         # Start by clearing the existing flair
         post.flair = []
@@ -1786,7 +1809,7 @@ def put_post_set_flair(auth, data):
 
         if post.status == POST_STATUS_PUBLISHED:
             task_selector('edit_post', post_id=post.id)
-        
+
         return post_view(post=post, variant=2, stub=False, user_id=user.id)
     else:
         raise Exception("Insufficient permissions")

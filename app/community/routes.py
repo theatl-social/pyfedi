@@ -54,6 +54,7 @@ from app.community.forms import (
     EditCommunityMembership,
     CommunityRssFeedEdit,
     DeleteCommunityRssFeedForm,
+    CreateGalleryForm,
 )
 from app.community.util import (
     search_for_community,
@@ -68,6 +69,7 @@ from app.community.util import (
     community_theme_list,
     set_community_theme_allowed,
     get_community_theme_allowed,
+    notify_admins_of_post_needing_approval,
 )
 from app.constants import (
     SUBSCRIPTION_MEMBER,
@@ -95,6 +97,7 @@ from app.constants import (
     NOTIF_MENTION,
     POST_STATUS_REVIEWING,
     POST_TYPE_EVENT,
+    POST_TYPE_GALLERY,
     INVITE_MEMBERS_ONLY,
     INVITE_MODS_ONLY,
     INVITE_OWNER_ONLY,
@@ -128,6 +131,7 @@ from app.models import (
     CommunityFlair,
     post_flair,
     UserFlair,
+    UserFollower,
     post_tag,
     Tag,
     hidden_posts,
@@ -206,7 +210,7 @@ from app.shared.tasks import task_selector
 from app.shared.community import leave_community
 from app.shared.feed import leave_feed
 from app.utils import get_recipient_language, subscribed_feeds, feed_membership
-from feedgen.feed import FeedGenerator
+from app.rss_extras import RSSFeed
 from datetime import timezone, timedelta
 
 
@@ -474,6 +478,7 @@ def _make_community_results_datalist_html(community_name):
 
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
 @login_required_if_private_instance
+
 def show_community(community: Community):
     if community.banned:
         abort(404)
@@ -517,15 +522,14 @@ def show_community(community: Community):
             current_feed_id = current_feed.id
             current_feed_title = current_feed.title
 
-    page = request.args.get("page", 1, type=int)
-    sort = request.args.get(
-        "sort", "" if current_user.is_anonymous else current_user.default_sort
-    )
-    if sort == "scaled":
-        sort = ""
-    content_type = request.args.get("content_type", "posts")
-    flair = request.args.get("flair", "")
-    tag = request.args.get("tag", "")
+    page = request.args.get('page', 1, type=int)
+    sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    if sort == 'scaled':
+        sort = ''
+    content_type = request.args.get('content_type', 'posts')
+    flair = request.args.get('flair', '')
+    tag = request.args.get('tag', '')
+    microblog_mode = request.args.get('microblog_mode', 'following')
     if sort is None:
         sort = ""
     low_bandwidth = request.cookies.get("low_bandwidth", "0") == "1"
@@ -707,6 +711,18 @@ def show_community(community: Community):
             tag_record = Tag.query.filter(Tag.name == tag.strip()).first()
             if tag_record:
                 posts = posts.join(post_tag).filter(post_tag.c.tag_id == tag_record.id)
+
+        if community.name == 'microblogs' and microblog_mode == 'following' and current_user.is_authenticated and current_user.num_following:
+            # limit posts query to those from people the current user is following, similar to get_deduped_post_ids() does.
+            posts = posts.filter(
+                db.session.query(UserFollower.id)
+                    .filter(
+                        UserFollower.local_user_id == current_user.id,
+                        UserFollower.remote_user_id == Post.user_id,
+                        UserFollower.is_inward == False
+                    )
+                    .exists()
+            )
 
         sticky_posts = posts.filter(Post.sticky == True)
         posts = posts.filter(Post.sticky == False)
@@ -1072,6 +1088,8 @@ def show_community(community: Community):
             current_feed_id=current_feed_id,
             current_feed_title=current_feed_title,
             user_flair=user_flair,
+            microblog_mode=microblog_mode,
+            hide_community_actions=community.name == "microblogs",
             sticky_posts=sticky_posts,
         )
     )
@@ -1110,7 +1128,13 @@ def show_community_rss(actor):
         if community.private:
             abort(403)
 
-        score = request.args.get("score", 0, int)
+        score = request.args.get('score', 0, int)
+        tag = request.args.get('tag', '')
+        flair = request.args.get('flair', '')
+
+        tag = Tag.query.filter(Tag.name == tag.strip()).first() if tag else None
+        flair_id = find_flair_id(flair.strip(), community.id)
+
 
         posts = Post.query.filter(Post.community_id == community.id).filter(
             Post.from_bot == False,
@@ -1119,56 +1143,35 @@ def show_community_rss(actor):
         )
         if score:
             posts = posts.filter(Post.score >= score)
+        if tag:
+            posts = posts.join(post_tag).filter(post_tag.c.tag_id == tag.id)
+        if flair_id:
+            posts = posts.join(post_flair).filter(post_flair.c.flair_id == flair_id)
 
-        posts = posts.order_by(desc(Post.created_at)).limit(20).all()
+        limit = request.args.get('limit', 20, int)
+        limit = max(min(limit, 100), 0)
+        posts = posts.order_by(desc(Post.created_at)).limit(limit).all()
 
-        description = (
-            shorten_string(community.description, 150)
-            if community.description
-            else None
-        )
-        og_image = community.image.source_url if community.image_id else None
-        fg = FeedGenerator()
-        fg.id(f"{current_app.config['SERVER_URL']}/c/{actor}")
-        fg.title(f"{community.title} on {g.site.name}")
-        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}", rel="alternate")
-        if og_image:
-            fg.logo(og_image)
+        server_url = current_app.config['SERVER_URL']
+        description = shorten_string(community.description, 150) if community.description else ' '
+        if community.icon_id:
+            image = community.icon.source_url
+        elif community.image_id:
+            image = community.image.source_url
         else:
-            fg.logo(
-                f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png"
-            )
-        if description:
-            fg.subtitle(description)
-        else:
-            fg.subtitle(" ")
-        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}/feed", rel="self")
-        fg.language("en")
+            image = f"{server_url}/static/images/apple-touch-icon.png"
+        feed = RSSFeed(title=f'{community.title} on {g.site.name}',
+                       link=f"{server_url}/c/{actor}",
+                       description=description,
+                       logo=image,
+                       self_link=f"{server_url}/c/{actor}/feed",
+                       language='en'
+                     )
 
-        for post in posts:
-            fe = fg.add_entry()
-            fe.title(post.title)
-            if post.slug:
-                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
-            else:
-                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
-            if post.url:
-                type = mimetype_from_url(post.url)
-                if type and not type.startswith("text/"):
-                    fe.enclosure(post.url, type=type)
-            fe.description(post.body_html)
-            fe.guid(post.profile_id(), permalink=True)
-            fe.author(name=post.author.user_name)
-            fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
-
-        response = make_response(fg.rss_str())
-        response.headers.set("Content-Type", "application/rss+xml")
-        response.headers.add_header(
-            "ETag", f"{community.id}_{hash(community.last_active)}"
-        )
-        response.headers.add_header(
-            "Cache-Control", "no-cache, max-age=600, must-revalidate"
-        )
+        response = make_response(feed.create_feed(posts, server_url))
+        response.headers.set('Content-Type', 'application/rss+xml')
+        response.headers.add_header('ETag', f"{community.id}_{hash(community.last_active)}")
+        response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
         return response
     else:
         abort(404)
@@ -1239,7 +1242,10 @@ def subscribe(actor):
     do_subscribe(actor, current_user.id, admin_preload=request.method == "POST")
     if request.method == "POST":
         community = actor_to_community(actor)
-        return render_template("community/_leave_button.html", community=community)
+        if request.headers.get('HX-Request'):
+            return _('Joined')
+        else:
+            return render_template('community/_leave_button.html', community=community)
     else:
         referrer = request.headers.get("Referer", None)
         if referrer is not None and current_app.config["SERVER_NAME"] in referrer:
@@ -1556,6 +1562,9 @@ def add_post(actor, type=None):
     elif type == "event":
         post_type = POST_TYPE_EVENT
         form = CreateEventForm()
+    elif type == 'gallery':
+        post_type = POST_TYPE_GALLERY
+        form = CreateGalleryForm()
     else:
         abort(404)
 
@@ -1594,15 +1603,28 @@ def add_post(actor, type=None):
             }
             plugins.fire_hook("before_post_create", post_data)
 
-            if type == "image" or type == "event":
-                uploaded_file = request.files["image_file"]
-            elif type == "video" and can_upload_video():
-                uploaded_file = request.files["image_file"]
+            if type == 'gallery':
+                # Collect all gallery images
+                uploaded_files = []
+                image_alt_texts = []
+                for entry in form.images:
+                    if entry.image_file.data:
+                        uploaded_files.append(entry.image_file.data)
+                        image_alt_texts.append(entry.alt_text.data or '')
+                # Check that at least one image is provided (for creation)
+                if not uploaded_files:
+                    flash(_('At least one image is required for a gallery post.'), 'error')
+                    return redirect(url_for('community.add_post', actor=community.ap_id if community.ap_id else community.name, type='gallery'))
+                post = make_post(form, community, post_type, SRC_WEB, uploaded_files=uploaded_files, image_alt_texts=image_alt_texts)
+            elif type == 'image' or type == 'event':
+                uploaded_file = request.files['image_file']
+            elif type == 'video' and can_upload_video():
+                uploaded_file = request.files['image_file']
             else:
                 uploaded_file = None
-            post = make_post(
-                form, community, post_type, SRC_WEB, uploaded_file=uploaded_file
-            )
+
+            if type != 'gallery':
+                post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
         except Exception as ex:
             flash(
                 _("Your post was not accepted because %(reason)s", reason=str(ex)),
@@ -1635,6 +1657,12 @@ def add_post(actor, type=None):
 
         flash(Markup(_('Your post has been created. <a href="/post/%(post_id)d/edit">Edit it</a> if you notice any typos!', post_id=post.id)))
 
+        if post.status == POST_STATUS_REVIEWING:
+            flash(_('Because your account has not posted before we will review your post before allowing it to be published. Please wait.'), 'warning')
+            notify_admins_of_post_needing_approval(post)
+
+        flash(Markup(_('Your post has been created. <a href="/post/%(post_id)d/edit">Edit it</a> if you notice any typos!', post_id=post.id)))
+
         resp = make_response(redirect(post.slug))
         # remove cookies used to maintain state when switching post type
         resp.delete_cookie("post_title")
@@ -1649,13 +1677,19 @@ def add_post(actor, type=None):
         elif post_type == POST_TYPE_EVENT:
             form.online.data = True
             form.event_timezone.data = current_user.timezone
-        if community.posting_warning:
-            flash(community.posting_warning)
+        if community.posting_warning or community.posting_warning_override:
+            if community.posting_warning_override:
+                flash(community.posting_warning_override)
+            else:
+                flash(community.posting_warning)
         if community.instance.posting_warning:
             flash(community.instance.posting_warning)
 
         form.timezone.data = current_user.timezone
         form.language_id.data = current_user.language_id or g.site.language_id
+
+        if community.default_hashtag:
+            form.tags.data = community.default_hashtag
 
         # The source query parameter is used when cross-posting - load the source post's content into the form
         if request.args.get("source"):
@@ -1827,6 +1861,7 @@ def community_edit(community_id: int):
             community.downvote_accept_mode = form.downvote_accept_mode.data
             community.post_url_type = form.post_url_type.data
             community.question_answer = form.question_answer.data
+            community.default_hashtag = form.default_hashtag.data
 
             icon_file = request.files["icon_file"]
             if icon_file and icon_file.filename != "":
@@ -1918,14 +1953,10 @@ def community_edit(community_id: int):
                 community.post_url_type if community.post_url_type else "friendly"
             )
             form.question_answer.data = community.question_answer
-        return render_template(
-            "community/community_edit.html",
-            title=_("Edit community"),
-            form=form,
-            current_app=current_app,
-            current="edit_settings",
-            community=community,
-        )
+            form.default_hashtag.data = community.default_hashtag
+        return render_template('community/community_edit.html', title=_('Edit community'), form=form,
+                               current_app=current_app, current="edit_settings",
+                               community=community)
     else:
         abort(401)
 
@@ -3695,6 +3726,9 @@ def community_leave_all():
             if subscription != SUBSCRIPTION_OWNER:
                 # send leave requests to celery - also handles db commits and cache busting
                 leave_feed(feed=feed, src=SRC_WEB, bulk_leave=True)
+
+    flash(_('You are being unsubscribed from all communities and feeds. '
+            'Please allow a couple minutes for the process to complete.'))
 
     flash(
         _(

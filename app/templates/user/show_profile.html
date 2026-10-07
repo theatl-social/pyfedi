@@ -19,9 +19,7 @@
 {% endblock %}
 
 {% block end_scripts -%}
-    {% if current_user.is_authenticated and current_user.is_admin() and user.post_count and posting_pattern_labels %}
-        <script src="{{ url_for('static', filename='js/chart.js', changed=getmtime('js/chart.js')) }}" nonce={{ nonce }}></script>
-    {% endif %}
+
 {% endblock -%}
 
 {% block app_content %}
@@ -388,6 +386,7 @@
                     </div>
                 </div>
             {% endif %}
+
         {% endif -%}
         <div class="card mb-3">
             <div class="card-body">
@@ -413,19 +412,7 @@
                                 <div class="col-4">
                                     <a class="w-100 btn btn-primary" href="/u/{{ user.link() }}/ban">{{ _('Ban') }}</a>
                                 </div>
-                                {% if bot_challenge is none %}
-                                    {% if not user.bot and not user.bot_override %}
-                                    <div class="col-4">
-                                        <a class="w-100 btn btn-primary confirm_first send_post" href="#" data-url="/u/{{ user.link() }}/bot_challenge">{{ _('Ask if bot') }}</a>
-                                    </div>
-                                    {% endif %}
-                                {% else %}
-                                    {% if bot_challenge.is_a_bot is none %}
-                                        {{ _('Bot challenge result pending') }}
-                                    {% elif bot_challenge.is_a_bot is false %}
-                                        {{ _('Not a bot') }}
-                                    {% endif %}
-                                {% endif %}
+
                             {% endif %}
                         {% endif %}
                     </div>
@@ -464,135 +451,19 @@
         {% if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()) %}
             <div class="card mb-3">
                 <div class="card-header">
-                     <h2>{{ _('Upvoted') }}</h2>
+                     <h2>{{ _('Voting') }}</h2>
                 </div>
                 <div class="card-body">
-                    <a href="{{ user.link() }}/upvotes">{{ _('Posts upvoted by %(user_name)s', user_name=user.user_name) }}</a>
+                    <p><a href="{{ user.link() }}/upvotes">{{ _('Posts upvoted by %(user_name)s', user_name=user.user_name) }}</a></p>
+                    {% if current_user.is_admin_or_staff() %}
+                    {% endif %}
                 </div>
             </div>
         {% endif %}
-        {% if current_user.is_authenticated and current_user.is_admin() and user.post_count and posting_pattern_labels %}
-            <div class="card mb-3">
-                <div class="card-header">
-                     <h2>{{ _('Posting pattern') }}</h2>
-                </div>
-                <div class="card-body">
-                    <canvas id="posting_pattern"></canvas>
-                    <script nonce="{{ nonce }}">
-                        document.addEventListener("DOMContentLoaded", () => {
-                            new Chart(document.getElementById('posting_pattern'), {
-                                type: 'bar',
-                                data: {
-                                    labels: {{ posting_pattern_labels|tojson }},
-                                    datasets: [{
-                                        label: 'Posts',
-                                        data: {{ posting_pattern_values|tojson }}
-                                    }]
-                                },
-                                options: {
-                                    plugins: {
-                                        legend: {
-                                            display: false
-                                        }
-                                    },
-                                    scales: {
-                                        x: {
-                                            title: {
-                                                display: true,
-                                                text: 'Hour of day',
-                                                font: {
-                                                    size: 12
-                                                }
-                                            },
-                                            ticks: {
-                                                font: {
-                                                    size: 10
-                                                }
-                                            },
-                                            grid: {
-                                                display: false
-                                            }
-                                        },
-                                        y: {
-                                            beginAtZero: true,
-                                            ticks: {
-                                                font: {
-                                                    size: 10
-                                                }
-                                            },
-                                            grid: {
-                                                display: false
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                        });
-                    </script>
-                </div>
-            </div>
-        {% endif %}
-        {% if current_user.is_authenticated and current_user.is_admin() and user.post_reply_count and comment_pattern_labels %}
-            <div class="card mb-3">
-                <div class="card-header">
-                     <h2>{{ _('Commenting pattern') }}</h2>
-                </div>
-                <div class="card-body">
-                    <canvas id="comment_pattern"></canvas>
-                    <script nonce="{{ nonce }}">
-                        document.addEventListener("DOMContentLoaded", () => {
-                            new Chart(document.getElementById('comment_pattern'), {
-                                type: 'bar',
-                                data: {
-                                    labels: {{ comment_pattern_labels|tojson }},
-                                    datasets: [{
-                                        label: 'Posts',
-                                        data: {{ comment_pattern_values|tojson }}
-                                    }]
-                                },
-                                options: {
-                                    plugins: {
-                                        legend: {
-                                            display: false
-                                        }
-                                    },
-                                    scales: {
-                                        x: {
-                                            title: {
-                                                display: true,
-                                                text: 'Hour of day',
-                                                font: {
-                                                    size: 12
-                                                }
-                                            },
-                                            ticks: {
-                                                font: {
-                                                    size: 10
-                                                }
-                                            },
-                                            grid: {
-                                                display: false
-                                            }
-                                        },
-                                        y: {
-                                            beginAtZero: true,
-                                            ticks: {
-                                                font: {
-                                                    size: 10
-                                                }
-                                            },
-                                            grid: {
-                                                display: false
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                        });
-                    </script>
-                </div>
-            </div>
-        {% endif %}
+
+
+
+
         {% if user_has_public_feeds %}
             <div class="card mb-3" id="public_feeds">
                 <div class="card-header">

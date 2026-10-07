@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from app.models import post_file
+from app.utils import make_gallery_thumbnail, get_request
+
 import os
+from io import BytesIO
 from typing import List
 from zoneinfo import ZoneInfo
 from datetime import datetime
 
 import boto3
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 from flask import flash, request, current_app, g, abort
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
@@ -245,7 +249,7 @@ def extra_rate_limit_check(user):
     return False
 
 
-def make_post(input, community, type, src, auth=None, uploaded_file=None):
+def make_post(input, community, type, src, auth=None, uploaded_file=None, uploaded_files=None, image_alt_texts=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type="model")
         if extra_rate_limit_check(user):
@@ -332,7 +336,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
     try:  # federation is done in edit_post
         post = edit_post(
-            input, post, type, src, user, auth, uploaded_file, from_scratch=True
+            input, post, type, src, user, auth, uploaded_file, from_scratch=True,
+            uploaded_files=uploaded_files, image_alt_texts=image_alt_texts
         )
     except Exception as e:
         db.session.delete(vote)
@@ -352,50 +357,36 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
 
 # 'from_scratch == True' means that it's not really a user edit, we're just re-using code for make_post()
-def edit_post(
-    input,
-    post: Post,
-    type,
-    src,
-    user=None,
-    auth=None,
-    uploaded_file=None,
-    from_scratch=False,
-    hash=None,
-):
+def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None, uploaded_files=None, image_alt_texts=None):
+    if type == POST_TYPE_GALLERY and uploaded_files is not None:
+        _validate_gallery_uploads(uploaded_files)
     if src == SRC_API:
         if not user:
-            user = authorise_api_user(auth, return_type="model", id_match=post.user_id)
-        title = input["title"].strip()
-        body = input["body"]
-        url = input["url"]
-        nsfw = input["nsfw"]
-        ai_generated = input["ai_generated"]
-        notify_author = input["notify_author"]
-        language_id = input["language_id"]
-        timezone = input["timezone"] if "timezone" in input else user.timezone
-        image_alt_text = input["image_alt_text"] if "image_alt_text" in input else ""
+           user = authorise_api_user(auth, return_type='model', id_match=post.user_id)
+        title = input['title'].strip()
+        body = input['body']
+        url = input['url']
+        nsfw = input['nsfw']
+        ai_generated = input['ai_generated']
+        notify_author = input['notify_author']
+        language_id = input['language_id']
+        timezone = input['timezone'] if 'timezone' in input else user.timezone
+        image_alt_text = input['image_alt_text'] if 'image_alt_text' in input else ''
         if image_alt_text is None:
-            image_alt_text = ""
-        if "tags" in input:
-            tags = tags_from_string_old(input["tags"])
+            image_alt_text = ''
+        if 'tags' in input:
+            tags = tags_from_string_old(input['tags'])
         else:
             tags = []
-        if "flair" in input:
-            flair = flairs_from_string(input["flair"], post.community_id)
-        elif input.get("flair_id"):
-            # Handle single flair_id for RSS feeds and other API calls.
-            # Truthiness rather than `"flair_id" in input`: RssFeed.flair_id is
-            # nullable and the cron passes it through unconditionally, so a
-            # membership test reaches `.in_(None)` and raises for every feed
-            # that has no flair configured -- i.e. the default.
-            flair_id = input["flair_id"]
+        if 'flair' in input:
+            flair = flairs_from_string(input['flair'], post.community_id)
+        elif 'flair_id' in input and input['flair_id']:
+            # Handle single flair_id for RSS feeds and other API calls
+            flair_id = input['flair_id']
             if isinstance(flair_id, int):
                 flair = [CommunityFlair.query.get(flair_id)]
             else:
-                flair = CommunityFlair.query.filter(
-                    CommunityFlair.id.in_(flair_id)
-                ).all()
+                flair = CommunityFlair.query.filter(CommunityFlair.id.in_(flair_id)).all()
             flair = [f for f in flair if f is not None]
         else:
             flair = []
@@ -403,40 +394,34 @@ def edit_post(
         repeat = None
 
         # Parse event data from API
-        event_data = input.get("event", None)
+        event_data = input.get('event', None)
         if event_data:
             # Parse datetime strings to datetime objects
-            if "start" in event_data:
-                if isinstance(event_data["start"], str):
-                    event_data["start"] = datetime.fromisoformat(
-                        event_data["start"].replace("Z", "+00:00")
-                    ).replace(tzinfo=None)
+            if 'start' in event_data:
+                if isinstance(event_data['start'], str):
+                    event_data['start'] = datetime.fromisoformat(event_data['start'].replace('Z', '+00:00')).replace(tzinfo=None)
                 else:
-                    event_data["start"] = event_data["start"]
-            if "end" in event_data and event_data["end"]:
-                if isinstance(event_data["end"], str):
-                    event_data["end"] = datetime.fromisoformat(
-                        event_data["end"].replace("Z", "+00:00")
-                    ).replace(tzinfo=None)
+                    event_data['start'] = event_data['start']
+            if 'end' in event_data and event_data['end']:
+                if isinstance(event_data['end'], str):
+                    event_data['end'] = datetime.fromisoformat(event_data['end'].replace('Z', '+00:00')).replace(tzinfo=None)
                 else:
-                    event_data["end"] = event_data["end"]
+                    event_data['end'] = event_data['end']
 
         # Parse poll data from API
-        poll_data = input.get("poll", None)
+        poll_data = input.get('poll', None)
         if poll_data:
             # Extract all poll fields
             parsed_poll = {
-                "mode": poll_data.get("mode", "single"),
-                "local_only": poll_data.get("local_only", False),
-                "choices": poll_data.get("choices", []),
+                'mode': poll_data.get('mode', 'single'),
+                'local_only': poll_data.get('local_only', False),
+                'choices': poll_data.get('choices', [])
             }
-            if "end_poll" in poll_data and poll_data["end_poll"]:
-                if isinstance(poll_data["end_poll"], str):
-                    parsed_poll["end_poll"] = datetime.fromisoformat(
-                        poll_data["end_poll"].replace("Z", "+00:00")
-                    )
+            if 'end_poll' in poll_data and poll_data['end_poll']:
+                if isinstance(poll_data['end_poll'], str):
+                    parsed_poll['end_poll'] = datetime.fromisoformat(poll_data['end_poll'].replace('Z', '+00:00'))
                 else:
-                    parsed_poll["end_poll"] = poll_data["end_poll"]
+                    parsed_poll['end_poll'] = poll_data['end_poll']
 
             poll_data = parsed_poll
     else:
@@ -450,6 +435,8 @@ def edit_post(
             url = input.video_url.data.strip()
         elif type == POST_TYPE_IMAGE and not from_scratch:
             url = post.url
+        elif type == POST_TYPE_GALLERY:    # gallery posts have a url going to the post, so Lemmy users can view the gallery
+            url = f"{current_app.config['SERVER_URL']}{post.slug}"
         else:
             url = None
         nsfw = input.nsfw.data
@@ -464,11 +451,7 @@ def edit_post(
         scheduled_for = input.scheduled_for.data
         repeat = input.repeat.data
         timezone = input.timezone.data
-        image_alt_text = (
-            input.image_alt_text.data
-            if hasattr(input, "image_alt_text") and input.image_alt_text
-            else ""
-        )
+        image_alt_text = input.image_alt_text.data if hasattr(input, 'image_alt_text') and input.image_alt_text else ''
 
         # Extract poll data from form
         if type == POST_TYPE_POLL:
@@ -476,16 +459,14 @@ def edit_post(
             for i in range(1, 16):
                 choice_text = getattr(input, f"choice_{i}").data
                 if choice_text:
-                    poll_choices.append(
-                        {"choice_text": choice_text.strip(), "sort_order": i}
-                    )
+                    poll_choices.append({'choice_text': choice_text.strip(), 'sort_order': i})
             poll_data = {
-                "mode": input.mode.data,
-                "local_only": input.local_only.data,
-                "choices": poll_choices,
+                'mode': input.mode.data,
+                'local_only': input.local_only.data,
+                'choices': poll_choices
             }
             if input.finish_in:
-                poll_data["end_poll"] = end_poll_date(input.finish_in.data)
+                poll_data['end_poll'] = end_poll_date(input.finish_in.data)
         else:
             poll_data = None
 
@@ -494,22 +475,22 @@ def edit_post(
             local_tz = ZoneInfo(input.event_timezone.data)
             local_start = input.start_datetime.data.replace(tzinfo=local_tz)
             local_end = input.end_datetime.data.replace(tzinfo=local_tz)
-            utc_start = local_start.astimezone(ZoneInfo("UTC"))
-            utc_end = local_end.astimezone(ZoneInfo("UTC"))
+            utc_start = local_start.astimezone(ZoneInfo('UTC'))
+            utc_end = local_end.astimezone(ZoneInfo('UTC'))
 
             event_data = {
-                "start": utc_start.replace(tzinfo=None),
-                "end": utc_end.replace(tzinfo=None),
-                "timezone": input.event_timezone.data,
-                "max_attendees": input.max_attendees.data,
-                "online": input.online.data,
-                "online_link": input.online_link.data,
-                "join_mode": input.join_mode.data,
-                "location": {
-                    "address": input.irl_address.data,
-                    "city": input.irl_city.data,
-                    "country": input.irl_country.data,
-                },
+                'start': utc_start.replace(tzinfo=None),
+                'end': utc_end.replace(tzinfo=None),
+                'timezone': input.event_timezone.data,
+                'max_attendees': input.max_attendees.data,
+                'online': input.online.data,
+                'online_link': input.online_link.data,
+                'join_mode': input.join_mode.data,
+                'location': {
+                    'address': input.irl_address.data,
+                    'city': input.irl_city.data,
+                    'country': input.irl_country.data
+                }
             }
         else:
             event_data = None
@@ -517,11 +498,7 @@ def edit_post(
     # WARNING: beyond this point do not use the input variable as it can be either a dict or a form object!
 
     post.indexable = user.indexable
-    if (
-        post.community.is_moderator(user)
-        or post.community.is_owner(user)
-        or user.is_admin()
-    ):
+    if post.community.is_moderator(user) or post.community.is_owner(user) or user.is_admin():
         post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw or post.community.nsfw
     post.nsfl = False if src == SRC_API else input.nsfl.data
@@ -538,11 +515,9 @@ def edit_post(
     post.timezone = timezone
 
     if post.url:
-        if post.url.startswith("https://pixelfed.social/") or post.url.startswith(
-            "https://pixelfed.uno/"
-        ):
+        if post.url.startswith('https://pixelfed.social/') or post.url.startswith('https://pixelfed.uno/'):
             post.type = POST_TYPE_IMAGE
-        elif post.url.startswith("https://loops.video/"):
+        elif post.url.startswith('https://loops.video/'):
             post.type = POST_TYPE_VIDEO
         elif is_video_url(post.url):
             post.type = POST_TYPE_VIDEO
@@ -551,7 +526,7 @@ def edit_post(
 
     if scheduled_for:
         date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
-        if date_with_tz.astimezone(ZoneInfo("UTC")) > utcnow(naive=False):
+        if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
             post.status = POST_STATUS_SCHEDULED
 
     url_changed = False
@@ -559,24 +534,16 @@ def edit_post(
 
     if not from_scratch:
         # Remove any subscription that currently exists
-        existing_notification = NotificationSubscription.query.filter(
-            NotificationSubscription.entity_id == post.id,
-            NotificationSubscription.user_id == user.id,
-            NotificationSubscription.type == NOTIF_POST,
-        ).first()
+        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post.id,
+                                                                      NotificationSubscription.user_id == user.id,
+                                                                      NotificationSubscription.type == NOTIF_POST).first()
         if existing_notification:
             db.session.delete(existing_notification)
 
         # Remove any poll votes that currently exists
         # Partially because it's easier to code but also to stop malicious alterations to polls after people have already voted
-        db.session.execute(
-            text('DELETE FROM "poll_choice_vote" WHERE post_id = :post_id'),
-            {"post_id": post.id},
-        )
-        db.session.execute(
-            text('DELETE FROM "poll_choice" WHERE post_id = :post_id'),
-            {"post_id": post.id},
-        )
+        db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :post_id'), {'post_id': post.id})
+        db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :post_id'), {'post_id': post.id})
 
         # Remove any old images, and set url_changed
         if url != post.url or uploaded_file:
@@ -590,15 +557,8 @@ def edit_post(
                 domain = domain_from_url(post.url)
                 if domain:
                     domain.post_count -= 1
-                if (
-                    post.type == POST_TYPE_VIDEO
-                    and store_files_in_s3()
-                    and post.url.startswith(
-                        f'https://{current_app.config["S3_PUBLIC_URL"]}'
-                    )
-                ):
+                if post.type == POST_TYPE_VIDEO and store_files_in_s3() and post.url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
                     from app.shared.tasks.maintenance import delete_from_s3
-
                     if current_app.debug:
                         delete_from_s3([post.url])
                     else:
@@ -608,38 +568,29 @@ def edit_post(
         post.tags.clear()
         post.flair.clear()
 
+
+
         post.edited_at = utcnow()
 
         db.session.commit()
 
-    if uploaded_file and uploaded_file.filename != "":
+    if uploaded_file and uploaded_file.filename != '':
         # check if this is an allowed type of file
-        allowed_extensions = [
-            ".gif",
-            ".jpg",
-            ".jpeg",
-            ".png",
-            ".webp",
-            ".heic",
-            ".mpo",
-            ".avif",
-            ".svg",
-        ]
+        allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg', '.jxl']
         if type == POST_TYPE_VIDEO and can_upload_video():
-            allowed_extensions.extend([".mp4", ".webm", ".mov"])
+            allowed_extensions.extend(['.mp4', '.webm', '.mov'])
         file_ext = os.path.splitext(uploaded_file.filename)[1]
         if file_ext.lower() not in allowed_extensions:
-            raise Exception("filetype not allowed")
+            raise Exception('filetype not allowed')
 
         new_filename = gibberish(15)
         # set up the storage directory
         if store_files_in_s3():
-            directory = "app/static/tmp"
+            directory = 'app/static/tmp'
         else:
-            directory = (
-                "app/static/media/posts/" + new_filename[0:2] + "/" + new_filename[2:4]
-            )
+            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
         ensure_directory_exists(directory)
+
 
         # save the file
         final_place = os.path.join(directory, new_filename + file_ext.lower())
@@ -648,233 +599,355 @@ def edit_post(
 
         final_ext = file_ext.lower()  # track file extension for conversion
 
-        # SP-017: strip <script>, event handlers, and javascript: URLs from
-        # uploaded SVGs before any code (PIL or downstream renderers) touches them.
-        if final_ext == ".svg":
-            sanitize_svg(final_place)
-
-        if final_ext == ".heic":
+        if final_ext == '.heic':
             register_heif_opener()
-        if final_ext == ".avif":
-            import pillow_avif  # NOQA  # do not remove
+        if final_ext == '.svg':
+            if not sanitize_svg(final_place):
+                os.unlink(final_place)
+                raise ValueError('SVG could not be sanitized')
 
         Image.MAX_IMAGE_PIXELS = 89478485
 
         # Use environment variables to determine image max dimension, format, and quality
-        image_max_dimension = current_app.config["MEDIA_IMAGE_MAX_DIMENSION"]
-        image_format = current_app.config["MEDIA_IMAGE_FORMAT"]
-        image_quality = current_app.config["MEDIA_IMAGE_QUALITY"]
+        image_max_dimension = current_app.config['MEDIA_IMAGE_MAX_DIMENSION']
+        image_format = current_app.config['MEDIA_IMAGE_FORMAT']
+        image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
 
-        if image_format == "AVIF":
-            import pillow_avif  # NOQA  # do not remove
-
-        if (
-            not final_place.endswith(".svg")
-            and not final_place.endswith(".gif")
-            and not is_video_url(final_place)
-        ):
+        if not final_place.endswith('.svg') and not final_place.endswith('.gif') and not is_video_url(final_place):
             img = Image.open(final_place)
-            if "." + img.format.lower() in allowed_extensions:
+            if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
-                if image_format == "JPEG" or final_ext in [".jpg", ".jpeg"]:
+                if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']):
                     img = to_srgb(img)
                 else:
-                    img = img.convert("RGBA")
-                img.thumbnail(
-                    (image_max_dimension, image_max_dimension), resample=Image.LANCZOS
-                )
+                    img = img.convert('RGBA')
+                img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
 
                 kwargs = {}
                 if image_format:
-                    kwargs["format"] = image_format.upper()
-                    final_ext = "." + image_format.lower()
+                    kwargs['format'] = image_format.upper()
+                    final_ext = '.' + image_format.lower()
                     final_place = os.path.splitext(final_place)[0] + final_ext
                 if image_quality:
-                    kwargs["quality"] = int(image_quality)
+                    kwargs['quality'] = int(image_quality)
 
                 img.save(final_place, optimize=True, **kwargs)
             else:
-                raise Exception("filetype not allowed")
+                raise Exception('filetype not allowed')
 
         url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
 
-        if current_app.config["IMAGE_HASHING_ENDPOINT"] and not is_video_url(
-            final_place
-        ):
+        if current_app.config['IMAGE_HASHING_ENDPOINT'] and not is_video_url(final_place):
             hash = retrieve_image_hash(url)
             if hash and hash_matches_blocked_image(hash):
-                raise Exception("This image is blocked")
+                raise Exception('This image is blocked')
 
         # Move uploaded file to S3
         if store_files_in_s3():
             session = boto3.session.Session()
-            extra_args = {"ContentType": guess_mime_type(final_place)}
-            if current_app.config.get("S3_STORAGE_CLASS"):
-                extra_args["StorageClass"] = current_app.config["S3_STORAGE_CLASS"]
+            extra_args = {'ContentType': guess_mime_type(final_place)}
+            if current_app.config.get('S3_STORAGE_CLASS'):
+                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+            if current_app.config.get('S3_PUBLIC_ACL'):
+                extra_args['ACL'] = 'public-read'
             s3 = session.client(
-                service_name="s3",
-                region_name=current_app.config["S3_REGION"],
-                endpoint_url=current_app.config["S3_ENDPOINT"],
-                aws_access_key_id=current_app.config["S3_ACCESS_KEY"],
-                aws_secret_access_key=current_app.config["S3_ACCESS_SECRET"],
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
             )
-            s3.upload_file(
-                final_place,
-                current_app.config["S3_BUCKET"],
-                "posts/"
-                + new_filename[0:2]
-                + "/"
-                + new_filename[2:4]
-                + "/"
-                + new_filename
-                + final_ext,
-                ExtraArgs=extra_args,
-            )
-            url = (
-                f"https://{current_app.config['S3_PUBLIC_URL']}/posts/"
-                + new_filename[0:2]
-                + "/"
-                + new_filename[2:4]
-                + "/"
-                + new_filename
-                + final_ext
-            )
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                           ExtraArgs=extra_args)
+            url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
+                  new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
             s3.close()
             os.unlink(final_place)
 
     if url and (from_scratch or url_changed):
-        domain = domain_from_url(url)
-        if domain:
-            if domain.banned or domain.name.endswith(".pages.dev"):
-                raise Exception(domain.name + " is blocked by admin")
-            post.domain = domain
-            domain.post_count += 1
-            already_notified = (
-                set()
-            )  # often admins and mods are the same people - avoid notifying them twice
-            targets_data = {
-                "gen": "0",
-                "post_id": post.id,
-                "orig_post_title": post.title,
-                "orig_post_body": post.body,
-                "orig_post_domain": post.domain,
-                "author_user_name": user.ap_id if user.ap_id else user.user_name,
-            }
-            if domain.notify_mods:
-                for community_member in post.community.moderators():
-                    if community_member.is_local():
-                        notify = Notification(
-                            title="Suspicious content",
-                            url=post.ap_id,
-                            user_id=community_member.user_id,
-                            author_id=user.id,
-                            notif_type=NOTIF_REPORT,
-                            subtype="post_from_suspicious_domain",
-                            targets=targets_data,
-                        )
-                        db.session.add(notify)
-                        already_notified.add(community_member.user_id)
-            if domain.notify_admins:
-                for admin in Site.admins():
-                    if admin.id not in already_notified:
-                        notify = Notification(
-                            title="Suspicious content",
-                            url=post.ap_id,
-                            user_id=admin.id,
-                            author_id=user.id,
-                            notif_type=NOTIF_REPORT,
-                            subtype="post_from_suspicious_domain",
-                            targets=targets_data,
-                        )
-                        db.session.add(notify)
+        if type != POST_TYPE_GALLERY:
+            domain = domain_from_url(url)
+            if domain:
+                if domain.banned or domain.name.endswith('.pages.dev'):
+                    raise Exception(domain.name + ' is blocked by admin')
+                post.domain = domain
+                domain.post_count += 1
+                already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+                targets_data = {'gen': '0',
+                                'post_id': post.id,
+                                'orig_post_title': post.title,
+                                'orig_post_body': post.body,
+                                'orig_post_domain': post.domain,
+                                'author_user_name': user.ap_id if user.ap_id else user.user_name
+                                }
+                if domain.notify_mods:
+                    for community_member in post.community.moderators():
+                        if community_member.is_local():
+                            notify = Notification(title='Suspicious content', url=post.ap_id,
+                                                  user_id=community_member.user_id, author_id=user.id,
+                                                  notif_type=NOTIF_REPORT,
+                                                  subtype='post_from_suspicious_domain',
+                                                  targets=targets_data)
+                            db.session.add(notify)
+                            already_notified.add(community_member.user_id)
+                if domain.notify_admins:
+                    for admin in Site.admins():
+                        if admin.id not in already_notified:
+                            notify = Notification(title='Suspicious content', url=post.ap_id,
+                                                  user_id=admin.id, author_id=user.id,
+                                                  notif_type=NOTIF_REPORT,
+                                                  subtype='post_from_suspicious_domain',
+                                                  targets=targets_data)
+                            db.session.add(notify)
 
-        thumbnail_url, embed_url = fixup_url(url)
-        if is_image_url(url):
-            file = File(source_url=url, hash=hash)
-            if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
-                # change this line when uploaded_file is supported in API
-                file.alt_text = image_alt_text
-            db.session.add(file)
-            db.session.commit()
-            post.image_id = file.id
+            thumbnail_url, embed_url = fixup_url(url)
+            if is_image_url(url):
+                file = File(source_url=url, hash=hash,
+                            original_path=(url if store_files_in_s3() else final_place) if uploaded_file else None)
+                if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
+                    # change this line when uploaded_file is supported in API
+                    file.alt_text = image_alt_text
+                db.session.add(file)
+                db.session.commit()
+                post.image_id = file.id
 
-            # For events, uploaded images are banners - don't change post type or URL
-            if type == POST_TYPE_EVENT:
-                post.url = None  # Events don't have URLs when they have banner images
-                make_image_sizes(
-                    post.image_id, 170, 2000, "posts", post.community.low_quality
-                )
-            else:
-                make_image_sizes(
-                    post.image_id, 512, 1200, "posts", post.community.low_quality
-                )
+
+                # For events, uploaded images are banners - don't change post type or URL
+                if type == POST_TYPE_EVENT:
+                    post.url = None  # Events don't have URLs when they have banner images
+                    make_image_sizes(post.image_id, 170, 2000, 'posts', post.community.low_quality)
+                else:
+                    make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
+                    post.type = POST_TYPE_IMAGE
+                    post.url = url
+            elif url.startswith('https://pixelfed.social') or url.startswith('pixelfed.uno'):
                 post.type = POST_TYPE_IMAGE
-                post.url = url
-        elif url.startswith("https://pixelfed.social") or url.startswith(
-            "pixelfed.uno"
-        ):
-            post.type = POST_TYPE_IMAGE
-            opengraph = opengraph_parse(thumbnail_url)
-            if opengraph and (
-                opengraph.get("og:image", "") != ""
-                or opengraph.get("og:image:url", "") != ""
-            ):
-                filename = opengraph.get("og:image") or opengraph.get("og:image:url")
-                if not filename.startswith("/"):
-                    file = File(
-                        source_url=filename,
-                        alt_text=shorten_string(opengraph.get("og:title"), 295),
-                    )
-                    post.image = file
-                    db.session.add(file)
-            post.url = url
-            post.body += "\n\nSource: "
-        elif url.startswith("https://loops.video"):
-            post.type = POST_TYPE_VIDEO
-            opengraph = opengraph_parse(thumbnail_url)
-            if opengraph and (
-                opengraph.get("og:image", "") != ""
-                or opengraph.get("og:image:url", "") != ""
-            ):
-                filename = opengraph.get("og:image") or opengraph.get("og:image:url")
-                if not filename.startswith("/"):
-                    filename = filename.replace(".jpg", ".720p.mp4")
-                    file = File(
-                        source_url=filename,
-                        alt_text=shorten_string(opengraph.get("og:title"), 295),
-                    )
-                    post.image = file
-                    db.session.add(file)
-            post.url = url
-        else:
-            opengraph = opengraph_parse(thumbnail_url)
-            if opengraph and (
-                opengraph.get("og:image", "") != ""
-                or opengraph.get("og:image:url", "") != ""
-            ):
-                filename = opengraph.get("og:image") or opengraph.get("og:image:url")
-                if not filename.startswith("/"):
-                    file = url_to_thumbnail_file(filename)
-                    if file:
-                        file.alt_text = shorten_string(opengraph.get("og:title"), 295)
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
                         post.image = file
                         db.session.add(file)
-
-            post.url = embed_url
-
-            if (
-                is_video_url(url)
-                or url.endswith(".mp4")
-                or url.endswith(".webm")
-                or is_video_hosting_site(embed_url)
-            ):
+                post.url = url
+                post.body += '\n\nSource: '
+            elif url.startswith('https://loops.video'):
                 post.type = POST_TYPE_VIDEO
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        filename = filename.replace('.jpg', '.720p.mp4')
+                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                        post.image = file
+                        db.session.add(file)
+                post.url = url
             else:
-                post.type = POST_TYPE_LINK
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        file = url_to_thumbnail_file(filename)
+                        if file:
+                            file.alt_text = shorten_string(opengraph.get('og:title'), 295)
+                            post.image = file
+                            db.session.add(file)
 
-        post.calculate_cross_posts(url_changed=url_changed)
+                post.url = embed_url
+
+                if is_video_url(url) or url.endswith('.mp4') or url.endswith('.webm') or is_video_hosting_site(embed_url):
+                    post.type = POST_TYPE_VIDEO
+                else:
+                    post.type = POST_TYPE_LINK
+
+        if type != POST_TYPE_GALLERY:
+            post.calculate_cross_posts(url_changed=url_changed)
     elif url and is_video_hosting_site(url):
         post.type = POST_TYPE_VIDEO
+
+    # Handle gallery images
+    if type == POST_TYPE_GALLERY and uploaded_files is not None:
+        image_alt_texts = image_alt_texts or []
+        replaced_files = []
+        new_files = {}
+        post.type = POST_TYPE_GALLERY
+        # Get existing gallery images sorted by weight
+        existing_gallery = db.session.query(File).join(
+            post_file, (post_file.c.file_id == File.id) & (post_file.c.post_id == post.id)
+        ).order_by(post_file.c.weight).all()
+
+        previous_alt_texts = {file.id: file.alt_text for file in existing_gallery}
+        # Process each form entry
+        if store_files_in_s3():
+            session = boto3.session.Session()
+            extra_args = {}
+            if current_app.config.get('S3_STORAGE_CLASS'):
+                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+            if current_app.config.get('S3_PUBLIC_ACL'):
+                extra_args['ACL'] = 'public-read'
+            s3 = session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+
+        for i, uploaded_file in enumerate(uploaded_files):
+            # Check if this entry has a new file upload
+            if uploaded_file and uploaded_file.filename != '':
+                if i < len(existing_gallery):
+                    replaced_files.append(existing_gallery[i])
+
+                # Validate file type
+                allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg', '.jxl']
+                file_ext = os.path.splitext(uploaded_file.filename)[1]
+                if file_ext.lower() not in allowed_extensions:
+                    raise Exception('filetype not allowed')
+
+                # Generate new filename
+                new_filename = gibberish(15)
+                if store_files_in_s3():
+                    directory = 'app/static/tmp'
+                else:
+                    directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+                ensure_directory_exists(directory)
+
+
+                # Save the file
+                final_place = os.path.join(directory, new_filename + file_ext.lower())
+                uploaded_file.seek(0)
+                uploaded_file.save(final_place)
+
+                uploaded_path = final_place
+                final_ext = file_ext.lower()
+
+                # Handle special formats
+                if final_ext == '.heic':
+                    register_heif_opener()
+
+                Image.MAX_IMAGE_PIXELS = 89478485
+                image_max_dimension = current_app.config['MEDIA_IMAGE_MAX_DIMENSION']
+                image_format = current_app.config['MEDIA_IMAGE_FORMAT']
+                image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
+
+                if final_ext == '.svg':
+                    if not sanitize_svg(final_place):
+                        os.unlink(final_place)
+                        raise ValueError('SVG could not be sanitized')
+
+                if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
+                    img = Image.open(final_place)
+                    if '.' + img.format.lower() in allowed_extensions:
+                        img = ImageOps.exif_transpose(img)
+                        if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']):
+                            img = to_srgb(img)
+                        else:
+                            img = img.convert('RGBA')
+                        img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
+
+                        kwargs = {}
+                        if image_format:
+                            kwargs['format'] = image_format.upper()
+                            final_ext = '.' + image_format.lower()
+                            final_place = os.path.splitext(final_place)[0] + final_ext
+                        if image_quality:
+                            kwargs['quality'] = int(image_quality)
+
+                        img.save(final_place, optimize=True, **kwargs)
+                    else:
+                        raise Exception('filetype not allowed')
+
+                if uploaded_path != final_place:
+                    os.unlink(uploaded_path)
+                width = height = None
+                if final_ext != '.svg':
+                    with Image.open(final_place) as stored_image:
+                        width, height = stored_image.size
+
+                url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
+
+                # Move to S3 if configured
+                if store_files_in_s3():
+                    extra_args['ContentType'] = guess_mime_type(final_place)
+                    s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                                   ExtraArgs=extra_args)
+                    url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
+                          new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
+                    os.unlink(final_place)
+
+                # Create File record
+                alt_text = image_alt_texts[i] if image_alt_texts and i < len(image_alt_texts) else ''
+                file = File(source_url=url, alt_text=alt_text,
+                            file_path=url if store_files_in_s3() else final_place, width=width, height=height)
+                db.session.add(file)
+                db.session.commit()
+
+                # Associate file with post via post_file table
+                db.session.execute(
+                    text('INSERT INTO post_file (post_id, file_id, weight) VALUES (:post_id, :file_id, :weight)'),
+                    {'post_id': post.id, 'file_id': file.id, 'weight': i}
+                )
+
+                # The upload was resized above; retain its recorded owned path.
+                # Fetching it again would replace file_path and orphan the original.
+                new_files[i] = file
+
+                # Check against image hash blocking
+                if current_app.config['IMAGE_HASHING_ENDPOINT']:
+                    hash = retrieve_image_hash(url)
+                    if hash and hash_matches_blocked_image(hash):
+                        raise Exception('This image is blocked')
+
+                # Update file hash
+                file.hash = hash if 'hash' in locals() else None
+                db.session.commit()
+
+        if store_files_in_s3():
+            s3.close()
+
+        # Handle existing images that weren't replaced (update alt text)
+        # and remove any existing images beyond the uploaded files count
+        for i in range(len(existing_gallery)):
+            if i < len(uploaded_files) and not (uploaded_files[i] and uploaded_files[i].filename != ''):
+                # This existing image wasn't replaced
+                old_file = existing_gallery[i]
+                # Update alt text if provided
+                if i < len(image_alt_texts):
+                    old_file.alt_text = image_alt_texts[i]
+                    db.session.commit()
+
+        desired_gallery = [new_files[i] if i in new_files else existing_gallery[i]
+                           for i in range(len(uploaded_files)) if i in new_files or i < len(existing_gallery)]
+        previous_thumbnail = post.image
+        try:
+            thumbnail_id = build_gallery_thumbnail([file.source_url for file in desired_gallery])
+        except Exception:
+            # Restore associations and alt text if composite generation fails.
+            for file in new_files.values():
+                db.session.execute(post_file.delete().where(
+                    post_file.c.post_id == post.id, post_file.c.file_id == file.id))
+                file.delete_from_disk(purge_cdn=False)
+                db.session.delete(file)
+            for file in existing_gallery:
+                file.alt_text = previous_alt_texts[file.id]
+            db.session.commit()
+            raise
+
+        # Retire originals after both replacements and their composite are ready.
+        retired = replaced_files + existing_gallery[len(uploaded_files):]
+        for old_file in retired:
+            db.session.execute(post_file.delete().where(
+                post_file.c.post_id == post.id, post_file.c.file_id == old_file.id))
+        post.image_id = thumbnail_id
+        db.session.commit()
+        for file in retired + ([previous_thumbnail] if previous_thumbnail else []):
+            if not file.has_references():
+                file.delete_from_disk(purge_cdn=False)
+                db.session.delete(file)
+        db.session.commit()
 
     if url and post.image:
         file = File.query.get(post.image_id)
@@ -886,25 +959,23 @@ def edit_post(
         post.type = POST_TYPE_POLL
 
         # Add poll choices
-        if "choices" in poll_data:
-            for choice in poll_data["choices"]:
-                if "choice_text" in choice and choice["choice_text"].strip():
-                    db.session.add(
-                        PollChoice(
-                            post_id=post.id,
-                            choice_text=choice["choice_text"].strip(),
-                            sort_order=choice.get("sort_order", 1),
-                        )
-                    )
+        if 'choices' in poll_data:
+            for choice in poll_data['choices']:
+                if 'choice_text' in choice and choice['choice_text'].strip():
+                    db.session.add(PollChoice(
+                        post_id=post.id,
+                        choice_text=choice['choice_text'].strip(),
+                        sort_order=choice.get('sort_order', 1)
+                    ))
 
         poll = Poll.query.filter_by(post_id=post.id).first()
         if poll is None:
             poll = Poll(post_id=post.id)
             db.session.add(poll)
-        poll.mode = poll_data.get("mode", "single")
-        if "end_poll" in poll_data and poll_data["end_poll"]:
-            poll.end_poll = poll_data["end_poll"]
-        poll.local_only = poll_data.get("local_only", False)
+        poll.mode = poll_data.get('mode', 'single')
+        if 'end_poll' in poll_data and poll_data['end_poll']:
+            poll.end_poll = poll_data['end_poll']
+        poll.local_only = poll_data.get('local_only', False)
         poll.latest_vote = None
         db.session.commit()
 
@@ -918,25 +989,25 @@ def edit_post(
             event = Event(post_id=post.id)
             db.session.add(event)
 
-        if "start" in event_data:
-            event.start = event_data["start"]
-        if "end" in event_data and event_data["end"]:
-            event.end = event_data["end"]
+        if 'start' in event_data:
+            event.start = event_data['start']
+        if 'end' in event_data and event_data['end']:
+            event.end = event_data['end']
 
-        event.timezone = event_data.get("timezone", "UTC")
-        event.max_attendees = event_data.get("max_attendees", 0)
-        event.participant_count = event_data.get("participant_count", 0)
-        event.full = event_data.get("full", False)
-        event.online = event_data.get("online", False)
-        event.online_link = event_data.get("online_link")
-        event.join_mode = event_data.get("join_mode", "free")
-        event.external_participation_url = event_data.get("external_participation_url")
-        event.anonymous_participation = event_data.get("anonymous_participation", False)
-        event.buy_tickets_link = event_data.get("buy_tickets_link")
-        event.event_fee_currency = event_data.get("event_fee_currency")
-        event.event_fee_amount = event_data.get("event_fee_amount", 0)
-        if "location" in event_data:
-            event.location = event_data["location"]
+        event.timezone = event_data.get('timezone', 'UTC')
+        event.max_attendees = event_data.get('max_attendees', 0)
+        event.participant_count = event_data.get('participant_count', 0)
+        event.full = event_data.get('full', False)
+        event.online = event_data.get('online', False)
+        event.online_link = event_data.get('online_link')
+        event.join_mode = event_data.get('join_mode', 'free')
+        event.external_participation_url = event_data.get('external_participation_url')
+        event.anonymous_participation = event_data.get('anonymous_participation', False)
+        event.buy_tickets_link = event_data.get('buy_tickets_link')
+        event.event_fee_currency = event_data.get('event_fee_currency')
+        event.event_fee_amount = event_data.get('event_fee_amount', 0)
+        if 'location' in event_data:
+            event.location = event_data['location']
         db.session.commit()
 
     # add tags & flair
@@ -945,9 +1016,8 @@ def edit_post(
 
     # Add subscription if necessary
     if notify_author:
-        new_notification = NotificationSubscription(
-            name=post.title, user_id=user.id, entity_id=post.id, type=NOTIF_POST
-        )
+        new_notification = NotificationSubscription(name=post.title, user_id=user.id, entity_id=post.id,
+                                                    type=NOTIF_POST)
         db.session.add(new_notification)
 
     db.session.commit()
@@ -957,9 +1027,9 @@ def edit_post(
 
     if from_scratch:
         if federate:
-            task_selector("make_post", post_id=post.id)
+            task_selector('make_post', post_id=post.id)
     elif federate:
-        task_selector("edit_post", post_id=post.id)
+        task_selector('edit_post', post_id=post.id)
 
     if src == SRC_API:
         if from_scratch:
@@ -968,6 +1038,7 @@ def edit_post(
             return user.id, post
     elif from_scratch:
         return post
+
 
 
 # just for deletes by owner (mod deletes are classed as 'remove')
@@ -1503,3 +1574,108 @@ def vote_for_poll(post_id, votes, src, auth=None):
                 user_id=user.id,
                 choice_text=PollChoice.query.get(int(choice_id)).choice_text,
             )
+
+
+def build_gallery_thumbnail(files: List[str], return_file_id=True):
+    validate_remote_gallery_urls(files)
+    pil_images = []
+    for url in files:
+        response = get_request(url)
+        if response is None:
+            continue
+        try:
+            if response.status_code != 200:
+                continue
+            content_type = response.headers.get('content-type', '').split(';', 1)[0]
+            # Sanitized SVGs display in the gallery; Pillow cannot rasterize them.
+            if content_type == 'image/svg+xml':
+                continue
+            if content_type.startswith('image') or (content_type == 'application/octet-stream' and url.endswith(('.avif', '.jxl'))):
+                Image.MAX_IMAGE_PIXELS = 89478485
+                try:
+                    with Image.open(BytesIO(response.content)) as image:
+                        pil_images.append(ImageOps.exif_transpose(image).copy())
+                except UnidentifiedImageError:
+                    continue
+        finally:
+            response.close()
+
+    thumbnail = make_gallery_thumbnail(pil_images, size=1200)
+
+    if thumbnail:
+        # Generate new filename
+        new_filename = gibberish(15)
+        if store_files_in_s3():
+            directory = 'app/static/tmp'
+        else:
+            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+        ensure_directory_exists(directory)
+
+        final_ext = '.webp'
+        final_place = os.path.join(directory, new_filename + final_ext)
+
+        thumbnail.save(final_place)
+
+        url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
+
+        # Move to S3 if configured
+        if store_files_in_s3():
+            session = boto3.session.Session()
+            extra_args = {}
+            if current_app.config.get('S3_STORAGE_CLASS'):
+                extra_args['StorageClass'] = current_app.config['S3_STORAGE_CLASS']
+            if current_app.config.get('S3_PUBLIC_ACL'):
+                extra_args['ACL'] = 'public-read'
+            s3 = session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            extra_args['ContentType'] = guess_mime_type(final_place)
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                           ExtraArgs=extra_args)
+            url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
+                  new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
+            os.unlink(final_place)
+
+        # Create File record
+        if return_file_id:
+            file = File(source_url=url, file_path=url if store_files_in_s3() else final_place,
+                        width=thumbnail.width, height=thumbnail.height)
+            db.session.add(file)
+            db.session.commit()
+
+            return file.id
+        else:
+            return url
+    else:
+        return None
+
+
+
+def _validate_gallery_uploads(files):
+    for uploaded in files:
+        if not uploaded or not uploaded.filename:
+            continue
+        extension = os.path.splitext(uploaded.filename)[1].lower()
+        if extension not in {'.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg', '.jxl'}:
+            raise ValueError('filetype not allowed')
+        if extension == '.heic':
+            register_heif_opener()
+        if extension != '.svg':
+            try:
+                with Image.open(uploaded) as image:
+                    image.verify()
+            finally:
+                uploaded.seek(0)
+
+
+def validate_remote_gallery_urls(files):
+    # Attachments come from federation; never interpret their URLs as local paths.
+    from urllib.parse import urlsplit
+    for file in files:
+        if not isinstance(file, str) or urlsplit(file).scheme not in {'http', 'https'} or not urlsplit(file).netloc:
+            raise ValueError('Gallery images must use remote HTTP URLs')

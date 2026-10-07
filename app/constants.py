@@ -1,4 +1,4 @@
-VERSION = "1.7.15.1-peachpie-20260912"
+VERSION = "1.8.0-peachpie-20261007"
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -6,6 +6,7 @@ POST_TYPE_IMAGE = 3
 POST_TYPE_VIDEO = 4
 POST_TYPE_POLL = 5
 POST_TYPE_EVENT = 6
+POST_TYPE_GALLERY = 7
 
 POST_TYPE_NAMES = {
     POST_TYPE_LINK: "Link",
@@ -14,6 +15,7 @@ POST_TYPE_NAMES = {
     POST_TYPE_VIDEO: "Video",
     POST_TYPE_POLL: "Poll",
     POST_TYPE_EVENT: "Event",
+    POST_TYPE_GALLERY: "Gallery",
 }
 
 POST_STATUS_SCHEDULED = -2
@@ -75,6 +77,7 @@ NOTIF_REPORT_ESCALATION = (
     40  # a USER, POST, or COMMENT report has been escalated from mods to admins
 )
 NOTIF_REGISTRATION = 41  # a new registration / sign up has been generated
+NOTIF_NEW_POST = 42         # a new post needs approval
 
 # --model/db default--
 NOTIF_DEFAULT = 999  # default entry

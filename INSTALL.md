@@ -23,10 +23,10 @@
 
 ## Minimum server requirements
 
-Any OS that runs Python 3.10+
-2 CPU cores
-4 GB of RAM
-40 GB of storage (eventually)
+ - Any OS that runs Python 3.10+
+ - 2 CPU cores
+ - 4 GB of RAM
+ - 40 GB of storage (eventually)
 
 If your server will be used by more than 10 people, double the CPU and RAM.
 
@@ -574,7 +574,7 @@ Every minute PieFed will retry federation sending attempts that failed previousl
 */1 * * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/send_queue.sh
 ```
 
-The send_queue cron job is also needed to make scheduled posts publish themselves and a few other things. 
+The send_queue cron job is also needed to make scheduled posts publish themselves and a few other things.
 Do not skip this one!
 
 

@@ -1,0 +1,185 @@
+from datetime import timezone
+from urllib.parse import urlsplit
+
+from feedgen.feed import FeedGenerator
+# not needed ATM from app.constants import POST_TYPE_GALLERY
+from app.utils import mimetype_from_url
+# could be used later for instance checks: from app.models import User, Community, Post, PostReply
+
+####################################################################################################
+# this is intended to be upstreamed
+from feedgen.ext.base import BaseExtension
+from feedgen.util import xml_elem
+
+SLASH_NS = 'http://purl.org/rss/1.0/modules/slash/'
+
+def _set_value(entry, name, value):
+    if value:
+        newelem = xml_elem('{%s}' % SLASH_NS + name, entry)
+        newelem.text = value
+
+class SlashExtension(BaseExtension):
+    def extend_ns(self):
+        return {'slash': SLASH_NS}
+
+class SlashEntryExtension(BaseExtension):
+    def __init__(self):
+        self._comments = None
+
+    def extend_atom(self, entry):  # TODO
+        return self.extend_rss(entry)
+
+    def extend_rss(self, entry):
+        if self._comments:
+            _set_value(entry, 'comments', self._comments)
+        return entry
+
+    def comments(self, value):
+        if type(value) is not int or value < 0:
+            raise ValueError('Slash Extension: Invalid comment count')
+        self._comments = str(value)
+####################################################################################################
+
+
+def _is_valid_xml_utf8(value):
+    """Accept exactly XML 1.0's character ranges, including supplementary Unicode."""
+    if isinstance(value, bytes):
+        try:
+            value = value.decode('utf-8')
+        except UnicodeDecodeError:
+            return False
+    return isinstance(value, str) and all(
+        ord(character) in (9, 10, 13) or 0x20 <= ord(character) <= 0xD7FF
+        or 0xE000 <= ord(character) <= 0xFFFD or 0x10000 <= ord(character) <= 0x10FFFF
+        for character in value)
+
+
+class RSSFeed:
+    """ A mixin of proxying FeedGenerator and dealing with the Post class/data model.
+    Feed channel data goes into __init__, DB model and related stuff into method arguments.
+    Can be easily adapted to handle comments (PostReply class) should those be syndicated some day.
+    """
+
+    def __init__(self, *,  title: str, link: str, description: str, logo: str|None = None, \
+                   self_link: str|None = None, language: str|None = None):
+        fg = FeedGenerator()
+        fg.load_extension('media', rss=True)
+        fg.register_extension('slash', SlashExtension, SlashEntryExtension)
+
+        fg.title(title)
+        fg.subtitle(description)
+        if logo:
+            fg.logo(logo)
+        if self_link:
+            fg.link(href=self_link, rel='self')
+        if language:
+            fg.language(language)
+        # feedgen takes the value of the last call of link as channel link for RSS,
+        # regardless of value of rel, so this must be the very last call of *link*
+        fg.link(href=link, rel='alternate')
+
+        self._fg = fg
+
+    def create_feed(self, posts, server_url):
+        # the reversed below is so that newer entries will be first in the feed wrt document order,
+        # which depending on the RSS client can be quite useful.
+        # However, this also depends on ordering done by the caller,
+        # and ultimately on FeedGenerator itself, so it's a heuristic only.
+        # list() because callers may pass a Query or other iterable which reversed() can't handle
+        for post in reversed(list(posts)):
+           self._add_post(post, self._fg, server_url)
+
+        return self._fg.rss_str()
+
+    @classmethod
+    def _add_post(cls, post, feed, server_url):
+         # Validate title and body - skip this post if invalid
+        # TODO can also be fixed with RegExes, feedgen could take care of it?
+        # @see https://www.w3.org/TR/REC-xml/#charsets
+        if not _is_valid_xml_utf8(post.title.strip()):
+            return
+        content = post.body_html.strip() if post.body_html else None
+        if content and not _is_valid_xml_utf8(content):
+            return
+
+        fe = feed.add_entry()
+        fe.title(post.title.strip())
+        link = f"{server_url}{post.slug}" if post.slug else f"{server_url}/post/{post.id}"
+        fe.link(href=link)
+        fe.guid(post.profile_id(), permalink=True)
+
+        fe.content(content, type='CDATA')  # feedgen takes care if this is empty
+        cls._add_media_content(post, fe)
+
+        if post.author:
+            fe.author(email=cls._email_from_public_url(post.author.public_url()))
+
+        fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
+        # reply_count_cross_posted is nullable and can drift negative, so fall back and clamp
+        comment_count = post.reply_count_cross_posted
+        if comment_count is None:
+            comment_count = post.reply_count
+        fe.slash.comments(max(0, comment_count or 0))
+
+        if post.community and _is_valid_xml_utf8(post.community.name):
+            fe.category(term=post.community.name)
+        for flair in set([flair.flair for flair in post.flair]):
+            if _is_valid_xml_utf8(flair):
+                fe.category(term=flair, scheme='flair')
+        for tag in set([tag.display_as for tag in post.tags]):
+            if _is_valid_xml_utf8(tag):
+                fe.category(term=tag, scheme='tag')
+
+    @staticmethod
+    def _email_from_public_url(url):
+        comps = urlsplit(url)
+        user = comps.path.replace('/u/', '', 1)
+        return f"{user}@{comps.netloc}"
+
+    @staticmethod
+    def _add_media_content(post, fe):
+        """ Add links from post as media:content to fe.
+
+        For better user experience, we attach post.url even when its type is unknown.
+        Since MIME type determination is tricky (*mimetype_from_url* uses the path suffix only,
+        *mime_type_using_head* depends on the server and calling it on every feed generation
+        introduces overhead),
+        we use media:content instead of RSS'es enclosure since it mandates only a URL.
+
+        We make best effort guesses to fill in other fields.
+
+        @see https://www.rssboard.org/media-rss
+
+        :post    Post
+        :fe      FeedEntry object
+        """
+        gallery = post.gallery if post.gallery else []
+        for file in gallery:
+            url = file.source_url
+            medium = {'url': url}
+            type = mimetype_from_url(url)
+            if type:
+                medium['type'] = type
+            size = file.filesize(False)
+            if size > 0:
+                medium['fileSize'] = str(size)
+
+            fe.media.content(medium, group=url)  # without group parameter, all media:content would go into the same media:group
+
+        url = post.url
+        if not url:
+            return
+        medium = {'url': url}
+        type = mimetype_from_url(url)
+        if type:
+            medium['type'] = type
+
+        image = post.image
+        if image and url == image.source_url:
+            if not type:  # may be None, e.g. for lemmy's image_proxy URLs
+                medium['medium'] = 'image'
+            size = image.filesize(False)
+            if size > 0:
+                medium['fileSize'] = str(size)
+
+        fe.media.content(medium, group=url)  # see above

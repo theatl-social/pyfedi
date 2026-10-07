@@ -1355,13 +1355,24 @@ details {
   padding-right: var(--spacing-4);
 }
 
-.post_type_image {
+.post_type_image, .post_type_gallery {
   .post_image {
     img {
       max-width: 100%;
       height: auto;
     }
   }
+}
+
+.post_gallery > div > a {
+    display: block;
+}
+
+
+.gallery-thumbnail {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
 }
 
 .voting_buttons_new {
@@ -2361,10 +2372,8 @@ h1 .warning_badge {
   object-fit: cover;
 }
 
-@include breakpoint(phablet) {
-	table td .community_icon {
-		display: block;
-	}
+table td .community_icon {
+    display: block;
 }
 
 .list-group-item .community_icon {
@@ -2559,8 +2568,8 @@ form {
 }
 
 .comment_author {
-  a {
-
+  .fe-reposter-account {
+    display: none;
   }
 }
 
@@ -2646,7 +2655,7 @@ form {
   background-color: var(--bs-secondary-bg);
 }
 
-.post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
+.post_type_gallery.reported, .post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
   img {
     filter: grayscale(100%) blur(var(--spacing-8))!important;
   }

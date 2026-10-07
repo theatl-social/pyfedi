@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     libpq-dev \
     curl \
+    ca-certificates \
+    procps \
     postgresql-client \
     bash \
     cron \

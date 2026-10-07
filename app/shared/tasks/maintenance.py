@@ -118,9 +118,11 @@ def process_expired_bans():
 
         expired_instance_bans = session.query(InstanceBan).filter(InstanceBan.banned_until != None, InstanceBan.banned_until < utcnow()).all()
         for expired_ban in expired_instance_bans:
+            session.execute(text('UPDATE "user" SET banned = false WHERE id = :user_id'), {'user_id': expired_ban.user_id})
             cache.delete_memoized(banned_instances, expired_ban.user_id)
             cache.delete_memoized(blocked_or_banned_instances, expired_ban.user_id)
             session.delete(expired_ban)
+
         session.commit()
 
     except Exception:
@@ -158,7 +160,7 @@ def remove_old_community_content():
 
 
 def remove_old_bot_content():
-    """Remove old posts by bots with no replies"""
+    """Remove old posts by bots with no replies. Also microblogs"""
     session = get_task_session()
     try:
 
@@ -171,6 +173,26 @@ def remove_old_bot_content():
                     deleted=False,
                     sticky=False,
                     from_bot=True,
+                    reply_count=0
+                ).filter(Post.posted_at < cut_off).all()]
+
+                # Process posts in batches of 100
+                batch_size = 100
+                for i in range(0, len(post_ids), batch_size):
+                    batch_ids = post_ids[i:i + batch_size]
+                    posts = session.query(Post).filter(Post.id.in_(batch_ids)).all()
+
+                    for post in posts:
+                        delete_post(post.id, post.author.is_local(), SRC_WEB, None)
+
+            microblog_retention = current_app.config['MICROBLOG_CONTENT_RETENTION']
+            if microblog_retention > 0:
+                cut_off = utcnow() - timedelta(days=28 * microblog_retention)
+                # First, fetch just the post IDs (lightweight query)
+                post_ids = [p[0] for p in session.query(Post.id).filter_by(
+                    deleted=False,
+                    sticky=False,
+                    microblog=True,
                     reply_count=0
                 ).filter(Post.posted_at < cut_off).all()]
 
@@ -196,10 +218,10 @@ def update_hashtag_counts():
     session = get_task_session()
     try:
         session.execute(text('''
-            UPDATE tag 
+            UPDATE tag
             SET post_count = (
                 SELECT COUNT(post_tag.post_id)
-                FROM post_tag 
+                FROM post_tag
                 WHERE post_tag.tag_id = tag.id
             )
         '''))
@@ -224,8 +246,8 @@ def delete_old_soft_deleted_content():
                 # Delete old posts only when no replies, mod-deleted or forced by community retention policy (deleted_by = 1)
                 post_ids = list(
                     session.execute(
-                        text("""SELECT id FROM post p 
-                                WHERE p.deleted = true AND p.posted_at < :cutoff AND (p.deleted_by <> p.user_id OR p.deleted_by = 1 OR p.reply_count = 0) 
+                        text("""SELECT id FROM post p
+                                WHERE p.deleted = true AND p.posted_at < :cutoff AND (p.deleted_by <> p.user_id OR p.deleted_by = 1 OR p.reply_count = 0)
                                   AND NOT EXISTS (
                                       SELECT 1
                                       FROM post_bookmark pb
@@ -649,6 +671,8 @@ def monitor_healthy_instances():
                                                       aliases=' '.join(aliases))
                                     session.add(new_emoji)
                                 session.commit()
+
+
                     cache.delete_memoized(get_emoji_replacements)
                 except Exception:
                     session.rollback()
@@ -891,19 +915,19 @@ def archive_old_posts():
         try:
             cutoff = utcnow() - timedelta(days=current_app.config['ARCHIVE_POSTS'] * 28)
             sql = '''
-                SELECT p.id 
+                SELECT p.id
                 FROM "post" p
                 JOIN "community" c ON c.id = p.community_id
-                WHERE p.archived IS NULL 
+                WHERE p.archived IS NULL
                   AND p.created_at < :cutoff
                   AND p.sticky = false
                   AND c.can_be_archived = true
                   AND c.private = false
                   AND p.id NOT IN (
-                      SELECT p2.id 
-                      FROM "post" p2 
-                      WHERE p2.community_id = p.community_id 
-                      ORDER BY p2.created_at DESC 
+                      SELECT p2.id
+                      FROM "post" p2
+                      WHERE p2.community_id = p.community_id
+                      ORDER BY p2.created_at DESC
                       LIMIT 100
                   )
             '''
@@ -943,7 +967,7 @@ def archive_old_users():
                     FROM "user" u
                     WHERE u.avatar_id IS NOT NULL AND u.cover_id IS NOT NULL AND u.ap_id IS NOT NULL
                       AND u.last_seen < :cutoff
-                      
+
                 '''
             user_ids = session.execute(text(sql), {'cutoff': cutoff}).scalars()
             for user_id in user_ids:
@@ -980,30 +1004,30 @@ def refresh_instance_chooser():
         query = {
             "query": '{ nodes(softwarename:"piefed" status: "UP") { domain uptime_alltime monthsmonitored } }'
         }
-        
+
         headers = {'Content-Type': 'application/json'}
         response = httpx_client.post('https://api.fediverse.observer/', json=query, headers=headers, timeout=30)
-        
+
         if response.status_code != 200:
             current_app.logger.error(f"fediverse.observer API returned {response.status_code}")
             return
-            
+
         response_data = response.json()
         if not response_data or 'data' not in response_data or 'nodes' not in response_data['data']:
             current_app.logger.error("Invalid response from fediverse.observer API")
             return
-            
+
         observer_domains = set()
-        
+
         # Shuffle the nodes list so instances are processed in random order each time
         nodes = response_data['data']['nodes']
         random.shuffle(nodes)
-        
+
         # Process each domain from fediverse.observer
         for node in nodes:
             domain = node['domain']
             observer_domains.add(domain)
-            
+
             try:
                 # Request instance_chooser API endpoint
                 try:
@@ -1015,35 +1039,35 @@ def refresh_instance_chooser():
                     if existing:
                         session.delete(existing)
                     continue
-                
+
                 if chooser_response.status_code == 200:
                     chooser_data = chooser_response.json()
 
                     chooser_data['uptime'] = node['uptime_alltime']
                     chooser_data['monthsmonitored'] = node['monthsmonitored']
-                    
+
                     # Update or create InstanceChooser record
                     instance_chooser = session.query(InstanceChooser).filter_by(domain=domain).first()
                     if not instance_chooser:
                         instance_chooser = InstanceChooser(domain=domain)
                         session.add(instance_chooser)
-                    
+
                     # Map API response to InstanceChooser fields
                     if 'language' in chooser_data and 'id' in chooser_data['language']:
                         instance_chooser.language_id = find_language_or_create(chooser_data['language']['code'], chooser_data['language']['name']).id
-                    
+
                     instance_chooser.nsfw = chooser_data.get('nsfw', False)
                     instance_chooser.newbie_friendly = chooser_data.get('newbie_friendly', True)
-                    
+
                     # Store the full response in the data field
                     instance_chooser.data = chooser_data
-                    
+
                 else:
                     # 404 or other error - remove existing record if it exists
                     existing = session.query(InstanceChooser).filter_by(domain=domain).first()
                     if existing:
                         session.delete(existing)
-                        
+
             except Exception as e:
                 current_app.logger.warning(f"Error processing domain {domain}: {str(e)}")
                 # Remove existing record if API call failed
@@ -1051,15 +1075,15 @@ def refresh_instance_chooser():
                 if existing:
                     session.delete(existing)
             session.commit()
-        
+
         # Remove InstanceChooser records for domains not in fediverse.observer
         existing_records = session.query(InstanceChooser).all()
         for record in existing_records:
             if record.domain not in observer_domains:
                 session.delete(record)
-        
+
         session.commit()
-        
+
     except Exception:
         session.rollback()
         raise
@@ -1158,24 +1182,3 @@ def clean_up_tmp():
                         os.remove(file_path)
                     except Exception:
                         pass
-
-
-def pwn_bots():
-    """ Everyone who has not responded to a bot challenge within 24h is assumed to be a bot"""
-    session = get_task_session()
-    cut_off = utcnow() - timedelta(days=1)
-    try:
-        for expired_challenge in BotChallenge.query.filter(BotChallenge.sent_at < cut_off, BotChallenge.is_a_bot == None).all():
-            session.execute(text('UPDATE "user" SET bot = true, bot_override = true, suppress_crossposts = true WHERE id = :user_id'), {
-                'user_id': expired_challenge.user_id
-            })
-            session.execute(text('UPDATE "bot_challenge" SET is_a_bot = true WHERE id = :id'),
-                            {'id': expired_challenge.id})
-        session.commit()
-
-    except Exception:
-        session.rollback()
-        raise
-
-    finally:
-        session.close()

@@ -13,6 +13,11 @@
             <a href="{{ url_for('community.add_post', actor=actor, type='link') }}" class="btn {{ 'btn-primary' if post_type == POST_TYPE_LINK else 'btn-outline-secondary' }}" aria-label="{{ _('Share a link') }}">{{ _('Link') }}</a>
             <a href="{{ url_for('community.add_post', actor=actor, type='discussion') }}" class="btn {{ 'btn-primary' if post_type == POST_TYPE_ARTICLE else 'btn-outline-secondary' }}" aria-label="{{ _('Start a discussion') }}">{{ _('Discussion') }}</a>
             <a href="{{ url_for('community.add_post', actor=actor, type='image') }}" class="btn {{ 'btn-primary' if post_type == POST_TYPE_IMAGE else 'btn-outline-secondary' }}" aria-label="{{ _('Share an image') }}">{{ _('Image') }}</a>
+            {% if community.instance.can_gallery() -%}
+                <a href="{{ url_for('community.add_post', actor=actor, type='gallery') }}" class="btn {{ 'btn-primary' if post_type == POST_TYPE_GALLERY else 'btn-outline-secondary' }}" aria-label="{{ _('Share multiple images') }}">{{ _('Gallery') }}</a>
+            {% else -%}
+                <a href="#" class="btn {{ 'btn-primary' if post_type == POST_TYPE_GALLERY else 'btn-outline-secondary' }}" aria-disabled="true" tabindex="-1" aria-label="{{ _('Share multiple images') }}" title="{{ _('Lemmy does not support galleries, try a PieFed community instead.') }}">{{ _('Gallery') }}</a>
+            {% endif -%}
             <a href="{{ url_for('community.add_post', actor=actor, type='video') }}" class="btn {{ 'btn-primary' if post_type == POST_TYPE_VIDEO else 'btn-outline-secondary' }}" aria-label="{{ _('Share a video') }}">{{ _('Video') }}</a>
             {% if community.instance.can_poll() -%}
                 <a href="{{ url_for('community.add_post', actor=actor, type='poll') }}" class="btn {{ 'btn-primary' if post_type == POST_TYPE_POLL else 'btn-outline-secondary' }}" aria-label="{{ _('Create a poll') }}">{{ _('Poll') }}</a>

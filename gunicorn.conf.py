@@ -1,8 +1,12 @@
 import multiprocessing
+import os
 
 cpu_cores = multiprocessing.cpu_count()
 
-workers = max(4, cpu_cores // 2)
+if num_workers := os.environ.get('GUNICORN_WORKERS'):
+    workers = int(num_workers)
+else:
+    workers = max(4, cpu_cores // 2)
 threads = 2
 
 worker_tmp_dir = "/dev/shm"
@@ -17,7 +21,7 @@ worker_class = "gthread"
 accesslog = "-"
 errorlog = "-"
 
-max_requests = 20000
+max_requests = int(os.environ.get("GUNICORN_MAX_REQUESTS", 20000))
 max_requests_jitter = 50
 
 # Timeout configuration - kill workers that hang

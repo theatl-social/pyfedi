@@ -8,7 +8,7 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField, IntegerField, DateTimeLocalField, RadioField
+    DateField, IntegerField, DateTimeLocalField, RadioField, FieldList, FormField
 
 from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Optional, URL
 
@@ -114,6 +114,7 @@ class EditCommunityForm(FlaskForm):
     topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
                                    render_kw={'class': 'form-multicheck-columns'})
+    default_hashtag = StringField(_l('Default hashtag on new posts'), validators=[Optional(), Length(max=75)])
     layouts = [('', _l('List')),
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]
@@ -189,7 +190,7 @@ class SearchRemoteCommunity(FlaskForm):
             elif '/' in self.address.data.strip():
                 self.address.errors.append(_l('/ cannot be in address'))
                 return False
-        
+
         return True
 
 
@@ -338,6 +339,42 @@ class EditImageForm(CreateImageForm):
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:
                 self.communities.errors.append(_l('Images cannot be posted to local communities.'))
+
+        return True
+
+
+class GalleryImageForm(FlaskForm):
+    class Meta:
+        csrf = False  # The parent form provides CSRF protection.
+
+    image_file = FileField(_l('Image'), validators=[Optional()], render_kw={'accept': 'image/*'})
+    alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=1500)])
+
+
+class CreateGalleryForm(CreatePostForm):
+    images = FieldList(FormField(GalleryImageForm), min_entries=10)
+
+    def validate(self, extra_validators=None) -> bool:
+        if not super().validate(extra_validators):
+            return False
+
+        # Validate file sizes for each uploaded image (only checks entries with data)
+        max_size_in_mb = 10 * 1024 * 1024  # 10 MB
+        for entry in self.images:
+            if entry.image_file.data:
+                uploaded_file = entry.image_file.data
+                file_content = uploaded_file.read()
+                if len(file_content) > max_size_in_mb:
+                    entry.image_file.errors.append(_l('This image file size is too large.'))
+                    uploaded_file.seek(0)
+                    return False
+                uploaded_file.seek(0)
+
+        if self.communities:
+            community = Community.query.get(self.communities.data)
+            if community.is_local() and g.site.allow_local_image_posts is False:
+                self.communities.errors.append(_l('Galleries cannot be posted to local communities.'))
+                return False
 
         return True
 

@@ -1,5 +1,5 @@
 {% if community %}
-<div class="d-block d-xl-none">
+<div class="d-block d-xl-none"><!-- mobile -->
     <div class="row">
         <div class="col-6 pe-1">
             <div class="d-block d-sm-none">
@@ -162,22 +162,36 @@
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label for="type" class="form-label">
-                                    {{ _('Content type') }}
-                                </label>
-                                <select class="form-control form-select" id="type" name="content_type">
-                                    <option value="posts" {{ 'selected' if content_type == '' or content_type == 'posts' }}>
-                                        {{ _('Posts') }}
-                                    </option>
-                                    <option value="comments" {{ 'selected' if content_type == 'comments' }}>
-                                        {{ _('Comments') }}
-                                    </option>
-                                    {% if has_events -%}
-                                        <option value="events" {{ 'selected' if content_type == 'events' }}>
-                                            {{ _('Events') }}
+                                {% if community.name == 'microblogs' %}
+                                    <label for="type" class="form-label">
+                                        {{ _('Posts from') }}
+                                    </label>
+                                    <select class="form-control form-select" id="microblog_mode" name="microblog_mode">
+                                        <option value="following" {{ 'selected' if microblog_mode == '' or microblog_mode == 'following' }}>
+                                            {{ _('Following') }}
                                         </option>
-                                    {% endif -%}
-                                </select>
+                                        <option value="firehose" {{ 'selected' if microblog_mode == 'firehose' }}>
+                                            {{ _('Everyone') }}
+                                        </option>
+                                    </select>
+                                {% else -%}
+                                    <label for="type" class="form-label">
+                                        {{ _('Content type') }}
+                                    </label>
+                                    <select class="form-control form-select" id="type" name="content_type">
+                                        <option value="posts" {{ 'selected' if content_type == '' or content_type == 'posts' }}>
+                                            {{ _('Posts') }}
+                                        </option>
+                                        <option value="comments" {{ 'selected' if content_type == 'comments' }}>
+                                            {{ _('Comments') }}
+                                        </option>
+                                        {% if has_events -%}
+                                            <option value="events" {{ 'selected' if content_type == 'events' }}>
+                                                {{ _('Events') }}
+                                            </option>
+                                        {% endif -%}
+                                    </select>
+                                {% endif %}
                             </div>
                             <button type="submit" class="btn btn-primary">
                                 {{ _('Apply filters') }}
@@ -416,9 +430,9 @@
 </div>
 {% endif %}
 
-<div class="d-xl-flex justify-content-between d-none my-1">
+<div class="d-xl-flex justify-content-between d-none my-1"><!-- desktop -->
     <div class="btn-group me-lg-1">
-        <a href="?sort=hot&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" type="button" rel="nofollow noindex">
+        <a href="?sort=hot&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" type="button" rel="nofollow noindex">
             {{ _('Hot') }}
         </a>
         <div class="btn-group" role="group">
@@ -427,75 +441,86 @@
             </button>
             <ul class="dropdown-menu" aria-labelledby="top_sort_button">
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}" href="?sort=top_12h&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}" href="?sort=top_12h&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('12 hours') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}" href="?sort=top&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}" href="?sort=top&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('Day') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}" href="?sort=top_1w&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}" href="?sort=top_1w&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('Week') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}" href="?sort=top_1m&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}" href="?sort=top_1m&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('Month') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}" href="?sort=top_1y&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}" href="?sort=top_1y&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('Year') }}
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}" href="?sort=top_all&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}">
+                    <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}" href="?sort=top_all&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}">
                         {{ _('All Time') }}
                     </a>
                 </li>
             </ul>
         </div>
-        <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('New') }}
         </a>
-        <a href="?sort=old&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=old&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Old') }}
         </a>
-        <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Active') }}
         </a>
     </div>
-    <div class="btn-group me-lg-1">
-        <a href="?content_type=posts&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show posts') }}" class="btn {{ 'btn-primary' if content_type == '' or content_type == 'posts' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-            {{ _('Posts') }}
-        </a>
-        {% if sort == '' %}
-            <a href="?content_type=comments&sort=new&layout={{ post_layout }}" aria-label="{{ _('Show comments') }}" class="btn {{ 'btn-primary' if content_type == 'comments' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Comments') }}
+    {% if community and community.name == 'microblogs' %}
+        <div class="btn-group me-lg-1">
+            <a href="?microblog_mode=following&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show posts from people you are following') }}" class="btn {{ 'btn-primary' if microblog_mode == '' or microblog_mode == 'following' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Following') }}
             </a>
-        {% else %}
-            <a href="?content_type=comments&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show comments') }}" class="btn {{ 'btn-primary' if content_type == 'comments' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Comments') }}
+            <a href="?microblog_mode=firehose&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show posts from everyone') }}" class="btn {{ 'btn-primary' if microblog_mode == 'firehose' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Everyone') }}
             </a>
-        {% endif %}
-        {% if has_events %}
-        <a href="?content_type=events&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show events') }}" class="btn {{ 'btn-primary' if content_type == 'events' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-            {{ _('Events') }}
-        </a>
-        {% endif %}
-    </div>
+        </div>
+    {% else -%}
+        <div class="btn-group me-lg-1">
+            <a href="?content_type=posts&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show posts') }}" class="btn {{ 'btn-primary' if content_type == '' or content_type == 'posts' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Posts') }}
+            </a>
+            {% if sort == '' %}
+                <a href="?content_type=comments&sort=new&layout={{ post_layout }}" aria-label="{{ _('Show comments') }}" class="btn {{ 'btn-primary' if content_type == 'comments' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Comments') }}
+                </a>
+            {% else %}
+                <a href="?content_type=comments&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show comments') }}" class="btn {{ 'btn-primary' if content_type == 'comments' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Comments') }}
+                </a>
+            {% endif %}
+            {% if has_events %}
+            <a href="?content_type=events&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show events') }}" class="btn {{ 'btn-primary' if content_type == 'events' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Events') }}
+            </a>
+            {% endif %}
+        </div>
+    {% endif -%}
     {% if post_layout != '' and post_layout is not none %}
         <div class="btn-group me-lg-1 layout_switcher">
-            <a href="?layout=list&sort={{ sort }}&content_type={{ content_type }}&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            <a href="?layout=list&sort={{ sort }}&content_type={{ content_type }}&flair={{ flair }}&microblog_mode={{ microblog_mode }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                 {{ _('List') }}
             </a>
-            <a href="?layout=masonry&sort={{ sort }}&content_type=posts&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            <a href="?layout=masonry&sort={{ sort }}&content_type=posts&flair={{ flair }}&microblog_mode={{ microblog_mode }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                 {{ _('Tile') }}
             </a>
-            <a href="?layout=masonry_wide&sort={{ sort }}&content_type=posts&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            <a href="?layout=masonry_wide&sort={{ sort }}&content_type=posts&flair={{ flair }}&microblog_mode={{ microblog_mode }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                 {{ _('Wide tile') }}
             </a>
         </div>

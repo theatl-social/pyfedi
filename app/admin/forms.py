@@ -10,6 +10,7 @@ from flask_babel import _, lazy_gettext as _l
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_NONE
 from app.models import Community, User, CmsPage
+from app.utils import get_setting
 
 
 class SiteProfileForm(FlaskForm):
@@ -174,6 +175,7 @@ class EditCommunityForm(FlaskForm):
                ('masonry_wide', _l('Wide masonry'))]
     default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()], render_kw={'class': 'form-select'})
     posting_warning = StringField(_l('Posting warning'), validators=[Optional(), Length(min=3, max=512)])
+    posting_warning_override = StringField(_l('Posting warning override'), validators=[Optional(), Length(min=0, max=512)])
     languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     ignore_remote_language = BooleanField(_l('Override remote language setting'))
     ignore_remote_gen_ai = BooleanField(_l('Override remote AI content setting'))
@@ -215,6 +217,13 @@ class EditInstanceForm(FlaskForm):
     admin_note = TextAreaField(_l('Notes about this instance (only visible to other admins)'))
     inbox = StringField(_l('Inbox'))
     submit = SubmitField(_l('Save'))
+
+
+class ContactInstanceForm(FlaskForm):
+    admin = SelectField(_l('Admin'), coerce=int, validators=[DataRequired()], render_kw={'class': 'form-select'})
+    message = TextAreaField(_l('Message'), validators=[DataRequired(), Length(min=1, max=5000)],
+                            render_kw={'placeholder': _l('Type a message here...'), 'rows': 3, 'autofocus': 'true'})
+    submit = SubmitField(_l('Send'))
 
 
 class CreateOfflineInstanceForm(FlaskForm):
@@ -357,10 +366,10 @@ class MoveCommunityForm(FlaskForm):
 
 
 class CmsPageForm(FlaskForm):
-    url = StringField(_l('URL path'), validators=[DataRequired(), Length(max=100)], 
+    url = StringField(_l('URL path'), validators=[DataRequired(), Length(max=100)],
                       render_kw={'placeholder': _l('e.g., /about-us')})
     title = StringField(_l('Page title'), validators=[DataRequired(), Length(max=255)])
-    body = TextAreaField(_l('Content (Markdown)'), validators=[DataRequired()], 
+    body = TextAreaField(_l('Content (Markdown)'), validators=[DataRequired()],
                         render_kw={'rows': 15, 'placeholder': _l('Write your content in Markdown format...')})
     submit = SubmitField(_l('Save'))
 
@@ -371,7 +380,7 @@ class CmsPageForm(FlaskForm):
     def validate_url(self, url):
         if not url.data.startswith('/'):
             url.data = '/' + url.data
-        
+
         # Check if another page already uses this URL (excluding the current page if editing)
         existing_page = CmsPage.query.filter_by(url=url.data).first()
         if existing_page and (not self.original_page or existing_page.id != self.original_page.id):
@@ -385,6 +394,11 @@ class EmojiForm(FlaskForm):
                       render_kw={'placeholder': _l('e.g. https://...')})
     aliases = StringField(_l('Keywords'), validators=[Optional(), Length(max=100)])
     category = StringField(_l('Category'), validators=[DataRequired(), Length(max=20)])
+    submit = SubmitField(_l('Save'))
+
+
+class EmojiFilterForm(FlaskForm):
+    filter = TextAreaField(_l('Filter'), validators=[Length(max=1000)])
     submit = SubmitField(_l('Save'))
 
 

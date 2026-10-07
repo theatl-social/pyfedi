@@ -4,17 +4,7 @@ from datetime import timezone
 from random import randint
 from typing import List
 
-from feedgen.feed import FeedGenerator
-from flask import (
-    g,
-    current_app,
-    request,
-    redirect,
-    url_for,
-    flash,
-    abort,
-    make_response,
-)
+from flask import g, current_app, request, redirect, url_for, flash, abort, make_response
 from markupsafe import Markup
 from flask_babel import _
 from flask_login import current_user
@@ -40,6 +30,7 @@ from app.constants import (
     SUBSCRIPTION_NONMEMBER,
     SRC_WEB,
 )
+from app.rss_extras import RSSFeed
 from app.feed import bp
 from app.feed.forms import AddCopyFeedForm, EditFeedForm, SearchRemoteFeed
 from app.feed.util import (
@@ -564,6 +555,7 @@ def feed_list():
 
 # @bp.route('/f/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
 @login_required_if_private_instance
+
 def show_feed(feed):
     block_honey_pot()
     # if the feed is private abort, unless the logged in user is the owner of the feed
@@ -1064,45 +1056,18 @@ def show_feed_rss(feed_path):
         post_ids = paginate_post_ids(post_ids, 0, page_length=100)
         posts = post_ids_to_models(post_ids, "new")
 
-        fg = FeedGenerator()
-        fg.id(f"{current_app.config['SERVER_URL']}/f/{last_feed_machine_name}")
-        fg.title(f"{feed.title} on {g.site.name}")
-        fg.link(
-            href=f"{current_app.config['SERVER_URL']}/f/{last_feed_machine_name}",
-            rel="alternate",
-        )
-        fg.logo(
-            f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png"
-        )
-        fg.subtitle(" ")
-        fg.link(
-            href=f"{current_app.config['SERVER_URL']}/f/{last_feed_machine_name}.rss",
-            rel="self",
-        )
-        fg.language("en")
+        server_url = current_app.config['SERVER_URL']
+        rss_feed = RSSFeed(title=f'{feed.title} on {g.site.name}',
+                           link=f"{server_url}/f/{last_feed_machine_name}",
+                           description=' ',
+                           logo=f"{server_url}/static/images/apple-touch-icon.png",
+                           self_link=f"{server_url}/f/{last_feed_machine_name}.rss",
+                           language='en')
 
-        for post in posts:
-            fe = fg.add_entry()
-            fe.title(post.title)
-            if post.slug:
-                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
-            else:
-                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
-            if post.url:
-                type = mimetype_from_url(post.url)
-                if type and not type.startswith("text/"):
-                    fe.enclosure(post.url, type=type)
-            fe.description(post.body_html)
-            fe.guid(post.profile_id(), permalink=True)
-            fe.author(name=post.author.user_name)
-            fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
-
-        response = make_response(fg.rss_str())
-        response.headers.set("Content-Type", "application/rss+xml")
-        response.headers.add_header("ETag", f"{feed.id}_{hash(g.site.last_active)}")
-        response.headers.add_header(
-            "Cache-Control", "no-cache, max-age=600, must-revalidate"
-        )
+        response = make_response(rss_feed.create_feed(posts, server_url))
+        response.headers.set('Content-Type', 'application/rss+xml')
+        response.headers.add_header('ETag', f"{feed.id}_{hash(g.site.last_active)}")
+        response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
         return response
     else:
         abort(404)

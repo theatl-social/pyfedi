@@ -11,7 +11,7 @@ Note: This guide uses `docker compose`. Depending on your docker setup, you may 
 ```bash
 git clone https://codeberg.org/rimu/pyfedi.git
 cd pyfedi/
-git checkout v1.5.x
+git checkout v1.7.x
 ```
 
 Change the 'git checkout' line to be the latest release. Check the branch name to find what to use after 'checkout' by
@@ -64,7 +64,7 @@ sudo docker compose up --build
 - Test external access from browser (On port 8030). Watch for movement in terminal window. Browser will show "Internal Server Error" message. Proceed to initialize database to address this error message.
 
 #### INITIALIZE DATABASE
-- Open a new terminal window
+- Open a new terminal window (and keep the other running)
 ```bash
 sudo docker exec -it piefed_app1 sh
 ```

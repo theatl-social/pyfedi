@@ -113,6 +113,9 @@ def create_all_for_tests(db):
     Requires an active application context.
     """
     if db.engine.dialect.name == "sqlite":
+        from sqlalchemy.orm import configure_mappers
+
+        configure_mappers()  # searchable installs table listeners when mappers configure
         _install_sqlite_compat()
         # sqlalchemy_searchable's before_create hook emits PostgreSQL DDL that
         # SQLite rejects, which aborts create_all() before most tables exist.

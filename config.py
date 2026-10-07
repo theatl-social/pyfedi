@@ -157,9 +157,10 @@ class Config(object):
     DISCORD_OAUTH_SECRET = os.environ.get("DISCORD_OAUTH_SECRET") or ""
 
     # enable the aplha api
-    ENABLE_ALPHA_API = os.environ.get("ENABLE_ALPHA_API") or False
-    SKIP_RATE_LIMIT_IPS = os.environ.get("SKIP_RATE_LIMIT_IPS") or ["127.0.0.1"]
-    SERVE_API_DOCS = os.environ.get("SERVE_API_DOCS") or False
+    ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
+    SKIP_RATE_LIMIT_IPS = os.environ.get('SKIP_RATE_LIMIT_IPS') or ['127.0.0.1']
+    SERVE_API_DOCS = os.environ.get('SERVE_API_DOCS') or False
+    RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'True') in ('True', 'true', '1')
 
     IMAGE_HASHING_ENDPOINT = os.environ.get("IMAGE_HASHING_ENDPOINT") or ""
 
@@ -242,9 +243,8 @@ class Config(object):
     )  # -1 = forever, no deletion
 
     # How long to keep bot content (that isn't stickied and has no replies), in months
-    BOT_CONTENT_RETENTION = int(
-        os.environ.get("BOT_CONTENT_RETENTION") or 6
-    )  # -1 = forever, no deletion
+    BOT_CONTENT_RETENTION = int(os.environ.get('BOT_CONTENT_RETENTION') or 6)  # -1 = forever, no deletion
+    MICROBLOG_CONTENT_RETENTION = int(os.environ.get('MICROBLOG_CONTENT_RETENTION') or -1)  # -1 = forever, no deletion
 
     CONTENT_WARNING = int(os.environ.get("CONTENT_WARNING") or 0)
 
