@@ -475,6 +475,15 @@ h1 {
   }
 }
 
+.fe-reposter-account {
+  position: relative;
+  top: 1px;
+  &:before {
+    content: "\e94d";
+    opacity: var(--opacity-05);
+  }
+}
+
 .fe-translate {
   &:before {
     content: "\e972";

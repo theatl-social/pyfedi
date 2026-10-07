@@ -122,9 +122,9 @@ else
     if [ "${FLASK_DEBUG:-}" = "1" ] && [ "${FLASK_ENV:-}" = "development" ]; then
         export FLASK_RUN_EXTRA_FILES=$(find app/templates app/static -type f | tr '\n' ':')
         echo "Starting flask development server as user 'python'..."
-        exec gosu python uv run flask run -h 0.0.0.0 -p 5000
+        exec gosu python uv run --no-sync flask run -h 0.0.0.0 -p 5000
     else
         echo "Starting Gunicorn as user 'python'..."
-        exec gosu python uv run gunicorn --config gunicorn.conf.py --preload pyfedi:app
+        exec gosu python uv run --no-sync gunicorn --config gunicorn.conf.py --preload pyfedi:app
     fi
 fi

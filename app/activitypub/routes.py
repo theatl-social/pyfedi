@@ -656,45 +656,42 @@ def community_profile(actor):
         if is_activitypub_request():
             if community.local_only or community.private:
                 abort(403)
-            server = current_app.config["SERVER_NAME"]
-            actor_data = {
-                "@context": default_context(),
-                "type": "Group",
-                "id": f"https://{server}/c/{actor}",
-                "name": community.title,
-                "postingWarning": community.posting_warning,
-                "sensitive": True if community.nsfw or community.nsfl else False,
-                "preferredUsername": actor,
-                "inbox": f"https://{server}/c/{actor}/inbox",
-                "outbox": f"https://{server}/c/{actor}/outbox",
-                "followers": f"https://{server}/c/{actor}/followers",
-                "moderators": f"https://{server}/c/{actor}/moderators",
-                "featured": f"https://{server}/c/{actor}/featured",
-                "attributedTo": f"https://{server}/c/{actor}/moderators",
-                "postingRestrictedToMods": community.restricted_to_mods
-                or community.local_only,
-                "questionAnswer": community.question_answer,
-                "defaultPostType": community.default_post_type,
-                "newModsWanted": community.new_mods_wanted,
-                "privateMods": community.private_mods,
-                "genAI": community.ai_generated,
-                "url": f"https://{server}/c/{actor}",
-                "publicKey": {
-                    "id": f"https://{server}/c/{actor}#main-key",
-                    "owner": f"https://{server}/c/{actor}",
-                    "publicKeyPem": community.public_key,
-                },
-                "endpoints": {
-                    "sharedInbox": f"{current_app.config['SERVER_URL']}/inbox"
-                },
-                "published": ap_datetime(community.created_at),
-                "updated": ap_datetime(community.last_active),
-                "lemmy:tagsForPosts": community.flair_for_ap(version=1),
-                "tag": community.flair_for_ap(version=2),
-                "postUrlType": community.post_url_type
-                if community.post_url_type
-                else "friendly",
-            }
+            server = current_app.config['SERVER_NAME']
+            actor_data = {"@context": default_context(),
+                          "type": "Group",
+                          "id": f"https://{server}/c/{actor}",
+                          "name": community.title,
+                          "postingWarning": community.posting_warning,
+                          "sensitive": True if community.nsfw or community.nsfl else False,
+                          "preferredUsername": actor,
+                          "inbox": f"https://{server}/c/{actor}/inbox",
+                          "outbox": f"https://{server}/c/{actor}/outbox",
+                          "followers": f"https://{server}/c/{actor}/followers",
+                          "moderators": f"https://{server}/c/{actor}/moderators",
+                          "featured": f"https://{server}/c/{actor}/featured",
+                          "attributedTo": f"https://{server}/c/{actor}/moderators",
+                          "postingRestrictedToMods": community.restricted_to_mods or community.local_only,
+                          "questionAnswer": community.question_answer,
+                          "defaultPostType": community.default_post_type,
+                          "newModsWanted": community.new_mods_wanted,
+                          "privateMods": community.private_mods,
+                          "genAI": community.ai_generated,
+                          "url": f"https://{server}/c/{actor}",
+                          "publicKey": {
+                              "id": f"https://{server}/c/{actor}#main-key",
+                              "owner": f"https://{server}/c/{actor}",
+                              "publicKeyPem": community.public_key
+                          },
+                          "endpoints": {
+                              "sharedInbox": f"{current_app.config['SERVER_URL']}/inbox"
+                          },
+                          "published": ap_datetime(community.created_at),
+                          "updated": ap_datetime(community.last_active),
+                          "lemmy:tagsForPosts": community.flair_for_ap(version=1),
+                          "tag": community.flair_for_ap(version=2),
+                          "postUrlType": community.post_url_type if community.post_url_type else "friendly",
+                          "defaultHashtag": community.default_hashtag
+                          }
             if community.description_html:
                 actor_data["summary"] = community.description_html
                 actor_data["source"] = {
@@ -3429,19 +3426,12 @@ def announce_activity_to_followers(
 @bp.route("/c/<actor>/outbox", methods=["GET"])
 def community_outbox(actor):
     actor = actor.strip()
-    community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
+    community: Community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        sticky_posts = (
-            Post.query.filter(Post.community_id == community.id)
-            .filter(
-                Post.sticky == True,
-                Post.deleted == False,
-                Post.status > POST_STATUS_REVIEWING,
-            )
-            .order_by(desc(Post.posted_at))
-            .limit(50)
-            .all()
-        )
+        if community.local_only or community.private:
+            abort(403)
+        sticky_posts = Post.query.filter(Post.community_id == community.id).filter(Post.sticky == True, Post.deleted == False,
+                                         Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(50).all()
         remaining_limit = 50 - len(sticky_posts)
         remaining_posts = (
             Post.query.filter(Post.community_id == community.id)
@@ -3480,9 +3470,9 @@ def community_featured(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        posts = Post.query.filter_by(
-            community_id=community.id, sticky=True, deleted=False
-        ).all()
+        if community.local_only or community.private:
+            abort(403)
+        posts = Post.query.filter_by(community_id=community.id, sticky=True, deleted=False).all()
 
         community_data = {
             "@context": default_context(),
@@ -3639,6 +3629,9 @@ def post_ap(post_id):
                 abort(403)
             if post.author.has_blocked_instance(find_instance_id(requestor_domain())):
                 return make_response(f"Author has blocked {requestor_domain()}"), 401
+            if post.community.local_only or post.community.private:
+                abort(403)
+
             if request.method == "GET":
                 post_data = post_to_page(post)
                 post_data["@context"] = default_context()
@@ -3716,12 +3709,10 @@ def post_ap_context(post_id):
         post = Post.query.get_or_404(post_id)
         if post.deleted:
             abort(404)
-        if request.method == "GET":
-            replies = (
-                PostReply.query.filter_by(post_id=post_id, deleted=False)
-                .order_by(PostReply.posted_at)
-                .limit(2000)
-            )
+        if post.community.local_only or post.community.private:
+            abort(403)
+        if request.method == 'GET':
+            replies = PostReply.query.filter_by(post_id=post_id, deleted=False).order_by(PostReply.posted_at).limit(2000)
             urls = [reply.ap_id for reply in replies]
             urls = [post.ap_id] + urls
             replies_collection = {

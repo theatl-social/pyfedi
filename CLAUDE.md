@@ -229,6 +229,49 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-10-07 -- upstream PieFed v1.8.0 with owner policy preserved**
+- Branch: `20261007/merge-upstream-v180`; upstream release commit
+  `e85fb8f45175aa5e175baec76be0537b9f47be44`. Checked both release branches:
+  `v1.8.x` has follow-up fixes but no newer version bump; `main` is `1.9.0-dev`.
+  Fork version: `1.8.0-peachpie-20261007` (package `1.8.0+peachpie.20261007`).
+- Retained galleries, JPEG XL/native Pillow AVIF, richer RSS, default hashtags,
+  posting-warning overrides, microblog following view, instance contact,
+  configurable worker concurrency, plain vote totals with separate hot-ranking
+  boosts, and upstream fixes to reports, uploads, and federation visibility.
+- **Owner-directed removals include optional filters and investigation tools:**
+  reposter inference/flags/filter controls and challenges; instance liability
+  classification/filter; vote clustering/targeting/serial-downvoter dashboards;
+  account posting/commenting timing and same-name suspicion lists; score/age
+  based "trash"/"spammy" review lists; new-account posting probation; external
+  image-content classifiers. Existing AI/C2PA/OCR/em-dash/anoobis/reputation
+  removals stay removed. Manual labels, explicit bans and ordinary moderation
+  remain. Compatible schema columns and historical data remain inert.
+  `tests/test_opinionated_features_removed.py` guards executable code, UI and
+  route removal, including optional controls.
+- Fixed incoming defects rather than importing them: galleries honor outer
+  CSRF/field validation, reject local attachment paths, preserve originals on
+  invalid replacement, process edits with unchanged URLs, purge unreferenced
+  media, and retain order/alt text across federated updates. RSS service accounts
+  require a provisioning marker and configured feed and respect posting/community
+  bans; a squatted `feed_bot` cannot receive service credentials. Public recent
+  tags exclude private/unpublished content; invalid XML categories do not break
+  RSS. Security regressions live in `tests/security/test_upstream_v180_safety.py`
+  and SP-031 through SP-035 below.
+- Migration head `20261007_owned_file_original`: one connected head, 300 revisions. Upgrade
+  from `merge_20260909_v1715` applies five additive/backfill upstream revisions
+  and the no-op merge, followed by one additive `file.original_path` revision
+  for owned-upload cleanup (remote URLs are never backfilled as owned). Applied migrations, including `544946659eb7`, are unchanged.
+- Verification: full suite **1099 passed, 96 skipped**, with multiprocessing
+  explicitly set to `fork` (Linux behavior). The ordinary macOS `spawn` run has
+  the same pre-existing nested-worker PicklingError seen before this merge.
+  Ruff passes; djlint checks 307 application templates with zero errors; all 329
+  runtime HTML templates compile. Route surface is 622 -> 623: only the two
+  challenge endpoints are removed, and three neutral upstream endpoints added.
+  Private admin paths, security patches, slug format, vote lock TTLs, privacy URL,
+  branding and shared modlist ownership pass their regression checks. Local
+  SQLite checks do not prove PostgreSQL/Docker runtime behavior; CI is the gate
+  before merging and publishing the release image.
+
 - **2026-09-12 -- upstream's surface-signal content heuristics removed**
 - Branch: `20260912/remove-content-heuristics`. Follow-up to the AI-detection
   removal below, by owner decision: find every heuristic "like the em-dash one"

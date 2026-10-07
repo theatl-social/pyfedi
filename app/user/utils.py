@@ -3,7 +3,7 @@ import time
 
 from flask import current_app
 from flask_login import current_user
-from sqlalchemy import text, desc, or_
+from sqlalchemy import text, desc, or_, func
 
 from app import celery, db
 from app.activitypub.signature import signed_get_request, send_post_request
@@ -99,7 +99,7 @@ def search_for_user(address: str, allow_fetch: bool = True):
         already_exists = db.session.query(User).filter_by(ap_id=address).first()
     else:
         already_exists = db.session.query(User).filter_by(user_name=name, ap_id=None).first()
-    
+
     if already_exists:
         return already_exists
     elif not allow_fetch:
@@ -169,7 +169,7 @@ class SimplePagination:
         self.next_num = page + 1 if has_next else None
         self.prev_num = page - 1 if has_prev else None
         self.total = len(items)
-    
+
     def __iter__(self):
         return iter(self.items)
 
@@ -190,22 +190,22 @@ def _get_user_posts(user, post_page):
         # Everyone else sees only public, non-deleted posts
         query = base_query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.private == False).order_by(
             desc(Post.posted_at))
-    
+
     # Get all post IDs (capped at 1000)
     all_post_ids = query.with_entities(Post.id).limit(1000).all()
     all_post_ids = [pid[0] for pid in all_post_ids]
-    
+
     # Paginate IDs (paginate_post_ids uses 0-indexed pages)
     paginated_ids = paginate_post_ids(all_post_ids, post_page - 1, page_length=20)
-    
+
     # Get full post models
     posts_query = post_ids_to_models(paginated_ids, 'new')
     posts_list = posts_query.all()
-    
+
     # Create pagination info - has_next means there are more results after this page
     has_next = len(all_post_ids) > post_page * 20
     has_prev = post_page > 1
-    
+
     return SimplePagination(posts_list, post_page, 20, has_next, has_prev)
 
 
@@ -224,21 +224,21 @@ def _get_user_post_replies(user, replies_page):
         # Everyone else sees only non-deleted replies
         query = base_query.filter(PostReply.deleted == False, PostReply.private == False).order_by(
             desc(PostReply.posted_at))
-    
+
     # Get all reply IDs (capped at 1000)
     all_reply_ids = query.with_entities(PostReply.id).limit(1000).all()
     all_reply_ids = [rid[0] for rid in all_reply_ids]
-    
+
     # Paginate IDs (paginate_post_ids uses 0-indexed pages)
     paginated_ids = paginate_post_ids(all_reply_ids, replies_page - 1, page_length=20)
-    
+
     # Get full reply models
     replies_list = PostReply.query.filter(PostReply.id.in_(paginated_ids)).order_by(desc(PostReply.posted_at)).all()
-    
+
     # Create pagination info
     has_next = len(all_reply_ids) > replies_page * 20
     has_prev = replies_page > 1
-    
+
     return SimplePagination(replies_list, replies_page, 20, has_next, has_prev)
 
 
@@ -316,6 +316,8 @@ def _get_user_same_ip(user):
         return []
 
     return User.query.filter_by(ip_address=user.ip_address).filter(User.ap_id == None, User.id != user.id).all()
+
+
 
 
 def _get_user_upvoted_posts(user):

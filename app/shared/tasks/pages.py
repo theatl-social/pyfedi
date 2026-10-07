@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
 from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, POST_TYPE_VIDEO, \
-    POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION, POST_TYPE_EVENT
+    POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION, POST_TYPE_EVENT, POST_TYPE_GALLERY
 from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow, Event, \
     Community
 from app.user.utils import search_for_user
@@ -179,6 +179,10 @@ def send_post(post_id, edit=False, session=None):
         attachment.append({'href': post.url, 'type': 'Link'})
     elif post.type == POST_TYPE_IMAGE:
         attachment.append({'type': 'Image', 'url': post.image.source_url, 'name': post.image.alt_text})
+    elif post.type == POST_TYPE_GALLERY:
+        for file in post.gallery:
+            attachment.append({'type': 'Document', 'url': file.source_url, 'name': file.alt_text,
+                               'width': file.width, 'height': file.height})
 
     page = {
       'id': post.public_url(),
@@ -288,7 +292,7 @@ def send_post(post_id, edit=False, session=None):
               'cc': cc,
               '@context': default_context()
             }
-            for instance in set(community.following_instances() + user.following_instances(software='piefed')):
+            for instance in set(community.following_instances() + user.following_instances(software=['piefed', 'mbin', 'pylova'])):
                 if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     if instance.software in MICROBLOG_APPS:
                         if activity == 'create':

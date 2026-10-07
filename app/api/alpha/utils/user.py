@@ -359,7 +359,7 @@ def put_user_save_user_settings(auth, data):
     else:
         avatar = None
         remove_avatar = False
-    
+
     if "cover" in data:
         if not data["cover"]:
             # null value passed, remove avatar image
@@ -387,7 +387,7 @@ def put_user_save_user_settings(auth, data):
                 user.hide_nsfw = 0
         elif show_nsfw == False:
             user.hide_nsfw = 1
-    
+
     if nsfl_visibility:
         if nsfl_visibility == "Show":
             user.hide_nsfl = 0
@@ -421,7 +421,7 @@ def put_user_save_user_settings(auth, data):
     if user_in_restricted_country(user):
         user.hide_nsfw = 1  # Hide nsfw
         user.hide_nsfl = 1
-    
+
     if bot_visibility:
         if bot_visibility == "Show":
             user.ignore_bots = 0
@@ -431,6 +431,7 @@ def put_user_save_user_settings(auth, data):
             user.ignore_bots = 2
         elif bot_visibility == "Transparent":
             user.ignore_bots = 3
+
 
     if show_read_posts == True:
         user.hide_read_posts = False
@@ -486,7 +487,7 @@ def put_user_save_user_settings(auth, data):
         user.default_sort = default_sort.lower()
     if default_comment_sort is not None:
         user.default_comment_sort = default_comment_sort.lower()
-    
+
     if extra_fields:
         current_num_fields = user.extra_fields.count()
         new_extra_fields = []
@@ -502,11 +503,11 @@ def put_user_save_user_settings(auth, data):
                 # Editing or deleting existing field
                 if field['id'] not in user_field_ids:
                     raise Exception(f"Permission denied. Extra field {field['id']} belongs to different user")
-                
+
                 user_field = UserExtraField.query.get(field['id'])
                 label = field['label'] if 'label' in field else None
                 text = field['text'] if 'text' in field else None
-                
+
                 if not label or not text:
                     # Mark field for deletion
                     fields_to_remove.append(user_field)
@@ -515,7 +516,7 @@ def put_user_save_user_settings(auth, data):
                     # Edit existing field
                     user_field.label = label
                     user_field.text = text
-            
+
             elif 'label' in field and 'text' in field:
                 # Create new field
                 label = field['label']
@@ -524,7 +525,7 @@ def put_user_save_user_settings(auth, data):
                 if label and text:
                     new_extra_fields.append(UserExtraField(label=label.strip(), text=text.strip()))
                     current_num_fields += 1
-            
+
         if current_num_fields <= 4:
             # Remove fields
             for field in fields_to_remove:
@@ -534,23 +535,23 @@ def put_user_save_user_settings(auth, data):
                 user.extra_fields.append(field)
         elif current_num_fields > 4:
             raise Exception("Cannot have more than four extra fields")
-    
+
     if reply_collapse_threshold:
         user.reply_collapse_threshold = reply_collapse_threshold
-    
+
     if reply_hide_threshold:
         user.reply_hide_threshold = reply_hide_threshold
-    
+
     if hide_low_quality == True:
         user.hide_low_quality = True
     elif hide_low_quality == False:
         user.hide_low_quality = False
-    
+
     if community_keyword_filter:
         user.community_keyword_filter = ", ".join(community_keyword_filter)
     elif community_keyword_filter is None:
         user.community_keyword_filter = ""
-    
+
     if accept_private_messages:
         if accept_private_messages == "None":
             user.accept_private_messages = 0
@@ -560,47 +561,47 @@ def put_user_save_user_settings(auth, data):
             user.accept_private_messages = 2
         elif accept_private_messages == "All":
             user.accept_private_messages = 3
-    
+
     if newsletter == True:
         user.newsletter = True
     elif newsletter == False:
         user.newsletter = False
-    
+
     if email_unread == True:
         user.email_unread = True
     elif email_unread == False:
         user.email_unread = False
-    
+
     if searchable == True:
         user.searchable = True
     elif searchable == False:
         user.searchable = False
-    
+
     if indexable == True:
         user.indexable = True
     elif indexable == False:
         user.indexable = False
-    
+
     if federate_votes == True:
         user.vote_privately = False
     elif federate_votes == False:
         user.vote_privately = True
-    
+
     if feed_auto_follow == True:
         user.feed_auto_follow = True
     elif feed_auto_follow == False:
         user.feed_auto_follow = False
-    
+
     if feed_auto_leave == True:
         user.feed_auto_leave = True
     elif feed_auto_leave == False:
         user.feed_auto_leave = False
-    
+
     if bot == True:
         user.bot = True
     elif bot == False:
         user.bot = False
-    
+
     if display_name == "[deleted]":
         raise Exception("this display name is reserved")
     elif display_name:
@@ -819,7 +820,7 @@ def _process_notification_item(item):
             notification_json['notif_body'] = comment.body if comment.body else ''
             notification_json['status'] = 'Read' if item.read else 'Unread'
             return notification_json
-    
+
     return False
 
 
@@ -837,7 +838,7 @@ def put_user_notification_state(auth, data):
     except AttributeError:
         # Problems looking something up in the db
         raise Exception("There was a problem processing that notification")
-    
+
     if not res:
         # Unsupported notification type
         raise Exception("This notification type is currently unsupported in the api")
@@ -952,7 +953,7 @@ def post_user_set_note(auth, data):
         existing_note = UserNote.query.filter(UserNote.target_id == target_user_id, UserNote.user_id == user.id).first()
         if existing_note:
             db.session.delete(existing_note)
-    
+
     db.session.commit()
 
     cache.delete_memoized(user_view)
@@ -1001,17 +1002,17 @@ def post_user_logout(auth):
     """Revoke the current JWT token by adding its jti to RevokedToken table."""
     if not auth:
         raise Exception('incorrect_login')
-    
+
     if not auth.startswith('Bearer '):
         raise Exception('incorrect_login')
-    
+
     token = auth[7:]  # remove 'Bearer '
-    
+
     try:
         decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     except Exception:
         raise Exception('incorrect_login')
-    
+
     jti = decoded.get('jti')
     if jti:
         # Check if already revoked
@@ -1019,7 +1020,7 @@ def post_user_logout(auth):
             revoked_token = RevokedToken(jti=jti)
             db.session.add(revoked_token)
             db.session.commit()
-    
+
     return {'success': True}
 
 

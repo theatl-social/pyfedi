@@ -160,6 +160,13 @@ def post_view(
                     v1["small_thumbnail_url"] = valid_url
                 if post.image.alt_text:
                     v1["alt_text"] = post.image.alt_text
+        if post.type == POST_TYPE_GALLERY:
+            if post.image_id:
+                if valid_url := post.image.view_url():
+                    v1['thumbnail_url'] = valid_url
+                if valid_url := post.image.thumbnail_url():
+                    v1['small_thumbnail_url'] = valid_url
+            v1['url'] = post.url if post.url else current_app.config['SERVER_URL'] + post.slug
         if post.cross_posts:
             v1["cross_posts"] = []
             cross_post_data = db.session.execute(
@@ -457,6 +464,13 @@ def post_view(
 
                     v2["post"]["poll"] = poll_data
 
+            # Gallery data
+            if post.type == POST_TYPE_GALLERY:
+                gallery_data = []
+                for gallery_image in post.gallery:
+                    gallery_data.append(gallery_image.source_url)
+                v2['post']['gallery'] = gallery_data
+
         return v2
 
     # Variant 3 - models/post/get_post_response.dart - /post api endpoint
@@ -547,6 +561,8 @@ def user_view(
 ) -> dict:
     if isinstance(user, int):
         user = User.query.get(user)
+        if user is None:
+            raise Exception('user not found')
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
@@ -588,7 +604,8 @@ def user_view(
             try:
                 extra_fields = user.extra_fields
             except DetachedInstanceError:  # when loading archived posts and their replies, temporary detatched users are created. See convert_archived_replies_to_tree()
-                extra_fields = User.query.get(user.id).extra_fields
+                fetched_user = User.query.get(user.id)
+                extra_fields = fetched_user.extra_fields if fetched_user else []
             num_extra_fields = 0
             for field in extra_fields:
                 user_field = {}
@@ -715,6 +732,7 @@ def user_view(
                     else "Popular",
                     "show_scores": True,
                     "show_bot_accounts": not user.ignore_bots == 1,
+                    "show_reposter_accounts": True,
                     "show_read_posts": not user.hide_read_posts == True,
                     "reply_collapse_threshold": user.reply_collapse_threshold,
                     "reply_hide_threshold": user.reply_hide_threshold,
@@ -1360,64 +1378,42 @@ def reply_report_view(report, reply_id, user_id, variant=1) -> dict:
         return report_json
 
 
-def post_report_view(report, post_id, user_id) -> dict:
+def post_report_view(report, post_id, user_id, variant=1) -> dict:
     # views/post_report_view.dart - /post/report api endpoint
     post_json = post_view(post=post_id, variant=2, user_id=user_id)
-    community_json = community_view(
-        community=post_json["post"]["community_id"], variant=1, stub=True
-    )
 
-    banned = db.session.execute(
-        text(
-            'SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'
-        ),
-        {"user_id": report.reporter_id, "community_id": community_json["id"]},
-    ).scalar()
-    moderator = db.session.execute(
-        text(
-            'SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'
-        ),
-        {"user_id": report.reporter_id, "community_id": community_json["id"]},
-    ).scalar()
-    admin = db.session.execute(
-        text(
-            'SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'
-        ),
-        {"user_id": report.reporter_id},
-    ).scalar()
-
-    creator_banned_from_community = True if banned else False
-    creator_is_moderator = True if moderator else False
-    creator_is_admin = True if admin else False
-
-    v1 = {
-        "post_report_view": {
-            "post_report": {
-                "id": report.id,
-                "creator_id": report.reporter_id,
-                "post_id": report.suspect_post_id,
-                "original_post_name": post_json["post"]["title"],
-                "original_post_body": "",
-                "reason": report.reasons,
-                "resolved": report.status == 3,
-                "published": report.created_at.isoformat(timespec="microseconds") + "Z",
-            },
-            "post": post_json["post"],
-            "community": community_json,
-            "creator": user_view(user=user_id, variant=1, stub=True, user_id=user_id),
-            "post_creator": user_view(
-                user=report.suspect_user_id, variant=1, stub=True, user_id=user_id
-            ),
-            "counts": post_json["counts"],
-            "creator_banned_from_community": creator_banned_from_community,
-            "creator_is_moderator": creator_is_moderator,
-            "creator_is_admin": creator_is_admin,
-            "creator_blocked": False,
-            "subscribed": post_json["subscribed"],
-            "saved": post_json["saved"],
+    post_report_dict =  {
+        "id": report.id,
+        "creator_id": report.reporter_id,
+        "post_id": report.suspect_post_id,
+        "original_post_name": post_json["post"]["title"],
+        "original_post_body": "",
+        "reason": report.reasons,
+        "resolved": report.status == 3,
+        "published": report.created_at.isoformat(timespec="microseconds") + "Z",
         }
-    }
-    return v1
+
+    if report.description:
+        post_report_dict["description"] = report.description
+
+    report_json = post_json
+
+    # Rename and add some report-specific fields
+    report_json["post_creator"] = report_json.pop("creator")
+    report_json["creator"] = user_view(user=report.reporter_id, variant=1, stub=True, user_id=user_id)
+    report_json["post_report"] = post_report_dict
+
+    # Not sure why this is hardcoded, but I didn't want to change it
+    report_json["creator_blocked"] = False
+
+    if variant == 1:
+        v1 = {'post_report_view': report_json}
+        return v1
+
+    if variant == 2:
+        # GET /post/report/list - just return the bare json to be appended onto a list by another function
+        return report_json
+
 
 
 def search_view(type) -> dict:

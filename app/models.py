@@ -20,6 +20,7 @@ from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
 from flask_sqlalchemy.query import Query
 from furl import furl
+from redis.exceptions import LockNotOwnedError
 from slugify import slugify
 from sqlalchemy import or_, text, desc, Index, func
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
@@ -35,7 +36,8 @@ from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
     ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
-    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO, INVITE_MEMBERS_ONLY, INVITE_MODS_ONLY, INVITE_OWNER_ONLY
+    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO, INVITE_MEMBERS_ONLY, INVITE_MODS_ONLY, INVITE_OWNER_ONLY, POST_TYPE_GALLERY, \
+    POST_TYPE_IMAGE
 
 
 def utcnow(naive=True):
@@ -100,7 +102,10 @@ class Instance(db.Model):
     gone_forever = db.Column(db.Boolean, default=False)  # True once this instance is considered offline forever - never start trying again (12 days offline)
     ip_address = db.Column(db.String(50))
     trusted = db.Column(db.Boolean, default=False, index=True)
+    defederated = db.Column(db.Boolean, default=False, index=True)
+    defederated_reason = db.Column(db.String(150), default='')
     silenced = db.Column(db.Boolean, default=False, index=True)
+    liability = db.Column(db.Boolean, default=False, index=True)
     posting_warning = db.Column(db.String(512))
     nodeinfo_href = db.Column(db.String(100))
     admin_note = db.Column(db.Text)
@@ -149,11 +154,17 @@ class Instance(db.Model):
         elif self.failures > 2 and self.dormant == False:
             self.dormant = True
 
+    def can_gallery(self):
+        return self.software != 'lemmy'
+
     def can_poll(self):
         return self.software != 'lemmy'
 
     def can_event(self):
         return self.software != 'lemmy'
+
+    def can_contact(self):
+        return self.software == 'piefed' or self.software == 'pylova' or self.software == 'lemmy' and not (self.dormant or self.gone_forever)
 
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)
@@ -366,6 +377,7 @@ user_file = db.Table('user_file',
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_path = db.Column(db.String(255))
+    original_path = db.Column(db.String(255))  # Owned upload path; never populated from remote URLs.
     file_name = db.Column(db.String(255))
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
@@ -418,6 +430,18 @@ class File(db.Model):
         path = parsed_url.path.lower()
         return any(path.endswith(extension) for extension in common_image_extensions)
 
+    def has_references(self):
+        if db.session.query(post_file).filter(post_file.c.file_id == self.id).first():
+            return True
+        if db.session.query(user_file).filter(user_file.c.file_id == self.id).first():
+            return True
+        for mapper in db.Model.registry.mappers:
+            for column in mapper.columns:
+                if any(fk.target_fullname == 'file.id' for fk in column.foreign_keys):
+                    if db.session.query(mapper.class_).filter(getattr(mapper.class_, column.key) == self.id).first():
+                        return True
+        return False
+
     def delete_from_disk(self, purge_cdn=True):
         purge_from_cache = []
         s3_files_to_delete = []
@@ -433,6 +457,14 @@ class File(db.Model):
                     ...
                 purge_from_cache.append(self.file_path.replace('app/', f"{current_app.config['SERVER_URL']}/"))
 
+        if self.original_path and self.original_path not in {self.file_path, self.thumbnail_path}:
+            if self.original_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}/') and _store_files_in_s3():
+                s3_files_to_delete.append(self.original_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '', 1))
+                purge_from_cache.append(self.original_path)
+            elif os.path.isfile(self.original_path):
+                os.unlink(self.original_path)
+                purge_from_cache.append(self.original_path.replace('app/', f"{current_app.config['SERVER_URL']}/"))
+
         if self.thumbnail_path:
             if self.thumbnail_path.startswith(
                     f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
@@ -446,17 +478,8 @@ class File(db.Model):
                     ...
                 purge_from_cache.append(
                     self.thumbnail_path.replace('app/', f"{current_app.config['SERVER_URL']}/"))
-        if self.source_url:
-            if self.source_url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
-                s3_path = self.source_url.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
-                s3_files_to_delete.append(s3_path)
-                purge_from_cache.append(self.source_url)
-            elif self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
-                try:
-                    os.unlink(self.source_url.replace(f"{current_app.config['SERVER_URL']}/", 'app/'))
-                except FileNotFoundError:
-                    ...
-                purge_from_cache.append(self.source_url)
+        # source_url is supplied by remote actors and never proves file ownership.
+        # Delete only server-recorded storage paths, including for S3 objects.
 
         if len(s3_files_to_delete) > 0:
             from app.shared.tasks.maintenance import delete_from_s3
@@ -468,10 +491,12 @@ class File(db.Model):
         if purge_cdn and purge_from_cache:
             flush_cdn_cache(purge_from_cache)
 
-    def filesize(self):
+    def filesize(self, total=True):
         size = 0
         if self.file_path and os.path.exists(self.file_path):
             size += os.path.getsize(self.file_path)
+        if total is False:
+            return size
         if self.thumbnail_path and os.path.exists(self.thumbnail_path):
             size += os.path.getsize(self.thumbnail_path)
         return size
@@ -583,6 +608,7 @@ class Community(db.Model):
     default_layout = db.Column(db.String(15))
     default_post_type = db.Column(db.String(15))
     posting_warning = db.Column(db.String(512))
+    posting_warning_override = db.Column(db.String(512))
     downvote_accept_mode = db.Column(db.Integer, default=0)  # -1 = None, 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
@@ -590,6 +616,7 @@ class Community(db.Model):
     post_url_type = db.Column(db.String(15))
     question_answer = db.Column(db.Boolean, default=False)     # if this is a stackoverflow-style question and answer community
     first_federated_at = db.Column(db.DateTime, index=True, default=utcnow)
+    default_hashtag = db.Column(db.String(75), default='')
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
@@ -913,10 +940,13 @@ class Community(db.Model):
             db.session.delete(rss_feed)
             db.session.commit()
         for post in db.session.query(Post).filter_by(community_id=self.id):
-            with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
-                post.delete_dependencies()
-                db.session.delete(post)
-                db.session.commit()
+            try:
+                with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=30):
+                    post.delete_dependencies()
+                    db.session.delete(post)
+                    db.session.commit()
+            except LockNotOwnedError:
+                pass
         db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
@@ -1015,11 +1045,14 @@ class User(UserMixin, db.Model):
     indexable = db.Column(db.Boolean, default=True)         # whether posts appear in search results
     bot = db.Column(db.Boolean, default=False, index=True)
     bot_override = db.Column(db.Boolean, default=False, index=True)
+    reposter = db.Column(db.Boolean, default=False, index=True)
+    reposter_override = db.Column(db.Boolean, default=False, index=True)
     suppress_crossposts = db.Column(db.Boolean, default=False, index=True)
     vote_privately = db.Column(db.Boolean, default=False)
     can_send_pm = db.Column(db.Boolean, default=True)
     finished_onboarding = db.Column(db.Boolean, default=False)
     ignore_bots = db.Column(db.Integer, default=0)
+    ignore_reposters = db.Column(db.Integer, default=0)
     unread_notifications = db.Column(db.Integer, default=0)
     ip_address = db.Column(db.String(50))
     ip_address_country = db.Column(db.String(50))
@@ -1244,6 +1277,10 @@ class User(UserMixin, db.Model):
         else:
             return False
 
+    def is_rss_bot(self):
+        return (self.is_local() and self.bot and self.user_name == 'feed_bot'
+                and self.admin_note == 'Automatically created bot to author RSS feed posts')
+
     def trustworthy(self):
         if self.is_admin():
             return True
@@ -1452,21 +1489,21 @@ class User(UserMixin, db.Model):
         # Get cover and avatar file IDs before clearing references
         cover_file_id = self.cover_id
         avatar_file_id = self.avatar_id
-        
+
         # Clear references first
         self.cover_id = None
         self.avatar_id = None
         db.session.flush()
-        
+
         if self.waiting_for_approval():
             db.session.query(UserRegistration).filter(UserRegistration.user_id == self.id).delete()
-        
+
         # Handle user_file associations
         user_files = db.session.query(File).join(user_file).filter(user_file.c.user_id == self.id).all()
         for file in user_files:
             file.delete_from_disk(purge_cdn=False)
             db.session.execute(text('DELETE FROM "user_file" WHERE file_id = :file_id'), {'file_id': file.id})
-        
+
         # Now handle cover and avatar files - delete them one at a time
         # after checking they're no longer referenced
         for file_id in [cover_file_id, avatar_file_id]:
@@ -1475,7 +1512,7 @@ class User(UserMixin, db.Model):
             file = db.session.query(File).get(file_id)
             if file is None:
                 continue
-            
+
             # Check if any user still references this file
             if db.session.query(User).filter(
                 or_(User.cover_id == file_id, User.avatar_id == file_id)
@@ -1484,7 +1521,7 @@ class User(UserMixin, db.Model):
             # Check user_file table
             if db.session.query(user_file).filter(user_file.c.file_id == file_id).count() > 0:
                 continue
-            
+
             # Safe to delete
             file.delete_from_disk()
             db.session.delete(file)
@@ -1622,8 +1659,8 @@ class User(UserMixin, db.Model):
 
         return True
 
-    # instances that have users which follow this user. (excluding the current instance)
-    def following_instances(self, include_dormant=False, software='') -> List[Instance]:
+    # instances that have users which follow this user. (excluding the current instance). Optionally limit to instances of the specificed software type
+    def following_instances(self, include_dormant=False, software: List[str] | None = None) -> List[Instance]:
         instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).\
             join(UserFollower, UserFollower.remote_user_id == User.id).filter(UserFollower.local_user_id == self.id,
                                                                               UserFollower.is_inward == True)
@@ -1631,7 +1668,10 @@ class User(UserMixin, db.Model):
             instances = instances.filter(Instance.dormant == False)
         instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
         if software:
-            instances = instances.filter(Instance.software == software)
+            if len(software) == 1:
+                instances = instances.filter(Instance.software == software[0])
+            else:
+                instances = instances.filter(Instance.software.in_(software))
         return instances.distinct().all()
 
     def is_following(self, other_user) -> str:
@@ -1689,6 +1729,7 @@ class Post(db.Model):
     notify_author = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=True, index=True)
     from_bot = db.Column(db.Boolean, default=False, index=True)
+    from_reposter = db.Column(db.Boolean, default=False, index=True)
     private = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the content arrived here
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the original server created it
@@ -1730,7 +1771,7 @@ class Post(db.Model):
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
     event = db.relationship('Event', uselist=False, backref='post', lazy='select', cascade='all, delete-orphan')
     boosts = db.relationship('PostBoost', backref='post', lazy='dynamic', cascade='all, delete-orphan')
-    gallery = db.relationship('File', secondary=post_file, lazy='dynamic')
+    gallery = db.relationship('File', secondary=post_file, lazy='dynamic', order_by=post_file.c.weight)
     votes = db.relationship('PostVote', lazy='dynamic', backref='post', cascade='all, delete-orphan', passive_deletes=True)
     bookmarks = db.relationship('PostBookmark', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     poll = db.relationship('Poll', uselist=False, backref='post', lazy='select', cascade='all, delete-orphan')
@@ -1919,6 +1960,7 @@ class Post(db.Model):
                 isinstance(request_json['object']['attachment'], list) and
                 len(request_json['object']['attachment']) > 0 and
                 'type' in request_json['object']['attachment'][0]):
+            attached_images = []
             for attachment in request_json['object']['attachment']:
                 alt_text = None
                 if attachment['type'] == 'Link':
@@ -1929,11 +1971,9 @@ class Post(db.Model):
                     if post.url:
                         break
                 elif attachment['type'] == 'Document':
-                    post.url = attachment['url']  # Mastodon
                     if 'name' in attachment:
                         alt_text = attachment['name']
-                    if post.url:
-                        break
+                    attached_images.append(attachment)
                 elif attachment['type'] == 'Audio':  # WordPress podcast
                     post.url = attachment['url']
                     if 'name' in attachment:
@@ -1946,10 +1986,29 @@ class Post(db.Model):
                     if attachment['type'] == 'Image':
                         post.url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
                         alt_text = attachment.get("name")
-                        file_path = attachment.get("file_path")
+                        # Remote attachment metadata cannot name server filesystem paths.
+            if len(attached_images) > 1:
+                from app.shared.post import validate_remote_gallery_urls
+                validate_remote_gallery_urls([attachment.get("url") for attachment in attached_images])
+                post.url = None
+                post.type = POST_TYPE_GALLERY
+                for f in attached_images:
+                    file = File(alt_text=f.get('name'), source_url=f.get('url'))
+                    db.session.add(file)
+                    post.gallery.append(file)
+                if 'image' in request_json['object']:
+                    image = File(source_url=request_json['object']['image']['url'])
+                    db.session.add(image)
+                    post.image = image
+                else:
+                    from app.shared.post import build_gallery_thumbnail
+                    if thumbnail_id := build_gallery_thumbnail([f.get('url') for f in attached_images]):
+                        post.image = db.session.get(File, thumbnail_id)
+            elif len(attached_images) == 1:
+                post.type = POST_TYPE_IMAGE
+                post.url = attached_images[0]['url']
 
-        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'],
-                                                                 dict):  # a.gup.pe (Mastodon)
+        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
             alt_text = None
             post.url = request_json['object']['attachment']['url']
 
@@ -2103,6 +2162,12 @@ class Post(db.Model):
             except IntegrityError:
                 db.session.rollback()
                 return Post.query.filter_by(ap_id=request_json['object']['id']).one()
+
+            if post.type == POST_TYPE_GALLERY:
+                for weight, file in enumerate(post.gallery):
+                    db.session.execute(post_file.update().where(
+                        post_file.c.post_id == post.id, post_file.c.file_id == file.id).values(weight=weight))
+                db.session.commit()
 
             # Mentions also need a post_id
             if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
@@ -2272,6 +2337,15 @@ class Post(db.Model):
         db.session.execute(text('DELETE FROM "hidden_posts" WHERE hidden_post_id = :post_id'), {'post_id': self.id})
         db.session.execute(text('DELETE FROM "read_posts" WHERE read_post_id = :post_id'), {'post_id': self.id})
         db.session.execute(text('UPDATE "rss_feed_item" SET post_id = null WHERE post_id = :post_id'), {'post_id': self.id})
+
+        # Gallery associations do not cascade; preserve media still used elsewhere.
+        gallery_files = list(self.gallery)
+        self.gallery = []
+        db.session.flush()
+        for file in gallery_files:
+            if not file.has_references():
+                file.delete_from_disk(purge_cdn=False)
+                db.session.delete(file)
 
         # Handle file deletions from disk before cascade deletes the File records
         if self.image_id and self.image:
@@ -2554,16 +2628,32 @@ class Post(db.Model):
         seconds = self.epoch_seconds(post_date) - 1685766018
         return round(sign * order + seconds / 45000, 7)
 
+    # Make 'hot' sort more spicy by amplifying the effect of early votes.
+    def spicy_score(self) -> float:
+        total_votes = self.up_votes + self.down_votes
+        if total_votes == 0:
+            return self.score
+        config = current_app.config
+
+        up_bands = [(10, config['SPICY_UNDER_10']), (30, config['SPICY_UNDER_30']), (60, config['SPICY_UNDER_60'])]
+        down_bands = [(30, config['SPICY_UNDER_30']), (60, config['SPICY_UNDER_60'])]
+
+        def extra_per_vote(bands):
+            extra = 0.0
+            band_start = 0
+            for band_end, multiplier in bands:
+                votes_in_band = max(0, min(total_votes, band_end + 1) - band_start)
+                extra += votes_in_band * (multiplier - 1)
+                band_start = band_end + 1
+            return extra / total_votes
+
+        return self.score + self.up_votes * extra_per_vote(up_bands) - self.down_votes * extra_per_vote(down_bands)
+
     def vote(self, user: User, vote_direction: str, emoji: str | None):
         from app import redis_client
         if vote_direction == 'downvote':
             if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
                 return None
-        # NOTE: timeout=30 (not 10) is deliberate. This outer lock wraps a vote
-        # transaction that can nest a second lock (lock:vote:/lock:user:) and,
-        # under load, take longer than 10s end to end -- a shorter timeout lets
-        # the lock expire before release, causing redis LockNotOwnedError. Fixed
-        # in commit 2610bf33; an upstream merge previously reverted this to 10.
         with redis_client.lock(f"lock:post:{self.id}", timeout=30, blocking_timeout=6):
             existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
             if vote_direction == 'reversal':
@@ -2627,26 +2717,12 @@ class Post(db.Model):
             else:
                 if vote_direction == 'upvote':
                     effect = 1.0
-                    spicy_effect = effect
-                    # Make 'hot' sort more spicy by amplifying the effect of early upvotes
-                    if self.up_votes + self.down_votes <= 10:
-                        spicy_effect = effect * current_app.config['SPICY_UNDER_10']
-                    elif self.up_votes + self.down_votes <= 30:
-                        spicy_effect = effect * current_app.config['SPICY_UNDER_30']
-                    elif self.up_votes + self.down_votes <= 60:
-                        spicy_effect = effect * current_app.config['SPICY_UNDER_60']
                     self.up_votes += 1
-                    self.score += spicy_effect  # score + (+1) = score+1
+                    self.score += effect  # score + (+1) = score+1
                 else:
                     effect = -1.0
-                    spicy_effect = effect
                     self.down_votes += 1
-                    # Make 'hot' sort more spicy by amplifying the effect of early downvotes
-                    if self.up_votes + self.down_votes <= 30:
-                        spicy_effect *= current_app.config['SPICY_UNDER_30']
-                    elif self.up_votes + self.down_votes <= 60:
-                        spicy_effect *= current_app.config['SPICY_UNDER_60']
-                    self.score += spicy_effect  # score + (-1) = score-1
+                    self.score += effect  # score + (-1) = score-1
                 vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
                                 effect=effect, emoji=emoji)
                 # upvotes do not increase reputation in low quality communities
@@ -2670,7 +2746,7 @@ class Post(db.Model):
                 self.update_reaction_cache()
 
             # Calculate new ranking values
-            self.ranking = self.post_ranking(self.score + self.reply_count, self.created_at)
+            self.ranking = self.post_ranking(self.spicy_score() + self.reply_count, self.created_at)
             self.ranking_scaled = self.ranking + self.community.scale_by()
 
             db.session.commit()
@@ -2683,6 +2759,7 @@ class Post(db.Model):
                 cache.delete_memoized(recently_upvoted_posts, user.id)
                 cache.delete_memoized(recently_downvoted_posts, user.id)
         return undo
+
 
     def move_to(self, community: Community):
         self.community_id = community.id
@@ -4024,6 +4101,7 @@ class CommunityFlair(db.Model):
     background_color = db.Column(db.String(50))
     blur_images = db.Column(db.Boolean, default=False)
     ap_id = db.Column(db.String(255), index=True, unique=True)
+    default_hashtag = db.Column(db.String(75), default='')
 
     def get_ap_id(self):
         if self.ap_id:

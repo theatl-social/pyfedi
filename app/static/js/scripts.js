@@ -8,6 +8,18 @@ if(!setTheme) {
     }
 }
 
+// Call a list of setup functions in order. One setup throwing an exception shouldn't take the rest of
+// the page down with it.
+function runSetups(setups) {
+    for (const setup of setups) {
+        try {
+            setup();
+        } catch (e) {
+            console.error(setup.name + '() failed:', e);
+        }
+    }
+}
+
 // fires after DOM is ready for manipulation
 document.addEventListener("DOMContentLoaded", function () {
     let low_bandwidth = document.body.classList.contains('low_bandwidth');
@@ -26,6 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setupVotingLongPress,
         setupVotingDialogHandlers,
         setupKeyboardShortcuts,
+        setupDynamicKeyboardShortcuts,
         setupCommunityNameInput,
         setupCommunityConditionalFields,
         setupShowMoreLinks,
@@ -56,7 +69,6 @@ document.addEventListener("DOMContentLoaded", function () {
         setupPopupCommunitySidebar,
         setupVideoSpoilers,
         setupCommunityFilter,
-        setupPopupTooltips,
         setupPasswordEye,
         setupBasicAutoResize,
         setupEventTimes,
@@ -109,7 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
         navigator.getBattery().then(function(battery) {
             // Only load youtube videos in teasers if there is plenty of power available
             if (battery.charging) {
-                requestAnimationFrame(setupYouTubeLazyLoad);
+                setupYouTubeLazyLoad();
             }
         });
     }
@@ -373,7 +385,7 @@ function setupLightboxTeaser() {
             baguetteBox.hide();
           }
         };
-        baguetteBox.run('.post_teaser', {
+        baguetteBox.run('.post_teaser a.post_link', {
             fullScreen: false,
             noScrollbars: true,
             async: true,
@@ -424,6 +436,48 @@ function setupLightboxPostBody() {
 
 }
 
+function setupLightboxPostGallery() {
+    if(typeof baguetteBox !== 'undefined') {
+        function popStateListener(event) {
+            baguetteBox.hide();
+        };
+        function baguetteBoxClickImg(event) {
+          if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
+            this.style.width = "100vw";
+            this.style.maxHeight = "none";
+          } else {
+            baguetteBox.hide();
+          }
+        };
+        baguetteBox.run('.post_gallery', {
+            fullScreen: false,
+            noScrollbars: true,
+            async: true,
+            preload: 3,
+            ignoreClass: 'preview_image',
+            afterShow: function() {
+                window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
+                window.addEventListener('popstate', popStateListener);
+                for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+                  el.addEventListener('click', baguetteBoxClickImg);
+                }
+            },
+            afterHide: function() {
+                if (window.history.state === '#lightbox') {
+                  for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+                    el.style.width = "";
+                    el.style.maxHeight = "";
+                    el.removeEventListener('click', baguetteBoxClickImg);
+                  }
+                  window.removeEventListener('popstate', popStateListener);
+                  window.history.back();
+                }
+            },
+        });
+    }
+
+}
+
 // fires after all resources have loaded, including stylesheets and js files
 window.addEventListener("load", function () {
     setupHideButtons();
@@ -438,7 +492,7 @@ function setupMobileNav() {
         navbarToggler.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
         navbarSupportedContent.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
     });
-    if(window.innerWidth < 992) {
+    if(window.matchMedia('(max-width: 991.98px)').matches) {
         navbarToggler.setAttribute('aria-expanded', 'false');
     }
 
@@ -1382,21 +1436,6 @@ function setupAddPassKeyAndCaptcha() {
 }
 
 function setupFancySelects() {
-    var crossPostCommunity = document.getElementById('which_community');
-    if(crossPostCommunity && crossPostCommunity.type === 'select-one') {
-        new TomSelect('#which_community', {maxOptions: null, maxItems: 1});
-    }
-
-    var communities = document.getElementById('communities');
-    if(communities && communities.type === 'select-one') {
-        new TomSelect('#communities', {maxOptions: null, maxItems: 1});
-    }
-
-    var community = document.getElementById('community');
-    if(community && community.type === 'select-one') {
-        new TomSelect('#community', {maxOptions: null, maxItems: 1});
-    }
-
     var languageSelect = document.querySelector('#tom_select div #language_id');
     if (languageSelect) {
         new TomSelect('#tom_select #language_id', {maxOptions: null, maxItems: 1});
@@ -2147,26 +2186,6 @@ function setupVotingDialogHandlers() {
     });
 }
 
-function setupPopupTooltips() {
-    // Find all elements with a title, add the necessary bootstrap attributes
-    document.querySelectorAll('[title]').forEach(el => {
-      if (!el.hasAttribute('data-bs-toggle') && !el.dataset.tooltipSetup) {     // don't mess with dropdowns that use data-bs-toggle
-        el.setAttribute('data-bs-toggle', 'tooltip');
-        el.setAttribute('data-bs-placement', 'top');
-        el.dataset.tooltipSetup = 'true';
-      }
-    });
-
-    // Initialize tooltips only for elements that haven't been initialized yet
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]:not([data-tooltip-initialized])');
-    [...tooltipTriggerList].map(el => {
-      new bootstrap.Tooltip(el, {
-          delay: { show: 750, hide: 200 }
-      });
-      el.dataset.tooltipInitialized = 'true';
-    });
-}
-
 function setupPasswordEye() {
     const showPasswordBtn = document.querySelector('.showPassword');
     const hidePasswordBtn = document.querySelector('.hidePassword');
@@ -2591,8 +2610,8 @@ function setupShareIcons() {
                   navigator.clipboard.writeText(location.href);
                   alert("Link copied to clipboard");
                 }
-                shareAnchor.dataset.shareIconSetup = 'true';
             });
+            shareAnchor.dataset.shareIconSetup = 'true';
         }
     });
 }

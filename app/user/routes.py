@@ -86,7 +86,7 @@ from app.models import (
 )
 from app.shared.site import block_remote_instance
 from app.shared.upload import process_file_delete, process_upload
-from app.shared.user import subscribe_user, ban_user, unban_user, follow_user, unfollow_user, bot_challenge_user
+from app.shared.user import subscribe_user, ban_user, unban_user, follow_user, unfollow_user
 from app.user import bp
 from app.user.forms import (
     ProfileForm,
@@ -195,6 +195,7 @@ def show_profile_by_id(user_id):
 
 
 @login_required_if_private_instance
+
 def show_profile(user):
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)
@@ -239,7 +240,6 @@ def show_profile(user):
     followers = User.query.filter(User.banned == False).join(UserFollower, UserFollower.remote_user_id == User.id). \
         filter(UserFollower.local_user_id == user.id, UserFollower.is_inward == True, UserFollower.is_accepted == True).all()
 
-    bot_challenge = BotChallenge.query.filter(BotChallenge.user_id == user.id).first()
 
     # pagination urls
     post_next_url = (
@@ -297,53 +297,7 @@ def show_profile(user):
         else None
     )
 
-    posting_pattern_labels = []
-    posting_pattern_values = []
-    comment_pattern_labels = []
-    comment_pattern_values = []
-    if current_user.is_authenticated:
-        vote_quota_used = profile_vote_quota_used(user.id)
-
-        # Generate graph of which hours of the day the user posts at. Bots tend to have a distinctive look.
-        sql = """select
-                    h.hour_of_day,
-                    count(p.id) as post_count
-                from generate_series(0, 23) as h(hour_of_day)
-                left join post p
-                    on extract(hour from p.created_at) = h.hour_of_day
-                    and p.created_at >= now() - interval '1 month'
-                    and p.user_id in (
-                        select id
-                        from "user"
-                        where user_name = :user_name
-                    )
-                group by h.hour_of_day
-                order by h.hour_of_day;"""
-        posting_pattern = db.session.execute(
-            text(sql), {"user_name": user.user_name}
-        ).all()
-        posting_pattern_labels = [x for x, y in posting_pattern]
-        posting_pattern_values = [y for x, y in posting_pattern]
-
-        sql = """select
-                            h.hour_of_day,
-                            count(p.id) as post_count
-                        from generate_series(0, 23) as h(hour_of_day)
-                        left join post_reply p
-                            on extract(hour from p.created_at) = h.hour_of_day
-                            and p.created_at >= now() - interval '1 month'
-                            and p.user_id in (
-                                select id
-                                from "user"
-                                where user_name = :user_name
-                            )
-                        group by h.hour_of_day
-                        order by h.hour_of_day;"""
-        comment_pattern = db.session.execute(text(sql), {'user_name': user.user_name}).all()
-        comment_pattern_labels = [x for x, y in comment_pattern]
-        comment_pattern_values = [y for x, y in comment_pattern]
-    else:
-        vote_quota_used = 0
+    vote_quota_used = profile_vote_quota_used(user.id) if current_user.is_authenticated else 0
 
     return render_template(
         "user/show_profile.html",
@@ -357,10 +311,6 @@ def show_profile(user):
         subscribed=subscribed,
         disable_voting=True,
         user_notes=user_notes(current_user.get_id()),
-        posting_pattern_labels=posting_pattern_labels,
-        posting_pattern_values=posting_pattern_values,
-        comment_pattern_labels=comment_pattern_labels,
-        comment_pattern_values=comment_pattern_values,
         show_posts_tab=request.args.get("show_posts_tab"),
         post_next_url=post_next_url,
         post_prev_url=post_prev_url,
@@ -389,7 +339,6 @@ def show_profile(user):
         archived_post_replies=archived_post_replies,
         followers=followers,
         following=following,
-        bot_challenge=bot_challenge,
         vote_quota_used=vote_quota_used,
     )
 
@@ -3011,27 +2960,6 @@ def user_unfollow(actor):
         return redirect(return_to)
 
 
-@bp.route('/u/<actor>/bot_challenge', methods=['POST'])
-@permission_required('change instance settings')
-def user_bot_challenge(actor):
-    actor = actor.strip()
-    return_to = request.args.get('return_to', f'/u/{actor}').strip()
-    if return_to.startswith('http'):
-        abort(401)
-    if '@' in actor:
-        user: User = User.query.filter_by(ap_id=actor, deleted=False).first()
-    else:
-        user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
-    if user is None:
-        abort(404)
-
-    bot_challenge_user(user.id, src=SRC_WEB)
-
-    flash(_('Bot challenge was sent. If they do not respond within 48 hours their account will be flagged as a bot.'), 'success')
-    if request.headers.get('HX-Request') == 'true':
-        return '<div class="ms-auto">' + _('Done') + '</div>'
-    else:
-        return redirect(return_to)
 
 
 @bp.route('/user/lookup/<person>/<domain>')
@@ -3242,6 +3170,34 @@ def show_profile_rss(actor):
     else:
         abort(404)
 
+    # If nothing has changed since their last visit, return HTTP 304
+    current_etag = f"{user.id}_{hash(user.last_seen)}"
+    if request_etag_matches(current_etag):
+        return return_304(current_etag, 'application/rss+xml')
+
+    limit = request.args.get('limit', 20, int)
+    limit = max(min(limit, 100), 0)
+    posts = user.posts.filter(Post.from_bot == False, Post.deleted == False,
+                              Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(limit).all()
+
+    server_url = current_app.config['SERVER_URL']
+    description = shorten_string(user.about, 150) if user.about else ' '
+    image = user.avatar_image() if user.avatar_id \
+                                    else f"{server_url}/static/images/apple-touch-icon.png"
+    feed = RSSFeed(title = f'{user.display_name()} on {g.site.name}',
+                   link = f"{server_url}/u/{actor}",
+                   description = description,
+                   logo = image,
+                   self_link = f"{server_url}/u/{actor}/feed",
+                   language = 'en'
+                 )
+
+    response = make_response(feed.create_feed(posts, server_url))
+    response.headers.set('Content-Type', 'application/rss+xml')
+    response.headers.add_header('ETag', f"{user.id}_{hash(user.last_seen)}")
+    response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+    return response
+
 
 @bp.route("/user/files", methods=["GET", "POST"])
 @login_required
@@ -3324,25 +3280,25 @@ def user_file_upload():
                     db.session.commit()
 
         if form.file1.data:
-            process_upload(form.file1.data, user_id=current_user.id)
+            process_upload(form.file1.data, user=current_user)
         if form.file2.data:
-            process_upload(form.file2.data, user_id=current_user.id)
+            process_upload(form.file2.data, user=current_user)
         if form.file3.data:
-            process_upload(form.file3.data, user_id=current_user.id)
+            process_upload(form.file3.data, user=current_user)
         if form.file4.data:
-            process_upload(form.file4.data, user_id=current_user.id)
+            process_upload(form.file4.data, user=current_user)
         if form.file5.data:
-            process_upload(form.file5.data, user_id=current_user.id)
+            process_upload(form.file5.data, user=current_user)
         if form.file6.data:
-            process_upload(form.file6.data, user_id=current_user.id)
+            process_upload(form.file6.data, user=current_user)
         if form.file7.data:
-            process_upload(form.file7.data, user_id=current_user.id)
+            process_upload(form.file7.data, user=current_user)
         if form.file8.data:
-            process_upload(form.file8.data, user_id=current_user.id)
+            process_upload(form.file8.data, user=current_user)
         if form.file9.data:
-            process_upload(form.file9.data, user_id=current_user.id)
+            process_upload(form.file9.data, user=current_user)
         if form.file10.data:
-            process_upload(form.file10.data, user_id=current_user.id)
+            process_upload(form.file10.data, user=current_user)
 
         return redirect(form.referrer.data)
 
@@ -3426,6 +3382,12 @@ def user_follow_request_reject(user_id):
             send_post_request(remote_user.ap_inbox_url, reject, current_user.private_key,
                               f"{current_user.public_url()}#main-key")
     return 'Done'
+
+
+
+
+
+
 
 
 def _calculate_future_date(restriction_setting):

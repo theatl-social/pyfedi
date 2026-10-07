@@ -14,7 +14,7 @@ from flask import session, g, json, request, current_app
 from sqlalchemy import text
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, \
     SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING, ROLE_ADMIN, VERSION, \
-    POST_TYPE_EVENT
+    POST_TYPE_EVENT, POST_TYPE_GALLERY
 from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
@@ -36,7 +36,7 @@ def app_context_processor():
                 can_translate=current_app.config['TRANSLATE_ENDPOINT'] != '',
                 POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE, notif_id_to_string=notif_id_to_string,
                 POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
-                POST_TYPE_EVENT=POST_TYPE_EVENT,
+                POST_TYPE_EVENT=POST_TYPE_EVENT, POST_TYPE_GALLERY=POST_TYPE_GALLERY,
                 SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                 SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, VERSION=VERSION)
 
@@ -94,7 +94,7 @@ def before_request():
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, User-Agent'
         #response.headers['Vary'] = 'Origin'
         return response
-    
+
     # Store nonce in g (g is per-request, unlike session)
     g.nonce = gibberish()
     g.locale = str(get_locale())
@@ -134,7 +134,7 @@ def after_request(response):
     response.headers['Access-Control-Allow-Origin'] = current_app.config.get('CORS_ALLOW_ORIGIN', '*')
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, User-Agent'
-    
+
     # Don't set cookies for static resources or ActivityPub responses to make them cachable
     if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/') or response.content_type == 'application/activity+json':
         # Remove session cookies that mess up caching
@@ -143,7 +143,7 @@ def after_request(response):
             session.modified = False
         # Cache headers for static resources
         # Skip manifest.json as it varies by User-Agent and has its own cache headers
-        if (request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/')) and '/manifest.json' not in request.path:
+        if (request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/') or request.path.startswith('/service_worker.js')) and '/manifest.json' not in request.path:
             response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'  # 1 year
             # Set Vary to only Accept-Encoding for static files to allow upstream proxy caching
             # Static files don't vary by cookie or language, only by Accept-Encoding for compression

@@ -22,7 +22,7 @@ content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
 feature_type_list = ["Community", "Local"]
-post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
+post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event", "Gallery"]
 nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
@@ -190,7 +190,7 @@ class LocalUser(DefaultSchema):
     federate_votes = fields.Boolean(required=True, metadata={"description": "If false, votes are only counted on local instance instead of federated remotely"})
     feed_auto_follow = fields.Boolean(required=True, metadata={"description": "Automatically follow communities in a subscribed feed"})
     feed_auto_leave = fields.Boolean(required=True, metadata={"description": "Automatically leave communities when unsubscribing from a feed. Does not impact communities joined outside of a feed auto-follow."})
-    hide_low_quality = fields.Boolean(required=True, 
+    hide_low_quality = fields.Boolean(required=True,
                                       metadata={"description": "Hide posts from communities marked as low-quality by the local instance admin"})
     indexable = fields.Boolean(required=True, metadata={"description": "If posts can show up in search results"})
     newsletter = fields.Boolean(required=True, metadata={"description": "Subscribe to the email newsletter that the local instance admin can send"})
@@ -200,11 +200,13 @@ class LocalUser(DefaultSchema):
     reply_hide_threshold = fields.Integer(required=True, metadata={"description": "Hide replies with a score at or below this level"})
     searchable = fields.Boolean(required=True, metadata={"description": "If profile shows up in the user list on the instance"})
     show_bot_accounts = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
+    show_reposter_accounts = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
     show_nsfl = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
     show_nsfw = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
     show_read_posts = fields.Boolean(required=True)
     show_scores = fields.Boolean(required=True)
     manually_approves_followers = fields.Boolean(allow_none=True)
+    posts_subject_to_admin_approval = fields.Boolean(allow_none=True)
 
 
 class LocalUserView(DefaultSchema):
@@ -415,6 +417,7 @@ class Post(DefaultSchema):
     emoji_reactions = fields.List(fields.Nested(Reactions), allow_none=True)
     event = fields.Nested(PostEvent)
     poll = fields.Nested(PostPoll)
+    gallery = fields.List(fields.String(metadata={"format": "url"}))
 
 
 class PostAggregates(DefaultSchema):
@@ -582,7 +585,7 @@ class CommentView(DefaultSchema):
     creator_banned_from_community = fields.Boolean(required=True)
     creator_blocked = fields.Boolean(required=True)
     creator_is_admin = fields.Boolean(required=True)
-    creator_is_moderator = fields.Boolean(required=True) 
+    creator_is_moderator = fields.Boolean(required=True)
     post = fields.Nested(Post, required=True)
     saved = fields.Boolean(required=True)
     subscribed = fields.String(
@@ -615,7 +618,7 @@ class FeedView(DefaultSchema):
     subscriptions_count = fields.Integer(required=True)
     title = fields.String(required=True)
     updated = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    user_id = fields.Integer(required=True, metadata={"description": "user_id of the feed creator/owner"}) 
+    user_id = fields.Integer(required=True, metadata={"description": "user_id of the feed creator/owner"})
     banner = fields.String(allow_none=True, metadata={"format": "url"})
     description = fields.String(allow_none=True, metadata={"format": "markdown"})
     description_html = fields.String(allow_none=True, metadata={"format": "html"})
@@ -1092,6 +1095,7 @@ class UserSaveSettingsRequest(DefaultSchema):
     bio = fields.String(metadata={"format": "markdown"})
     bot = fields.Boolean(metadata={"description": "This user is a bot"})
     bot_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list))
+    reposter_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list))
     community_keyword_filter = fields.List(fields.String(), allow_none=True,
                                            metadata={"description": "Filter out communities with these words in their name. Pass null to remove any filters."})
     cover = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
@@ -1421,22 +1425,14 @@ class PostReport(DefaultSchema):
     original_post_body = fields.String(required=True)
     reason = fields.String(required=True)
     resolved = fields.Boolean(required=True)
+    description = fields.String(metadata={"description": "Additional context/information to accompany the report"})
     published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
 
 
-class PostReportView(DefaultSchema):
+class PostReportView(PostView):
     post_report = fields.Nested(PostReport, required=True)
-    post = fields.Nested(Post, required=True)
-    community = fields.Nested(Community, required=True)
-    creator = fields.Nested(Person, required=True)
-    post_creator = fields.Nested(Person, required=True)
-    counts = fields.Nested(PostAggregates, required=True)
-    creator_banned_from_community = fields.Boolean(required=True)
-    creator_is_moderator = fields.Boolean(required=True)
-    creator_is_admin = fields.Boolean(required=True)
+    post_creator = fields.Nested(Person, required=True, metadata={"description": "Creator of the reported post"})
     creator_blocked = fields.Boolean(required=True)
-    subscribed = fields.String(validate=validate.OneOf(subscribed_type_list), required=True)
-    saved = fields.Boolean(required=True)
 
 
 class PostReportResponse(DefaultSchema):

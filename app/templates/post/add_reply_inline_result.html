@@ -23,7 +23,7 @@
         {% endif -%}
         {% if user.bot or user.bot_override -%}
             <span class="fe fe-bot-account" title="{{ _('Bot account') }}"> </span>
-        {% endif -%}
+                {% endif -%}
         {% if user_flair and user.id in user_flair %}
             <span class="user_flair">{{ user_flair[user.id] }}</span>
         {% endif %}

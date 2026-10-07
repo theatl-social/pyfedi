@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List
 from urllib.parse import urlparse
 from datetime import datetime
@@ -6,12 +7,12 @@ import orjson
 
 from flask import current_app
 from flask_login import current_user
-from sqlalchemy import desc, asc, text, or_
+from sqlalchemy import desc, asc, text, or_, func
 
 from app import db, cache
-from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL, POST_TYPE_ARTICLE
-from app.models import PostReply, Post, Community, User, Language, utcnow
-from app.utils import blocked_or_banned_instances, blocked_users, is_video_hosting_site, get_request, silenced_instances
+from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL, POST_TYPE_ARTICLE, POST_TYPE_GALLERY
+from app.models import PostReply, Post, Community, User, Language, utcnow, UserFlair, UserExtraField
+from app.utils import blocked_or_banned_instances, blocked_users, is_video_hosting_site, get_request, silenced_instances, html_to_text
 
 
 @cache.memoize(timeout=600)
@@ -19,7 +20,7 @@ def retrieve_archived_post(archived_url: str) -> dict:
     """Load archived post data from S3 or local disk"""
     if not archived_url:
         return None
-        
+
     try:
         if archived_url.startswith('http'):
             # Load from S3 via HTTP
@@ -41,7 +42,7 @@ def retrieve_archived_post(archived_url: str) -> dict:
     except Exception as e:
         current_app.logger.error(f"Failed to load archived data from {archived_url}: {e}")
         return None
-    
+
     return None
 
 
@@ -49,7 +50,7 @@ def convert_archived_replies_to_tree(archived_replies: list, post: Post) -> List
     """Convert archived reply data back to the expected tree format using PostReply models"""
     if not archived_replies:
         return []
-    
+
     def create_real_reply(reply_data):
         # Create a PostReply instance (not persisted to DB)
         post_reply = PostReply()
@@ -79,13 +80,13 @@ def convert_archived_replies_to_tree(archived_replies: list, post: Post) -> List
         post_reply.path = reply_data.get('path', [])
         post_reply.answer = reply_data.get('answer', False)
         post_reply.reports = 0
-        
+
         # Post relationship
         post_reply.post = post
-        
+
         # Community relationship
         post_reply.community = post.community
-        
+
         # Author from archived data (or fetch if we have user_id)
         #if reply_data.get('user_id'):
         #    post_reply.author = User.query.get(reply_data['user_id'])
@@ -110,16 +111,16 @@ def convert_archived_replies_to_tree(archived_replies: list, post: Post) -> List
         author.reputation = reply_data.get('author_reputation', 1)
 
         post_reply.author = author
-        
+
         # Language
         if reply_data.get('language_id'):
             post_reply.language = Language.query.get(reply_data['language_id'])
-        
+
         return {
             'comment': post_reply,
             'replies': [create_real_reply(child) for child in reply_data.get('replies', [])]
         }
-    
+
     return [create_real_reply(reply) for reply in archived_replies]
 
 
@@ -134,7 +135,7 @@ def find_comment_branch_in_archived(archived_replies: list, comment_id: int) -> 
             if found:
                 return found
         return []
-    
+
     return search_tree(archived_replies, comment_id)
 
 
@@ -203,7 +204,7 @@ def get_comment_branch(post: Post, comment_id: int, sort_by: str, viewer: User) 
                 return convert_archived_replies_to_tree(branch_data, post)
             else:
                 return []
-    
+
     # Fetch the specified parent comment and its replies
     parent_comment = PostReply.query.get(comment_id)
     if parent_comment is None:
@@ -304,11 +305,48 @@ def post_type_to_form_url_type(post_type: int, post_url: str):
         return 'link'
     elif post_type == POST_TYPE_IMAGE:
         return 'link'
+    elif post_type == POST_TYPE_GALLERY:
+        return 'link'
     elif post_type == POST_TYPE_VIDEO:
-        return 'video'
+        return 'link'
     elif post_type == POST_TYPE_POLL:
         return 'poll'
     elif post_type == POST_TYPE_ARTICLE:
         return 'discussion'
     else:
         return ''
+
+
+def user_flair_on_post(post) -> dict:
+    user_flair = {}
+    # Collect all post IDs (main + cross-posts)
+    all_post_ids = [post.id]
+    if post.cross_posts:
+        all_post_ids.extend(post.cross_posts)
+    user_subq = db.session.query(PostReply.user_id).filter(PostReply.post_id.in_(all_post_ids)).distinct()
+    # Include post author
+    user_subq = user_subq.union(db.session.query(db.literal(post.user_id)))
+    for u_flair in UserFlair.query.filter(UserFlair.user_id.in_(user_subq)):
+        user_flair[u_flair.user_id] = u_flair.flair
+    return user_flair
+
+
+
+def user_pronouns_on_post(post) -> dict:
+    result = defaultdict(str)
+    all_post_ids = [post.id]
+    if post.cross_posts:
+        all_post_ids.extend(post.cross_posts)
+    user_subq = db.session.query(PostReply.user_id).filter(PostReply.post_id.in_(all_post_ids)).distinct()
+    # Include post author
+    user_subq = user_subq.union(db.session.query(db.literal(post.user_id)))
+
+    pronouns = db.session.query(UserExtraField).filter(UserExtraField.user_id.in_(user_subq)).\
+        filter(or_(func.lower(UserExtraField.label) == 'pronouns', func.lower(UserExtraField.label) == 'species'))
+    for pronoun in pronouns:
+        if len(pronoun.text) <= 22:
+            if '<' in pronoun.text and '>' in pronoun.text:
+                result[pronoun.user_id] = html_to_text(pronoun.text)
+            else:
+                result[pronoun.user_id] = pronoun.text
+    return result

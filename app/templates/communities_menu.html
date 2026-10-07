@@ -10,7 +10,7 @@
         <ul class="text-end text-lg-start">
             <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="{{ url_for("main.list_communities", home_select="local") }}">{{ _('Local communities') }}</a></li>
             <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
-            {% if default_user_add_remote or (is_staff or is_admin) %}            
+            {% if default_user_add_remote or (is_staff or is_admin) %}
                 <li><a class="dropdown-item" href="/community/add_remote">{{ _('Add remote community') }}</a></li>
             {% endif -%}
           {% if favorite_communities -%}
@@ -35,6 +35,7 @@
             {% endfor -%}
           {% endif %}
           <li><a class="dropdown-item" href="/r/random">{{ _('Random community') }}</a></li>
+          <li><a class="dropdown-item" href="/c/microblogs">{{ _('Microblogs') }}</a></li>
         </ul>
     </div>
     <hr>

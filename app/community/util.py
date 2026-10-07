@@ -13,16 +13,17 @@ from pillow_heif import register_heif_opener
 from psycopg2 import IntegrityError
 from flask_babel import _, lazy_gettext as _l
 
-from app import db, cache, celery
+from app import db, cache, celery, plugins
 from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, \
     find_hashtag_or_create, create_post, remote_object_to_json, find_flair
 from app.community.forms import CreateLinkForm
-from app.constants import SRC_WEB, POST_TYPE_LINK
+from app.constants import SRC_WEB, POST_TYPE_LINK, NOTIF_NEW_POST, POST_STATUS_PUBLISHED
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
-    Instance, User, Tag, CommunityFlair, CommunityThemeAllowed
+    Instance, User, Tag, CommunityFlair, CommunityThemeAllowed, Notification, post_tag
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
-    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting, scale_gif, theme_list
+    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting, scale_gif, theme_list, \
+    add_to_modlog, role_access
 from sqlalchemy import func, desc, text
 import os
 
@@ -214,12 +215,12 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                                 # Skip if reply already exists
                                                 if session.query(PostReply).filter_by(ap_id=reply_data['id']).first():
                                                     continue
-                                                
+
                                                 # Find the author of the reply
                                                 reply_author = find_actor_or_create(reply_data['attributedTo'])
                                                 if not reply_author:
                                                     continue
-                                                
+
                                                 # Extract reply content
                                                 body = body_html = ''
                                                 if 'content' in reply_data:
@@ -233,7 +234,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                                         body_html = markdown_to_html(body)
                                                     else:
                                                         body = html_to_text(body_html)
-                                                
+
                                                 # Find parent (post or comment this is replying to)
                                                 in_reply_to = None
                                                 if 'inReplyTo' in reply_data:
@@ -245,7 +246,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                                         parent_comment = session.query(PostReply).filter_by(ap_id=reply_data['inReplyTo']).first()
                                                         if parent_comment:
                                                             in_reply_to = parent_comment
-                                                
+
                                                 # Get language
                                                 language_id = None
                                                 if 'language' in reply_data and isinstance(reply_data['language'], dict):
@@ -253,7 +254,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                                     language = find_language_or_create(reply_data['language']['identifier'],
                                                                                      reply_data['language']['name'])
                                                     language_id = language.id
-                                                
+
                                                 # Check if distinguished
                                                 distinguished = reply_data.get('distinguished', False)
                                                 answer = reply_data.get('answer', False)
@@ -386,6 +387,32 @@ def flairs_from_string(flairs: str, community_id: int) -> List[Tag]:
         if flair_to_append and flair_to_append not in return_value:
             return_value.append(flair_to_append)
     return return_value
+
+
+@celery.task
+def delete_community_task(community_id):
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                community = session.query(Community).get(community_id)
+                if community.is_local():
+                    community.banned = True
+                    # todo: federate deletion out to all instances. At end of federation process, delete_dependencies() and delete community
+
+                # record for modlog
+                reason = f"Community {community.name} deleted by {current_user.user_name}"
+                add_to_modlog('delete_community', actor=current_user, reason=reason, community=community)
+
+                # actually delete the community
+                community.delete_dependencies()
+                session.delete(community)
+                session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def delete_post_from_community(post_id):
@@ -542,8 +569,6 @@ def save_icon_file(icon_file, directory='communities') -> File:
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
-    elif file_ext.lower() == '.avif':
-        import pillow_avif  # NOQA
 
     # resize if necessary or if using MEDIA_IMAGE_FORMAT
     if file_ext.lower() in allowed_extensions:
@@ -591,9 +616,6 @@ def save_icon_file(icon_file, directory='communities') -> File:
 
             final_ext = file_ext.lower()
             thumbnail_ext = file_ext.lower()
-
-            if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
-                import pillow_avif  # NOQA
 
             if img.width > 250 or img.height > 250 or image_format or thumbnail_image_format:
                 img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
@@ -697,8 +719,6 @@ def save_banner_file(banner_file, directory='communities') -> File:
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
-    elif file_ext.lower() == '.avif':
-        import pillow_avif  # NOQA
 
     # resize if necessary
     Image.MAX_IMAGE_PIXELS = 89478485
@@ -715,9 +735,6 @@ def save_banner_file(banner_file, directory='communities') -> File:
         thumbnail_ext = file_ext.lower()
         img_width = img.width
         img_height = img.height
-
-        if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
-            import pillow_avif  # NOQA
 
         if img.width > 1600 or img.height > 600 or image_format or thumbnail_image_format:
             img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
@@ -755,7 +772,7 @@ def save_banner_file(banner_file, directory='communities') -> File:
                     width=img_width, height=img_height, thumbnail_path=final_place_thumbnail,
                     thumbnail_width=thumbnail_width, thumbnail_height=thumbnail_height)
         db.session.add(file)
-        
+
         # Move uploaded files to S3 if needed
         if store_files_in_s3():
             import boto3
@@ -776,7 +793,7 @@ def save_banner_file(banner_file, directory='communities') -> File:
                 extra_args['ACL'] = 'public-read'
             s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs=extra_args)
             file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
-            
+
             # Upload thumbnail
             s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail{thumbnail_ext}'
             extra_args = {'ContentType': guess_mime_type(final_place_thumbnail)}
@@ -786,11 +803,11 @@ def save_banner_file(banner_file, directory='communities') -> File:
                 extra_args['ACL'] = 'public-read'
             s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs=extra_args)
             file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
-            
+
             s3.close()
             os.unlink(final_place)
             os.unlink(final_place_thumbnail)
-            
+
         return file
     else:
         abort(400)
@@ -874,6 +891,32 @@ def find_potential_moderators(search: str) -> List[User]:
           order_by(desc(User.reputation)).all()
 
 
+@cache.memoize(timeout=600)
+def hashtags_recent(content_filters):
+    tags = db.session.execute(
+        db.select(*Tag.__table__.columns, func.count(Post.id).label('pc'))
+        .join(post_tag, Tag.id == post_tag.c.tag_id)
+        .join(Post, Post.id == post_tag.c.post_id)
+        .join(Community, Community.id == Post.community_id)
+        .where(Post.created_at >= utcnow() - timedelta(days=1),
+               Tag.banned.is_(False), Post.deleted.is_(False),
+               Post.private.is_(False), Community.private.is_(False),
+               Community.banned.is_(False), Post.status == POST_STATUS_PUBLISHED)
+        .group_by(*Tag.__table__.columns)
+        .order_by(desc('pc')).limit(10)
+    ).mappings().all()
+
+    def tag_blocked(tag):
+        for name, keywords in content_filters.items() if content_filters else {}:
+            for keyword in keywords:
+                if keyword in tag['name'].lower():
+                    return True
+        return False
+
+    return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
+
+
+@cache.memoize(timeout=600)
 def hashtags_used_in_community(community_id: int, content_filters):
     tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
     FROM "tag" AS t
@@ -895,6 +938,7 @@ def hashtags_used_in_community(community_id: int, content_filters):
     return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
 
 
+@cache.memoize(timeout=600)
 def hashtags_used_in_communities(community_ids: List[int], content_filters):
     if community_ids is None or len(list(community_ids)) == 0:
         return None
@@ -989,3 +1033,29 @@ def community_theme_list():
     community_themes = theme_list()
     community_themes.insert(0,('disabled', _l('Disabled')))
     return community_themes
+
+
+def notify_admins_of_post_needing_approval(post):
+    """Notify admins when a post is ready for review"""
+
+    targets_data = {'gen': '0', 'post_id': post.id, 'user_id': post.user_id}
+    for admin in Site.admins():
+        notify = Notification(title='Approve new post',
+                              url='/admin/content?show=approval', user_id=admin.id,
+                              author_id=post.user_id, notif_type=NOTIF_NEW_POST,
+                              subtype='new_post_for_approval',
+                              targets=targets_data)
+        admin.unread_notifications += 1
+        db.session.add(notify)
+    if role_access('approve registrations', 3):
+        for admin in Site.staff():
+            notify = Notification(title='Approve new post',
+                                  url='/admin/content?show=approval', user_id=admin.id,
+                                  author_id=post.user_id, notif_type=NOTIF_NEW_POST,
+                                  subtype='new_post_for_approval',
+                                  targets=targets_data)
+            admin.unread_notifications += 1
+            db.session.add(notify)
+    db.session.commit()
+
+    plugins.fire_hook("new_post_for_approval", post)

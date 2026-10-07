@@ -31,4 +31,4 @@ echo "Starting Celery worker as user 'python'..."
 #
 # The image is built with `uv sync --frozen`, so the environment is already
 # correct by construction and there is nothing to sync at runtime.
-exec gosu python uv run --no-sync celery -A celery_worker_docker.celery worker --concurrency=4 --queues=celery,background,send
+exec gosu python uv run --no-sync celery -A celery_worker_docker.celery worker --concurrency=${CELERY_CONCURRENCY:-4} --queues=celery,background,send
