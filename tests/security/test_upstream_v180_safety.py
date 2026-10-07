@@ -342,6 +342,10 @@ def test_federated_gallery_create_update_preserves_images_order_and_alt(test_app
     monkeypatch.setattr("app.utils.get_setting", lambda key, default=None: False)
     monkeypatch.setattr("app.activitypub.util.get_setting", lambda key, default=None: False)
     monkeypatch.setattr("app.redis_client", SimpleNamespace(lock=lambda *args, **kwargs: nullcontext()))
+    # Exercise real gallery persistence without dispatching notification work
+    # to a broker, which the core CI job deliberately does not provide.
+    notified = []
+    monkeypatch.setattr("app.activitypub.util.notify_about_post", lambda post: notified.append(post.id))
     activity = dict(id="https://remote.example/activities/1", type="Create", object={
         "id": "https://remote.example/posts/1", "type": "Page", "name": "Gallery",
         "content": "Original body", "image": {"url": "https://remote.example/composite.png"},
@@ -353,6 +357,7 @@ def test_federated_gallery_create_update_preserves_images_order_and_alt(test_app
     })
     post = Post.new(user, community, activity)
     assert post.type == POST_TYPE_GALLERY
+    assert notified == [post.id]
     activity["type"] = "Update"
     activity["object"]["content"] = "Updated body"
     activity["object"]["attachment"] = [
