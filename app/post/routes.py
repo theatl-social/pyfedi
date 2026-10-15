@@ -890,6 +890,20 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
         if in_reply_to.author.banned or in_reply_to.community_id in communities_banned_from(in_reply_to.author.id):
             author_banned = True
 
+        # Get selected text and pre-populate the textarea with it quoted
+        to_quote = request.args.get("selectedText")
+
+        if to_quote:
+            selected_lines = to_quote.splitlines()
+            quoted_lines = []
+            
+            for line in selected_lines:
+                quoted_lines.append("> " + line)
+
+            quoted_text = "\n".join(quoted_lines) + "\n\n"
+        else:
+            quoted_text = ""
+
         return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, nonce=nonce,
                                languages=languages_for_form(), markdown_editor=current_user.markdown_editor,
                                recipient_language_id=recipient_language_id,
@@ -897,7 +911,8 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                recipient_language_name=recipient_language_name,
                                in_reply_to=in_reply_to, author_banned=author_banned,
                                user_pronouns=user_pronouns_on_post(post),
-                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
+                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
+                               quoted_text=quoted_text)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))
@@ -986,12 +1001,7 @@ def post_source(post_id: int, state: str):
         return render_template("post/_post_source_swap.html", post_body=post_body, state="hide", post_id=post_id)
     
     if state == "show":
-        if '````' in post.body:
-            post_body = '<pre><code>' + str(escape(post.body)) + '</code></pre>'
-        elif '```' in post.body:
-            post_body = markdown_to_html("````md\n" + post.body + "\n````")
-        else:
-            post_body = markdown_to_html("```md\n" + post.body + "\n```")
+        post_body = '<pre><code>' + str(escape(post.body)) + '</code></pre>'
         
         return render_template("post/_post_source_swap.html", post_body=post_body, state="show", post_id=post_id)
     
@@ -1891,12 +1901,7 @@ def post_reply_source(post_id: int, comment_id: int, state: str):
                                comment_id=comment_id, post_id=post_id)
     
     if state == "show":
-        if '````' in post_reply.body:
-            reply_body = '<pre><code>' + str(escape(post_reply.body)) + '</code></pre>'
-        elif '```' in post_reply.body:
-            reply_body = markdown_to_html("````md\n" + post_reply.body + "\n````")
-        else:
-            reply_body = markdown_to_html("```md\n" + post_reply.body + "\n```")
+        reply_body = '<pre><code>' + str(escape(post_reply.body)) + '</code></pre>'
         
         return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="show",
                                comment_id=comment_id, post_id=post_id)
