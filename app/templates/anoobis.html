@@ -116,8 +116,8 @@
             var difficulty = isMobile() ? DIFFICULTY_MOBILE : DIFFICULTY_DESKTOP;
             setTimeout(function () {
                 solveProofOfWork(difficulty);
-                setCookie('anoobis2', 'ok', 1000);
-                location.href = '{{ next }}';
+                setCookie('anoobis', 'ok', 1000);
+                location.href = {{ next|tojson }};
             }, 50);
         });
     </script>
