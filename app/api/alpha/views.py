@@ -33,6 +33,7 @@ from app.models import (
     PollChoice,
     Conversation,
     Report,
+    NotificationSubscription,
 )
 from app.post.util import tags_to_string, flair_to_string
 from app.utils import (
@@ -47,6 +48,7 @@ from app.utils import (
     joined_communities,
     moderating_communities_ids_all_users,
     community_membership_private,
+    months_since,
 )
 from app.shared.community import get_comm_flair_list
 from app.shared.post import get_post_flair_list
@@ -129,7 +131,7 @@ def post_view(
         if post.deleted and (user_id is None or user_id not in g.admin_ids):
             v1["body"] = ""
         if post.edited_at:
-            v1["edited_at"] = post.edited_at.isoformat(timespec="microseconds") + "Z"
+            v1['updated'] = post.edited_at.isoformat(timespec="microseconds") + 'Z'
         if post.deleted == True:
             if post.deleted_by and post.user_id != post.deleted_by:
                 v1["removed"] = True
@@ -549,6 +551,47 @@ def post_view(
         return v5
 
 
+def scheduled_post_view(post: Post | int, variant: int, user_id: int | None = None) -> dict:
+    if isinstance(post, int):
+        post = Post.query.get(post)
+        if post is None:
+            raise NoResultFound
+
+    # Ensure that the auth'd user is the author of the post
+    if not user_id == post.author.id:
+        raise Exception("Not authorized to view")
+
+    if not post.scheduled_for:
+        raise Exception("Not a scheduled post")
+
+    # Variant 1 - ScheduledPost schema
+    if variant == 1:
+        v1 = post_view(post, variant=1, user_id=user_id)
+        v1['created'] = v1.pop('published')
+        v1['next_scheduled_for'] = post.scheduled_for.isoformat(timespec="microseconds") + 'Z'
+        v1['repeat'] = post.repeat.capitalize() if post.repeat else "None"
+
+        return v1
+
+    # Variant 2 - ScheduledPostView schema
+    if variant == 2:
+        v2 = post_view(post, variant=3, user_id=user_id)
+        post_json = v2["post_view"]
+        del v2["post_view"]
+
+        # Clean up some stuff that isn't needed for scheduled posts
+        keys_to_remove = ["post", "hidden", "read", "saved", "unread_comments", "my_vote"]
+        for key in keys_to_remove:
+            if key in post_json:
+                del post_json[key]
+
+        post_json["scheduled_post"] = scheduled_post_view(post, variant=1, user_id=user_id)
+
+        v2['scheduled_post_view'] = post_json
+
+        return v2
+
+
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
 @cache.memoize(timeout=600)
 def user_view(
@@ -592,9 +635,11 @@ def user_view(
         if user.cover_id and not stub:
             valid_url = user.cover.medium_url()
             if valid_url:
-                v1["banner"] = valid_url
-        if not v1["title"]:
-            v1["title"] = v1["user_name"]
+                v1['banner'] = valid_url
+        if getattr(user, 'matrix_user_id'):
+            v1['matrix_user_id'] = user.matrix_user_id
+        if not v1['title']:
+            v1['title'] = v1['user_name']
         if flair_community_id:
             flair = user.community_flair(flair_community_id)
             if flair:
@@ -633,11 +678,18 @@ def user_view(
 
     # Variant 2 - views/person_view.dart
     if variant == 2:
-        counts = {
-            "person_id": user.id,
-            "post_count": user.post_count,
-            "comment_count": user.post_reply_count,
-        }
+        counts = {'person_id': user.id, 'post_count': user.post_count, 'comment_count': user.post_reply_count}
+        
+        if user.num_following:
+            counts["following_count"] = user.num_following
+        else:
+            counts["following_count"] = 0
+
+        if user.num_followers:
+            counts["follower_count"] = user.num_followers
+        else:
+            counts["follower_count"] = 0
+        
         user_sub = False
         if user_id and user_id != user.id:
             user_sub = db.session.execute(
@@ -774,12 +826,15 @@ def user_view(
                     "about": user.about,
                     "about_html": user.about_html,
                     "extra_fields": extra_fields,
+                    "matrix_user_id": user.matrix_user_id if user.matrix_user_id else ""
                 },
                 "counts": {
                     "person_id": user.id,
                     "post_count": user.post_count,
                     "comment_count": user.post_reply_count,
-                },
+                    "follower_count": user.num_followers,
+                    "following_count": user.num_following
+                }
             },
             "moderates": moderating_communities_view(user),
             "follows": joined_communities_view(user),
@@ -796,6 +851,8 @@ def user_view(
             del v6["local_user_view"]["person"]["about_html"]
         if not v6["local_user_view"]["person"]["extra_fields"]:
             del v6["local_user_view"]["person"]["extra_fields"]
+        if not v6["local_user_view"]["person"]["matrix_user_id"]:
+            del v6["local_user_view"]["person"]["matrix_user_id"]
 
         return v6
 
@@ -1514,7 +1571,18 @@ def feed_view(
         v1["owner"] = user_id == feed.user_id
         v1["local"] = feed.is_local()
 
-        v1["communities"] = []
+        if user_id:
+            existing_notification = NotificationSubscription.query.filter(
+                NotificationSubscription.entity_id == feed.id,
+                NotificationSubscription.user_id == user_id,
+                NotificationSubscription.type == NOTIF_FEED).first()
+
+            v1["activity_alert"] = bool(existing_notification)
+
+        else:
+            v1["activity_alert"] = False
+
+        v1['communities'] = []
         if include_communities:
             for community in (
                 Community.query.filter(
@@ -1686,16 +1754,9 @@ def conversation_report_view(report: int | Report, variant=1) -> dict:
         return v2
 
 
-def topic_view(
-    topic: Topic | int,
-    variant: int,
-    communities_moderating,
-    banned_from,
-    communities_joined,
-    blocked_community_ids,
-    blocked_instance_ids,
-    include_communities,
-) -> dict:
+def topic_view(topic: Topic | int, variant: int, communities_moderating, banned_from,
+               communities_joined, blocked_community_ids, blocked_instance_ids,
+               include_communities, user_id: int | None = None) -> dict:
     if isinstance(topic, int):
         topic = Topic.query.get(topic)
 
@@ -1736,6 +1797,16 @@ def topic_view(
                     v1["communities"].append(
                         community_view(community, variant=1, stub=True)
                     )
+
+        if user_id:
+            existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == topic.id,
+                                                                          NotificationSubscription.user_id == user_id,
+                                                                          NotificationSubscription.type == NOTIF_TOPIC).first()
+
+            v1["activity_alert"] = bool(existing_notification)
+
+        else:
+            v1["activity_alert"] = False
 
         return v1
 
@@ -1821,23 +1892,28 @@ def site_instance_chooser_view():
         maturity = "Embryonic"
 
     result = {
-        "language": {"id": language.id, "code": language.code, "name": language.name},
-        "nsfw": g.site.enable_nsfw,
-        "newbie_friendly": num_topics() >= 3,
-        "name": g.site.name,
-        "elevator_pitch": get_setting("elevator_pitch", ""),
-        "description": g.site.description or "",
-        "about": g.site.about_html or "",
-        "sidebar": g.site.sidebar_html or "",
-        "logo_url": f"{current_app.config['SERVER_URL']}{logo}",
-        "maturity": maturity,
-        "mau": active_month(),
-        "can_make_communities": not g.site.community_creation_admin_only,
-        "defederation": list(set([instance.domain for instance in defed_list])),
-        "trusts": list(set([instance.domain for instance in trusted_list])),
-        "tos_url": g.site.tos_url or "",
-        "registration_mode": g.site.registration_mode,
-        "software": "piefed",
+        'language': {
+            "id": language.id,
+            "code": language.code,
+            "name": language.name
+        },
+        'nsfw': g.site.enable_nsfw,
+        'newbie_friendly': num_topics() >= 3,
+        'name': g.site.name,
+        'elevator_pitch': get_setting('elevator_pitch', ''),
+        'description': g.site.description or '',
+        'about': g.site.about_html or '',
+        'sidebar': g.site.sidebar_html or '',
+        'logo_url': f"{current_app.config['SERVER_URL']}{logo}",
+        'maturity': maturity,
+        'mau': active_month(),
+        'can_make_communities': not g.site.community_creation_admin_only,
+        'defederation': list(set([instance.domain for instance in defed_list])),
+        'trusts': list(set([instance.domain for instance in trusted_list])),
+        'tos_url': g.site.tos_url or '',
+        'registration_mode': g.site.registration_mode,
+        'software': 'piefed',
+        'monthsmonitored': months_since(g.site.created_at)
     }
     return result
 
@@ -2015,5 +2091,15 @@ def registration_view(registration) -> dict:
             )
     else:
         v1["status"] = "awaiting review"
+    
+    return v1
+
+
+def captcha_view(captcha) -> dict:
+    v1 = dict()
+
+    v1["png"] = captcha["image"].split(",")[-1]
+    v1["wav"] = captcha["audio"].split(",")[-1]
+    v1["uuid"] = captcha["uuid"]
 
     return v1

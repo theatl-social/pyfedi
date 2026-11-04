@@ -573,7 +573,10 @@ def get_suggestion(data):
             .all()
         ):
             result.append(community.lemmy_link()[1:])
-    return {"result": result}
+    elif query.startswith('~'):
+        for feed in Feed.query.filter(Feed.public == True, Feed.name.ilike(f'{query[1:]}%')).order_by(desc(Feed.subscriptions_count)).limit(7).all():
+            result.append(feed.lemmy_link()[1:])
+    return {'result': result}
 
 
 def get_modlog(auth, data):

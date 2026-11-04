@@ -79,6 +79,8 @@ class SiteMiscForm(FlaskForm):
 
 class InstanceChooserForm(FlaskForm):
     enable_instance_chooser = BooleanField(_l('Enable instance chooser'))
+    main_instance_list = StringField(_l('Retrieve list of instances from'))
+    crawl_known_instances = BooleanField(_l('Publish instance list'))
     elevator_pitch = StringField(_l('One-sentence elevator pitch'), validators=[Length(max=90)])
     number_of_admins = IntegerField(_l('Number of admins with emergency access'))
     financial_stability = BooleanField(_l('Non-admins donate enough to pay for hosting'))
@@ -326,6 +328,7 @@ class EditUserForm(FlaskForm):
     banned = BooleanField(_l('Banned'))
     ban_posts = BooleanField(_l('Ban posts'))
     ban_comments = BooleanField(_l('Ban comments'))
+    ban_votes = BooleanField(_l('Ban votes'))
     can_send_pm = BooleanField(_l('Can send PMs'))
     hide_type_choices = [(0, _l('Show')),
                          (1, _l('Hide completely')),

@@ -166,7 +166,9 @@ from app.utils import (
     community_membership_private,
     intlist_to_strlist,
     permission_required,
+    calculate_rss_cache_timeout,
 )
+from app.rss_extras import RSSFeed
 
 
 def profile_vote_quota_used(user_id: int) -> float:
@@ -1324,6 +1326,11 @@ def report_profile(actor):
                 targets=targets_data,
             )
             db.session.add(report)
+            db.session.commit()  # Need to commit to get an id
+
+            # Add the report id to the targets data
+            targets_data['report_id'] = report.id
+            report.targets = targets_data
 
             # Notify site admin
             already_notified = set()
@@ -1639,7 +1646,13 @@ def notification_goto(notification_id):
             current_user.unread_notifications -= 1
         notification.read = True
         db.session.commit()
-        return redirect(notification.url)
+
+        if notification.url == "/admin/reports" and "report_id" in notification.targets:
+            dest_url = notification.url + f"#report_{notification.targets['report_id']}"
+        else:
+            dest_url = notification.url
+
+        return redirect(dest_url)
     else:
         abort(403)
 
@@ -1785,10 +1798,10 @@ def import_settings_task(user_id, redis_key):
                                     session.add(member)
                                     if community.subscriptions_count is None:
                                         community.subscriptions_count = 0
-                                    if community.total_subscriptions_count is None:
-                                        community.total_subscriptions_count = 0
-                                    community.subscriptions_count += 1
-                                    community.total_subscriptions_count += 1
+                                    # Only increment subscriptions_count for local users (ap_id == None)
+                                    if user.ap_id is None:
+                                        community.subscriptions_count += 1
+                                    # For remote communities, total_subscriptions_count comes from ActivityPub, not local tracking
                                     session.commit()
                                 if not community.instance.gone_forever:
                                     follow = {
@@ -1825,7 +1838,10 @@ def import_settings_task(user_id, redis_key):
                                             user_id=user.id, community_id=community.id
                                         )
                                         session.add(member)
-                                        community.subscriptions_count += 1
+                                        # Only increment subscriptions_count for local users (ap_id == None)
+                                        if user.ap_id is None:
+                                            community.subscriptions_count += 1
+                                        # For local communities, total_subscriptions_count = local + remote users
                                         community.total_subscriptions_count += 1
                                         session.commit()
                             cache.delete_memoized(community_membership, user, community)
@@ -3188,14 +3204,13 @@ def show_profile_rss(actor):
                    link = f"{server_url}/u/{actor}",
                    description = description,
                    logo = image,
-                   self_link = f"{server_url}/u/{actor}/feed",
-                   language = 'en'
+                   self_link = f"{server_url}/u/{actor}/feed"
                  )
 
     response = make_response(feed.create_feed(posts, server_url))
     response.headers.set('Content-Type', 'application/rss+xml')
     response.headers.add_header('ETag', f"{user.id}_{hash(user.last_seen)}")
-    response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+    response.headers.add_header('Cache-Control', f'public, max-age={calculate_rss_cache_timeout(posts)}')
     return response
 
 

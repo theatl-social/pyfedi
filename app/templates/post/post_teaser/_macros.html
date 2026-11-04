@@ -58,7 +58,7 @@
         {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">{{ _('nsfl') }}</span>{% endif -%}
         {% if post.ai_generated and ((current_user.is_authenticated and current_user.hide_gen_ai == 2) or current_user.is_anonymous) -%}<span class="warning_badge ai_generated" title="{{ _('This post contains AI generated content') }}">{{ _('AI') }}</span>{% endif -%}
         {% if post.id in reported_posts -%}
-        <a href="{{ '/' + post.community.link() + '/moderate' }}"><span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span></a>
+        <a href="{{ '/community/' + post.community.link() + '/moderate' }}"><span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span></a>
         {% endif -%}
         {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}
         {% if post.deleted -%}<span class="red fe fe-delete" title="{{ _('Post deleted') }}"></span>{% endif -%}
@@ -184,7 +184,15 @@
     {% if not embed -%}
         <div class="post_options_link pull-right">
             {% if current_user.is_authenticated and joined_communities and post.community_id not in joined_communities and not post.is_microblog() %}
-                <a class="small" rel="nofollow" title="{{ _('Join this community') }}" aria-label="{{ _('Join this community') }}" href="#" hx-post="{{ '/c/' + post.community.link() + '/subscribe' }}" hx-swap="outerHTML" hx-target="this" >{{ _('Join') }}</a>
+                <a class="small join_{{ post.community.id }}" rel="nofollow"
+                        title="{{ _('Join this community') }}"
+                        aria-label="{{ _('Join this community') }}"
+                        href="{{ '/community/' + post.community.link() + '/subscribe' }}"
+                        hx-post="{{ '/community/' + post.community.link() + '/subscribe' }}"
+                        hx-swap="outerHTML"
+                        hx-target="this">
+                    {{ _('Join') }}
+                </a>
             {% endif -%}
             {% if current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}
                 <div class="post_translate_icon">
@@ -246,7 +254,7 @@
                 <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
             {% else -%}
                     <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}" decoding="async" referrerpolicy="no-referrer"
-                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" width="{{ post.image.thumb_width() }}" height="{{ post.image.thumb_height() }}" /></a>
             {% endif -%}
         </div>
     {% endif -%}
@@ -270,7 +278,7 @@
                 <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
             {% else -%}
                     <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}" decoding="async" referrerpolicy="no-referrer"
-                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+                         width="{{ post.image.thumb_width() }}" height="{{ post.image.thumb_height() }}" alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
     {% endif -%}
@@ -295,7 +303,7 @@
                 <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external"></span></a>
             {% else -%}
                 <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Read article') }}"><span class="fe fe-external"></span><img src="{{ post.image.thumbnail_url() }}" decoding="async" referrerpolicy="no-referrer"
-                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+                         width="{{ post.image.thumb_width() }}" height="{{ post.image.thumb_height() }}" alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
     {% else %}
@@ -322,7 +330,7 @@
                 <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
             {% else -%}
                 <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}" decoding="async" referrerpolicy="no-referrer"
-                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+                        width="{{ post.image.thumb_width() }}" height="{{ post.image.thumb_height() }}" alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
     {% else -%}

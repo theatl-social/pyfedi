@@ -60,6 +60,36 @@ def purge_user_then_delete_task(user_id, flush):
             session.close()
 
 
+def purge_remote_user_then_delete(user_id, flush=True):
+    if current_app.debug:
+        purge_remote_user_then_delete_task(user_id, flush)
+    else:
+        purge_remote_user_then_delete_task.delay(user_id, flush)
+
+
+@celery.task
+def purge_remote_user_then_delete_task(user_id, flush):
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                user = session.query(User).get(user_id)
+                if user:
+                    user.purge_content(flush=flush)
+
+                    from app import redis_client
+                    with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
+                        session.refresh(user) # often the removal of content will take a long time so get a fresh copy of the user to be sure the setting of the delete flag succeeds.
+                        user.deleted = True
+                        session.commit()
+
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+
 def unsubscribe_from_community(community, user):
     if community.instance.gone_forever or community.instance.dormant:
         return
@@ -323,8 +353,33 @@ def _get_user_same_ip(user):
 def _get_user_upvoted_posts(user):
     """Get posts upvoted by user (only for user themselves or admins)."""
     if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()):
-        return Post.query.join(PostVote, PostVote.post_id == Post.id).filter(PostVote.effect > 0, PostVote.user_id == user.id). \
-            order_by(desc(PostVote.id)).limit(50).all()
+        sql = """
+            SELECT p.id as post_id, pv.created_at as vote_created_at
+            FROM "post" p
+            JOIN "post_vote" pv ON pv.post_id = p.id
+            WHERE pv.effect > 0 AND pv.user_id = :user_id AND pv.author_id != :user_id
+            ORDER BY pv.id DESC
+            LIMIT 100
+        """
+        result = db.session.execute(text(sql), {'user_id': user.id}).all()
+        
+        # Get all post IDs first, then fetch posts and map vote creation times
+        post_ids = [row.post_id for row in result]
+        posts = Post.query.filter(Post.id.in_(post_ids)).all()
+        
+        # Create a mapping from post_id to vote_created_at
+        vote_time_map = {row.post_id: row.vote_created_at for row in result}
+        
+        # Add vote_created_at attribute to each post
+        for post in posts:
+            post.vote_created_at = vote_time_map.get(post.id)
+        
+        # Return posts in the same order as the SQL results
+        # Sort posts by their position in the original post_ids list
+        post_id_order = {post_id: idx for idx, post_id in enumerate(post_ids)}
+        upvoted_posts = sorted(posts, key=lambda p: post_id_order.get(p.id, 0))
+        
+        return upvoted_posts
     return []
 
 

@@ -251,7 +251,6 @@ class Config(object):
     TRANSLATE_ENDPOINT = os.environ.get("TRANSLATE_ENDPOINT") or ""
     TRANSLATE_KEY = os.environ.get("TRANSLATE_KEY") or ""
 
-    ALLOW_AI_CRAWLERS = os.environ.get("ALLOW_AI_CRAWLERS") or False
 
     REDIS_MEMORY_LIMIT = int(os.environ.get("REDIS_MEMORY_LIMIT") or 200000000)
 

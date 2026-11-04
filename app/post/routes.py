@@ -663,6 +663,25 @@ def continue_discussion(post_id, comment_id):
                 else:
                     flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
 
+    if current_user.is_anonymous:
+        if current_app.config['CONTENT_WARNING']:
+            if post.nsfl:
+                flash(_('This post is only visible to logged in users.'))
+                return redirect(url_for("auth.login", next=f"/post/{post_id}"))
+        else:
+            if post.nsfw or post.nsfl:
+                flash(_('This post is only visible to logged in users.'))
+                return redirect(url_for("auth.login", next=f"/post/{post_id}"))
+
+        if post.community.private:
+            abort(403)
+    else:
+        if (post.nsfw or post.nsfl) and user_in_restricted_country(current_user):
+            abort(403)
+
+        if post.community.private and post.community_id not in community_membership_private(current_user.id):
+            abort(403)
+
     mods = post.community.moderators()
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
     if post.community.private_mods:
@@ -717,7 +736,7 @@ def continue_discussion(post_id, comment_id):
     description = shorten_string(markdown_to_text(comment.body), 200) if comment.body else None
     og_image = post.image.source_url if post.image_id else None
 
-    response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title),
+    response = render_template('post/continue_discussion.html', title=post.title,
                                post=post, mods=mod_list, has_voted=has_voted, poll_results=poll_results,
                                poll_data=poll_data,
                                poll_choices=poll_choices, poll_total_votes=poll_total_votes,
@@ -843,7 +862,7 @@ def add_reply(post_id: int, comment_id: int):
         form.notify_author.data = True
         form.language_id.data = current_user.language_id or g.site.language_id
 
-        return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
+        return render_template('post/add_reply.html', title=post.title, post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to,
                                markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                mods=mod_list,
@@ -890,6 +909,20 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
         if in_reply_to.author.banned or in_reply_to.community_id in communities_banned_from(in_reply_to.author.id):
             author_banned = True
 
+        # Get selected text and pre-populate the textarea with it quoted
+        to_quote = request.args.get("selectedText")
+
+        if to_quote:
+            selected_lines = to_quote.splitlines()
+            quoted_lines = []
+            
+            for line in selected_lines:
+                quoted_lines.append("> " + line)
+
+            quoted_text = "\n".join(quoted_lines) + "\n\n"
+        else:
+            quoted_text = ""
+
         return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, nonce=nonce,
                                languages=languages_for_form(), markdown_editor=current_user.markdown_editor,
                                recipient_language_id=recipient_language_id,
@@ -897,7 +930,8 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                recipient_language_name=recipient_language_name,
                                in_reply_to=in_reply_to, author_banned=author_banned,
                                user_pronouns=user_pronouns_on_post(post),
-                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
+                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
+                               quoted_text=quoted_text)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))
@@ -986,13 +1020,8 @@ def post_source(post_id: int, state: str):
         return render_template("post/_post_source_swap.html", post_body=post_body, state="hide", post_id=post_id)
 
     if state == "show":
-        if '````' in post.body:
-            post_body = '<pre><code>' + str(escape(post.body)) + '</code></pre>'
-        elif '```' in post.body:
-            post_body = markdown_to_html("````md\n" + post.body + "\n````")
-        else:
-            post_body = markdown_to_html("```md\n" + post.body + "\n```")
-
+        post_body = '<pre><code>' + str(escape(post.body)) + '</code></pre>'
+        
         return render_template("post/_post_source_swap.html", post_body=post_body, state="show", post_id=post_id)
 
     elif state == "hide":
@@ -1884,13 +1913,8 @@ def post_reply_source(post_id: int, comment_id: int, state: str):
                                comment_id=comment_id, post_id=post_id)
 
     if state == "show":
-        if '````' in post_reply.body:
-            reply_body = '<pre><code>' + str(escape(post_reply.body)) + '</code></pre>'
-        elif '```' in post_reply.body:
-            reply_body = markdown_to_html("````md\n" + post_reply.body + "\n````")
-        else:
-            reply_body = markdown_to_html("```md\n" + post_reply.body + "\n```")
-
+        reply_body = '<pre><code>' + str(escape(post_reply.body)) + '</code></pre>'
+        
         return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="show",
                                comment_id=comment_id, post_id=post_id)
 
@@ -1900,6 +1924,58 @@ def post_reply_source(post_id: int, comment_id: int, state: str):
         return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="hide",
                                comment_id=comment_id, post_id=post_id)
 
+
+@bp.route("/post/<int:post_id>/comment/<int:comment_id>/edit_inline", methods=["GET", "POST"])
+@login_required
+def post_reply_edit_inline(post_id: int, comment_id: int):
+    # This should be an htmx request, if not, redirect to the old form
+    if not request.headers.get('HX-Request'):
+        return redirect(url_for('post.post_reply_edit', post_id=post_id, comment_id=comment_id))
+
+    # Fetch stuff
+    post = Post.query.get_or_404(post_id)
+    post_reply = PostReply.query.get_or_404(comment_id)
+    if post_reply.post_id != post.id:
+        abort(404)
+    form = EditReplyForm()
+    form.language_id.choices = languages_for_form()
+    
+    # Ensure it is the author making the edit
+    if post_reply.user_id == current_user.id:
+        if form.validate_on_submit():
+            # Edit was submitted
+            edit_reply(form, post_reply, post, SRC_WEB, in_line=True)
+            return render_template(
+                "post/post_reply_edit_inline.html",
+                form=form,
+                markdown_editor=current_user.markdown_editor,
+                post=post,
+                post_reply=post_reply,
+                editing=False)
+        else:
+            if request.args.get('cancelled', False):
+                # Edit was cancelled
+                editing = False
+            else:
+                # Edit is requested, get the form and populate it
+                editing = True
+                form.body.data = post_reply.body
+                form.body.render_kw = {"id": f"reply_body_{post_reply.id}"}
+                form.notify_author.data = post_reply.notify_author
+                form.language_id.data = post_reply.language_id
+                form.distinguished.data = post_reply.distinguished
+                if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
+                    form.distinguished.render_kw = {'disabled': True}
+            
+            return render_template(
+                "post/post_reply_edit_inline.html",
+                form=form,
+                markdown_editor=current_user.markdown_editor,
+                post=post,
+                post_reply=post_reply,
+                editing=editing)
+    else:
+        abort(401)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
@@ -2291,6 +2367,7 @@ def post_cross_post(post_id: int):
             response.delete_cookie('post_title')
             response.delete_cookie('post_description')
             response.delete_cookie('post_tags')
+            response.delete_cookie('post_community')
             return response
         else:
             flash(_('Could not find that community.'), 'error')
@@ -2327,14 +2404,18 @@ def preview():
     if preview_top:
         oob_target = oob_target + "top_"
 
-    if preview_type == "comment":
+    if preview_type.startswith("comment"):
         oob_target = oob_target + "comment_preview_"
         if preview_top:
             target_id = "#textarea_comment_to_preview"
+        elif preview_type.endswith("_edit"):
+            target_id = "#textarea_reply_edit_preview_"
         else:
             target_id = "#textarea_in_reply_to_preview_"
-            if preview_id:
-                target_id += preview_id
+           
+        if preview_id and not preview_top:
+            target_id += preview_id
+    
     elif preview_type == "post" or preview_type == "wiki":
         oob_target = "post_preview_btn"
         target_id = "#preview"

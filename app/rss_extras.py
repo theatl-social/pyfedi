@@ -13,14 +13,17 @@ from feedgen.util import xml_elem
 
 SLASH_NS = 'http://purl.org/rss/1.0/modules/slash/'
 
+
 def _set_value(entry, name, value):
     if value:
         newelem = xml_elem('{%s}' % SLASH_NS + name, entry)
         newelem.text = value
 
+
 class SlashExtension(BaseExtension):
     def extend_ns(self):
         return {'slash': SLASH_NS}
+
 
 class SlashEntryExtension(BaseExtension):
     def __init__(self):
@@ -38,8 +41,8 @@ class SlashEntryExtension(BaseExtension):
         if type(value) is not int or value < 0:
             raise ValueError('Slash Extension: Invalid comment count')
         self._comments = str(value)
-####################################################################################################
 
+####################################################################################################
 
 def _is_valid_xml_utf8(value):
     """Accept exactly XML 1.0's character ranges, including supplementary Unicode."""
@@ -61,10 +64,11 @@ class RSSFeed:
     """
 
     def __init__(self, *,  title: str, link: str, description: str, logo: str|None = None, \
-                   self_link: str|None = None, language: str|None = None):
+                   self_link: str|None = None):
         fg = FeedGenerator()
         fg.load_extension('media', rss=True)
         fg.register_extension('slash', SlashExtension, SlashEntryExtension)
+        fg.load_extension('dc')
 
         fg.title(title)
         fg.subtitle(description)
@@ -72,8 +76,6 @@ class RSSFeed:
             fg.logo(logo)
         if self_link:
             fg.link(href=self_link, rel='self')
-        if language:
-            fg.language(language)
         # feedgen takes the value of the last call of link as channel link for RSS,
         # regardless of value of rel, so this must be the very last call of *link*
         fg.link(href=link, rel='alternate')
@@ -106,7 +108,7 @@ class RSSFeed:
         fe.title(post.title.strip())
         link = f"{server_url}{post.slug}" if post.slug else f"{server_url}/post/{post.id}"
         fe.link(href=link)
-        fe.guid(post.profile_id(), permalink=True)
+        fe.guid(post.profile_id(), permalink=False)
 
         fe.content(content, type='CDATA')  # feedgen takes care if this is empty
         cls._add_media_content(post, fe)
@@ -115,6 +117,11 @@ class RSSFeed:
             fe.author(email=cls._email_from_public_url(post.author.public_url()))
 
         fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
+
+        # Add post language using both Dublin Core and standard RSS elements
+        if post.language and post.language.code:
+            fe.dc.dc_language(post.language.code)
+
         # reply_count_cross_posted is nullable and can drift negative, so fall back and clamp
         comment_count = post.reply_count_cross_posted
         if comment_count is None:
@@ -123,6 +130,7 @@ class RSSFeed:
 
         if post.community and _is_valid_xml_utf8(post.community.name):
             fe.category(term=post.community.name)
+            fe.category(term=post.community.lemmy_link(), scheme='lemmy-link')
         for flair in set([flair.flair for flair in post.flair]):
             if _is_valid_xml_utf8(flair):
                 fe.category(term=flair, scheme='flair')
@@ -167,7 +175,7 @@ class RSSFeed:
             fe.media.content(medium, group=url)  # without group parameter, all media:content would go into the same media:group
 
         url = post.url
-        if not url:
+        if not url:  # image is only used when post.url is not None, so the thumbnail for galleries will not be used unless it's given as URL.
             return
         medium = {'url': url}
         type = mimetype_from_url(url)

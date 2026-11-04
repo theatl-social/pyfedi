@@ -299,6 +299,11 @@ def post_private_message_report(auth, data):
         targets=targets_data,
     )
     db.session.add(report)
+    db.session.commit()  # Need to commit to get an id
+
+    # Add the report id to the targets data
+    targets_data['report_id'] = report.id
+    report.targets = targets_data
 
     already_notified = set()
     for admin in Site.admins():
@@ -371,6 +376,11 @@ def post_private_message_conversation_report(auth, data):
         targets=targets_data,
     )
     db.session.add(report)
+    db.session.commit()  # Need to commit to get an id
+
+    # Add the report id to the targets data
+    targets_data['report_id'] = report.id
+    report.targets = targets_data
 
     already_notified = set()
     for admin in Site.admins():

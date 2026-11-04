@@ -23,6 +23,7 @@ from app.models import (
     CommunityJoinRequest,
     Instance,
     File,
+    NotificationSubscription,
 )
 from app.shared.tasks import task_selector
 from app.shared.community import leave_community
@@ -41,6 +42,7 @@ from app.utils import (
     piefed_markdown_to_lemmy_markdown,
     markdown_to_html,
     is_image_url,
+    render_template,
 )
 
 
@@ -638,13 +640,14 @@ def _feed_remove_community(community_id: int, current_feed_id: int):
                         )
 
                 if proceed:
-                    db.session.query(CommunityMember).filter_by(
-                        user_id=user.id, community_id=community.id
-                    ).delete()
-                    db.session.query(CommunityJoinRequest).filter_by(
-                        user_id=user.id, community_id=community.id
-                    ).delete()
-                    community.subscriptions_count -= 1
+                    db.session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).delete()
+                    db.session.query(CommunityJoinRequest).filter_by(user_id=user.id, community_id=community.id).delete()
+                    # Only decrement subscriptions_count for users with ap_id == None
+                    if user.ap_id is None:
+                        community.subscriptions_count -= 1
+                    # Only decrement total_subscriptions_count for local communities
+                    if community.is_local():
+                        community.total_subscriptions_count -= 1
                     db.session.commit()
 
                 cache.delete_memoized(community_membership, user, community)
@@ -792,6 +795,7 @@ def existing_communities(feed_id: int) -> List:
     ).scalars()
 
 
+
 def form_communities_to_ids(form_communities: str) -> set:
     from app.community.util import search_for_community
 
@@ -806,3 +810,44 @@ def form_communities_to_ids(form_communities: str) -> set:
         if community:
             result.add(community.id)
     return result
+
+
+def subscribe_feed(feed_id: int, subscribe, src, auth=None):
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
+    feed = Feed.query.get(feed_id)
+
+    if src == SRC_WEB:
+        subscribe = False if feed.notify_new_posts(user_id) else True
+
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == feed.id,
+                                                                    NotificationSubscription.user_id == user_id,
+                                                                    NotificationSubscription.type == NOTIF_FEED).first()
+
+    if subscribe == False:
+        if existing_notification:
+            db.session.delete(existing_notification)
+            db.session.commit()
+        else:
+            msg = 'A subscription for this feed did not exist.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+
+    else:
+        if existing_notification:
+            msg = 'A subscription for this feed already existed.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+        else:
+            new_notification = NotificationSubscription(name=feed.name, user_id=user_id, entity_id=feed.id,
+                                                        type=NOTIF_FEED)
+            db.session.add(new_notification)
+            db.session.commit()
+
+    if src == SRC_API:
+        return user_id
+    else:
+        return render_template("feed/_notification_toggle.html", feed=feed)

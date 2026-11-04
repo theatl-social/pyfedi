@@ -551,6 +551,26 @@ Any failure means a patch has regressed and must be re-applied before the merge 
   URL/traversal sentinels, failed sanitizer, failed composite, and successful
   replacement/purge coverage.
 
+### SP-036 — Post teaser turned escaped text into live HTML (stored XSS)
+
+- **Origin:** pre-existing in this fork and upstream (still present in
+  v1.8.11); found while merging v1.8.11's spoiler-aware rewrite of
+  `first_paragraph()`.
+- **Files:** `app/utils.py` (`first_paragraph`).
+- **Issue:** post teasers render `{{ first_paragraph(post.body_html) | safe }}`.
+  When the first paragraph is boilerplate ("Summary", "Comments",
+  "cross-posted from: ...") the function returned the second paragraph as
+  `f'<p>{second_paragraph.text}</p>'`. BeautifulSoup's `.text` decodes
+  entities, so inert stored text such as `&lt;img src=x onerror=...&gt;` came
+  back as a real element on every feed, community, tag and domain listing.
+  Reachable by any local poster (markdown `\<img ...>`) and by any federated
+  post. The CSP is only sent to logged-in users, so anonymous visitors had no
+  script mitigation at all, and non-script HTML injection worked for everyone.
+- **Fix:** escape the decoded text again before wrapping it. The other branch
+  already passes through `allowlist_html()`.
+- **Tests:** `tests/security/test_sp036_first_paragraph_xss.py` (verified red
+  before the fix: 13 failed).
+
 ## When upstream finally patches one of these
 
 When upstream ships a fix that closes the vulnerability, audit the upstream patch and our patch side-by-side. If upstream's is equivalent or stricter, switch to upstream's during the merge and update this file to mark the patch as "Upstream-equivalent — superseded in vX.Y.Z". Keep the regression test — it now also verifies upstream's fix.

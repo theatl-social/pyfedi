@@ -1378,6 +1378,9 @@ form .mb-3.required > label:after {
   z-index: 1031;
   text-wrap: nowrap;
   border-top-width: var(--border-2) !important;
+  /* own compositor layer - stops Chromium/Vivaldi hit-testing taps at the wrong offset after the browser toolbar hides */
+  transform: translateZ(0);
+  will-change: transform;
 }
 .mobilenav a {
   flex-grow: 1;
@@ -1568,6 +1571,10 @@ ul.form-multicheck-columns li {
   display: none;
 }
 
+.edit_reply .form-label {
+  display: none;
+}
+
 .sort_methods, .view_filter {
   text-wrap: none;
   text-wrap-mode: nowrap;
@@ -1747,19 +1754,21 @@ ul.form-multicheck-columns li {
 }
 .post_teaser_image_preview a {
   display: inline-block;
+  min-width: 150px;
+  min-width: min(100%, var(--spacing-16) * 9.375); /* 150px, or available width if <150 */
   max-width: 512px;
-  max-width: calc(var(--spacing-16) * 32); /* 512px */
-  max-height: 575px;
-  max-height: calc(var(--spacing-16) * 35.9375); /* 575px */
-  overflow: hidden;
+  max-width: min(100%, var(--spacing-16) * 32); /* 512px, or available width if <512 */
+  overflow: hidden; /* makes sure that blurred images don't overflow */
   border-radius: var(--spacing-4);
 }
 .post_teaser_image_preview img {
   max-width: 100%;
-  min-width: 150px;
-  min-width: calc(var(--spacing-16) * 9.375); /* 150px */
-  margin-right: var(--spacing-4);
+  max-height: 575px;
+  max-height: calc(var(--spacing-16) * 35.9375); /* 575px */
+  width: auto;
   height: auto;
+  border-radius: var(--spacing-4);
+  overflow: hidden; /* clips the corners off with the radius */
 }
 
 .post_teaser_video_preview {
@@ -1803,6 +1812,11 @@ ul.form-multicheck-columns li {
 }
 .post_teaser_video_preview .blur {
   filter: blur(var(--spacing-24));
+}
+
+.microblog_teaser .post_teaser_article_preview p, .microblog_teaser .post_teaser_link_preview p {
+  -webkit-line-clamp: 3; /* give microblogs a bit more teaser text because there is no heading */
+  line-clamp: 3;
 }
 
 time {
@@ -2614,50 +2628,50 @@ a.unread:before, div.unread:before {
   line-height: var(--spacing-32);
 }
 
-.post_body, .comment_body, #preview, .reply_preview, .accordion-body, .post_col, #about_community .card-body {
+.post_body, .comment_body, #preview, .reply_preview, .accordion-body, .post_col, #about_community .card-body, .message_body {
   word-wrap: break-word;
   line-height: 1.6;
 }
-.post_body h1, .post_body h2, .post_body h3, .post_body h4, .post_body h5, .post_body h6, .comment_body h1, .comment_body h2, .comment_body h3, .comment_body h4, .comment_body h5, .comment_body h6, #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6, .reply_preview h1, .reply_preview h2, .reply_preview h3, .reply_preview h4, .reply_preview h5, .reply_preview h6, .accordion-body h1, .accordion-body h2, .accordion-body h3, .accordion-body h4, .accordion-body h5, .accordion-body h6, .post_col h1, .post_col h2, .post_col h3, .post_col h4, .post_col h5, .post_col h6, #about_community .card-body h1, #about_community .card-body h2, #about_community .card-body h3, #about_community .card-body h4, #about_community .card-body h5, #about_community .card-body h6 {
+.post_body h1, .post_body h2, .post_body h3, .post_body h4, .post_body h5, .post_body h6, .comment_body h1, .comment_body h2, .comment_body h3, .comment_body h4, .comment_body h5, .comment_body h6, #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6, .reply_preview h1, .reply_preview h2, .reply_preview h3, .reply_preview h4, .reply_preview h5, .reply_preview h6, .accordion-body h1, .accordion-body h2, .accordion-body h3, .accordion-body h4, .accordion-body h5, .accordion-body h6, .post_col h1, .post_col h2, .post_col h3, .post_col h4, .post_col h5, .post_col h6, #about_community .card-body h1, #about_community .card-body h2, #about_community .card-body h3, #about_community .card-body h4, #about_community .card-body h5, #about_community .card-body h6, .message_body h1, .message_body h2, .message_body h3, .message_body h4, .message_body h5, .message_body h6 {
   margin-top: 0.5rem;
   margin-bottom: 0;
 }
-.post_body h1.post_title, .comment_body h1.post_title, #preview h1.post_title, .reply_preview h1.post_title, .accordion-body h1.post_title, .post_col h1.post_title, #about_community .card-body h1.post_title {
+.post_body h1.post_title, .comment_body h1.post_title, #preview h1.post_title, .reply_preview h1.post_title, .accordion-body h1.post_title, .post_col h1.post_title, #about_community .card-body h1.post_title, .message_body h1.post_title {
   margin-top: 0;
   margin-bottom: 0.5rem;
 }
-.post_body h1, .comment_body h1, #preview h1, .reply_preview h1, .accordion-body h1, .post_col h1, #about_community .card-body h1 {
+.post_body h1, .comment_body h1, #preview h1, .reply_preview h1, .accordion-body h1, .post_col h1, #about_community .card-body h1, .message_body h1 {
   font-size: var(--font-size-31);
 }
-.post_body h2, .comment_body h2, #preview h2, .reply_preview h2, .accordion-body h2, .post_col h2, #about_community .card-body h2 {
+.post_body h2, .comment_body h2, #preview h2, .reply_preview h2, .accordion-body h2, .post_col h2, #about_community .card-body h2, .message_body h2 {
   font-size: var(--font-size-24);
 }
-.post_body h3, .comment_body h3, #preview h3, .reply_preview h3, .accordion-body h3, .post_col h3, #about_community .card-body h3 {
+.post_body h3, .comment_body h3, #preview h3, .reply_preview h3, .accordion-body h3, .post_col h3, #about_community .card-body h3, .message_body h3 {
   font-size: var(--font-size-18);
 }
-.post_body h4, .comment_body h4, #preview h4, .reply_preview h4, .accordion-body h4, .post_col h4, #about_community .card-body h4 {
+.post_body h4, .comment_body h4, #preview h4, .reply_preview h4, .accordion-body h4, .post_col h4, #about_community .card-body h4, .message_body h4 {
   font-size: var(--font-size-16);
   font-weight: normal;
 }
-.post_body h5, .comment_body h5, #preview h5, .reply_preview h5, .accordion-body h5, .post_col h5, #about_community .card-body h5 {
+.post_body h5, .comment_body h5, #preview h5, .reply_preview h5, .accordion-body h5, .post_col h5, #about_community .card-body h5, .message_body h5 {
   font-size: var(--font-size-16);
   font-weight: normal;
   font-style: italic;
 }
-.post_body h6, .comment_body h6, #preview h6, .reply_preview h6, .accordion-body h6, .post_col h6, #about_community .card-body h6 {
+.post_body h6, .comment_body h6, #preview h6, .reply_preview h6, .accordion-body h6, .post_col h6, #about_community .card-body h6, .message_body h6 {
   font-size: var(--font-size-16);
   font-weight: normal;
   font-style: italic;
   color: var(--bs-code-color);
 }
-.post_body img, .comment_body img, #preview img, .reply_preview img, .accordion-body img, .post_col img, #about_community .card-body img {
+.post_body img, .comment_body img, #preview img, .reply_preview img, .accordion-body img, .post_col img, #about_community .card-body img, .message_body img {
   max-width: 100%;
   height: auto;
 }
-.post_body .post_image img, .comment_body .post_image img, #preview .post_image img, .reply_preview .post_image img, .accordion-body .post_image img, .post_col .post_image img, #about_community .card-body .post_image img {
+.post_body .post_image img, .comment_body .post_image img, #preview .post_image img, .reply_preview .post_image img, .accordion-body .post_image img, .post_col .post_image img, #about_community .card-body .post_image img, .message_body .post_image img {
   margin-bottom: var(--spacing-16);
 }
-.post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote, .post_col blockquote, #about_community .card-body blockquote {
+.post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote, .post_col blockquote, #about_community .card-body blockquote, .message_body blockquote {
   padding: var(--spacing-4) var(--spacing-8);
   font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
   margin: 0 var(--spacing-20) var(--spacing-12) var(--spacing-20);
@@ -2668,10 +2682,10 @@ a.unread:before, div.unread:before {
   background-color: var(--bs-secondary-bg-subtle);
   border-left-color: var(--bs-secondary-border-subtle);
 }
-.post_body blockquote p:last-child, .comment_body blockquote p:last-child, #preview blockquote p:last-child, .reply_preview blockquote p:last-child, .accordion-body blockquote p:last-child, .post_col blockquote p:last-child, #about_community .card-body blockquote p:last-child {
+.post_body blockquote p:last-child, .comment_body blockquote p:last-child, #preview blockquote p:last-child, .reply_preview blockquote p:last-child, .accordion-body blockquote p:last-child, .post_col blockquote p:last-child, #about_community .card-body blockquote p:last-child, .message_body blockquote p:last-child {
   margin-bottom: 0px;
 }
-.post_body pre, .comment_body pre, #preview pre, .reply_preview pre, .accordion-body pre, .post_col pre, #about_community .card-body pre {
+.post_body pre, .comment_body pre, #preview pre, .reply_preview pre, .accordion-body pre, .post_col pre, #about_community .card-body pre, .message_body pre {
   background: var(--bs-secondary-bg);
   font-family: monospace;
   padding: var(--spacing-4) var(--spacing-8);
@@ -2681,49 +2695,49 @@ a.unread:before, div.unread:before {
   border-width: var(--border-2);
   border-radius: var(--spacing-4);
 }
-.post_body .post_source pre, .comment_body .post_source pre, #preview .post_source pre, .reply_preview .post_source pre, .accordion-body .post_source pre, .post_col .post_source pre, #about_community .card-body .post_source pre {
+.post_body .post_source pre, .comment_body .post_source pre, #preview .post_source pre, .reply_preview .post_source pre, .accordion-body .post_source pre, .post_col .post_source pre, #about_community .card-body .post_source pre, .message_body .post_source pre {
   padding-top: var(--spacing-16);
   padding-bottom: var(--spacing-16);
 }
-.post_body p > code, .comment_body p > code, #preview p > code, .reply_preview p > code, .accordion-body p > code, .post_col p > code, #about_community .card-body p > code {
+.post_body p > code, .comment_body p > code, #preview p > code, .reply_preview p > code, .accordion-body p > code, .post_col p > code, #about_community .card-body p > code, .message_body p > code {
   background: var(--bs-secondary-bg);
   padding: var(--spacing-4) var(--spacing-8);
   border-radius: var(--spacing-4);
   position: relative;
 }
-.post_body p > code .btn, .comment_body p > code .btn, #preview p > code .btn, .reply_preview p > code .btn, .accordion-body p > code .btn, .post_col p > code .btn, #about_community .card-body p > code .btn {
+.post_body p > code .btn, .comment_body p > code .btn, #preview p > code .btn, .reply_preview p > code .btn, .accordion-body p > code .btn, .post_col p > code .btn, #about_community .card-body p > code .btn, .message_body p > code .btn {
   --bs-btn-padding-x: var(--spacing-4) ! important;
   --bs-btn-padding-y: 0 ! important;
 }
-.post_body code .before, .comment_body code .before, #preview code .before, .reply_preview code .before, .accordion-body code .before, .post_col code .before, #about_community .card-body code .before {
+.post_body code .before, .comment_body code .before, #preview code .before, .reply_preview code .before, .accordion-body code .before, .post_col code .before, #about_community .card-body code .before, .message_body code .before {
   float: right;
 }
-.post_body code .btn:hover, .comment_body code .btn:hover, #preview code .btn:hover, .reply_preview code .btn:hover, .accordion-body code .btn:hover, .post_col code .btn:hover, #about_community .card-body code .btn:hover {
+.post_body code .btn:hover, .comment_body code .btn:hover, #preview code .btn:hover, .reply_preview code .btn:hover, .accordion-body code .btn:hover, .post_col code .btn:hover, #about_community .card-body code .btn:hover, .message_body code .btn:hover {
   background-color: var(--black-tint-02);
   color: var(--white);
 }
-.post_body table.table, .comment_body table.table, #preview table.table, .reply_preview table.table, .accordion-body table.table, .post_col table.table, #about_community .card-body table.table {
+.post_body table.table, .comment_body table.table, #preview table.table, .reply_preview table.table, .accordion-body table.table, .post_col table.table, #about_community .card-body table.table, .message_body table.table {
   display: block;
   width: 100%;
   overflow-x: auto;
 }
-.post_body ol li, .post_body ul li, .comment_body ol li, .comment_body ul li, #preview ol li, #preview ul li, .reply_preview ol li, .reply_preview ul li, .accordion-body ol li, .accordion-body ul li, .post_col ol li, .post_col ul li, #about_community .card-body ol li, #about_community .card-body ul li {
+.post_body ol li, .post_body ul li, .comment_body ol li, .comment_body ul li, #preview ol li, #preview ul li, .reply_preview ol li, .reply_preview ul li, .accordion-body ol li, .accordion-body ul li, .post_col ol li, .post_col ul li, #about_community .card-body ol li, #about_community .card-body ul li, .message_body ol li, .message_body ul li {
   margin-bottom: var(--spacing-8);
 }
-.post_body ol li > p, .post_body ul li > p, .comment_body ol li > p, .comment_body ul li > p, #preview ol li > p, #preview ul li > p, .reply_preview ol li > p, .reply_preview ul li > p, .accordion-body ol li > p, .accordion-body ul li > p, .post_col ol li > p, .post_col ul li > p, #about_community .card-body ol li > p, #about_community .card-body ul li > p {
+.post_body ol li > p, .post_body ul li > p, .comment_body ol li > p, .comment_body ul li > p, #preview ol li > p, #preview ul li > p, .reply_preview ol li > p, .reply_preview ul li > p, .accordion-body ol li > p, .accordion-body ul li > p, .post_col ol li > p, .post_col ul li > p, #about_community .card-body ol li > p, #about_community .card-body ul li > p, .message_body ol li > p, .message_body ul li > p {
   margin-bottom: 0;
 }
-.post_body img[align=left], .comment_body img[align=left], #preview img[align=left], .reply_preview img[align=left], .accordion-body img[align=left], .post_col img[align=left], #about_community .card-body img[align=left] {
+.post_body img[align=left], .comment_body img[align=left], #preview img[align=left], .reply_preview img[align=left], .accordion-body img[align=left], .post_col img[align=left], #about_community .card-body img[align=left], .message_body img[align=left] {
   margin-right: var(--spacing-12);
   margin-bottom: var(--spacing-12);
   float: left;
 }
-.post_body img[align=right], .comment_body img[align=right], #preview img[align=right], .reply_preview img[align=right], .accordion-body img[align=right], .post_col img[align=right], #about_community .card-body img[align=right] {
+.post_body img[align=right], .comment_body img[align=right], #preview img[align=right], .reply_preview img[align=right], .accordion-body img[align=right], .post_col img[align=right], #about_community .card-body img[align=right], .message_body img[align=right] {
   margin-left: var(--spacing-12);
   margin-bottom: var(--spacing-12);
   float: right;
 }
-.post_body img[align=middle], .comment_body img[align=middle], #preview img[align=middle], .reply_preview img[align=middle], .accordion-body img[align=middle], .post_col img[align=middle], #about_community .card-body img[align=middle] {
+.post_body img[align=middle], .comment_body img[align=middle], #preview img[align=middle], .reply_preview img[align=middle], .accordion-body img[align=middle], .post_col img[align=middle], #about_community .card-body img[align=middle], .message_body img[align=middle] {
   display: block;
   margin: 0 auto var(--spacing-12) auto;
   float: none;
@@ -3118,15 +3132,27 @@ form h5 {
 }
 
 .coolfieldset legend, .coolfieldset.expanded legend {
-  background: var(--whitesmoke) url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
+  background-color: var(--whitesmoke);
+  background-image: url(/static/images/expanded.svg);
+  background-size: 10px auto;
+  background-repeat: no-repeat;
+  background-position: center left var(--spacing-4);
 }
 
 .coolfieldset.collapsed legend {
-  background: var(--whitesmoke) url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
+  background-color: var(--whitesmoke);
+  background-image: url(/static/images/collapsed.svg);
+  background-size: 10px auto;
+  background-repeat: no-repeat;
+  background-position: center left var(--spacing-4);
 }
 
 .coolfieldset.expanded .coolfieldset.collapsed legend {
-  background: var(--whitesmoke) url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
+  background-color: var(--whitesmoke);
+  background-image: url(/static/images/collapsed.svg);
+  background-size: 10px auto;
+  background-repeat: no-repeat;
+  background-position: center left var(--spacing-4);
 }
 
 .domain_link {
@@ -4145,15 +4171,35 @@ other bootstrap classes in use from Reboot Bootstrap class and other bootstrap f
 }
 
 .coolfieldset.expanded legend {
-  background: var(--whitesmoke) url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
+  background-color: var(--whitesmoke);
+  background-image: url(/static/images/expanded.svg);
+  background-size: 10px auto;
+  background-repeat: no-repeat;
+  background-position: center left var(--spacing-4);
 }
 
 [data-bs-theme=dark] .coolfieldset legend {
-  background: var(--super-dark-grey) url(/static/images/expanded.gif) no-repeat center left var(--spacing-4);
+  background-color: var(--super-dark-grey);
+  background-image: url(/static/images/expanded.svg);
+  background-size: 10px auto;
+  background-repeat: no-repeat;
+  background-position: center left var(--spacing-4);
 }
 
 [data-bs-theme=dark] .coolfieldset.collapsed legend {
-  background: var(--super-dark-grey) url(/static/images/collapsed.gif) no-repeat center left var(--spacing-4);
+  background-color: var(--super-dark-grey);
+  background-image: url(/static/images/collapsed.svg);
+  background-size: 10px auto;
+  background-repeat: no-repeat;
+  background-position: center left var(--spacing-4);
+}
+
+[data-bs-theme=dark] .coolfieldset.expanded .coolfieldset.collapsed legend {
+  background-color: var(--super-dark-grey);
+  background-image: url(/static/images/collapsed.svg);
+  background-size: 10px auto;
+  background-repeat: no-repeat;
+  background-position: center left var(--spacing-4);
 }
 
 [data-bs-theme=dark] .post_teaser_title_a:visited {
@@ -4191,6 +4237,15 @@ body.compact-min .post_teaser .post_teaser_image_preview img {
   max-height: calc(var(--spacing-16) * 10.625); /* 170px */
   width: auto;
   min-width: inherit;
+}
+body.compact-min .post_teaser .post_teaser_article_preview p, body.compact-min .post_teaser .post_teaser_link_preview p {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+body.compact-min .microblog_teaser .post_teaser_article_preview,
+body.compact-min .microblog_teaser .post_teaser_link_preview,
+body.compact-min .microblog_teaser .post_teaser_video_preview {
+  display: inherit;
 }
 body.compact-min .community_icon {
   width: var(--spacing-20);

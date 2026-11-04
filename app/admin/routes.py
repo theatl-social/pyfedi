@@ -10,6 +10,7 @@ import shutil
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file, make_response
 from flask_login import current_user, login_user
 from flask_babel import _, ngettext
+from markupsafe import Markup
 from slugify import slugify
 from sqlalchemy import text, desc, or_, and_, delete, update, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -51,6 +52,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
     safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, \
     instance_allowed, trusted_instance_ids, get_emoji_replacements, get_site_as_dict, roles_with, sql_file
+from app.utils import pause_federation_key
 from app.admin import bp
 
 
@@ -270,7 +272,7 @@ def admin_misc():
     form.language_id.choices = languages_for_form(all_languages=True)
     if close_form.submit.data and close_form.validate():
         from app import redis_client
-        redis_client.set('pause_federation', '666', ex=86400 * 365 * 10)
+        redis_client.set(pause_federation_key(), '666', ex=86400 * 365 * 10)
         site.registration_mode = 'Closed'
         if close_form.announcement.data:
             set_setting('announcement', close_form.announcement.data)
@@ -363,6 +365,8 @@ def admin_instance_chooser():
         set_setting('number_of_admins', form.number_of_admins.data)
         set_setting('financial_stability', form.financial_stability.data)
         set_setting('daily_backups', form.daily_backups.data)
+        set_setting('main_instance_list', form.main_instance_list.data or 'piefed.social')
+        set_setting('crawl_known_instances', form.crawl_known_instances.data)
         flash(_('Settings saved. It might take up to 24 hours before other instances show your changes.'))
     elif request.method == 'GET':
         form.enable_instance_chooser.data = get_setting('enable_instance_chooser', False)
@@ -370,6 +374,8 @@ def admin_instance_chooser():
         form.number_of_admins.data = get_setting('number_of_admins', 0)
         form.financial_stability.data = get_setting('financial_stability', False)
         form.daily_backups.data = get_setting('daily_backups', False)
+        form.main_instance_list.data = get_setting('main_instance_list', 'piefed.social')
+        form.crawl_known_instances.data = get_setting('crawl_known_instances', False)
 
     return render_template('admin/instance_chooser.html', title=_('Misc settings'), form=form,
                            roles_with=roles_with('change instance settings'))
@@ -1141,8 +1147,7 @@ def activity_json(activity_id):
         is_valid_json = False
 
     if is_valid_json:
-        json_md = "```json\n" + pretty_json + "\n```"
-        json_html = markdown_to_html(json_md)
+        json_html = '<pre><code>\n' + pretty_json + '\n</code></pre>'
     else:
         json_md = "`" + pretty_json + "`"
         json_html = markdown_to_html(json_md)
@@ -1763,6 +1768,7 @@ def admin_user_edit(user_id):
         user.banned = form.banned.data
         user.ban_posts = form.ban_posts.data
         user.ban_comments = form.ban_comments.data
+        user.ban_votes = form.ban_votes.data
         user.hide_nsfw = form.hide_nsfw.data
         user.hide_nsfl = form.hide_nsfl.data
         user.can_send_pm = form.can_send_pm.data
@@ -1813,6 +1819,7 @@ def admin_user_edit(user_id):
         form.banned.data = user.banned
         form.ban_posts.data = user.ban_posts
         form.ban_comments.data = user.ban_comments
+        form.ban_votes.data = user.ban_votes
         form.hide_nsfw.data = user.hide_nsfw
         form.hide_nsfl.data = user.hide_nsfl
         form.can_send_pm.data = user.can_send_pm
@@ -1963,6 +1970,17 @@ def admin_user_delete_task(user_id, current_user_id):
             session.close()
 
 
+@bp.route('/user/<int:user_id>/reset_password', methods=['POST'])
+@permission_required('administer all users')
+@login_required
+def admin_user_reset_password(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_local():
+        flash(Markup(_('Provide this link so they can reset their password, or log out and use it for them. It is valid for 20 minutes:<br>%(link)s',
+                link=url_for('auth.reset_password', token=user.get_reset_password_token(1200), _external=True))))
+    else:
+        flash('Can only reset passwords of local users.', 'error')
+    return redirect(url_for('admin.admin_user_edit', user_id=user.id))
 
 
 @bp.route('/reports', methods=['GET'])
