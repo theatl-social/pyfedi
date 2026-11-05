@@ -57,13 +57,13 @@ from flask import (
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
-from sqlalchemy import text, or_, desc, asc, event, select, func, update
+from sqlalchemy import text, or_, and_, desc, asc, event, select, func, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
-from markupsafe import Markup
+from markupsafe import Markup, escape
 import boto3
 from app import db, cache, httpx_client, celery, plugins
 from app.constants import *
@@ -115,6 +115,8 @@ from app.models import (
     CommunityFavorite,
     UserFollower,
     CommunityFlairBlock,
+    Role,
+    RolePermission,
 )
 
 logger = logging.getLogger(__name__)
@@ -611,13 +613,13 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
         pattern = re.compile(
             "|".join(re.escape(k) for k in emoji_replacements), re.IGNORECASE
         )
-
-        clean_html = pattern.sub(
-            lambda m: "<img referrerpolicy='no-referrer' width=30 height=30 src='"
-            + emoji_replacements[m.group(0).lower()]
-            + "'>",
-            clean_html,
-        )
+        try:
+            clean_html = pattern.sub(
+                lambda m: "<img referrerpolicy='no-referrer' width=30 height=30 src='" + emoji_replacements[m.group(0).lower()] + "'>",
+                clean_html
+            )
+        except KeyError:
+            pass
 
     # bring back the <code> snippets
     clean_html = pop_code(code_snippets, clean_html, code_placeholder)
@@ -910,6 +912,26 @@ def handle_bold_em(text: str) -> str:
     return text
 
 
+def handle_escaped_angle_brackets(text: str) -> str:
+    """
+    Handles cases where users try to escape the < and > characters with a leading slash "\" ironically leading to them
+    not being rendered properly.
+    """
+
+    placeholder = gibberish(10)
+    
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_md(text, placeholder)
+
+    # Step 2: Replace \< and \> with just < or > instead
+    text = re.sub(r"\\([<>])", r"\1", text)
+
+    # Step 3: Restore code blocks
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
 def escape_img(raw_html: str) -> str:
     """Prevents embedding images for places where an image would break formatting."""
 
@@ -1114,7 +1136,7 @@ def handle_reddit_spoilers(text: str) -> str:
     placeholder = gibberish(10)
 
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets, text = stash_code_html(text, placeholder)
+    code_snippets, text = stash_code_md(text, placeholder)
 
     # Step 2: Do the regex matching and substitutions
     img_md = re.compile(r">!\s?(.+?)\s?!<", re.M)
@@ -1132,7 +1154,7 @@ def handle_blockquotes(text: str) -> str:
     placeholder = gibberish(10)
 
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets, text = stash_code_html(text, placeholder)
+    code_snippets, text = stash_code_md(text, placeholder)
 
     # Step 2: Regex to capture all groups of lines preceded by > (roughly based on markdown2 regex)
     md_quotes = re.compile(r"((^[ \t]*>[ \t]?.*(\n|$))+)", re.M)
@@ -1227,7 +1249,7 @@ def handle_better_lists(text: str) -> str:
     placeholder = gibberish(10)
 
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets, text = stash_code_html(text, placeholder)
+    code_snippets, text = stash_code_md(text, placeholder)
 
     # Step 2: Split the whole entry into each newline
     text_list = text.splitlines()
@@ -1273,6 +1295,73 @@ def handle_better_lists(text: str) -> str:
     return text
 
 
+def handle_indented_codeblocks(text: str) -> str:
+    """Handles some special processing of indented code blocks (disgusting though they may be)"""
+
+    # Stash footnotes since they can inadvertently interfere with indented code blocks
+    placeholder = gibberish(10)
+    footnote_snippets, text = stash_footnotes(text, placeholder)
+
+    # Stash normal codeblocks
+    code_placeholder = gibberish(10)
+    code_snippets, text = stash_code_md(text, code_placeholder, ignore_indented=True)
+
+    # Regex to capture groups of lines starting with at least four spaces or a tab (ignoring lines with only a \n)
+    block_regex = re.compile(r'(^(?: {4,}|\t)[^\r\n]*(?:\r?\n|$))+', re.M)
+
+    def wrap_indented_block(match):
+        contents = match.group(0)
+
+        if contents.isspace():
+            # This is only whitespace - don't wrap it in a code block
+            return contents
+
+        # Add attribute so that markdown2 later knows not to format the contents of this html tag
+        output = '<pre><code>'
+
+        # Figure out how much whitespace the first line of the match has - then strip that from the whole match
+        firstline = contents.splitlines()[0]
+        if firstline.startswith("\t"):
+            leading_chars = "\t"
+        else:
+            leading_chars = "    "
+
+        # Commence stripping
+        lines = contents.splitlines(keepends=True)
+        new_lines = []
+        for line in lines:
+            if line.startswith(leading_chars):
+                new_lines.append(line.removeprefix(leading_chars))
+            elif leading_chars == "\t" and line.startswith("    "):
+                # Default to tab = 4 spaces if needed
+                new_lines.append(line.removeprefix("    "))
+            else:
+                # Shouldn't ever get here if we did our regex right, just a fallback
+                new_lines.append(line)
+
+        # Join it all back up
+        contents = "".join(new_lines)
+
+        # Add the matched group
+        output += contents
+
+        # Close the html
+        output += '</code></pre>'
+
+        return output
+
+    # Do the regex work
+    text = re.sub(block_regex, wrap_indented_block, text)
+
+    # Return the footnotes
+    text = pop_footnotes(footnote_snippets, text, placeholder)
+
+    # Return the codeblocks
+    text = pop_code(code_snippets, text, code_placeholder)
+
+    return text
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(
@@ -1283,12 +1372,16 @@ def markdown_to_html(
     test_env=False,
 ) -> str:
     if markdown_text:
+
+        placeholder = gibberish(10)
+
         markdown_text = handle_reddit_spoilers(markdown_text)
 
-        # Escape <...> if it’s not a real HTML tag
-        markdown_text = escape_non_html_angle_brackets(
-            markdown_text
-        )  # To handle situations like https://ani.social/comment/9666667
+        # Ironically, need to unescape angle brackets that users escaped in their markdown (e.g. \< becomes <)
+        # This prevents it from being garbled by escape_non_html_angle_brackets next
+        markdown_text = handle_escaped_angle_brackets(markdown_text)
+        # Escape <...> if it's not a real HTML tag to handle situations like https://ani.social/comment/9666667
+        markdown_text = escape_non_html_angle_brackets(markdown_text)
 
         markdown_text = handle_blockquotes(
             markdown_text
@@ -1303,6 +1396,10 @@ def markdown_to_html(
         markdown_text = handle_naked_spoilers(markdown_text)
         markdown_text = handle_spoiler_spacing(markdown_text)
         markdown_text = handle_video_embeds(markdown_text)
+
+        # These need to be the final pre-processing functions prior to converting to html, or code blocks can get mangled
+        markdown_text = handle_indented_codeblocks(markdown_text)
+        code_snippets, markdown_text = stash_code_html(markdown_text, placeholder)
 
         try:
             md = markdown2.Markdown(
@@ -1347,6 +1444,8 @@ def markdown_to_html(
                 raw_html = apply_enhanced_image_attributes(raw_html, md)
             except:
                 raw_html = ""
+
+        raw_html = pop_code(code_snippets, raw_html, placeholder)
 
         if not allow_img:
             raw_html = escape_img(raw_html)
@@ -1477,21 +1576,25 @@ def microblog_content_to_title(html: str) -> Tuple[str, str]:
 
 
 def first_paragraph(html):
-    soup = BeautifulSoup(html, "html.parser")
-    first_para = soup.find("p")
-    if first_para:
-        if (
-            first_para.text.strip() == "Summary"
-            or first_para.text.strip() == "*Summary*"
-            or first_para.text.strip() == "Comments"
-            or first_para.text.lower().startswith("cross-posted from:")
-        ):
-            second_paragraph = first_para.find_next("p")
-            if second_paragraph:
-                return f"<p>{second_paragraph.text}</p>"
-        return allowlist_html(f"<p>{first_para.text}</p>")
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # Get all <p> tags, but ignore any that are inside a <details> tag (spoiler block)
+    paragraphs = [paragraph for paragraph in soup.find_all('p')
+                      if not paragraph.find_parent('details')]
+
+    if paragraphs:
+        first_para = paragraphs[0]
+        if first_para.text.strip() == 'Summary' or \
+                first_para.text.strip() == '*Summary*' or \
+                first_para.text.strip() == 'Comments' or \
+                first_para.text.lower().startswith('cross-posted from:'):
+            if len(paragraphs) > 1:
+                second_paragraph = paragraphs[1]
+                # SP-036: .text decodes entities, so escape it again -- teasers render this |safe
+                return f'<p>{escape(second_paragraph.text)}</p>'
+        return allowlist_html(f'<p>{first_para.text}</p>')
     else:
-        return ""
+        return ''
 
 
 def community_link_to_href(link: str, server_name_override: str | None = None) -> str:
@@ -1606,7 +1709,7 @@ def stash_code_html(text: str, placeholder: str) -> tuple[list, str]:
     return (code_snippets, text)
 
 
-def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
+def stash_code_md(text: str, placeholder: str, ignore_indented: bool = False) -> tuple[list, str]:
     code_snippets = []
 
     def store_code(match):
@@ -1614,7 +1717,14 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
         return f"{placeholder}{len(code_snippets) - 1}$"
 
     # Fenced code blocks (```...```)
-    text = re.sub(r"```[\s\S]*?```", store_code, text)
+    fenced_regex = re.compile(r'^```[^\n]*\n([\s\S]*?)^```[ \t]*$', re.M)
+    text = re.sub(fenced_regex, store_code, text)
+
+    if not ignore_indented:
+        # Indented code blocks
+        text_regex = re.compile(r'(^(?: {4,}|\t)[^\r\n]*(?:\r?\n|$))+', re.M)
+        text = re.sub(text_regex, store_code, text)
+    
     # Inline code (`...`)
     text = re.sub(r"`[^`\n]+`", store_code, text)
 
@@ -1624,6 +1734,129 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
 def pop_code(code_snippets: list, text: str, placeholder: str) -> str:
     for i, code in enumerate(code_snippets):
         text = text.replace(f"{placeholder}{i}$", code)
+
+    return text
+
+
+def stash_footnotes(text: str, placeholder: str) -> tuple[list, str]:
+    """
+    Stash footnote annotations so that they don't conflict with indented code blocks.
+    """
+
+    lines = text.splitlines(keepends=True)
+
+    # Regex to catch the beginning of a footnote annotation
+    footnote_beginning = re.compile(r'^\[\^.*\]:', re.M)
+
+    # Initialize stuff
+    footnote_snippets = []
+    temp_footnote = []
+    candidate_lines = []
+    footnote_continuations = ["\n", "\t", "    "]
+    output_lines = []
+    extra_line = gibberish(10)
+
+    # Add an extra line onto the end to make iterating easier, just ignore it later
+    lines.append(extra_line)
+
+    # Function to help stash a footnote
+    def get_placeholder(temp_footnote, len_snippets):
+        footnote_text = "".join(temp_footnote)
+        placeholder_text = f"{placeholder}{len_snippets}$"
+        
+        return [footnote_text, placeholder_text]
+
+    # Iterate through lines, handling the different cases
+    for line in lines:
+        # There are a bunch of different cases we can run into
+        if footnote_beginning.match(line):
+            # This line begins a new footnote
+            if temp_footnote:
+                # The previous line was part of another footnote, stash that one before beginning the new one
+                footnote_info = get_placeholder(temp_footnote, len(footnote_snippets))
+                
+                footnote_snippets.append(footnote_info[0])
+                output_lines.append(footnote_info[1] + "\n")
+
+                # If there was one or more candidate lines, append that before moving to the new footnote
+                if candidate_lines:
+                    for candidate_line in candidate_lines:
+                        output_lines.append(candidate_line)
+
+                # Stashed footnote, clear these placeholders
+                temp_footnote = []
+                candidate_lines = []
+            
+            # Start preserving the new footnote
+            temp_footnote = [line]
+
+        elif line == extra_line:
+            # This is the last line we added. Deal with any ongoing footnotes and don't include this text in the output
+            if temp_footnote:
+                # There is an ongoing footnote, stash it
+                footnote_info = get_placeholder(temp_footnote, len(footnote_snippets))
+                
+                footnote_snippets.append(footnote_info[0])
+                output_lines.append(footnote_info[1] + "\n")
+
+                # If there was one or more candidate lines, append that before moving to the new footnote
+                if candidate_lines:
+                    for candidate_line in candidate_lines:
+                        output_lines.append(candidate_line)
+                
+                # Stashed footnote, clear these placeholders
+                temp_footnote = []
+                candidate_line = ""
+
+        elif not temp_footnote:
+            # Previous line was not part of a footnote and this line doesn't start one
+            output_lines.append(line)
+
+        elif temp_footnote and not any(line.startswith(prefix) for prefix in footnote_continuations):
+            # There is an ongoing footnote, but this line isn't part of one. Stash the footnote and append the lines
+            footnote_info = get_placeholder(temp_footnote, len(footnote_snippets))
+
+            footnote_snippets.append(footnote_info[0])
+            output_lines.append(footnote_info[1] + "\n")
+
+            # If there was one or more candidate lines, append that before moving on
+            if candidate_lines:
+                for candidate_line in candidate_lines:
+                    output_lines.append(candidate_line)
+
+            # Clear the placeholders
+            temp_footnote = []
+            candidate_lines = []
+
+            # Append the current line that isn't part of a footnote
+            output_lines.append(line)
+
+        elif temp_footnote and any(line.startswith(prefix) for prefix in footnote_continuations):
+            # This line potentially continues the ongoing footnote
+            
+            # If it is just a line of whitespace, keep it provisionally before adding it to the footnote
+            if line.isspace():
+                candidate_lines.append(line)
+                continue
+
+            # This line is more than just whitespace - the footnote continues
+            # First, add any candidate lines saved up
+            if candidate_lines:
+                for candidate_line in candidate_lines:
+                    temp_footnote.append(candidate_line)
+            
+            # Then, add the non-whitespace line
+            temp_footnote.append(line)
+
+    # Done looping through the text, build the response
+    text = "".join(output_lines)
+
+    return (footnote_snippets, text)
+
+
+def pop_footnotes(footnote_snippets: list, text:str, placeholder: str) -> str:
+    for i, footnote in enumerate(footnote_snippets):
+        text = text.replace(f"{placeholder}{i}$", footnote)
 
     return text
 
@@ -2028,6 +2261,37 @@ def login_required_if_private_instance(func):
     return decorated_view
 
 
+def pause_federation_key() -> str:
+    """Redis key that pauses (1) or permanently closes (666) federation.
+
+    Upstream v1.8.x namespaced this per instance so several instances can share
+    one Redis, but used f'pause_federation_{SECRET_KEY}' -- which writes the
+    Flask secret (session signing, password-reset JWTs) into a key name visible
+    to anything that can list keys. SERVER_NAME is unique per instance and not
+    secret. Every reader and writer must use this helper, or a pause written by
+    one side is never seen by the other.
+    """
+    return f'pause_federation_{current_app.config["SERVER_NAME"]}'
+
+
+def auth_required_if_private(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not g.site.private_instance:
+            return func(*args, **kwargs)
+
+        # Make sure header is present
+        auth = request.headers.get('Authorization')
+        if not auth:
+            raise Exception("instance_is_private")
+
+        # Make sure credentials valid - raises an exeption if it doesn't validate
+        _ = authorise_api_user(auth)
+        
+        return func(*args, **kwargs)
+
+    return decorated_view
+
 
 
 def permission_required(permission):
@@ -2281,7 +2545,7 @@ def guess_mime_type(file_path: str) -> str:
 
 
 def can_downvote(user, community: Community, communities_banned_from_list=None) -> bool:
-    if user is None or community is None or user.banned or user.bot:
+    if user is None or community is None or user.banned or user.bot or user.bot_override or user.ban_votes:
         return False
 
     try:
@@ -2322,7 +2586,7 @@ def can_downvote(user, community: Community, communities_banned_from_list=None) 
 
 
 def can_upvote(user, community: Community, communities_banned_from_list=None) -> bool:
-    if user is None or community is None or user.banned or user.bot:
+    if user is None or community is None or user.banned or user.bot or user.bot_override or user.ban_votes:
         return False
 
     if communities_banned_from_list is not None:
@@ -5906,3 +6170,36 @@ def roles_with(permission):
         filter(RolePermission.permission == permission).\
         order_by(Role.weight)
     return ', '.join([role.name for role in roles.all()])
+
+
+def calculate_rss_cache_timeout(posts):
+    """ Calculate cache timeout based on average time between posts. Used for RSS feeds. """
+
+    if not posts:
+        return 3600
+
+    if len(posts) < 2:
+        return 3600
+
+    # Extract and sort creation timestamps
+    timestamps = sorted([post.created_at for post in posts if post.created_at])
+
+    if len(timestamps) < 2:
+        return 3600
+
+    total_seconds = 0
+    for i in range(1, len(timestamps)):
+        delta = timestamps[i] - timestamps[i-1]
+        total_seconds += delta.total_seconds()
+
+    average_seconds = total_seconds / (len(timestamps) - 1)
+    timeout = max(int(average_seconds / 3), 600)
+
+    return min(timeout, 21600)  # Between 10 minutes and 6 hours
+
+
+def months_since(dt: datetime):
+    """ How many months have passed since dt """
+
+    now = datetime.now()
+    return (now.year - dt.year) * 12 + now.month - dt.month

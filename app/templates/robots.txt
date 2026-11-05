@@ -16,12 +16,8 @@ User-Agent: *
   Disallow: /post/*/comment/*
   Disallow: /honey
   Disallow: /honey/
-  Content-Signal: ai-train=no, search=yes, ai-input=no
 
 User-agent: Applebot
-Disallow: /
-
-User-agent: GPTBot
 Disallow: /
 
 User-agent: AhrefsBot
@@ -43,18 +39,6 @@ User-agent: SummalyBot
 Disallow: /
 
 User-agent: MJ12bot
-Disallow: /
-
-User-agent: ClaudeBot
-Disallow: /
-
-User-agent: Claude-SearchBot
-Disallow: /
-
-User-agent: LinkupBot
-Disallow: /
-
-User-agent: Lightpanda
 Disallow: /
 
 User-agent: SleepBot
@@ -90,9 +74,6 @@ User-agent: Yisouspider
 User-agent: PetalBot
 Disallow: /
 
-User-agent: Bytespider
-Disallow: /
-
 User-agent: Sogou web spider
 Disallow: /
 
@@ -102,19 +83,5 @@ Disallow: /
 User-agent: SERankingBacklinksBot
 Disallow: /
 
-User-Agent: PerplexityBot
-Crawl-delay: 1
-
-User-agent: meta-externalagent
-User-agent: Meta-ExternalAgent
-User-agent: meta-externalfetcher
-User-agent: Meta-ExternalFetcher
-User-agent: meta-webindexer
 User-agent: TikTokSpider
-User-agent: DuckAssistBot
-User-agent: anthropic-ai
 Disallow: /
-
-{% if use_rsl %}
-License: https://{{ instance_domain }}/rsl.xml
-{% endif %}

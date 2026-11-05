@@ -64,10 +64,12 @@ def get_site_instance_chooser_search(query_params):
         instance_data = instance.data
         if instance_data["registration_mode"] == "Closed":
             continue
-        instance_data["domain"] = instance.domain
-        instance_data["id"] = instance.id
-        instance_data["language"] = instance_data["language"]["name"]
-        result["result"].append(instance_data)
+        instance_data['domain'] = instance.domain
+        instance_data['id'] = instance.id
+        instance_data['language'] = instance_data['language']['name']
+        uptime = instance_data.get('uptime')
+        instance_data['uptime'] = str(uptime) if uptime else ''
+        result['result'].append(instance_data)
     return result
 
 

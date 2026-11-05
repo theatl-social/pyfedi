@@ -98,6 +98,7 @@ from app.utils import (
     user_pronouns,
     mimetype_from_url,
     community_membership_private,
+    calculate_rss_cache_timeout,
 )
 
 
@@ -473,84 +474,6 @@ def feed_notification(feed_id: int):
         db.session.commit()
 
     return render_template("feed/_notification_toggle.html", feed=feed)
-
-
-@bp.route("/feed/add_community", methods=["GET"])
-@login_required
-def feed_add_community():
-    # this expects a new_feed_id, a current_feed_id, and a community_id
-    # it will get those and then add a community to a feed using the FeedItem model
-
-    # SP-020: user_id is no longer accepted from request.args. Previously the
-    # ownership check `Feed.query.get(feed_id).user_id != user_id` was
-    # tautological — the attacker controlled both sides — so any logged-in
-    # user could add or remove communities to any other user's feed (and for
-    # public feeds, federate the modification signed by the victim feed's
-    # private key). Now we always operate against the session user and refuse
-    # if they do not own the feed.
-    user_id = current_user.id
-    feed_id = int(request.args.get("new_feed_id"))
-    current_feed_id = int(request.args.get("current_feed_id"))
-    community_id = int(request.args.get("community_id"))
-
-    target_feed = Feed.query.get_or_404(feed_id)
-    if target_feed.user_id != user_id and not current_user.is_admin():
-        abort(403)
-    if current_feed_id:
-        source_feed = Feed.query.get_or_404(current_feed_id)
-        if source_feed.user_id != user_id and not current_user.is_admin():
-            abort(403)
-
-    _feed_add_community(community_id, current_feed_id, feed_id, user_id)
-
-    # send the user back to the page they came from or main
-    # Get the referrer from the request headers
-    referrer = request.referrer
-
-    # If the referrer exists and is not the same as the current request URL, redirect to the referrer
-    if referrer and referrer != request.url:
-        return redirect(referrer)
-
-    # If referrer is not available or is the same as the current request URL, redirect to the default URL
-    return redirect(url_for("main.index"))
-
-
-@bp.route("/feed/list", methods=["GET"])
-@login_required
-def feed_list():
-    # this takes a user id, community id, and current_feed id,
-    # and returns a set of html entries of the users feeds
-
-    # get the user id
-    user_id = int(request.args.get("user_id"))
-    # get the community id
-    community_id = int(request.args.get("community_id"))
-    # get the current_feed
-    current_feed_id = int(request.args.get("current_feed_id"))
-    # get the user's feeds
-    user_feeds = Feed.query.filter_by(user_id=user_id).all()
-
-    # setup html base to send back
-    options_html = ""
-
-    # add the none option if already in a feed
-    if current_feed_id != 0:
-        options_html = (
-            options_html
-            + f'<li><a class="dropdown-item" href="/feed/remove_community?user_id={user_id}&new_feed_id=0&current_feed_id={current_feed_id}&community_id={community_id}">None</li>'
-        )
-
-    # for loop to add the rest of the options to the html
-    for feed in user_feeds:
-        # skip the current_feed if it has one
-        if feed.id == current_feed_id:
-            continue
-        options_html = (
-            options_html
-            + f'<li><a class="dropdown-item" href="/feed/add_community?user_id={user_id}&new_feed_id={feed.id}&current_feed_id={current_feed_id}&community_id={community_id}">{feed.title}</li>'
-        )
-
-    return options_html
 
 
 # @bp.route('/f/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
@@ -1052,22 +975,24 @@ def show_feed_rss(feed_path):
             for item in feed_items:
                 feed_community_ids.append(item.community_id)
 
-        post_ids = get_deduped_post_ids("", feed_community_ids, "new")
-        post_ids = paginate_post_ids(post_ids, 0, page_length=100)
-        posts = post_ids_to_models(post_ids, "new")
+        post_ids = get_deduped_post_ids('', feed_community_ids, 'new')
+        post_ids = paginate_post_ids(post_ids, 0, page_length=50)
+        posts = post_ids_to_models(post_ids, 'new').all()
 
         server_url = current_app.config['SERVER_URL']
         rss_feed = RSSFeed(title=f'{feed.title} on {g.site.name}',
                            link=f"{server_url}/f/{last_feed_machine_name}",
                            description=' ',
                            logo=f"{server_url}/static/images/apple-touch-icon.png",
-                           self_link=f"{server_url}/f/{last_feed_machine_name}.rss",
-                           language='en')
+                           self_link=f"{server_url}/f/{last_feed_machine_name}.rss")
+
+        if language := request.args.get('lang'):    # filter by language
+            posts = [post for post in posts if post.language_code() == language]
 
         response = make_response(rss_feed.create_feed(posts, server_url))
         response.headers.set('Content-Type', 'application/rss+xml')
         response.headers.add_header('ETag', f"{feed.id}_{hash(g.site.last_active)}")
-        response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+        response.headers.add_header('Cache-Control', f'public, max-age={calculate_rss_cache_timeout(posts)}')
         return response
     else:
         abort(404)

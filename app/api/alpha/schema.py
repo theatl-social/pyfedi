@@ -13,6 +13,7 @@ default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
                   "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Old", "Scaled", "Active"]
+post_repeat_list = ['None', 'Daily', 'Weekly', 'Monthly']
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
 community_sort_list = ["Hot", "Top", "New", "Old", "Active", "TopAll", "TopPosts", "TopSubscribers", "NewFederated", "OldFederated"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
@@ -28,6 +29,8 @@ ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
 search_nsfw = ['Exclude', 'Include', 'Only']
 modlog_type_list = ["All", "ModRemovePost", "ModLockPost", "ModFeaturePost", "ModRemoveComment", "ModRemoveCommunity", "ModBanFromCommunity", "ModAddCommunity", "ModTransferCommunity", "ModAdd", "ModBan", "ModHideCommunity", "AdminPurgePerson", "AdminPurgeCommunity", "AdminPurgePost", "AdminPurgeComment"]
+activity_alert_type_list = ["Posts", "Comments", "Communities", "Topics", "Feeds", "Users"]
+activity_alert_filter_list = ["All", "Mine", "Others"]
 
 
 def validate_datetime_string(text):
@@ -90,12 +93,15 @@ class Person(DefaultSchema):
     flair = fields.String()
     published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     title = fields.String(allow_none=True)
+    matrix_user_id = fields.String()
 
 
 class PersonAggregates(DefaultSchema):
     comment_count = fields.Integer(required=True)
     person_id = fields.Integer(required=True)
     post_count = fields.Integer(required=True)
+    follower_count = fields.Integer(required=True, metadata={"description": "Number of users following this account. This is total followers for local accounts, but only local followers for remote accounts."})
+    following_count = fields.Integer(required=True, metadata={"description": "Number of users this accounts follows, only non-zero for local accounts"})
 
 
 class PersonView(DefaultSchema):
@@ -264,6 +270,7 @@ class GetSiteInstanceChooserResponse(DefaultSchema):
     trusts = fields.List(fields.String(), required=True)
     registration_mode = fields.String(required=True)
     software = fields.String(required=True)
+    monthsmonitored = fields.Integer(required=True)
 
 
 class GetSiteInstanceChooserSearchResponseItem(DefaultSchema):
@@ -285,8 +292,7 @@ class GetSiteInstanceChooserSearchResponseItem(DefaultSchema):
     trusts = fields.List(fields.String(), required=True)
     registration_mode = fields.String(required=True)
     language = fields.String(required=True)
-    monthsmonitored = fields.Integer(required=True)
-
+    monthsmonitored = fields.Integer(required=False)
 
 
 class GetSiteInstanceChooserSearchResponse(DefaultSchema):
@@ -420,6 +426,15 @@ class Post(DefaultSchema):
     gallery = fields.List(fields.String(metadata={"format": "url"}))
 
 
+class ScheduledPost(Post):
+    class Meta(DefaultSchema.Meta):
+        exclude = ("published",)
+
+    created = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    next_scheduled_for = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    repeat = fields.String(required=True, validate=validate.OneOf(post_repeat_list))
+
+
 class PostAggregates(DefaultSchema):
     comments = fields.Integer(required=True)
     downvotes = fields.Integer(required=True)
@@ -462,8 +477,17 @@ class PostView(DefaultSchema):
     activity_alert = fields.Boolean()
     alt_text = fields.String()
     my_vote = fields.Integer()
+    blurred = fields.Boolean(metadata={"description": "Should the post be blurred per the community/user settings?"})
+    filtered = fields.Boolean(metadata={"description": "Would this post be otherwise blocked by a user filter?"})
     flair_list = fields.List(fields.Nested(CommunityFlair), metadata={"description": "See also the simpler 'flair' on post which can be used when editing"})
     can_auth_user_moderate = fields.Boolean()
+
+
+class ScheduledPostView(PostView):
+    class Meta(DefaultSchema.Meta):
+        exclude = ("post", "hidden", "read", "saved", "unread_comments", "my_vote")
+
+    scheduled_post = fields.Nested(ScheduledPost, required=True)
 
 
 class CommunityAggregates(DefaultSchema):
@@ -598,6 +622,7 @@ class CommentView(DefaultSchema):
 
 class FeedView(DefaultSchema):
     actor_id = fields.Url(required=True)
+    activity_alert = fields.Boolean(required=True)
     ap_domain = fields.String(required=True)
     children = fields.List(fields.Nested(lambda: FeedView()), required=True,
                            metadata={"description": "Always empty list for resolve_object endpoint"})
@@ -875,6 +900,7 @@ class FollowFeedRequest(DefaultSchema):
 
 
 class TopicView(DefaultSchema):
+    activity_alert = fields.Boolean(required=True)
     children = fields.List(fields.Nested(lambda: TopicView()), required=True)
     communities = fields.List(fields.Nested(Community), required=True)
     communities_count = fields.Integer(required=True)
@@ -914,7 +940,6 @@ class GetUserResponse(DefaultSchema):
     moderates = fields.List(fields.Nested(CommunityModeratorView), required=True)
     person_view = fields.Nested(PersonView, required=True)
     posts = fields.List(fields.Nested(PostView), required=True)
-    site = fields.Nested(Site)
 
 
 class UserLoginRequest(DefaultSchema):
@@ -1123,6 +1148,7 @@ class UserSaveSettingsRequest(DefaultSchema):
     show_nsfl = fields.Boolean()
     show_read_posts = fields.Boolean()
     searchable = fields.Boolean(metadata={"description": "If profile shows up in the user list on the instance"})
+    matrix_user_id = fields.String(allow_none=True, metadata={"description": "Pass null to remove existing id"})
 
 
 class UserSaveSettingsResponse(DefaultSchema):
@@ -1347,6 +1373,17 @@ class GetPostResponse(DefaultSchema):
     cross_posts = fields.List(fields.Nested(PostView))
 
 
+class GetScheduledPostRequest(DefaultSchema):
+    id = fields.Integer(required=True)
+
+
+class GetScheduledPostResponse(DefaultSchema):
+    scheduled_post_view = fields.Nested(ScheduledPostView, required=True)
+    community_view = fields.Nested(CommunityView)
+    moderators = fields.List(fields.Nested(CommunityModeratorView))
+    cross_posts = fields.List(fields.Nested(PostView))
+
+
 class GetSiteMetadataRequest(DefaultSchema):
     url = fields.String()
 
@@ -1382,13 +1419,19 @@ class CreatePostRequest(DefaultSchema):
     title = fields.String(required=True, validate=validate_non_empty_string)
     community_id = fields.Integer(required=True)
     alt_text = fields.String(metadata={"description": "Will be used for image posts or link posts that point to images"})
-    body = fields.String()
+    body = fields.String(metadata={"format": "markdown"})
     url = fields.String(metadata={"format": "url"})
+    og_image_url = fields.String(metadata={"format": "url", "description": "Thumbnail image, retrieved from og:image in linked web page"})
     nsfw = fields.Boolean()
     ai_generated = fields.Boolean()
     language_id = fields.Integer()
     event = fields.Nested(PostEvent, allow_none=True)
     poll = fields.Nested(PostPoll, allow_none=True)
+
+
+class CreateScheduledPostRequest(CreatePostRequest):
+    scheduled_for = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    repeat = fields.String(validate=validate.OneOf(post_repeat_list), metadata={"default": "None", "description": "Will default to `None` if field is omitted"})
 
 
 class EditPostRequest(DefaultSchema):
@@ -1405,9 +1448,18 @@ class EditPostRequest(DefaultSchema):
     flair = fields.String(allow_none=True, metadata={"description": "Flair, separated by commas with no hash character"})
 
 
+class EditScheduledPostRequest(EditPostRequest):
+    scheduled_for = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    repeat = fields.String(validate=validate.OneOf(post_repeat_list))
+
+
 class DeletePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     deleted = fields.Boolean(required=True)
+
+
+class DeleteScheduledPostRequest(DeletePostRequest):
+    pass
 
 
 class ReportPostRequest(DefaultSchema):
@@ -1525,6 +1577,19 @@ class ListPostsRequest(Schema):
     feed_id = fields.Integer()
     topic_id = fields.Integer()
     ignore_sticky = fields.Boolean(metadata={"default": False, "description": "Ignores a post's sticky state when sorting"})
+
+
+class ScheduledPostListRequest(DefaultSchema):
+    q = fields.String()
+    sort = fields.String(
+        validate=validate.OneOf(["New", "Old", "Relevance"]),
+        metadata={"default": "New", 
+                  "description": "`New` means that the post with the next scheduled posting time will be returned first. `Relevance` only applies when querying with `q`"})
+    community_name = fields.String(metadata={"description": "`comm_name@instance.tld` format - local communities can omit the `@instance.tld` if convenient"})
+    community_id = fields.Integer()
+    include_deleted = fields.Boolean()
+    limit = fields.Integer(metadata={"default": 50})
+    page = fields.Integer(metadata={"default": 1})
 
 
 class ListPostsRequest2(ListPostsRequest):
@@ -1721,6 +1786,11 @@ class ImageDeleteResponse(DefaultSchema):
 
 class ListPostsResponse(Schema):
     posts = fields.List(fields.Nested(PostView), required=True)
+    next_page = fields.String(allow_none=True)
+
+
+class ScheduledPostListResponse(DefaultSchema):
+    scheduled_posts = fields.List(fields.Nested(ScheduledPostView), required=True)
     next_page = fields.String(allow_none=True)
 
 
@@ -2273,7 +2343,7 @@ class CaptchaFields(DefaultSchema):
 
 
 class FetchCaptchaResponse(DefaultSchema):
-    ok = fields.List(fields.Nested(CaptchaFields))
+    ok = fields.Nested(CaptchaFields)
 
 
 class UserFollowRequest(DefaultSchema):
@@ -2290,3 +2360,61 @@ class UserUnfollowRequest(DefaultSchema):
 
 class UserUnfollowResponse(DefaultSchema):
     ok = fields.String()
+
+
+class FetchActivityAlertsRequest(DefaultSchema):
+    type_ = fields.String(validate=validate.OneOf(activity_alert_type_list), metadata={"default": "Posts", "description": "Only this type of item will be returned."})
+    filter = fields.String(validate=validate.OneOf(activity_alert_filter_list), metadata={"default": "All", "description": "Ignored with `type_` = `Users`, `Feeds`, `Topics`"})
+    sort = fields.String(validate=validate.OneOf(["New", "Old"]), metadata={"default": "New", "description": "Sorted by date of activity alert creation"})
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 20})
+
+
+class FetchActivityAlertsResponse(DefaultSchema):
+    next_page = fields.String(allow_none=True)
+    communities = fields.List(fields.Nested(CommunityView))
+    posts = fields.List(fields.Nested(PostView))
+    users = fields.List(fields.Nested(PersonView))
+    comments = fields.List(fields.Nested(CommentView))
+    topics = fields.List(fields.Nested(TopicView), metadata={"description": "Does not include children topics or constituent communities."})
+    feeds = fields.List(fields.Nested(FeedView), metadata={"description": "Does not include children feeds or constituent communities."})
+
+
+class ActivityAlertRequest(DefaultSchema):
+    class Meta(DefaultSchema.Meta):
+        description = "At least one field is required, and only one item per field."
+
+    post_id = fields.Integer()
+    comment_id = fields.Integer()
+    person_id = fields.Integer()
+    topic_id = fields.Integer()
+    feed_id = fields.Integer()
+    community_id = fields.Integer()
+
+    @validates_schema
+    def validate_input(self, data, **kwargs):
+        fields_to_check = ("post_id", "comment_id", "person_id", "topic_id", "feed_id", "community_id")
+        if not any(field in data for field in fields_to_check):
+            raise ValidationError("At least one field must be specified")
+
+
+class ActivityAlertResponse(DefaultSchema):
+    class Meta(DefaultSchema.Meta):
+        description = "Only fields with modified activity alerts are returned."
+
+    community = fields.Nested(CommunityView)
+    post = fields.Nested(PostView)
+    user = fields.Nested(PersonView)
+    comment = fields.Nested(CommentView)
+    topic = fields.Nested(TopicView, metadata={"description": "Does not include children topics or constituent communities."})
+    feed = fields.Nested(FeedView, metadata={"description": "Does not include children feeds or constituent communities."})
+
+
+class FeedSubscribeRequest(DefaultSchema):
+    feed_id = fields.Integer(required=True)
+    subscribe = fields.Boolean(required=True)
+
+
+class TopicSubscribeRequest(DefaultSchema):
+    topic_id = fields.Integer(required=True)
+    subscribe = fields.Boolean(required=True)

@@ -157,8 +157,6 @@ def after_request(response):
                 else:
                     del response.headers['Vary']
     else:
-        if not current_app.config['ALLOW_AI_CRAWLERS']:
-            response.headers.add('Link', f'<https://{current_app.config["SERVER_NAME"]}/rsl.xml>; rel="license"; type="application/rsl+xml"')
         if 'auth/register' not in request.path:
             if hasattr(g, 'nonce') and "api/alpha/swagger" not in request.path:
                 # Don't set CSP header for htmx fragment requests - they use parent page's CSP

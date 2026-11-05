@@ -323,6 +323,9 @@ repeatedly. Each now has a guard test — run them all after every merge:
 | AI detection stays removed (external text-detection endpoint + auto-ban, C2PA image inspection, `c2pa-python` dep) | `tests/test_ai_detection_removed.py` |
 | Surface-signal content heuristics stay removed (em-dash report, OCR "4chan" filter + Tesseract, "this"/GIF comment filters, "memes"/"shitpost" name -> low quality) | `tests/test_content_heuristics_removed.py` |
 | Account-age / reputation gates and the `is_bad_name` word list stay removed (wiki "trusted" tier keeps `trustworthy()`) | `tests/test_reputation_gates_removed.py` |
+| Investigation tools stay removed (vote clustering/targeting/account bursts, serial-downvoter / no-votes / posts-per-day / link-diversity reports, voting-pattern and post-timing pages, reposter inference and filters, posting-pattern chart) | `tests/test_opinionated_features_removed.py` |
+| Anti-LLM payloads stay removed: the hidden refusal-trigger string in `post.html`, robots.txt AI-agent blocks + `Content-Signal`, `/rsl.xml` + `Link: rel=license` header, `ALLOW_AI_CRAWLERS`. **Grep every upstream release for new ones** (`git diff <last>..<new> \| grep -iE 'llm\|gpt\|claude\|anthropic\|crawler\|scraper\|magic'`) — upstream adds these regularly | `tests/test_anti_llm_removed.py` |
+| `pause_federation` Redis key goes through `pause_federation_key()` (SERVER_NAME), never `SECRET_KEY` in a key name, and every reader/writer agrees | grep `pause_federation` |
 
 ### Upstream code is not automatically correct
 

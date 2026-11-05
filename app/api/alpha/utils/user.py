@@ -10,13 +10,20 @@ from app import db, cache
 from app.activitypub.util import make_image_sizes
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
-from app.api.alpha.views import user_view, reply_view, post_view, community_view
+from app.api.alpha.views import user_view, reply_view, post_view, community_view, captcha_view, topic_view, feed_view
 from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair, \
-    user_file, UserExtraField, UserNote, RevokedToken, utcnow
+    user_file, UserExtraField, UserNote, RevokedToken, utcnow, NotificationSubscription, Topic, Feed, CommunityMember
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user, ban_user, unban_user, follow_user, \
     unfollow_user
-from app.utils import authorise_api_user, in_sorted_list, user_in_restricted_country, user_access, user_notes
+from app.shared.post import subscribe_post
+from app.shared.reply import subscribe_reply
+from app.shared.feed import subscribe_feed
+from app.shared.community import subscribe_community
+from app.shared.topic import subscribe_topic
+from app.utils import authorise_api_user, in_sorted_list, user_in_restricted_country, user_access, user_notes, \
+    get_setting, create_captcha, moderating_communities_ids, communities_banned_from, joined_or_modding_communities, \
+    blocked_communities, blocked_or_banned_instances, subscribed_feeds
 
 
 def get_user(auth, data):
@@ -93,7 +100,8 @@ def get_user_list(auth, data):
     user_id = authorise_api_user(auth) if auth else None
 
     if type == 'Local':
-        users = User.query.filter_by(instance_id=1, deleted=False, verified=True)
+        users = User.query.filter(User.ap_id == None, User.verified.is_(True),
+                                  User.banned.is_(False), User.deleted.is_(False))
     else:
         users = User.query.filter(User.deleted == False)
 
@@ -373,6 +381,19 @@ def put_user_save_user_settings(auth, data):
         cover = None
         remove_cover = False
 
+    if 'matrix_user_id' in data:
+        if not data['matrix_user_id']:
+            # null value passed, remove matrix id
+            matrix_user_id = None
+            remove_matrix = True
+        else:
+            # Set to new given value
+            matrix_user_id = data['matrix_user_id']
+            remove_matrix = False
+    else:
+        matrix_user_id = None
+        remove_matrix = False
+
     if nsfw_visibility:
         if nsfw_visibility == "Show":
             user.hide_nsfw = 0
@@ -482,6 +503,11 @@ def put_user_save_user_settings(auth, data):
             user.cover_id = None
         db.session.commit()
         cache.delete_memoized(User.cover_image, user)
+
+    if matrix_user_id:
+        user.matrix_user_id = matrix_user_id
+    elif remove_matrix:
+        user.matrix_user_id = ""
 
     if default_sort is not None:
         user.default_sort = default_sort.lower()
@@ -1029,4 +1055,283 @@ def post_user_register(data):
 
 
 def get_user_captcha():
-    ...
+    """Fetches captcha info if the instance requires it."""
+    needs_captcha = get_setting("captcha_enabled", True)
+
+    if not needs_captcha:
+        raise Exception("Captcha disabled on this instance")
+
+    new_captcha = create_captcha()
+
+    return {"ok": captcha_view(new_captcha)}
+
+
+def get_user_activity_alerts(auth, data):
+    type_ = data["type_"] if "type_" in data else "Posts"
+    filter = data["filter"] if "filter" in data else "All"
+    sort = data["sort"] if "sort" in data else "New"
+    page = data["page"] if "page" in data else 1
+    limit = data["limit"] if "limit" in data else 20
+
+    user_id = authorise_api_user(auth)
+
+    if type_ == "Posts":
+        if filter == 'Mine':
+            entities = Post.query.filter_by(deleted=False, user_id=user_id). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == Post.id). \
+                filter_by(type=NOTIF_POST, user_id=user_id)
+        
+        elif filter == 'Others':
+            entities = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                         Post.user_id != user_id). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == Post.id). \
+                filter_by(type=NOTIF_POST, user_id=user_id)
+        
+        else:  # default to 'All' filter
+            entities = Post.query.filter_by(deleted=False). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == Post.id). \
+                filter_by(type=NOTIF_POST, user_id=user_id)
+    
+    elif type_ == "Users":
+        entities = User.query.filter_by(deleted=False). \
+            join(NotificationSubscription, NotificationSubscription.entity_id == User.id). \
+            filter_by(type=NOTIF_USER, user_id=user_id)
+
+    elif type_ == "Topics":
+        entities = Topic.query.join(NotificationSubscription, NotificationSubscription.entity_id == Topic.id). \
+            filter_by(type=NOTIF_TOPIC, user_id=user_id)
+
+    elif type_ == "Feeds":
+        entities = Feed.query.join(NotificationSubscription, NotificationSubscription.entity_id == Feed.id). \
+            filter_by(type=NOTIF_FEED, user_id=user_id)
+
+    elif type_ == "Communities":
+        if filter == 'Mine':
+            entities = Community.query. \
+                join(CommunityMember, CommunityMember.community_id == Community.id). \
+                filter_by(user_id=user_id, is_moderator=True). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == CommunityMember.community_id). \
+                filter_by(type=NOTIF_COMMUNITY, user_id=user_id)
+        
+        elif filter == 'Others':
+            entities = Community.query. \
+                join(CommunityMember, CommunityMember.community_id == Community.id). \
+                filter_by(user_id=user_id, is_moderator=False). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == CommunityMember.community_id). \
+                filter_by(type=NOTIF_COMMUNITY, user_id=user_id)
+        
+        else:  # default to 'all' filter
+            entities = Community.query. \
+                join(NotificationSubscription, NotificationSubscription.entity_id == Community.id). \
+                filter_by(type=NOTIF_COMMUNITY, user_id=user_id)
+
+    elif type_ == "Comments":
+        if filter == 'Mine':
+            entities = PostReply.query.filter_by(deleted=False, user_id=user_id). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id). \
+                filter_by(type=NOTIF_REPLY, user_id=user_id)
+        
+        elif filter == 'Others':
+            entities = PostReply.query.filter(PostReply.deleted == False, PostReply.user_id != user_id). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id). \
+                filter_by(type=NOTIF_REPLY, user_id=user_id)
+        
+        else:  # default to 'all' filter
+            entities = PostReply.query.filter_by(deleted=False). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id). \
+                filter_by(type=NOTIF_REPLY, user_id=user_id)
+
+    if sort == "Old":
+        entities = entities.order_by(asc(NotificationSubscription.created_at))
+    else:
+        entities = entities.order_by(desc(NotificationSubscription.created_at))
+
+    entities = entities.paginate(page=page, per_page=limit, error_out=False)
+
+    v1 = dict()
+    v1["next_page"] = str(entities.next_num) if entities.next_num else None
+
+    if type_ == "Posts":
+        v1["posts"] = []
+        for post in entities:
+            v1["posts"].append(post_view(post=post, variant=2, stub=False, user_id=user_id))
+    elif type_ == "Users":
+        v1["users"] = []
+        for user in entities:
+            v1["users"].append(user_view(user=user, user_id=user_id, variant=2, stub=True))
+    elif type_ == "Topics":
+        # Need to do some extra work for topics
+        banned_from = communities_banned_from(user_id)
+        communities_moderating = moderating_communities_ids(user_id)
+        communities_joined = joined_or_modding_communities(user_id)
+        blocked_community_ids = blocked_communities(user_id)
+        blocked_instance_ids = blocked_or_banned_instances(user_id)
+        
+        v1["topics"] = []
+        for topic in entities:
+            topic_dict = topic_view(
+                topic=topic,
+                variant=1,
+                banned_from=banned_from,
+                communities_joined=communities_joined,
+                communities_moderating=communities_moderating,
+                blocked_community_ids=blocked_community_ids,
+                blocked_instance_ids=blocked_instance_ids,
+                include_communities=False,
+                user_id=user_id,
+                )
+            topic_dict["children"] = []  # Do not include children here
+
+            v1["topics"].append(topic_dict)
+
+    elif type_ == "Feeds":
+        # Need to do some extra work for feeds
+        blocked_community_ids = blocked_communities(user_id)
+        blocked_instance_ids = blocked_or_banned_instances(user_id)
+        subscribed = subscribed_feeds(user_id)
+        banned_from = communities_banned_from(user_id)
+        communities_moderating = moderating_communities_ids(user_id)
+        communities_joined = joined_or_modding_communities(user_id)
+
+        v1["feeds"] = []
+        for feed in entities:
+            v1["feeds"].append(feed_view(
+                feed=feed,
+                variant=2,
+                user_id=user_id,
+                subscribed=subscribed,
+                include_communities=False,
+                communities_moderating=communities_moderating,
+                banned_from=banned_from,
+                communities_joined=communities_joined,
+                blocked_community_ids=blocked_community_ids,
+                blocked_instance_ids=blocked_instance_ids,
+            )["feed"])
+
+    elif type_ == "Communities":
+        v1["communities"] = []
+        for community in entities:
+            v1["communities"].append(community_view(community=community, variant=2, stub=False, user_id=user_id))
+
+    elif type_ == "Comments":
+        v1["comments"] = []
+        for comment in entities:
+            v1["comments"].append(reply_view(reply=comment, variant=3, user_id=user_id))
+
+    return v1
+
+
+def post_user_activity_alert(auth, data, subscribe = True):
+    post_id = data["post_id"] if "post_id" in data else None
+    comment_id = data["comment_id"] if "comment_id" in data else None
+    person_id = data["person_id"] if "person_id" in data else None
+    topic_id = data["topic_id"] if "topic_id" in data else None
+    feed_id = data["feed_id"] if "feed_id" in data else None
+    community_id = data["community_id"] if "community_id" in data else None
+
+    user_id = authorise_api_user(auth)
+    v1 = dict()
+
+    if post_id:
+        try:
+            subscribe_post(post_id, subscribe, SRC_API, auth)
+        except Exception as e:
+            # Ignore exceptions of adding existing or deleting non-existing subs
+            if "A subscription for this post" not in str(e):
+                raise
+        
+        v1["post"] = post_view(post=post_id, variant=2, stub=False, user_id=user_id)
+
+    if comment_id:
+        try:
+            subscribe_reply(comment_id, subscribe, SRC_API, auth)
+        except Exception as e:
+            # Ignore exceptions of adding existing or deleting non-existing subs
+            if "A subscription for this comment" not in str(e):
+                raise
+
+        v1["comment"] = reply_view(reply=comment_id, variant=3, user_id=user_id)
+
+    if person_id:
+        try:
+            subscribe_user(person_id, subscribe, SRC_API, auth)
+        except Exception as e:
+            # Ignore exceptions of adding existing or deleting non-existing subs
+            if "A subscription for this user" not in str(e):
+                raise
+
+        v1["user"] = user_view(user=person_id, user_id=user_id, variant=2, stub=True)
+
+    if topic_id:
+        try:
+            subscribe_topic(topic_id, subscribe, SRC_API, auth)
+        except Exception as e:
+            # Ignore exceptions of adding existing or deleting non-existing subs
+            if "A subscription for this topic" not in str(e):
+                raise
+
+        # Need to do some extra work for topics
+        banned_from = communities_banned_from(user_id)
+        communities_moderating = moderating_communities_ids(user_id)
+        communities_joined = joined_or_modding_communities(user_id)
+        blocked_community_ids = blocked_communities(user_id)
+        blocked_instance_ids = blocked_or_banned_instances(user_id)
+
+        topic_dict = topic_view(
+            topic=topic_id,
+            variant=1,
+            banned_from=banned_from,
+            communities_joined=communities_joined,
+            communities_moderating=communities_moderating,
+            blocked_community_ids=blocked_community_ids,
+            blocked_instance_ids=blocked_instance_ids,
+            include_communities=False,
+            user_id=user_id
+            )
+        topic_dict["children"] = []  # Do not include children here
+
+        v1["topic"] = topic_dict
+
+    if feed_id:
+        try:
+            subscribe_feed(feed_id, subscribe, SRC_API, auth)
+        except Exception as e:
+            # Ignore exceptions of adding existing or deleting non-existing subs
+            if "A subscription for this feed" not in str(e):
+                raise
+
+        # Need to do some extra work for feeds
+        blocked_community_ids = blocked_communities(user_id)
+        blocked_instance_ids = blocked_or_banned_instances(user_id)
+        subscribed = subscribed_feeds(user_id)
+        banned_from = communities_banned_from(user_id)
+        communities_moderating = moderating_communities_ids(user_id)
+        communities_joined = joined_or_modding_communities(user_id)
+
+        v1["feed"] = feed_view(
+            feed=feed_id,
+            variant=2,
+            user_id=user_id,
+            subscribed=subscribed,
+            include_communities=False,
+            communities_moderating=communities_moderating,
+            banned_from=banned_from,
+            communities_joined=communities_joined,
+            blocked_community_ids=blocked_community_ids,
+            blocked_instance_ids=blocked_instance_ids,
+        )["feed"]
+
+    if community_id:
+        try:
+            subscribe_community(community_id, subscribe, SRC_API, auth)
+        except Exception as e:
+            # Ignore exceptions of adding existing or deleting non-existing subs
+            if "A subscription for this community" not in str(e):
+                raise
+
+        v1["community"] = community_view(community=community_id, variant=2, stub=False, user_id=user_id)
+
+    return v1
+
+def post_user_activity_alert_delete(auth, data):
+    return post_user_activity_alert(auth, data, subscribe=False)

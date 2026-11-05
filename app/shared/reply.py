@@ -200,7 +200,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         return reply
 
 
-def edit_reply(input, reply, post, src, auth=None):
+def edit_reply(input, reply, post, src, auth=None, in_line=False):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model', id_match=reply.user_id)
         content = input['body']
@@ -227,7 +227,7 @@ def edit_reply(input, reply, post, src, auth=None):
         reply.distinguished = distinguished
     db.session.commit()
 
-    if src == SRC_WEB:
+    if src == SRC_WEB and not in_line:
         flash(_('Your changes have been saved.'), 'success')
 
     task_selector('edit_reply', reply_id=reply.id, parent_id=reply.parent_id)
@@ -338,6 +338,11 @@ def report_reply(reply, input, src, auth=None):
                     source_instance_id=reporter_user.instance_id,
                     targets=targets_data)
     db.session.add(report)
+    db.session.commit()  # Need to commit to get an id
+
+    # Add the report id to the targets data
+    targets_data['report_id'] = report.id
+    report.targets = targets_data
 
     # Notify local moderators, and send Flag to remote moderators
     # if user has not selected 'report_remote', just send to remote mods not on community's or suspect_users's instances

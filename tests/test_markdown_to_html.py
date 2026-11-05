@@ -209,6 +209,14 @@ And if you want to add your score to the database to help your fellow Bookworms 
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
         self.assertTrue("<blockquote>" in result)
 
+    def test_escaped_angle_brackets(self):
+        """Test user-escaped angle brackets aren't garbled."""
+
+        markdown = r"\<stuff\>"  # use raw string to avoid syntax error from slashes
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = "<p>&lt;stuff&gt;</p>\n"
+        self.assertEqual(result, correct_html)
+
     def test_disallowed_tags(self):
         """Test that disallowed tags are removed"""
         markdown = "Paragraph with <script>alert('xss')</script> script."
@@ -283,6 +291,19 @@ And if you want to add your score to the database to help your fellow Bookworms 
         markdown = "```\n::: spoiler Spoiler Title\ndon't ~~strikethrough~~\n:::\n```"
         correct_html = "<pre><code>::: spoiler Spoiler Title\ndon't ~~strikethrough~~\n:::\n</code></pre>\n"
         result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        self.assertEqual(result, correct_html)
+
+    def test_indents_in_fenced_code(self):
+        """Make sure indented sections are properly included in fenced code blocks."""
+        
+        markdown = "```python\ndef testing():\n    print('stuff')\n```"
+        correct_html = '<div class="codehilite">\n<pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">testing</span><span class="p">():</span>\n    <span class="nb">print</span><span class="p">(</span><span class="s1">\'stuff\'</span><span class="p">)</span>\n</code></pre>\n</div>\n'
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        self.assertEqual(result, correct_html)
+
+        markdown = "```\ndef testing():\n    print('stuff')\n```"
+        correct_html = "<pre><code>def testing():\n    print('stuff')\n</code></pre>\n"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
         self.assertEqual(result, correct_html)
 
     def test_code_block_link(self):
@@ -562,6 +583,47 @@ And if you want to add your score to the database to help your fellow Bookworms 
         markdown = "|| spoiler here || and >! another !<"
         result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
         target_html = "<p><tg-spoiler>spoiler here</tg-spoiler> and <tg-spoiler>another</tg-spoiler></p>\n"
+        self.assertEqual(target_html, result)
+
+    def test_indented_code_blocks(self):
+        """
+        Tests functionality around indented code blocks. They can especially interfere with footnotes.
+        """
+
+        # Basic functionality
+        markdown = "    code"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<pre><code>code</code></pre>\n'
+        self.assertEqual(target_html, result)
+
+        # Triple tics in indented code block
+        markdown = "    ```\n    code\n    ```"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<pre><code>```\ncode\n```</code></pre>\n'
+        self.assertEqual(target_html, result)
+
+        # Quad tics in indented code block
+        markdown = "    ````\n    ```\n    code\n    ```\n    ````"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<pre><code>````\n```\ncode\n```\n````</code></pre>\n'
+        self.assertEqual(target_html, result)
+
+        # Simple footnote and indented code block
+        markdown = "note[^1]\n\n    code\n\n[^1]: footnote"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p>note<sup class="footnote-ref" id="fnref-1-fn-test"><a href="#fn-1-fn-test">1</a></sup></p>\n<pre><code>code\n</code></pre>\n<div class="footnotes">\n<hr/>\n<ol>\n<li id="fn-1-fn-test">\n<p>footnote\xa0<a class="footnoteBackLink" href="#fnref-1-fn-test">↩</a></p>\n</li>\n</ol>\n</div>\n'
+        self.assertEqual(target_html, result)
+
+        # Footnote split across lines and indented code block
+        markdown = "note[^1]\n\n    code\n\n[^1]: more\n    footnote"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p>note<sup class="footnote-ref" id="fnref-1-fn-test"><a href="#fn-1-fn-test">1</a></sup></p>\n<pre><code>code\n</code></pre>\n<div class="footnotes">\n<hr/>\n<ol>\n<li id="fn-1-fn-test">\n<p>more\nfootnote\xa0<a class="footnoteBackLink" href="#fnref-1-fn-test">↩</a></p>\n</li>\n</ol>\n</div>\n'
+        self.assertEqual(target_html, result)
+
+        # Footnote with multiple formatted paragraphs and indented code block
+        markdown = "note[^1]\n\n    code\n\n[^1]: more\n\n\t`footnote`"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p>note<sup class="footnote-ref" id="fnref-1-fn-test"><a href="#fn-1-fn-test">1</a></sup></p>\n<pre><code>code\n</code></pre>\n<div class="footnotes">\n<hr/>\n<ol>\n<li id="fn-1-fn-test">\n<p>more</p>\n<p><code>footnote</code>\xa0<a class="footnoteBackLink" href="#fnref-1-fn-test">↩</a></p>\n</li>\n</ol>\n</div>\n'
         self.assertEqual(target_html, result)
 
 

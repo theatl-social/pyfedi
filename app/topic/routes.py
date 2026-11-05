@@ -23,6 +23,7 @@ from app.utils import render_template, user_filters_posts, validation_required, 
     joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids, \
     approval_required, block_honey_pot, user_pronouns, community_membership_private
+from app.utils import calculate_rss_cache_timeout
 from app.rss_extras import RSSFeed
 
 
@@ -228,22 +229,24 @@ def show_topic_rss(topic_path):
             text('SELECT id FROM community WHERE banned is false AND private is false AND topic_id IN :topic_ids'),
             {'topic_ids': tuple(topic_ids)}).scalars()
         post_ids = get_deduped_post_ids('', list(community_ids), 'new')
-        post_ids = paginate_post_ids(post_ids, 0, page_length=100)
-        posts = post_ids_to_models(post_ids, 'new')
+        post_ids = paginate_post_ids(post_ids, 0, page_length=50)
+        posts = post_ids_to_models(post_ids, 'new').all()
 
         server_url = current_app.config['SERVER_URL']
         feed = RSSFeed(title = f'{topic.name} on {g.site.name}',
                        link = f"{server_url}/topic/{last_topic_machine_name}",
                        description = ' ',
                        logo = f"{server_url}/static/images/apple-touch-icon.png",
-                       self_link = f"{server_url}/topic/{last_topic_machine_name}.rss",
-                       language = 'en'
+                       self_link = f"{server_url}/topic/{last_topic_machine_name}.rss"
                      )
+
+        if language := request.args.get('lang'):    # filter by language
+            posts = [post for post in posts if post.language_code() == language]
 
         response = make_response(feed.create_feed(posts, server_url))
         response.headers.set('Content-Type', 'application/rss+xml')
         response.headers.add_header('ETag', f"{topic.id}_{hash(g.site.last_active)}")
-        response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+        response.headers.add_header('Cache-Control', f'public, max-age={calculate_rss_cache_timeout(posts)}')
         return response
     else:
         abort(404)

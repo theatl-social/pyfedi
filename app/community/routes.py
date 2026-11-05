@@ -204,6 +204,7 @@ from app.utils import (
     banned_instances,
     is_invalid_get_request_uri,
     user_ip_banned,
+    calculate_rss_cache_timeout,
 )
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
@@ -947,64 +948,28 @@ def show_community(community: Community):
     )
     og_image = community.image.source_url if community.image_id else None
 
-    if content_type == "posts" or content_type == "events":
-        next_url = (
-            url_for(
-                "activitypub.community_profile",
-                actor=community.ap_id
-                if community.ap_id is not None
-                else community.name,
-                page=posts.next_num,
-                sort=sort,
-                layout=post_layout,
-                content_type=content_type,
-            )
-            if posts.has_next
-            else None
-        )
-        prev_url = (
-            url_for(
-                "activitypub.community_profile",
-                actor=community.ap_id
-                if community.ap_id is not None
-                else community.name,
-                page=posts.prev_num,
-                sort=sort,
-                layout=post_layout,
-                content_type=content_type,
-            )
-            if posts.has_prev and page != 1
-            else None
-        )
+    if content_type == 'posts' or content_type == 'events':
+        next_url = url_for('activitypub.community_profile',
+                           actor=community.ap_id if community.ap_id is not None else community.name,
+                           page=posts.next_num, sort=sort, layout=post_layout,
+                           content_type=content_type,
+                           microblog_mode=microblog_mode if microblog_mode != 'following' else None) if posts.has_next else None
+        prev_url = url_for('activitypub.community_profile',
+                           actor=community.ap_id if community.ap_id is not None else community.name,
+                           page=posts.prev_num, sort=sort, layout=post_layout,
+                           content_type=content_type,
+                           microblog_mode=microblog_mode if microblog_mode != 'following' else None) if posts.has_prev and page != 1 else None
     else:
-        next_url = (
-            url_for(
-                "activitypub.community_profile",
-                actor=community.ap_id
-                if community.ap_id is not None
-                else community.name,
-                page=comments.next_num,
-                sort=sort,
-                layout=post_layout,
-                content_type=content_type,
-            )
-            if comments.has_next
-            else None
-        )
-        prev_url = (
-            url_for(
-                "activitypub.community_profile",
-                actor=community.ap_id
-                if community.ap_id is not None
-                else community.name,
-                page=comments.prev_num,
-                sort=sort,
-                layout=post_layout,
-                content_type=content_type,
-            )
-            if comments.has_prev and page != 1
-            else None
-        )
+        next_url = url_for('activitypub.community_profile',
+                           actor=community.ap_id if community.ap_id is not None else community.name,
+                           page=comments.next_num, sort=sort, layout=post_layout,
+                           content_type=content_type,
+                           microblog_mode=microblog_mode if microblog_mode != 'following' else None) if comments.has_next else None
+        prev_url = url_for('activitypub.community_profile',
+                           actor=community.ap_id if community.ap_id is not None else community.name,
+                           page=comments.prev_num, sort=sort, layout=post_layout,
+                           content_type=content_type,
+                           microblog_mode=microblog_mode if microblog_mode != 'following' else None) if comments.has_prev and page != 1 else None
 
     # Voting history
     if current_user.is_authenticated:
@@ -1164,14 +1129,16 @@ def show_community_rss(actor):
                        link=f"{server_url}/c/{actor}",
                        description=description,
                        logo=image,
-                       self_link=f"{server_url}/c/{actor}/feed",
-                       language='en'
+                       self_link=f"{server_url}/c/{actor}/feed"
                      )
+
+        if language := request.args.get('lang'):    # filter by language
+            posts = [post for post in posts if post.language_code() == language]
 
         response = make_response(feed.create_feed(posts, server_url))
         response.headers.set('Content-Type', 'application/rss+xml')
         response.headers.add_header('ETag', f"{community.id}_{hash(community.last_active)}")
-        response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+        response.headers.add_header('Cache-Control', f'public, max-age={calculate_rss_cache_timeout(posts)}')
         return response
     else:
         abort(404)
@@ -1439,7 +1406,12 @@ def unsubscribe(actor):
                 db.session.query(CommunityFlairBlock).filter_by(
                     user_id=current_user.id, community_id=community.id
                 ).delete()
-                community.subscriptions_count -= 1
+                # Only decrement subscriptions_count for local users (ap_id == None)
+                if current_user.ap_id is None:
+                    community.subscriptions_count -= 1
+                # Only decrement total_subscriptions_count for local communities
+                if community.is_local():
+                    community.total_subscriptions_count -= 1
                 db.session.commit()
 
                 if request.method == "GET":
@@ -1665,12 +1637,14 @@ def add_post(actor, type=None):
 
         resp = make_response(redirect(post.slug))
         # remove cookies used to maintain state when switching post type
-        resp.delete_cookie("post_title")
-        resp.delete_cookie("post_description")
-        resp.delete_cookie("post_tags")
+        resp.delete_cookie('post_title')
+        resp.delete_cookie('post_description')
+        resp.delete_cookie('post_tags')
+        resp.delete_cookie('post_community')
         return resp
     else:  # GET
-        form.communities.data = community.id
+        target_community_id = request.cookies.get('post_community') or community.id
+        form.communities.data = int(target_community_id)
         form.notify_author.data = True
         if post_type == POST_TYPE_POLL:
             form.finish_in.data = "3d"
@@ -1781,6 +1755,11 @@ def community_report(community_id: int):
             targets=targets_data,
         )
         db.session.add(report)
+        db.session.commit()  # Need to commit to get an id
+
+        # Add the report id to the targets data
+        targets_data['report_id'] = report.id
+        report.targets = targets_data
 
         # Notify admin
         # todo: find all instance admin(s). for now just load User.id == 1
@@ -2291,9 +2270,11 @@ def community_ban_user(community_id: int, user_id: int):
     # authenticated user to ban anyone from any community. See
     # SECURITY_PATCHES.md.
     if not (
-        community.is_owner() or current_user.is_admin() or community.is_moderator()
+        community.is_owner() or current_user.is_admin_or_staff() or community.is_moderator()
     ):
         abort(401)
+    if community.is_moderator(user):
+        abort(403)  # upstream v1.8.x: moderators cannot be banned from their own community
     existing = CommunityBan.query.filter_by(
         community_id=community.id, user_id=user.id
     ).first()
@@ -2339,7 +2320,7 @@ def community_ban_user(community_id: int, user_id: int):
                 )
         if form.delete_post_replies.data:
             post_replies = PostReply.query.filter(
-                PostReply.user_id == user.id, Post.community_id == community.id
+                PostReply.user_id == user.id, PostReply.community_id == community.id
             ).all()
             for post_reply in post_replies:
                 delete_post_reply_from_community(post_reply.id, current_user.id)
@@ -2424,9 +2405,11 @@ def community_unban_user(community_id: int, user_id: int):
     user = User.query.get_or_404(user_id)
     # SP-009: only mods/owners/admins may unban. See SECURITY_PATCHES.md.
     if not (
-        community.is_owner() or current_user.is_admin() or community.is_moderator()
+        community.is_owner() or current_user.is_admin_or_staff() or community.is_moderator()
     ):
         abort(401)
+    if community.is_moderator(user):
+        abort(403)  # upstream v1.8.x: moderators cannot be banned from their own community
     existing_ban = CommunityBan.query.filter_by(
         community_id=community.id, user_id=user.id
     ).first()
@@ -3932,16 +3915,11 @@ def check_url_already_posted():
     url = request.args.get("link_url")
     if url:
         url = remove_tracking_from_link(url.strip())
-        posts = Post.query.filter(
-            Post.url == url, Post.deleted == False, Post.status > POST_STATUS_REVIEWING
-        ).all()
-        title, description = retrieve_metadata_of_url(url)
-        return flask.render_template(
-            "community/check_url_posted.html",
-            posts=posts,
-            title=title,
-            description=description,
-        )
+        posts = Post.query.filter(Post.url == url, Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                  Post.microblog == False, Post.from_bot == False).all()
+        title, description, image = retrieve_metadata_of_url(url)
+        return flask.render_template('community/check_url_posted.html', posts=posts,
+                                     title=title, description=description, image=image)
     else:
         abort(404)
 
@@ -4024,6 +4002,7 @@ def retrieve_metadata_of_url(url):
 
     title = ""
     description = ""
+    image = ""
     try:
         allow_http = bool(current_app.config.get("SSRF_GUARD_ALLOW_HTTP"))
         allow_private = bool(current_app.config.get("SSRF_GUARD_ALLOW_PRIVATE"))
@@ -4053,11 +4032,16 @@ def retrieve_metadata_of_url(url):
             if meta_description and meta_description.get("content"):
                 description = meta_description.get("content").strip()
 
-            return title, description
-        else:
-            return title, description
+            # upstream v1.8.x pre-fills the post image from og:image. It is
+            # only echoed back to the form here; any fetch of it goes through
+            # url_to_thumbnail_file(), which is SSRF-guarded (SP-010).
+            og_image = soup.find("meta", property="og:image")
+            if og_image and og_image.get("content"):
+                image = og_image.get("content").strip()
+
+        return title, description, image
     except Exception:
-        return title, description
+        return title, description, image
 
 
 @bp.route("/c/<actor>/fixup_from_remote")

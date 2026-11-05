@@ -1,4 +1,5 @@
-from datetime import timedelta
+from collections import defaultdict
+from datetime import timedelta, date
 import random
 import re
 import os
@@ -6,6 +7,8 @@ import time
 
 import httpx
 import boto3
+import orjson
+from botocore.exceptions import ClientError
 from flask import current_app
 from sqlalchemy import text, select, func
 
@@ -15,10 +18,10 @@ from app.constants import NOTIF_UNBAN, SRC_WEB
 from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
     DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, InstanceChooser, \
     InstanceBan, Emoji, RevokedToken, BotChallenge
-from app.shared.post import delete_post
+from app.shared.post import delete_post, delete_rss_feed_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
     shorten_string, patch_db_session, archive_post, get_setting, set_setting, communities_banned_from_all_users, \
-    banned_instances, blocked_or_banned_instances, get_emoji_replacements, store_files_in_s3
+    banned_instances, blocked_or_banned_instances, get_emoji_replacements, store_files_in_s3, ensure_directory_exists
 
 
 @celery.task
@@ -138,19 +141,28 @@ def remove_old_community_content():
     session = get_task_session()
     try:
         communities = session.query(Community).filter(Community.content_retention > 0).all()
+        reduce_post_count = defaultdict(int)
 
         with patch_db_session(session):
+            feed_bot = session.query(User).filter_by(user_name='feed_bot', ap_id=None).first()
             for community in communities:
                 cut_off = utcnow() - timedelta(days=community.content_retention)
-                post_ids = [p[0] for p in session.query(Post.id).filter_by(
+                posts = session.query(Post.id, Post.user_id).filter_by(
                     deleted=False,
                     sticky=False,
                     community_id=community.id
-                ).filter(Post.posted_at < cut_off).all()]
+                ).filter(Post.posted_at < cut_off).all()
 
-                for post_id in post_ids:
-                    delete_post(post_id, False, SRC_WEB, None)
+                for post_id, post_author_id in posts:
+                    if feed_bot and post_author_id == feed_bot.id:
+                        delete_rss_feed_post(post_id, post_author_id)     # rss feed posts are deleted by their author, to avoid polluting the modlog with irrellivent entries
+                        reduce_post_count[community.id] += 1
+                    else:
+                        delete_post(post_id, False, SRC_WEB, None)
 
+        for community_id, reduce_post_count_by in reduce_post_count.items():
+            session.execute(text('UPDATE "community" SET post_count = post_count - :reduce_post_count_by WHERE id = :community_id'),
+                            {'reduce_post_count_by': reduce_post_count_by, 'community_id': community_id})
         session.commit()
     except Exception:
         session.rollback()
@@ -312,21 +324,36 @@ def update_community_stats():
         ).all()
 
         for community in communities:
-            stmt = (
+            # Count local users only (ap_id == None) for subscriptions_count
+            stmt_local = (
                 select(func.count())
                 .select_from(CommunityMember)
                 .join(User, User.id == CommunityMember.user_id)
                 .where(
                     CommunityMember.community_id == community.id,
                     CommunityMember.is_banned == False,
-                    User.bot == False
+                    User.bot == False,
+                    User.ap_id == None,
+                    User.banned == False
                 )
             )
-            community.subscriptions_count = session.execute(stmt).scalar()
-            # ensure local communities have something their total_subscriptions_count, for use in topic and feed sidebar
-            if community.is_local() and \
-                    (community.total_subscriptions_count is None or community.total_subscriptions_count < community.subscriptions_count):
-                community.total_subscriptions_count = community.subscriptions_count
+            community.subscriptions_count = session.execute(stmt_local).scalar()
+            
+            # For local communities, count all users (local + remote) for total_subscriptions_count
+            if community.is_local():
+                stmt_total = (
+                    select(func.count())
+                    .select_from(CommunityMember)
+                    .join(User, User.id == CommunityMember.user_id)
+                    .where(
+                        CommunityMember.community_id == community.id,
+                        CommunityMember.is_banned == False,
+                        User.bot == False,
+                        User.banned == False
+                    )
+                )
+                print(f'local community updated id {community.id}')
+                community.total_subscriptions_count = session.execute(stmt_total).scalar()
 
             community.post_count = session.execute(text(
                 'SELECT COUNT(*) as c FROM post WHERE deleted is false and community_id = :community_id'
@@ -590,6 +617,8 @@ def monitor_healthy_instances():
                         if 'software' in node_json:
                             instance.software = node_json['software']['name'].lower()[:50]
                             instance.version = node_json['software']['version'][:50]
+                            instance.active_1mo = node_json['usage']['users']['activeMonth']
+                            instance.active_6mo = node_json['usage']['users']['activeHalfyear']
                             instance.failures = 0
                             instance.dormant = False
                             instance.gone_forever = False
@@ -624,7 +653,7 @@ def monitor_healthy_instances():
                 session.commit()
 
             # Handle admin roles for Lemmy/PieFed instances
-            if instance.online() and (instance.software == 'lemmy' or instance.software == 'piefed' or instance.software == 'pylova'):
+            if instance.online() and (instance.software == 'lemmy' or instance.software == 'piefed' or instance.software == 'pylova' or instance.software == 'catodon'):
                 try:
                     response = get_request(f'https://{instance.domain}/api/v3/site')
                     if response and response.status_code == 200:
@@ -943,7 +972,10 @@ def archive_old_posts():
                     aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                 )
             for post_id in post_ids:
-                archive_post(post_id, s3)
+                try:
+                    archive_post(post_id, s3)
+                except ClientError:  # s3 randomly fails sometimes
+                    continue
 
             if s3:
                 s3.close()
@@ -998,33 +1030,35 @@ def archive_user(user_id, session):
 
 @celery.task
 def refresh_instance_chooser():
+    main_list = get_setting('main_instance_list', 'piefed.social')
+
     session = get_task_session()
     try:
-        # Make GraphQL request to fediverse.observer API
-        query = {
-            "query": '{ nodes(softwarename:"piefed" status: "UP") { domain uptime_alltime monthsmonitored } }'
-        }
-
-        headers = {'Content-Type': 'application/json'}
-        response = httpx_client.post('https://api.fediverse.observer/', json=query, headers=headers, timeout=30)
+        # Make request to main instance list
+        try:
+            response = get_request(f'https://{main_list}/static/media/known_instances.json?cache_bust={date.today()}')
+        except Exception:
+            current_app.logger.error(f'{main_list} API is down')
+            return
 
         if response.status_code != 200:
-            current_app.logger.error(f"fediverse.observer API returned {response.status_code}")
+            current_app.logger.error(f"{main_list} API returned {response.status_code}")
+            if get_setting('crawl_known_instances', False) and main_list == current_app.config['SERVER_NAME']:
+                build_instance_list.delay()
             return
 
         response_data = response.json()
-        if not response_data or 'data' not in response_data or 'nodes' not in response_data['data']:
-            current_app.logger.error("Invalid response from fediverse.observer API")
+        if not response_data:
+            current_app.logger.error(f"Invalid response from {main_list} API")
             return
 
         observer_domains = set()
 
         # Shuffle the nodes list so instances are processed in random order each time
-        nodes = response_data['data']['nodes']
-        random.shuffle(nodes)
-
-        # Process each domain from fediverse.observer
-        for node in nodes:
+        random.shuffle(response_data)
+        
+        # Process each domain from main list
+        for node in response_data:
             domain = node['domain']
             observer_domains.add(domain)
 
@@ -1043,8 +1077,8 @@ def refresh_instance_chooser():
                 if chooser_response.status_code == 200:
                     chooser_data = chooser_response.json()
 
-                    chooser_data['uptime'] = node['uptime_alltime']
-                    chooser_data['monthsmonitored'] = node['monthsmonitored']
+                    uptime = node.get('uptime_alltime')
+                    chooser_data['uptime'] = str(uptime) if uptime else ''
 
                     # Update or create InstanceChooser record
                     instance_chooser = session.query(InstanceChooser).filter_by(domain=domain).first()
@@ -1075,14 +1109,79 @@ def refresh_instance_chooser():
                 if existing:
                     session.delete(existing)
             session.commit()
-
-        # Remove InstanceChooser records for domains not in fediverse.observer
+        
+        # Remove InstanceChooser records for domains not in main list
         existing_records = session.query(InstanceChooser).all()
         for record in existing_records:
             if record.domain not in observer_domains:
                 session.delete(record)
 
         session.commit()
+
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+    if get_setting('crawl_known_instances', False):
+        build_instance_list.delay()
+
+
+@celery.task
+def build_instance_list():
+    """ Generate a json file at /static/media/known_instances.json for other instances to populate their instance chooser with """
+
+    session = get_task_session()
+    try:
+        min_version = '1.6.0'
+        result = [{
+            'domain': current_app.config['SERVER_NAME'],
+            'uptime_alltime': ''    # One day we will have real values for this. Must be a string, e.g. '98.5'
+        }]
+        already_seen = {current_app.config['SERVER_NAME']}
+
+        # Initially, get the list of instances we already know about, from previous federation traffic. monitor_healthy_instances() keeps this up to date.
+        locally_known_instances = session.query(Instance).filter(Instance.software == 'piefed', Instance.version >= min_version,
+                                                                 Instance.dormant == False, Instance.gone_forever == False)
+        for instance in locally_known_instances:
+            result.append({
+                'domain': instance.domain,
+                'uptime_alltime': ''
+            })
+            already_seen.add(instance.domain)
+
+            # For each of the already known instances, ask them which instances they know about.
+            try:
+                federated_instances_response = get_request(f'https://{instance.domain}/api/v3/federated_instances')
+            except Exception as e:
+                current_app.logger.warning(f"Failed to get federated_instances from {instance.domain}: {str(e)}")
+                continue
+
+            if federated_instances_response.status_code == 200:
+                try:
+                    federated_instances_data = federated_instances_response.json()
+                    linked = federated_instances_data['federated_instances']['linked']
+                except (ValueError, KeyError, TypeError) as e:
+                    current_app.logger.warning(f"Bad federated_instances response from {instance.domain}: {str(e)}")
+                    continue
+
+                for federated_instance in linked:
+                    domain = federated_instance['domain']
+                    software = federated_instance['software'] if 'software' in federated_instance else ''
+                    version = federated_instance['version'] if 'version' in federated_instance else ''
+                    if domain not in already_seen and software == 'piefed' and version >= min_version:
+                        result.append({
+                            'domain': domain,
+                            'uptime_alltime': ''
+                        })
+                        already_seen.add(domain)
+
+        # Save result to file
+        ensure_directory_exists('app/static/media')
+        with open("app/static/media/known_instances.json", "wb") as f:
+            f.write(orjson.dumps(result))
+
 
     except Exception:
         session.rollback()
@@ -1129,6 +1228,8 @@ def add_remote_community_from_post(post_data):
         server, community = extract_domain_and_actor(post_data['url'])
         community_lookup = ['!' + community + '@' + server]
     else:
+        if 'body' not in post_data:  # posts without a body have no community link in them, e.g. https://lemmy.world/post/52957269
+            return
         pattern = r'![A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
         community_lookup = re.findall(pattern, post_data['body'])
 

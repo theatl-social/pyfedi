@@ -229,6 +229,76 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-11-04 -- upstream PieFed v1.8.11, plus anti-LLM removal**
+- Branch: `20261104/merge-upstream-v1811`; upstream tag `v1.8.11` (`dc1488002`,
+  198 non-merge commits since v1.8.0; upstream merged `main` into `v1.8.x` this
+  cycle). `upstream/v1.8.x` is 3 commits past the tag with no version bump
+  (frontend perf, content filter, topic view warning) -- not taken.
+  Fork version `1.8.11-peachpie-20261104` / `1.8.11+peachpie.20261104`.
+- Taken from upstream: scheduled-post API (5 routes), activity-alert API,
+  feed/topic subscribe API, captcha + register API paths (they were
+  double-prefixed `/api/alpha/api/alpha/...`; `post_user_register` is still a
+  `...` stub upstream, so it registers nobody), inline comment editing,
+  `/statistics`, admin "reset password" link, `auth_required_if_private`
+  decorator on API routes, `ban_votes` (admin bans from voting), bots cannot
+  vote, a local user's block discards the blocked person's downvotes on their
+  comments (owner approved), instance chooser no longer depends on
+  fediverse.observer, ActivityPub hardening (Announce-scope checks on
+  Delete/Lock/Add/Remove/Restore, ChatMessage sanitised + sender/recipient
+  check, unsigned "fediseer" ChatMessage exemption removed), longer
+  nodeinfo caching, RSS cache tuning. Deps: cryptography ~=50.0, webauthn
+  ~=3.0 (our imports verified; passkey ceremony not exercised), kombu pinned
+  5.5.4 (a downgrade, matching celery 5.3.6), certifi 2026.10.19.
+- Migrations: 3 additive upstream (`26554a31c057` instance active counts,
+  `7c5a293ed40c` partial index on local users, `61f3520d99b2` `user.ban_votes`)
+  + `merge_20261104_v1811`. Upgrade from `20261007_owned_file_original`
+  applies exactly those 4.
+- **Kept removed** (came back via auto-merge or conflicts): vote
+  manipulation/targeting/namesake dashboards, new "account bursts",
+  `voting_clusters` CLI, serial-downvoter / no-votes / high posts-per-day /
+  link-diversity reports (+ their SQL and templates), voting-pattern and
+  post-timing pages, reposter challenge UI, `ignore_reposters`/`from_reposter`
+  filters in domain/tag/main/check-url, posting-pattern chart, anoobis,
+  `CHAN_DETECTION_ENDPOINT`.
+- **Anti-LLM removal (owner request):** upstream `ed8d40aca` ("magic string
+  that chokes claude") put a visually-hidden refusal-trigger string on every
+  post page -- removed. Also removed: robots.txt AI-agent blocks and
+  `Content-Signal: ai-train=no, ai-input=no`, `/rsl.xml` and the
+  `Link: rel="license"` header on every response, `ALLOW_AI_CRAWLERS`.
+  SEO-bot blocks, path disallows and the `/honey` honeypot stay. Guarded by
+  `tests/test_anti_llm_removed.py` (red before, green after). **Grep every
+  future release for new ones** -- see the skill table.
+- **Security:** new **SP-036** -- `first_paragraph()` returned the second
+  paragraph's `.text` (entities decoded) unescaped into teasers rendered
+  `|safe`: stored XSS on every listing, pre-existing here and upstream.
+  SP-020: upstream deleted `/feed/add_community` and `/feed/list`
+  outright; tests now accept "removed" and fail if either returns unguarded.
+  SP-006 kept over upstream's `opengraph_parse` + `is_invalid_get_request_uri`
+  in `retrieve_metadata_of_url` (now also returns og:image; that URL is only
+  fetched via SP-010-guarded `url_to_thumbnail_file`).
+- **Upstream defects fixed rather than imported:**
+  - Redis key renamed to `pause_federation_{SECRET_KEY}` -- the Flask secret
+    in a key name. Replaced with `pause_federation_key()` (SERVER_NAME). The
+    auto-merged admin "close instance" already wrote the new key while our
+    inbox read the old one, so closing an instance would have done nothing.
+  - **30 undefined names hidden by `from ... import *`** (ruff F821 can't see
+    them): e.g. `markdown_to_html`/`allowlist_html` in federated ChatMessage
+    handling, `can_downvote`/`can_upvote` in undo-vote, `NotificationSubscription`
+    in feed/topic views, `RSSFeed` in user RSS. Found by checking each F405 hit
+    against the star-imported module -- do this on every merge.
+  - Community ban: our copy filtered `PostReply` on `Post.community_id`
+    (wrong table); took upstream's fix plus "moderators can't be banned",
+    SP-009 guard kept (now `is_admin_or_staff`).
+  - `post_reply_edit_inline`: `redirect()` without `return`; post/comment id
+    mismatch not checked. Admin reset-password: `get_or_404`.
+- Verification: ruff clean; star-import undefined-name check 0; djlint 309
+  files 0 errors; 309 templates compile; every `url_for` resolves; route
+  surface 625 -> 637 (14 added, 4 removed: the two feed routes and the two
+  mis-prefixed API paths, which reappear at the right path); single migration
+  head; `tests/security/` + guards green; full suite **1 failed / 1121 passed
+  / 96 skipped** vs baseline 1 failed / 1098 passed / 96 skipped (the known
+  macOS `PicklingError`).
+
 - **2026-10-07 -- upstream PieFed v1.8.0 with owner policy preserved**
 - Branch: `20261007/merge-upstream-v180`; upstream release commit
   `e85fb8f45175aa5e175baec76be0537b9f47be44`. Checked both release branches:

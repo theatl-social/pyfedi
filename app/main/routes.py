@@ -5,7 +5,6 @@ from datetime import timedelta, timezone
 from random import randint
 
 import flask
-from furl import furl
 from markupsafe import Markup
 from pyld import jsonld
 from sqlalchemy import or_, and_, func
@@ -19,7 +18,7 @@ from app.admin.util import topics_for_form
 from app.api.alpha.utils.misc import get_resolve_object
 from app.community.util import hashtags_recent
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
-    POST_STATUS_REVIEWING
+    POST_STATUS_REVIEWING, VERSION
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
@@ -31,6 +30,7 @@ from sqlalchemy import bindparam, desc, text
 from app.main.forms import ShareLinkForm
 from app.main.util import sidebar_active_communities, sidebar_new_instances, sidebar_upcoming_events, \
     sidebar_new_communities, _base_list_communities_context, reload_url
+from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
@@ -44,6 +44,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, \
     num_topics, referrer, block_honey_pot, user_pronouns, get_instance_stickies, \
     community_membership_private, favorite_communities, mimetype_from_url, get_request, store_files_in_s3
+from app.utils import calculate_rss_cache_timeout
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage, BannedInstances, BotChallenge
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
@@ -612,7 +613,7 @@ def login():
 
 @bp.route('/robots.txt')
 def robots():
-    resp = make_response(render_template('robots.txt', use_rsl=not current_app.config['ALLOW_AI_CRAWLERS']))
+    resp = make_response(render_template('robots.txt'))
     resp.mimetype = 'text/plain'
     return resp
 
@@ -632,15 +633,6 @@ def sitemap():
     posts = posts.order_by(desc(Post.posted_at)).limit(500)
 
     resp = make_response(render_template('sitemap.xml', posts=posts, current_app=current_app))
-    resp.mimetype = 'text/xml'
-    return resp
-
-
-@bp.route('/rsl.xml')
-def rsl():
-    if current_app.config['ALLOW_AI_CRAWLERS']:
-        abort(404)
-    resp = make_response(render_template('rsl.xml'))
     resp.mimetype = 'text/xml'
     return resp
 
@@ -899,6 +891,7 @@ def share():
         response.delete_cookie('post_title')
         response.delete_cookie('post_description')
         response.delete_cookie('post_tags')
+        response.delete_cookie('post_community')
         return response
 
     if request.cookies.get('cross_post_community_id'):
@@ -1184,7 +1177,7 @@ def static_manifest():
 
     # S3 media url
     if store_files_in_s3():
-        manifest['scope_extensions'] = [{"origin": current_app.config['S3_PUBLIC_URL']}]
+        manifest['scope_extensions'] = [{"type": "origin", "origin": current_app.config['S3_PUBLIC_URL']}]
 
     # Build response with cache headers
     response = make_response(jsonify(manifest))
@@ -1241,10 +1234,10 @@ def explore():
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,)
 
 
-# RSS feed of the community
+# RSS feed of the home page
 @bp.route('/index/feed', methods=['GET'])
 @bp.route('/index/feed/<feed_type>', methods=['GET'])
-#@cache.cached(timeout=600, query_string=True)
+@cache.cached(timeout=600, query_string=True)
 def index_rss(feed_type=None):
 
     # If nothing has changed since their last visit, return HTTP 304
@@ -1312,7 +1305,7 @@ def index_rss(feed_type=None):
     post_ids = get_deduped_post_ids(gibberish(15), community_ids, 'new',
                                     include_following=feed_type == 'subscribed' and current_user_is_authenticated)
     post_ids = paginate_post_ids(post_ids, 0, page_length=50)
-    posts = post_ids_to_models(post_ids, 'new')
+    posts = post_ids_to_models(post_ids, 'new').all()
 
     server_url = current_app.config['SERVER_URL']
     description = shorten_string(g.site.description, 150) if g.site.description else ' '
@@ -1322,14 +1315,63 @@ def index_rss(feed_type=None):
                    link = server_url,
                    description = description,
                    logo = image,
-                   self_link = f"{server_url}/feed",
-                   language = 'en'
+                   self_link = f"{server_url}/feed"
                  )
+
+    if language := request.args.get('lang'):  # filter by language
+        posts = [post for post in posts if post.language_code() == language]
 
     response = make_response(feed.create_feed(posts, server_url))
     response.headers.set('Content-Type', 'application/rss+xml')
     response.headers.add_header('ETag', f"home_{hash(g.site.last_active)}")
-    response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+    response.headers.add_header('Cache-Control', f'public, max-age={calculate_rss_cache_timeout(posts)}')
+    return response
+
+
+@bp.route('/statistics')
+@bp.route('/statistics/<software>')
+@login_required_if_private_instance
+def statistics(software=''):
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    software = software or request.args.get('software', '')
+    if software == '':
+        title = _('Statistics')
+    else:
+        title = _('Statistics for %(software)s', software=software)
+
+    local_instance = Instance.query.get(1)
+    if local_instance.active_1mo is None or local_instance.updated_at < utcnow() - timedelta(days=1):
+        local_instance.active_1mo = active_month()
+        local_instance.updated_at = utcnow()
+        local_instance.version = VERSION
+        db.session.commit()
+
+    instances = Instance.query.filter(Instance.gone_forever == False, Instance.active_1mo != None, Instance.active_1mo > 0)
+    if software:
+        software = software.strip().lower()
+        instances = instances.filter(func.lower(Instance.software) == software)
+
+    instances = instances.order_by(desc(Instance.active_1mo))
+
+    # Pagination
+    arg_dict = {"low_bandwidth": low_bandwidth,
+                "software": software,
+                }
+
+    instances = instances.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
+    next_url = url_for('main.modlog', page=instances.next_num, **arg_dict) if instances.has_next else None
+    prev_url = url_for('main.modlog', page=instances.prev_num, **arg_dict) if instances.has_prev and page != 1 else None
+
+    response = make_response(render_template('statistics.html', title=title, instances=instances,
+                                             next_url=next_url, prev_url=prev_url, software=software))
+    if not current_app.debug:
+        if current_user.is_anonymous:
+            response.headers.set('Vary', 'Accept, Accept-Language')
+            response.headers.set('Cache-Control', 'public, max-age=3600')
+        else:
+            response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
+            response.headers.set('Cache-Control', 'private, max-age=15, must-revalidate')
     return response
 
 

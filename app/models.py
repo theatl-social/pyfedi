@@ -110,6 +110,8 @@ class Instance(db.Model):
     nodeinfo_href = db.Column(db.String(100))
     admin_note = db.Column(db.Text)
     popular = db.Column(db.Boolean, default=True)  # New communities from here have their popular flag set
+    active_6mo = db.Column(db.Integer, default=0)
+    active_1mo = db.Column(db.Integer, default=0)
 
     __table_args__ = (
         Index('ix_instance_created_at_active', created_at.desc(),
@@ -422,6 +424,20 @@ class File(db.Model):
             return self.thumbnail_path
         thumbnail_path = self.thumbnail_path[4:] if self.thumbnail_path.startswith('app/') else self.thumbnail_path
         return f"{current_app.config['SERVER_URL']}/{thumbnail_path}"   # image paths must include fqdn (not just starting with /) because apps need to make a request from outside
+
+    def thumb_width(self):
+        if self.thumbnail_width:
+            return self.thumbnail_width
+        if self.width:
+            return self.width
+        return ''
+
+    def thumb_height(self):
+        if self.thumbnail_height:
+            return self.thumbnail_height
+        if self.width:
+            return self.height
+        return ''
 
     def is_image(self):
         common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif', '.svg+xml',
@@ -1014,6 +1030,7 @@ class User(UserMixin, db.Model):
     banned_until = db.Column(db.DateTime)  # null == permanent ban
     ban_posts = db.Column(db.Boolean, default=False)
     ban_comments = db.Column(db.Boolean, default=False)
+    ban_votes = db.Column(db.Boolean, default=False)
     deleted = db.Column(db.Boolean, default=False)
     deleted_by = db.Column(db.Integer, index=True)
     about = db.Column(db.Text)  # markdown
@@ -1128,6 +1145,12 @@ class User(UserMixin, db.Model):
         db.Index(
             'idx_user_user_name_lower',
             db.text('lower(user_name)')
+        ),
+        # Counts of active local users (nodeinfo, site stats). postgresql_where must match the where part of those queries exactly.
+        db.Index(
+            'idx_user_local_active_last_seen',
+            'last_seen',
+            postgresql_where=db.text('ap_id is null AND verified is true AND banned is false AND deleted is false')
         ),
     )
 
@@ -1901,7 +1924,7 @@ class Post(db.Model):
                     instance_id=user.instance_id,
                     indexable=user.indexable,
                     microblog=microblog,
-                    posted_at=utcnow()
+                    posted_at=ap_parse_datetime(request_json['object']['published']) if 'published' in request_json['object'] else utcnow()
                     )
         if 'type' in request_json and request_json['type'] == 'Update':
             post.edited_at = utcnow()
@@ -2651,8 +2674,9 @@ class Post(db.Model):
 
     def vote(self, user: User, vote_direction: str, emoji: str | None):
         from app import redis_client
-        if vote_direction == 'downvote':
-            if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
+        from app.utils import blocked_users, blocked_instances
+        if vote_direction == 'downvote' and self.author.is_local():
+            if user.id in blocked_users(self.user_id) or user.instance_id in blocked_instances(self.user_id):
                 return None
         with redis_client.lock(f"lock:post:{self.id}", timeout=30, blocking_timeout=6):
             existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
@@ -2746,7 +2770,7 @@ class Post(db.Model):
                 self.update_reaction_cache()
 
             # Calculate new ranking values
-            self.ranking = self.post_ranking(self.spicy_score() + self.reply_count, self.created_at)
+            self.ranking = self.post_ranking(self.spicy_score() + self.reply_count, self.posted_at)
             self.ranking_scaled = self.ranking + self.community.scale_by()
 
             db.session.commit()
@@ -2813,8 +2837,8 @@ class PostReply(db.Model):
     private = db.Column(db.Boolean, default=False, index=True)
     distinguished = db.Column(db.Boolean, default=False)
     notify_author = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, index=True, default=utcnow)
-    posted_at = db.Column(db.DateTime, index=True, default=utcnow)
+    created_at = db.Column(db.DateTime, index=True, default=utcnow) # this is when the post arrived here
+    posted_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the original server created it
     deleted = db.Column(db.Boolean, default=False, index=True)
     deleted_by = db.Column(db.Integer, index=True)
     replies_enabled = db.Column(db.Boolean, default=True)
@@ -2908,7 +2932,8 @@ class PostReply(db.Model):
                           distinguished=distinguished, answer=answer, private=private, indexable=user.indexable,
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
-                          ap_announce_id=announce_id)
+                          ap_announce_id=announce_id,
+                          posted_at=ap_parse_datetime(request_json['object']['published']) if request_json and 'published' in request_json['object'] else utcnow())
         if request_json and request_json['type'] == 'Update':
             reply.edited_at = utcnow()
         if reply.body:
@@ -3116,7 +3141,10 @@ class PostReply(db.Model):
 
     def vote(self, user: User, vote_direction: str, emoji: str):
         from app import redis_client
-        from app.utils import wilson_confidence_lower_bound
+        from app.utils import wilson_confidence_lower_bound, blocked_users, blocked_instances
+        if vote_direction == 'downvote' and self.author.is_local():
+            if user.id in blocked_users(self.user_id) or user.instance_id in blocked_instances(self.user_id):
+                return None
         # NOTE: timeout=30 (not 10) is deliberate. This outer lock wraps a vote
         # transaction that can nest a second lock (lock:vote:/lock:user:) and,
         # under load, take longer than 10s end to end -- a shorter timeout lets
@@ -3779,7 +3807,7 @@ class Site(db.Model):
     allowlist = db.Column(db.Text, default='')
     blocklist = db.Column(db.Text, default='')
     blocked_phrases = db.Column(db.Text, default='')  # discard incoming content with these phrases
-    auto_decline_referrers = db.Column(db.Text, default='rdrama.net\nahrefs.com\nkiwifarms.sh\nkiwifarms.st')  # automatically decline registration requests if the referrer is one of these
+    auto_decline_referrers = db.Column(db.Text, default='rdrama.net\nahrefs.com\nkiwifarms.net\nkiwifarms.st')  # automatically decline registration requests if the referrer is one of these
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
     last_active = db.Column(db.DateTime, default=utcnow)
@@ -3818,7 +3846,8 @@ class Site(db.Model):
 
     def active_now(self):
         return db.session.execute(text(
-            "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '5 minutes' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar()
+            "SELECT COUNT(*) as c FROM \"user\" WHERE last_seen >= :since AND ap_id is null AND verified is true AND banned is false AND deleted is false"),
+            {'since': utcnow() - timedelta(minutes=5)}).scalar()
 
     def active_daily(self):
         from app.activitypub.util import active_day
@@ -4316,3 +4345,16 @@ def _large_community_subscribers() -> float:
 def _store_files_in_s3():
     return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and \
         current_app.config['S3_ENDPOINT'] != ''
+
+
+def ap_parse_datetime(dt_str: str) -> datetime:
+    """
+    Parse a datetime string in any of these formats:
+    - 2026-10-07T20:40:31.642079Z       # Lemmy
+    - 2026-10-01T22:23:03.219228+00:00  # PieFed
+    - 2026-07-24T00:59:13+00:00         # Mbin
+
+    Returns a native Python datetime.
+    """
+    dt = pendulum.parse(dt_str, strict=False)
+    return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond)

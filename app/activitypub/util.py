@@ -107,6 +107,8 @@ from app.utils import (
     banned_instances,
     instance_banned,
     communities_run_by_inactive_mods,
+    can_downvote,
+    can_upvote,
 )
 
 
@@ -570,7 +572,7 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
     if hashtag[0] == "#":
         hashtag = hashtag[1:]
 
-    existing_tag = Tag.query.filter(Tag.name == hashtag.lower()).first()
+    existing_tag = db.session.query(Tag).filter(Tag.name == hashtag.lower()).first()
     if existing_tag:
         return existing_tag
     else:
@@ -1049,10 +1051,12 @@ def refresh_community_profile_task(community_id, activity_json):
                     community.default_post_type = activity_json['defaultPostType'] if 'defaultPostType' in activity_json else 'link'
                     community.default_hashtag = activity_json['defaultHashtag'] if 'defaultHashtag' in activity_json else ''
                     community.ap_moderators_url = mods_url
-                    if "followers" in activity_json:
-                        community.ap_followers_url = activity_json["followers"]
-                    if "featured" in activity_json:
-                        community.ap_featured_url = activity_json["featured"]
+                    if 'followers' in activity_json:
+                        community.ap_followers_url = activity_json['followers']
+                    if 'featured' in activity_json:
+                        community.ap_featured_url = activity_json['featured']
+                    if 'contentRetention' in activity_json and activity_json['contentRetention']:
+                        community.content_retention = activity_json['contentRetention']
                     community.ap_fetched_at = utcnow()
                     community.public_key = activity_json["publicKey"]["publicKeyPem"]
 
@@ -2855,9 +2859,7 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
                 to_delete.author.post_reply_count -= 1
                 db.session.commit()
                 if not to_delete.author.bot:
-                    with redis_client.lock(
-                        f"lock:post:{to_delete.id}", timeout=10, blocking_timeout=6
-                    ):
+                    with redis_client.lock(f"lock:post:{to_delete.post_id}", timeout=10, blocking_timeout=6):
                         to_delete.post.reply_count -= 1
                         if to_delete.post.reply_count_cross_posted:
                             to_delete.post.reply_count_cross_posted -= 1
@@ -2881,17 +2883,14 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
                     link=f"post/{to_delete.post.id}#comment_{to_delete.id}",
                 )
         log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
+        return True
     else:
-        log_incoming_ap(
-            id,
-            APLOG_DELETE,
-            APLOG_FAILURE,
-            saved_json,
-            "Deletor did not have permisson",
-        )
+        log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Deletor did not have permisson')
+        return False
 
 
 def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, reason):
+    from app import redis_client
     saved_json = request_json if store_ap_json else None
     id = request_json["id"]
     community = to_restore.community
@@ -2905,13 +2904,17 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
         or community.is_instance_admin(restorer)
     ):
         if isinstance(to_restore, Post):
-            to_restore.deleted = False
-            to_restore.deleted_by = None
-            community.post_count += 1
-            to_restore.author.post_count += 1
-            if to_restore.url:
-                to_restore.calculate_cross_posts()
-            db.session.commit()
+            with redis_client.lock(f"lock:post:{to_restore.id}", timeout=20, blocking_timeout=20):
+                to_restore.deleted = False
+                to_restore.deleted_by = None
+                db.session.commit()
+                if to_restore.url:
+                    to_restore.calculate_cross_posts()
+            with redis_client.lock(f"lock:community:{community.id}", timeout=10, blocking_timeout=6):
+                community.post_count += 1
+            with redis_client.lock(f"lock:user:{to_restore.user_id}", timeout=10, blocking_timeout=6):
+                to_restore.author.post_count += 1
+                db.session.commit()
             if to_restore.author.id != restorer.id:
                 add_to_modlog(
                     "restore_post",
@@ -2925,19 +2928,26 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
                 )
 
         elif isinstance(to_restore, PostReply):
-            to_restore.deleted = False
-            to_restore.deleted_by = None
-            if not to_restore.author.bot:
-                to_restore.post.reply_count += 1
-            to_restore.author.post_reply_count += 1
-            if to_restore.path:
-                db.session.execute(
-                    text(
-                        "update post_reply set child_count = child_count + 1 where id in :parents"
-                    ),
-                    {"parents": tuple(to_restore.path[:-1])},
-                )
-            db.session.commit()
+            with redis_client.lock(f"lock:post_reply:{to_restore.id}", timeout=10, blocking_timeout=6):
+                to_restore.deleted = False
+                to_restore.deleted_by = None
+                if to_restore.path:
+                    db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
+                                       {'parents': tuple(to_restore.path[:-1])})
+                db.session.commit()
+            with redis_client.lock(f"lock:user:{to_restore.user_id}", timeout=10, blocking_timeout=6):
+                to_restore.author.post_reply_count += 1
+                db.session.commit()
+                if not to_restore.author.bot:
+                    with redis_client.lock(f"lock:post:{to_restore.post_id}", timeout=10, blocking_timeout=6):
+                        to_restore.post.reply_count += 1
+                        if to_restore.post.reply_count_cross_posted is not None:
+                            to_restore.post.reply_count_cross_posted += 1
+                        db.session.commit()
+            with redis_client.lock(f"lock:community:{community.id}", timeout=10, blocking_timeout=6):
+                community.post_reply_count += 1
+                db.session.commit()
+
             if to_restore.author.id != restorer.id:
                 add_to_modlog(
                     "restore_post_reply",
@@ -2951,14 +2961,10 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
                     link=f"post/{to_restore.post_id}#comment_{to_restore.id}",
                 )
         log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_SUCCESS, saved_json)
+        return True
     else:
-        log_incoming_ap(
-            id,
-            APLOG_UNDO_DELETE,
-            APLOG_FAILURE,
-            saved_json,
-            "Restorer did not have permisson",
-        )
+        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, saved_json, 'Restorer did not have permisson')
+        return False
 
 
 def site_ban_remove_data(blocker_id, blocked):
@@ -3144,7 +3150,7 @@ def ban_user(blocker, blocked, community, core_activity):
             new_ban.reason = shorten_string(reason, 255)
 
             ban_until = None
-            if "expires" in core_activity:
+            if 'expires' in core_activity and core_activity['expires']:
                 try:
                     ban_until = datetime.fromisoformat(core_activity["expires"])
                 except ValueError:
@@ -3570,13 +3576,11 @@ def create_post_reply(
                     # ignore Mentions in comments from MBIN if they're just there because a local user authored a comment further up in the comment chain
                     # (direct replies will generate a different kind of Notification)
                     # note: can't just check for any Notifications (reply or mention) 'cos local users could conceivably have turned inbox replies off
-                    ids = tuple(ids)
-                    user_ids = db.session.execute(
-                        text('SELECT user_id FROM "post_reply" WHERE id IN :ids'),
-                        {"ids": ids},
-                    ).scalars()
-                    if recipient.id in user_ids:
-                        continue
+                    if len(ids):
+                        ids = tuple(ids)
+                        user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                        if recipient.id in user_ids:
+                            continue
 
                     # if checking for previous comments seems overly-involved, a cheaper solution is perhaps to just be to reject Mentions from MBIN in comments with a depth > 0
 
@@ -4107,15 +4111,11 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                             continue
 
                                     # ignore Mentions generated because a local user authored a comment further up in the comment chain
-                                    ids = tuple(ids)
-                                    user_ids = db.session.execute(
-                                        text(
-                                            'SELECT user_id FROM "post_reply" WHERE id IN :ids'
-                                        ),
-                                        {"ids": ids},
-                                    ).scalars()
-                                    if recipient.id in user_ids:
-                                        continue
+                                    if len(ids):
+                                        ids = tuple(ids)
+                                        user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                                        if recipient.id in user_ids:
+                                            continue
 
                                 blocked_senders = blocked_users(recipient.id)
                                 if reply.user_id not in blocked_senders:
@@ -4548,21 +4548,18 @@ def undo_vote(comment, post, target_ap_id, user):
             user_id=user.id, post_id=post.id
         ).first()
         if existing_vote:
-            with db.session.begin_nested():
-                db.session.execute(
-                    text(
-                        'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
-                    ),
-                    {"effect": existing_vote.effect, "user_id": post.user_id},
-                )
-            if (
-                existing_vote.effect < 0
-            ):  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
+            if existing_vote.effect < 0:  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
+                if not can_downvote(user, post.community):
+                    return None
                 post.down_votes -= 1
             else:
+                if not can_upvote(user, post.community):
+                    return None
                 post.up_votes -= 1
             post.score -= existing_vote.effect
             db.session.delete(existing_vote)
+            db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                               {'effect': existing_vote.effect, 'user_id': post.user_id})
             db.session.commit()
         return post
     if isinstance(voted_on, PostReply):
@@ -4571,21 +4568,18 @@ def undo_vote(comment, post, target_ap_id, user):
             user_id=user.id, post_reply_id=comment.id
         ).first()
         if existing_vote:
-            with db.session.begin_nested():
-                db.session.execute(
-                    text(
-                        'UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'
-                    ),
-                    {"effect": existing_vote.effect, "user_id": comment.user_id},
-                )
-            if (
-                existing_vote.effect < 0
-            ):  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
+            if existing_vote.effect < 0:  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
+                if not can_downvote(user, comment.community):
+                    return None
                 comment.down_votes -= 1
             else:
+                if not can_upvote(user, comment.community):
+                    return None
                 comment.up_votes -= 1
             comment.score -= existing_vote.effect
             db.session.delete(existing_vote)
+            db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                               {'effect': existing_vote.effect, 'user_id': comment.user_id})
             db.session.commit()
         return comment
 
@@ -4630,6 +4624,11 @@ def process_report(user, reported, request_json, session):
             targets=targets_data,
         )
         session.add(report)
+        session.commit()  # Need to commit to get an id
+        
+        # Add the report id to the targets data
+        targets_data['report_id'] = report.id
+        report.targets = targets_data
 
         # Notify site admin
         already_notified = set()
@@ -4681,6 +4680,11 @@ def process_report(user, reported, request_json, session):
             targets=targets_data,
         )
         session.add(report)
+        session.commit()  # Need to commit to get an id
+                
+        # Add the report id to the targets data
+        targets_data['report_id'] = report.id
+        report.targets = targets_data
 
         already_notified = set()
         for mod in reported.community.moderators():
@@ -4745,6 +4749,12 @@ def process_report(user, reported, request_json, session):
             targets=targets_data,
         )
         session.add(report)
+        session.commit()  # Need to commit to get an id
+                
+        # Add the report id to the targets data
+        targets_data['report_id'] = report.id
+        report.targets = targets_data
+        
         # Notify moderators
         already_notified = set()
         for mod in post.community.moderators():

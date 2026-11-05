@@ -43,8 +43,10 @@ document.addEventListener("DOMContentLoaded", function () {
         setupCommunityConditionalFields,
         setupShowMoreLinks,
         setupSubmitOnInputChange,
-        setupTeaserClick
-    ];
+        setupTeaserClick,
+
+        // lightboxes are too heavy for low bandwidth mode
+        ...(low_bandwidth ? [] : [setupLightboxTeaser, setupLightboxPostBody, setupLightboxListener]),
 
     // Lower priority setup functions that can be deferred
     const deferredSetups = [
@@ -81,7 +83,17 @@ document.addEventListener("DOMContentLoaded", function () {
         setupCodeBlockCopy,
         setupLoadingAnimation,
         setupHidRead,
-        setupAutoReload
+        setupShareIcons,
+        setupAutoReload,
+        setupPopupTooltips,
+        setupLightboxPostGallery,
+        setupHandleUrlPaste,
+        setupMarkdownKeyboardShortcuts,
+        setupQuotingHighlightedText,
+        setupJoinListener,
+
+        // must be last - see comment above
+        setupDynamicContentObserver
     ];
 
     // Run critical setups immediately
@@ -146,47 +158,45 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function setupTeaserClick() {
     // make post teasers clickable
-    if(window.matchMedia("(pointer: fine)").matches) {
-        document.querySelectorAll('.post_teaser').forEach(teaser => {
-            if (!teaser.dataset.teaserClick) {
-                teaser.addEventListener('click', function (e) {
+    document.querySelectorAll('.post_teaser').forEach(teaser => {
+        if (!teaser.dataset.teaserClick) {
+            teaser.addEventListener('click', function (e) {
 
-                    // Ignore clicks on controls within the teaser
-                    if (e.target.closest(
-                        'button, [role="button"], .dropdown, .dropdown-menu, .voting_buttons_new, [hx-post], .reaction_button, img, a'
-                    )) {
-                        return;
-                    }
+                // Ignore clicks on controls within the teaser
+                if (e.target.closest(
+                    'button, [role="button"], .dropdown, .dropdown-menu, .voting_buttons_new, [hx-post], .reaction_button, img, a'
+                )) {
+                    return;
+                }
 
-                    const link = teaser.querySelector('h3 a');
-                    if (!link?.href) return;
+                const link = teaser.querySelector('h3 a');
+                if (!link?.href) return;
 
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
 
-                    // ctrl/cmd click opens new tab
-                    if (e.metaKey || e.ctrlKey || e.button === 1) {
-                        window.open(link.href, '_blank', 'noopener');
-                        return;
-                    }
+                // ctrl/cmd click opens new tab
+                if (e.metaKey || e.ctrlKey || e.button === 1) {
+                    window.open(link.href, '_blank', 'noopener');
+                    return;
+                }
 
-                    // shift click opens new window
-                    if (e.shiftKey) {
-                        window.open(link.href, '_blank');
-                        return;
-                    }
+                // shift click opens new window
+                if (e.shiftKey) {
+                    window.open(link.href, '_blank');
+                    return;
+                }
 
-                    // normal click
-                    if (e.button === 0) {
-                        window.location.href = link.href;
-                    }
+                // normal click
+                if (e.button === 0) {
+                    window.location.href = link.href;
+                }
 
-                }, true);
-            }
-            teaser.dataset.teaserClick = 'true';
-        });
-    }
+            }, true);
+        }
+        teaser.dataset.teaserClick = 'true';
+    });
 }
 
 function setupUserPopup() {
@@ -232,6 +242,7 @@ function setupPostTypeSwitcher() {
             setCookie('post_title', document.getElementById('title').value, 0.1);
             setCookie('post_description', document.getElementById('body').value, 0.1);
             setCookie('post_tags', document.getElementById('tags').value, 0.1);
+            setCookie('post_community', document.getElementById('communities').value, 0.1);
         };
     });
 
@@ -239,16 +250,20 @@ function setupPostTypeSwitcher() {
     var title = document.getElementById('title');
     var body = document.getElementById('body');
     var tags = document.getElementById('tags');
-    if(typeSwitcher && title && body && tags) {
+    var community = document.getElementById('communities');
+    if(typeSwitcher && title && body && tags && community) {
         var cookie_title = getCookie('post_title');
         var cookie_description = getCookie('post_description');
         var cookie_tags = getCookie('post_tags');
+        var cookie_community = getCookie('post_community');
         if(cookie_title)
             title.value = cookie_title;
         if(cookie_description)
             body.value = cookie_description;
         if(cookie_tags)
             tags.value = cookie_tags;
+        if(cookie_community)
+            community.value = cookie_community;
     }
 }
 
@@ -1200,6 +1215,18 @@ function displayTimeTracked() {
     }
 }
 
+function setupQuotingHighlightedText() {
+    // Pre-populate reply box with highlighted text in a markdown quote
+    // Set up an htmx listener since reply textareas are dynamically loaded
+    document.addEventListener("htmx:configRequest", function (event) {
+        const target = event.detail.elt.getAttribute("hx-target");
+
+        if (target && target.startsWith("#reply_to_")) {
+            event.detail.parameters.selectedText = window.getSelection()?.toString() ?? "";
+        }
+    });
+}
+
 function setupMarkdownEditorEnabler() {
     const markdownEnablerLinks = document.querySelectorAll('.markdown_editor_enabler');
     markdownEnablerLinks.forEach(function(link) {
@@ -1218,6 +1245,118 @@ function setupMarkdownEditorEnabler() {
             }
         });
     });
+}
+
+function setupHandleUrlPaste() {
+    // Wrap selected text in a markdown-formatted link when pasting a url
+    const textareaElements = document.querySelectorAll('textarea');
+    if (textareaElements.length) {
+        // textarea tags found, set up the event listener
+        textareaElements.forEach((textareaElement) => {
+            textareaElement.addEventListener("paste", function(event) {
+                const textarea = event.target;
+                const url = event.clipboardData.getData("text/plain");
+
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+
+                // If no text selected or text isn't a url, we don't need to do any formatting
+                if (start === end || !/^https?:\/\/\S+$/i.test(url)) {
+                    return;
+                }
+
+                // Wrap the selected text in markdown link format
+                const selectedText = textarea.value.slice(start, end);
+                const markdownLink = `[${selectedText}](${url})`;
+
+                event.preventDefault();
+
+                // Replace the selection with the Markdown link
+                textarea.setRangeText(markdownLink, start, end, "end");
+            });
+        });
+    }
+}
+
+function markdownKeyboardShortcuts(event) {
+    // Pull this out into a separate function so that duplicate listeners aren't created on the same element
+    // If it isn't the Ctrl/Cmd key or if Alt/Shift is held down as well, stop here
+    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) {
+        return;
+    }
+
+    const textarea = event.target;
+    const key = event.key.toLowerCase();
+    const text = textarea.value;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = text.slice(start, end)
+    
+    let mdStart;  // This will be the markdown syntax to the left
+    let mdEnd;  // This will be the markdown syntax to the right
+
+    if (key === "b") {
+        // Bold
+        mdStart = "**";
+        mdEnd = "**";
+    } else if (key === "i") {
+        // Italics
+        mdStart = "*";
+        mdEnd = "*";
+    } else if (key === "s") {
+        // Spoiler
+        mdStart = "\n\n::: spoiler spoiler\n";
+        mdEnd = "\n:::\n\n";
+    } else if (key === "m") {
+        // In-line spoiler
+        mdStart = "|| ";
+        mdEnd = " ||";
+    }else {
+        // No special key combination
+        return;
+    }
+
+    event.preventDefault();
+
+    // No text selected, just insert notation and place cursor in the middle
+    if (start === end) {
+        textarea.setRangeText(mdStart + mdEnd, start, end, "end");
+        textarea.setSelectionRange(start + mdStart.length, start + mdStart.length);
+        return;
+    }
+
+    // Check if the selected text is already wrapped in the notation, remove it if so
+    if (start >= mdStart.length &&
+        text.slice(start - mdStart.length, start) === mdStart &&
+        text.slice(end, end + mdEnd.length) === mdEnd
+    ) {
+        // Remove the md notation
+        const before = text.slice(0, start - mdStart.length);
+        const after = text.slice(end + mdEnd.length);
+        textarea.value = before + selected + after;
+
+        // Reselect the original text selection
+        textarea.setSelectionRange(start - mdStart.length, start - mdStart.length + selected.length);
+    
+    } else {
+        // Add the markdown notation
+        const newText = mdStart + selected + mdEnd;
+        textarea.setRangeText(newText, start, end, "end");
+
+        // Reselect the original text, ignoring the added markdown syntax
+        textarea.setSelectionRange(start + mdStart.length, start + mdStart.length + selected.length);
+    }
+}
+
+function setupMarkdownKeyboardShortcuts() {
+    // Add some keyboard shortcuts for markdown authoring convenience
+    const textareaElements = document.querySelectorAll('textarea');
+    if (textareaElements.length) {
+        // textarea tags found, set up the event listener
+        textareaElements.forEach((textareaElement) => {
+            textareaElement.addEventListener("keydown", markdownKeyboardShortcuts)
+        });
+    }
 }
 
 function setupPolls() {
@@ -1688,7 +1827,7 @@ function setupDynamicContentObserver() {
         const targetClasses = [
             'send_post', 'confirm_first', 'showElement', 'show-more',
             'user_preview', 'hide_button', 'unhide', 'comment', 'autoresize',
-            'showPopupCommunitySidebar'
+            'showPopupCommunitySidebar', 'score', 'downarea'
         ];
 
         for (const mutation of mutations) {
@@ -1765,21 +1904,26 @@ function handleCtrlEnterForBodyTextarea(textarea) {
 // Re-run specific setup functions for dynamically loaded content
 function setupDynamicContent() {
     // These are the key functions needed for post options and other dynamic content
-    setupConfirmFirst();
-    setupSendPost();
-    setupShowElementLinks();
-    setupShowMoreLinks();
-    setupUserPopup();
-    setupVotingLongPress();
-    setupDynamicKeyboardShortcuts();
-    setupHideButtons();
-    setupPopupTooltips();
-    setupBasicAutoResize();
-    setupUserMentionSuggestions();
-    setupTranslateAll();
-    setupReactionDialog();
-    setupCodeBlockCopy();
-    setupShareIcons();
+    runSetups([
+        setupConfirmFirst,
+        setupSendPost,
+        setupShowElementLinks,
+        setupShowMoreLinks,
+        setupUserPopup,
+        setupVotingLongPress,
+        setupDynamicKeyboardShortcuts,
+        setupHideButtons,
+        setupBasicAutoResize,
+        setupUserMentionSuggestions,
+        setupTranslateAll,
+        setupReactionDialog,
+        setupCodeBlockCopy,
+        setupShareIcons,
+        setupPopupTooltips,
+        setupHandleUrlPaste,
+        setupMarkdownKeyboardShortcuts
+    ]);
+
 
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {
@@ -1806,6 +1950,41 @@ function handleDynamicCtrlEnter(event) {
         event.preventDefault();
         handleCtrlEnterForBodyTextarea(event.target);
     }
+}
+
+// Make sure lightbox catches images that are dynamically loaded
+function setupLightboxListener() {
+    // HTMX event listener for dynamic content loading
+    document.addEventListener('htmx:afterSwap', function(event) {
+        // If it is an auto-reload, re-initialize the lightbox
+        if (event.target.id === "auto-reload") {
+            setupLightboxTeaser();
+        }
+    });
+}
+
+// Function to remove all the "Join" text on post teasers after an htmx is triggered to join that community
+function setupJoinListener() {
+    // HTMX event listener
+    document.addEventListener('htmx:beforeSwap', function(event) {
+        // First get info about the element triggering the request, return if something is wrong
+        const trigger = event.detail.requestConfig.elt;
+        if (!trigger || !trigger.classList) return;
+        
+        // Check if it has a class matching join_<community_id>
+        const joinClass = [...trigger.classList].find(className => /^join_\d+$/.test(className));
+
+        // If that class isn't present, send the htmx request like normal
+        if (!joinClass || event.detail.isError) return;
+
+        // If we make it this far, we will do the swap with JS, so disable htmx swapping
+        event.detail.shouldSwap = false;
+
+        // Remove all matching elements (presumably because we have joined now)
+        document.querySelectorAll(`.${joinClass}`).forEach(element => {
+            element.remove();
+        });
+    });
 }
 
 // Community filter (search box)

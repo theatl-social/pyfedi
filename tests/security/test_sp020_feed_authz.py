@@ -38,10 +38,46 @@ def _function_source(path: pathlib.Path, name: str) -> str:
 
 
 # --- F-CRIT-1: feed_add_community no longer trusts user_id from query string
+#
+# Upstream v1.8.11 (0a9954cd8) deleted the web routes `/feed/add_community`
+# and `/feed/list` outright -- nothing in the UI called them any more. That
+# fixes F-CRIT-1 by removal, so these tests accept two states:
+#   * the route is gone and nothing in app/ registers it again, or
+#   * it is back, and it carries the SP-020 ownership checks.
+# A route coming back *without* the checks fails, which is the regression.
+
+import re
+
+_REMOVED_ROUTES = ("/feed/add_community", "/feed/list")
+
+
+def _feed_add_community_source():
+    try:
+        return _function_source(FEED_ROUTES, "feed_add_community")
+    except AssertionError:
+        return None
+
+
+def test_removed_feed_routes_stay_unregistered_unless_patched():
+    route_re = re.compile(r"""@\w+\.route\(\s*['"]([^'"]+)['"]""")
+    registered = set()
+    for path in (REPO_ROOT / "app").rglob("*.py"):
+        if "api" in path.parts:
+            continue  # /api/alpha/feed/list is the authenticated API, not this route
+        registered.update(route_re.findall(path.read_text()))
+    if _feed_add_community_source() is None:
+        back = [r for r in _REMOVED_ROUTES if r in registered]
+        assert not back, (
+            f"SP-020: {back} re-registered without feed_add_community's "
+            "ownership checks. /feed/list read user_id from request.args and "
+            "listed any user's feeds."
+        )
 
 
 def test_feed_add_community_does_not_read_user_id_from_args():
-    src = _function_source(FEED_ROUTES, "feed_add_community")
+    src = _feed_add_community_source()
+    if src is None:
+        return  # removed upstream; see test_removed_feed_routes_stay_unregistered_unless_patched
     assert "request.args.get('user_id')" not in src, (
         "SP-020 REGRESSION: feed_add_community reads user_id from "
         "request.args again. The tautological ownership check is back; any "
@@ -59,7 +95,9 @@ def test_feed_add_community_does_not_read_user_id_from_args():
 
 
 def test_feed_add_community_resolves_target_feed_and_checks_ownership():
-    src = _function_source(FEED_ROUTES, "feed_add_community")
+    src = _feed_add_community_source()
+    if src is None:
+        return
     # Must look up the target feed by feed_id and verify ownership against
     # current_user (or admin override).
     assert "get_or_404" in src, (
@@ -100,7 +138,9 @@ def test_feed_add_community_preserves_admin_override():
     """Privileged-path: an admin must be able to edit another user's feed.
     The fix added an `or not current_user.is_admin()` (negative form) to the
     ownership check; this test confirms it survives refactors."""
-    src = _function_source(FEED_ROUTES, "feed_add_community")
+    src = _feed_add_community_source()
+    if src is None:
+        return
     # The check should reject only when the user is neither owner nor admin.
     # Two acceptable patterns:
     #   if target_feed.user_id != user_id and not current_user.is_admin():

@@ -114,7 +114,6 @@
                   <li><strong>{{ _('Newbie friendly') }}:</strong> <span id="modal-newbie"></span></li>
                   <li><strong>{{ _('Primary language') }}:</strong> <span id="modal-language"></span></li>
                   <li><strong>{{ _('Registration') }}:</strong> <span id="modal-registration"></span></li>
-                  <li><strong>{{ _('Defederation') }}:</strong> <span id="modal-defederation"></span></li>
                 </ul>
               </div>
               <div class="col-md-6">
@@ -352,7 +351,7 @@
                         <button class="btn btn-outline-secondary more-info-btn mt-2" data-id="${instance.id}" style="float: right;">{{ _('More') }}</button>
                         {{ _('Stability') }}: ${instance.maturity} <br>
                         {{ _('Newbie friendly') }}: ${instance.newbie_friendly ? 'Yes' : 'No'}  <br>
-                        {{ _('Age') }}: ${instance.monthsmonitored ? instance.monthsmonitored + ' months' : 'New'}
+                        {{ _('Age') }}: ${instance.monthsmonitored == null ? 'Unknown' : (instance.monthsmonitored ? instance.monthsmonitored + ' months' : 'New')}
                     </div>
                 </div>
             </div>
@@ -543,7 +542,7 @@
 
         // Populate instance info
         document.getElementById('modal-maturity').textContent = instance.maturity || 'Unknown';
-        document.getElementById('modal-months').textContent = instance.monthsmonitored ? `${instance.monthsmonitored} months` : 'Unknown';
+        document.getElementById('modal-months').textContent = instance.monthsmonitored == null ? 'Unknown' : (instance.monthsmonitored ? `${instance.monthsmonitored} months` : 'New');
         document.getElementById('modal-uptime').textContent = instance.uptime ? `${instance.uptime}%` : 'Unknown';
         document.getElementById('modal-newbie').textContent = instance.newbie_friendly ? 'Yes' : 'No';
         document.getElementById('modal-language').textContent = instance.language || 'Not specified';
@@ -557,41 +556,7 @@
         } else {
             tosLink.classList.add('d-none');
         }
-
-        // Handle federation status
-        const watchedDomains = {
-            'hexbear.net': 'hexbear-status',
-            'hilariouschaos.com': 'hilariouschaos-status',
-            'lemmygrad.ml': 'lemmygrad-status',
-            'lemmy.ml': 'lemmy-status',
-            'gregtech.eu': 'lemvotes-status',
-        };
-
-        const defederatedDomains = instance.defederation || [];
-
-        countDefederated = 0;
-
-        Object.entries(watchedDomains).forEach(([domain, elementId]) => {
-            const statusElement = document.getElementById(elementId);
-            const isDefederated = defederatedDomains.includes(domain);
-
-            if (isDefederated) {
-                countDefederated += 1
-            }
-        });
-
-        if(countDefederated >= 3)
-            defederationQuality = 'Good';
-        else if(countDefederated === 2)
-            defederationQuality = 'Ok';
-        else if(countDefederated === 1)
-            defederationQuality = 'Minimal';
-        else if(countDefederated < 1)
-            defederationQuality = 'None';
-
-        const defederationElement = document.getElementById('modal-defederation')
-        defederationElement.innerHTML = defederationQuality;
-
+        
         // Show the modal
         const modal = new bootstrap.Modal(document.getElementById('instanceModal'));
         modal.show();

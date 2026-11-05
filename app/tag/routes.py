@@ -98,9 +98,9 @@ def show_tag(tag):
 
         # pagination
         posts = posts.paginate(page=page, per_page=50, error_out=False)
-        next_url = url_for('tag.show_tag', tag=tag, page=posts.next_num,
+        next_url = url_for('tag.show_tag', tag=tag.name, page=posts.next_num,
                            category=category, category_id=category_id) if posts.has_next else None
-        prev_url = url_for('tag.show_tag', tag=tag, page=posts.prev_num,
+        prev_url = url_for('tag.show_tag', tag=tag.name, page=posts.prev_num,
                            category=category, category_id=category_id) if posts.has_prev and page != 1 else None
 
         return render_template('tag/tag.html', tag=tag, title=tag.name, posts=posts,
@@ -137,9 +137,11 @@ def show_tag_rss(tag):
                        link = f"{server_url}/tag/{tag.name}",
                        description = ' ',
                        logo = image,
-                       self_link = f"{server_url}/tag/{tag.name}/feed",
-                       language = 'en'
+                       self_link = f"{server_url}/tag/{tag.name}/feed"
                      )
+
+        if language := request.args.get('lang'):    # filter by language
+            posts = [post for post in posts if post.language_code() == language]
 
         response = make_response(feed.create_feed(posts, server_url))
         response.headers.set('Content-Type', 'application/rss+xml')

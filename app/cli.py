@@ -110,6 +110,7 @@ from app.utils import (
     html_to_text,
     site_language_id,
 )
+from app.utils import pause_federation_key
 
 logger = logging.getLogger(__name__)
 
@@ -262,58 +263,24 @@ def register(app):
             db.create_all()
             private_key, public_key = RsaKeys.generate_keypair()
             db.session.add(
-                Site(
-                    name="PieFed",
-                    description="Explore Anything, Discuss Everything.",
-                    public_key=public_key,
-                    private_key=private_key,
-                    language_id=2,
-                )
-            )
-            db.session.add(
-                Instance(domain=app.config["SERVER_NAME"], software="PieFed")
-            )  # Instance 1 is always the local instance
-            db.session.add(Settings(name="allow_nsfw", value=json.dumps(False)))
-            db.session.add(Settings(name="allow_nsfl", value=json.dumps(False)))
-            db.session.add(Settings(name="allow_dislike", value=json.dumps(True)))
-            db.session.add(
-                Settings(name="allow_local_image_posts", value=json.dumps(True))
-            )
-            db.session.add(
-                Settings(name="allow_remote_image_posts", value=json.dumps(True))
-            )
-            db.session.add(Settings(name="federation", value=json.dumps(True)))
-            banned_instances = [
-                "anonib.al",
-                "lemmygrad.ml",
-                "gab.com",
-                "rqd2.net",
-                "exploding-heads.com",
-                "hexbear.net",
-                "hilariouschaos.com",
-                "threads.com",
-                "noauthority.social",
-                "pieville.net",
-                "links.hackliberty.org",
-                "poa.st",
-                "freespeechextremist.com",
-                "bae.st",
-                "nicecrew.digital",
-                "detroitriotcity.com",
-                "gregtech.eu",
-                "pawoo.net",
-                "shitposter.club",
-                "spinster.xyz",
-                "catgirl.life",
-                "gameliberty.club",
-                "yggdrasil.social",
-                "beefyboys.win",
-                "brighteon.social",
-                "cum.salon",
-                "wizard.casa",
-                "maga.place",
-                "lemmychan.org",
-            ]
+                Site(name="PieFed", description='Explore Anything, Discuss Everything.', public_key=public_key,
+                     private_key=private_key, language_id=2))
+            db.session.add(Instance(domain=app.config['SERVER_NAME'],
+                                    software='piefed'))  # Instance 1 is always the local instance
+            db.session.add(Settings(name='allow_nsfw', value=json.dumps(False)))
+            db.session.add(Settings(name='allow_nsfl', value=json.dumps(False)))
+            db.session.add(Settings(name='allow_dislike', value=json.dumps(True)))
+            db.session.add(Settings(name='allow_local_image_posts', value=json.dumps(True)))
+            db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
+            db.session.add(Settings(name='federation', value=json.dumps(True)))
+            banned_instances = ['anonib.al', 'lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com',
+                                'hexbear.net', 'hilariouschaos.com',
+                                'threads.com', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
+                                'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
+                                'detroitriotcity.com', 'gregtech.eu',
+                                'pawoo.net', 'shitposter.club', 'spinster.xyz', 'catgirl.life', 'gameliberty.club',
+                                'yggdrasil.social', 'beefyboys.win', 'brighteon.social', 'cum.salon', 'wizard.casa',
+                                'maga.place', 'lemmychan.org']
             for bi in banned_instances:
                 db.session.add(BannedInstances(domain=bi))
                 print("Added banned instance", bi)
@@ -617,7 +584,7 @@ def register(app):
 
                 for row in result:
                     # Use admin (user 1) as placeholder creator for all communities
-                    # since we can't easily determine the actual creator from Lemmy schema
+                    # since we can't easily determine the creator from Lemmy schema
                     creator_id = 1
 
                     existing_community = Community.query.get(row.id)
@@ -1676,11 +1643,11 @@ def register(app):
                                         "Redis memory is quite full - stopping send queue to avoid making it worse."
                                     )
                                     redis_client.set(
-                                        "pause_federation", "1", ex=600
+                                        pause_federation_key(), "1", ex=600
                                     )  # this also stops incoming federation
                                     return
                                 else:
-                                    redis_client.set("pause_federation", "0", ex=600)
+                                    redis_client.set(pause_federation_key(), "0", ex=600)
                             except:  # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
                                 ...
                             if not current_app.debug:
@@ -1746,7 +1713,7 @@ def register(app):
     def reopen():
         from app import redis_client
 
-        redis_client.set("pause_federation", "666", ex=1)
+        redis_client.set(pause_federation_key(), "666", ex=1)
         print("Done")
 
     @app.cli.command("publish-scheduled-posts")
@@ -2345,18 +2312,16 @@ def register(app):
             try:
                 with patch_db_session(session):
                     site = Site.query.get(1)
-                    users_to_notify = (
-                        User.query.join(Notification, User.id == Notification.user_id)
-                        .filter(
-                            User.ap_id == None,
-                            Notification.created_at > User.last_seen,
-                            Notification.read == False,
-                            User.email_unread_sent
-                            == False,  # they have not been emailed since last activity
-                            User.email_unread == True,  # they want to be emailed
-                        )
-                        .all()
-                    )
+                    users_to_notify = User.query.join(Notification, User.id == Notification.user_id).filter(
+                        User.ap_id == None,
+                        User.verified.is_(True),
+                        User.banned.is_(False),
+                        User.deleted.is_(False),
+                        Notification.created_at > User.last_seen,
+                        Notification.read == False,
+                        User.email_unread_sent == False,  # they have not been emailed since last activity
+                        User.email_unread == True  # they want to be emailed
+                    ).all()
 
                     for user in users_to_notify:
                         notifications = Notification.query.filter(

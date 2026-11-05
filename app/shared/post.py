@@ -43,6 +43,7 @@ from app.models import (
     Event,
     Community,
     CommunityFlair,
+    ap_parse_datetime,
 )
 from app.shared.tasks import task_selector
 from app.shared.voting import vote_quota_exceeded
@@ -372,12 +373,15 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         language_id = input['language_id']
         timezone = input['timezone'] if 'timezone' in input else user.timezone
         image_alt_text = input['image_alt_text'] if 'image_alt_text' in input else ''
+        og_image_url = input.get('og_image_url')
         if image_alt_text is None:
             image_alt_text = ''
+        
         if 'tags' in input:
             tags = tags_from_string_old(input['tags'])
         else:
             tags = []
+        
         if 'flair' in input:
             flair = flairs_from_string(input['flair'], post.community_id)
         elif 'flair_id' in input and input['flair_id']:
@@ -390,8 +394,23 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
             flair = [f for f in flair if f is not None]
         else:
             flair = []
+
         scheduled_for = None
         repeat = None
+
+        if "scheduled_for" in input and isinstance(input["scheduled_for"], datetime):
+            scheduled_for = input["scheduled_for"]
+        elif "scheduled_for" in input and input["scheduled_for"]:
+            scheduled_for = ap_parse_datetime(input["scheduled_for"])
+
+        if scheduled_for and "repeat" in input and input["repeat"]:
+            repeat = input["repeat"].lower()
+        else:
+            repeat = None
+
+        # Check that a scheduled post is in the future
+        if scheduled_for and utcnow() > scheduled_for:
+            raise Exception("A scheduled post must be scheduled for the future")
 
         # Parse event data from API
         event_data = input.get('event', None)
@@ -443,6 +462,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         ai_generated = input.ai_generated.data
         notify_author = input.notify_author.data
         language_id = input.language_id.data
+        og_image_url = input.og_image_url.data
         tags = tags_from_string_old(input.tags.data)
         if input.flair:
             flair = flair_from_form(input.flair.data)
@@ -744,15 +764,19 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
                         db.session.add(file)
                 post.url = url
             else:
-                opengraph = opengraph_parse(thumbnail_url)
-                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                    if not filename.startswith('/'):
-                        file = url_to_thumbnail_file(filename)
-                        if file:
-                            file.alt_text = shorten_string(opengraph.get('og:title'), 295)
-                            post.image = file
-                            db.session.add(file)
+                filename = ''
+                if og_image_url:
+                    filename = og_image_url
+                else:
+                    opengraph = opengraph_parse(thumbnail_url)
+                    if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                        filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                if filename and not filename.startswith('/'):
+                    file = url_to_thumbnail_file(filename)
+                    if file:
+                        file.alt_text = shorten_string(post.title, 295)
+                        post.image = file
+                        db.session.add(file)
 
                 post.url = embed_url
 
@@ -1088,6 +1112,32 @@ def delete_post(post_id: int, federate_deletion, src, auth):
         return
 
 
+def delete_rss_feed_post(post_id: int, user_id: int):
+
+    from app import redis_client
+    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
+        post = db.session.query(Post).get(post_id)
+        if post.url:
+            post.calculate_cross_posts(delete_only=True)
+
+        post.deleted = True
+        post.deleted_by = user_id
+        post.author.post_count -= 1
+        db.session.commit()
+
+    if post.status == POST_STATUS_PUBLISHED:
+        task_selector('delete_post', user_id=user_id, post_id=post.id)
+
+    # remove any notifications about the post
+    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
+    for notif in notifs:
+        # dont delete report notifs
+        if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+            continue
+        db.session.delete(notif)
+    db.session.commit()
+
+
 def restore_post(post_id: int, src, auth):
     if src == SRC_API:
         post = db.session.query(Post).get(post_id)
@@ -1176,6 +1226,11 @@ def report_post(post: Post, input, src, auth=None):
         targets=targets_data,
     )
     db.session.add(report)
+    db.session.commit()  # Need to commit to get an id
+
+    # Add the report id to the targets data
+    targets_data['report_id'] = report.id
+    report.targets = targets_data
 
     # Notify local moderators, and send Flag to remote moderators
     # if user has not selected 'report_remote', just send to remote mods not on community's or suspect_users's instances
