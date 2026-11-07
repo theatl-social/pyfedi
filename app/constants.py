@@ -1,4 +1,4 @@
-VERSION = "1.8.11-peachpie-20261104"
+VERSION = "1.8.11-peachpie-20261107"
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -77,7 +77,7 @@ NOTIF_REPORT_ESCALATION = (
     40  # a USER, POST, or COMMENT report has been escalated from mods to admins
 )
 NOTIF_REGISTRATION = 41  # a new registration / sign up has been generated
-NOTIF_NEW_POST = 42         # a new post needs approval
+NOTIF_NEW_POST = 42  # a new post needs approval
 
 # --model/db default--
 NOTIF_DEFAULT = 999  # default entry

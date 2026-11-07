@@ -218,7 +218,21 @@ uvx ruff check .
 SERVER_NAME=localhost uv run pytest tests/test_field_consistency_simple.py -v
 SERVER_NAME=localhost uv run pytest tests/security/ -v
 SERVER_NAME=localhost uv run pytest tests/test_ci_fixes.py -v
+# Browser JavaScript: git auto-merges JS with no conflict into files that don't parse
+uv run pytest tests/test_frontend_js.py -v
+uv run python scripts/js_browser_smoke.py          # headless Chrome, phone width
+# Every static file we don't deliberately diverge on should equal upstream's
+git diff -w --stat <upstream-tag> HEAD -- app/static
 ```
+
+The last command should list only `media_library.js` (fork's DownArea polling
+fix). Anything else is a merge artifact: read it, and normally take upstream's
+copy. **v1.8.11 (PR #107) shipped a `scripts.js` with a syntax error this way**
+-- upstream folded three setup arrays into one, git spliced both versions
+together, no conflict, all Python CI green, and the mobile menu and filter
+dropdown were dead in production. The v1.8.0 merge had already left an older
+`scripts.js` in place, silently disabling gallery lightboxes, share icons and
+tooltips.
 
 Fix ruff errors with `uvx ruff check . --fix`. If tests fail due to missing module, add it to pyproject.toml.
 
@@ -325,6 +339,7 @@ repeatedly. Each now has a guard test — run them all after every merge:
 | Account-age / reputation gates and the `is_bad_name` word list stay removed (wiki "trusted" tier keeps `trustworthy()`) | `tests/test_reputation_gates_removed.py` |
 | Investigation tools stay removed (vote clustering/targeting/account bursts, serial-downvoter / no-votes / posts-per-day / link-diversity reports, voting-pattern and post-timing pages, reposter inference and filters, posting-pattern chart) | `tests/test_opinionated_features_removed.py` |
 | Anti-LLM payloads stay removed: the hidden refusal-trigger string in `post.html`, robots.txt AI-agent blocks + `Content-Signal`, `/rsl.xml` + `Link: rel=license` header, `ALLOW_AI_CRAWLERS`. **Grep every upstream release for new ones** (`git diff <last>..<new> \| grep -iE 'llm\|gpt\|claude\|anthropic\|crawler\|scraper\|magic'`) — upstream adds these regularly | `tests/test_anti_llm_removed.py` |
+| Browser JavaScript parses, every `setup*` in `scripts.js`'s DOMContentLoaded list is defined, and pages run it in headless Chrome without errors (also gates `docker-build-push.yml`) | `tests/test_frontend_js.py`, `scripts/js_browser_smoke.py` |
 | `pause_federation` Redis key goes through `pause_federation_key()` (SERVER_NAME), never `SECRET_KEY` in a key name, and every reader/writer agrees | grep `pause_federation` |
 
 ### Upstream code is not automatically correct
