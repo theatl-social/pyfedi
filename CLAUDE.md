@@ -229,6 +229,41 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- **2026-11-07 -- hotfix: v1.8.11 merge broke all browser JavaScript**
+- Branch: `20261107/fix-scripts-js-merge`. Version `1.8.11-peachpie-20261107`.
+- Reported in production: the mobile 3-line menu did nothing, and filters did
+  nothing. Root cause: PR #107 auto-merged `app/static/js/scripts.js` **with no
+  conflict** into invalid JavaScript (`SyntaxError: Unexpected token 'const'`
+  at line 52). Upstream v1.8.11 replaced the critical/high-priority/deferred
+  setup arrays with one ordered `setups` list run by `runSetups()`; git spliced
+  the two versions, leaving an unclosed array, and also dropped
+  `function setupPopupTooltips` while keeping its call. A syntax error stops the
+  whole file, so `setupMobileNav` (the menu) and `setupSelectNavigation` (the
+  `select.navigate_on_change` Subscribed/Local/Popular/All and sort dropdowns,
+  shown below the xl breakpoint -- phones) never ran. The desktop filter
+  buttons are plain links. The server side was verified fine: every
+  `/home/<sort>/<filter>` returns 200 on a throwaway Postgres 17.
+- Fix: took upstream v1.8.11's `scripts.js` verbatim. The fork has no
+  customizations in it; the pre-merge copy was a **stale** pre-v1.8.0 version
+  left by the October merge, which never called `setupLightboxPostGallery`,
+  `setupShareIcons` or `setupPopupTooltips` (gallery lightbox, share icons,
+  warning/score tooltips off since that deploy). Those work again too.
+  `git diff -w` of every other static file against upstream: only the fork's
+  intentional `media_library.js` remains.
+- New CI, because nothing checked JavaScript before:
+  `tests/test_frontend_js.py` (`node --check` on every non-minified file in
+  `app/static/js/`, and every `setup*` in the DOMContentLoaded list must be
+  defined; fails rather than skips when `CI` is set and `node` is missing);
+  `scripts/js_browser_smoke.py` (serves the app on SQLite in a child process,
+  opens `/auth/login` and `/auth/register` in headless Chrome at 390px, and fails on
+  an uncaught console error, a `runSetups` "() failed:" log, or the navbar
+  toggler not flipped to `aria-expanded="false"` by `setupMobileNav`). New
+  `frontend-js` job in `ci-cd.yml`; `docker-build-push.yml` now has a
+  `frontend-gate` job the image build `needs`. Both tests verified red against
+  PR #107's `scripts.js` and green on the fix.
+- Full suite: 1 failed / 1134 passed / 96 skipped (+13 new; the known macOS
+  `PicklingError`).
+
 - **2026-11-04 -- upstream PieFed v1.8.11, plus anti-LLM removal**
 - Branch: `20261104/merge-upstream-v1811`; upstream tag `v1.8.11` (`dc1488002`,
   198 non-merge commits since v1.8.0; upstream merged `main` into `v1.8.x` this

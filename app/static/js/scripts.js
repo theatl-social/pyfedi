@@ -24,17 +24,15 @@ function runSetups(setups) {
 document.addEventListener("DOMContentLoaded", function () {
     let low_bandwidth = document.body.classList.contains('low_bandwidth');
 
-    // Critical setup functions that must run immediately
-    const criticalSetups = [
+    // Every setup function, run in order. Order matters in two places: the lightbox needs
+    // the teasers to exist, and setupDynamicContentObserver goes last so the observer isn't
+    // watching while the setups above it are still writing to the DOM - otherwise their
+    // writes trigger it and the whole lot runs a second time.
+    const setups = [
         setupMobileNav,
         setupLightDark,
         setupConfirmFirst,
         setupSendPost,
-        setupDynamicContentObserver
-    ];
-
-    // High priority setup functions
-    const highPrioritySetups = [
         setupVotingLongPress,
         setupVotingDialogHandlers,
         setupKeyboardShortcuts,
@@ -48,8 +46,6 @@ document.addEventListener("DOMContentLoaded", function () {
         // lightboxes are too heavy for low bandwidth mode
         ...(low_bandwidth ? [] : [setupLightboxTeaser, setupLightboxPostBody, setupLightboxListener]),
 
-    // Lower priority setup functions that can be deferred
-    const deferredSetups = [
         setupTopicChooser,
         setupTimeTracking,
         setupConversationChooser,
@@ -96,38 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setupDynamicContentObserver
     ];
 
-    // Run critical setups immediately
-    criticalSetups.forEach(setup => setup());
-
-    // Run high priority setups in next frame
-    requestAnimationFrame(() => {
-        highPrioritySetups.forEach(setup => setup());
-
-        // Setup lightbox if not low bandwidth
-        if (!low_bandwidth) {
-            requestAnimationFrame(() => {
-                setupLightboxTeaser();
-                setupLightboxPostBody();
-            });
-        }
-    });
-
-    // Defer remaining setups to avoid blocking
-    let setupIndex = 0;
-    function runDeferredSetups() {
-        const batchSize = 3; // Process 3 setups per frame
-        const endIndex = Math.min(setupIndex + batchSize, deferredSetups.length);
-
-        for (let i = setupIndex; i < endIndex; i++) {
-            deferredSetups[i]();
-        }
-
-        setupIndex = endIndex;
-        if (setupIndex < deferredSetups.length) {
-            requestAnimationFrame(runDeferredSetups);
-        }
-    }
-    requestAnimationFrame(runDeferredSetups);
+    runSetups(setups);
 
     if(navigator.getBattery) {
         navigator.getBattery().then(function(battery) {
@@ -553,13 +518,7 @@ function setupLightDark() {
 
     var preferredTheme = getStoredTheme();
     if (!preferredTheme || (preferredTheme !== 'light' && preferredTheme !== 'dark')) {
-        const isLinux = navigator.platform.toLowerCase().includes('linux') && !navigator.platform.toLowerCase().includes('android');
-        if(isLinux) {
-            preferredTheme = 'dark';
-        }
-        else {
-            preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
+        preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
     //setTheme(preferredTheme);
     icon.classList.remove('fe-eye');
@@ -1291,7 +1250,7 @@ function markdownKeyboardShortcuts(event) {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selected = text.slice(start, end)
-    
+
     let mdStart;  // This will be the markdown syntax to the left
     let mdEnd;  // This will be the markdown syntax to the right
 
@@ -1337,7 +1296,7 @@ function markdownKeyboardShortcuts(event) {
 
         // Reselect the original text selection
         textarea.setSelectionRange(start - mdStart.length, start - mdStart.length + selected.length);
-    
+
     } else {
         // Add the markdown notation
         const newText = mdStart + selected + mdEnd;
@@ -1970,7 +1929,7 @@ function setupJoinListener() {
         // First get info about the element triggering the request, return if something is wrong
         const trigger = event.detail.requestConfig.elt;
         if (!trigger || !trigger.classList) return;
-        
+
         // Check if it has a class matching join_<community_id>
         const joinClass = [...trigger.classList].find(className => /^join_\d+$/.test(className));
 
@@ -2849,4 +2808,24 @@ function setupAutoReload() {
             setTimeout(setupVotableElements, 2000); // so people can vote with A and Z keys
         }
     }, 60000);  // once per minute
+}
+
+function setupPopupTooltips() {
+    // Find all warning elements with a title, add the necessary bootstrap attributes
+    document.querySelectorAll('span.fe-warning[title], span.score[title]').forEach(el => {
+      if (!el.hasAttribute('data-bs-toggle') && !el.dataset.tooltipSetup) {     // don't mess with dropdowns that use data-bs-toggle
+        el.setAttribute('data-bs-toggle', 'tooltip');
+        el.setAttribute('data-bs-placement', 'top');
+        el.dataset.tooltipSetup = 'true';
+      }
+    });
+
+    // Initialize tooltips only for elements that haven't been initialized yet
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]:not([data-tooltip-initialized])');
+    [...tooltipTriggerList].map(el => {
+      new bootstrap.Tooltip(el, {
+          delay: { show: 750, hide: 200 }
+      });
+      el.dataset.tooltipInitialized = 'true';
+    });
 }

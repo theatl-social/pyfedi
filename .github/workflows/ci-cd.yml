@@ -232,6 +232,51 @@ jobs:
           uv run mypy app/ --ignore-missing-imports --follow-imports=silent
         continue-on-error: true
 
+  # Browser JavaScript. Added after PR #107 shipped a scripts.js that git
+  # auto-merged into a syntax error: every Python/template check was green and
+  # the mobile menu and filter dropdown were dead in production.
+  frontend-js:
+    name: Frontend JavaScript
+    runs-on: ubuntu-latest
+    needs: startup-validation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Syntax-check first-party JavaScript
+        run: |
+          node --version
+          fail=0
+          while IFS= read -r f; do
+            node --check "$f" || { echo "::error file=$f::not valid JavaScript"; fail=1; }
+          done < <(find app/static/js -name '*.js' ! -name '*.min.js')
+          exit $fail
+
+      - name: Setup-list guard
+        run: uv run pytest tests/test_frontend_js.py -v
+        env:
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci-padding-must-be-32-plus-chars
+          CACHE_TYPE: NullCache
+
+      - name: Headless Chrome smoke test (pages run scripts.js without errors)
+        run: |
+          google-chrome --version
+          uv run python scripts/js_browser_smoke.py --chrome "$(command -v google-chrome)"
+        timeout-minutes: 10
+
   # Template linting
   template-quality:
     name: Template Quality
@@ -476,7 +521,7 @@ jobs:
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [startup-validation, core-tests, python-quality, template-quality, docker-validation, security-scan]
+    needs: [startup-validation, core-tests, python-quality, template-quality, frontend-js, docker-validation, security-scan]
     if: always()
 
     steps:
@@ -507,6 +552,12 @@ jobs:
             echo "**Template Quality**: Passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "**Template Quality**: Issues found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [[ "${{ needs.frontend-js.result }}" == "success" ]]; then
+            echo "**Frontend JavaScript**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Frontend JavaScript**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [[ "${{ needs.docker-validation.result }}" == "success" ]]; then
