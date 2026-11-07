@@ -102,25 +102,43 @@ def spawn_server(db_path):
 
 
 def load(chrome, url, profile):
-    proc = subprocess.run(
-        [
-            chrome,
-            "--headless=new",
-            "--no-sandbox",
-            "--disable-gpu",
-            "--disable-dev-shm-usage",
-            f"--user-data-dir={profile}",
-            "--window-size=390,844",
-            "--enable-logging=stderr",
-            "--v=0",
-            "--dump-dom",
-            url,
-        ],
-        capture_output=True,
-        text=True,
-        timeout=90,
-    )
-    return proc.stdout, proc.stderr
+    """Return (dom, chrome_log) for one page load.
+
+    Chrome prints the DOM once the page has loaded, then shuts down. On macOS
+    the shutdown sometimes stalls (a "teardown watchdog" exit, or a hang), so
+    after the timeout Chrome is killed and whatever it already printed is used.
+    One retry, with a fresh profile, if no DOM came back at all.
+    """
+    for attempt in range(2):
+        with tempfile.TemporaryFile("w+") as log:
+            proc = subprocess.Popen(
+                [
+                    chrome,
+                    "--headless=new",
+                    "--no-sandbox",
+                    "--disable-gpu",
+                    "--disable-dev-shm-usage",
+                    f"--user-data-dir={profile}-{attempt}",
+                    "--window-size=390,844",
+                    "--enable-logging=stderr",
+                    "--v=0",
+                    "--dump-dom",
+                    url,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=log,
+                text=True,
+            )
+            try:
+                dom, _ = proc.communicate(timeout=60)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                dom, _ = proc.communicate()
+            log.seek(0)
+            chrome_log = log.read()
+        if "</html>" in dom:
+            return dom, chrome_log
+    return dom, chrome_log
 
 
 def main():
@@ -138,7 +156,8 @@ def main():
     try:
         for page in PAGES:
             url = f"http://127.0.0.1:{PORT}{page}"
-            dom, log = load(chrome, url, os.path.join(work, "profile"))
+            profile = os.path.join(work, "profile-" + page.strip("/").replace("/", "-"))
+            dom, log = load(chrome, url, profile)
             errors = [
                 ln
                 for ln in log.splitlines()
